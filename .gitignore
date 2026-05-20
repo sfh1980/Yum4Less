@@ -1,0 +1,14 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+
+# Local environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Private learning notes for the repo owner
+.private/

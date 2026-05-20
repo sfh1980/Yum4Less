@@ -1,0 +1,12 @@
+---
+description: Keep Yum4Less teaching content in the private learning notes file
+alwaysApply: true
+---
+
+# Private Learning Notes
+
+- Put repo-owner-only teaching, lessons, walkthroughs, and guidance in `.private/learning-notes.md`.
+- Treat `.private/learning-notes.md` as educational notes only, not as source-of-truth project documentation.
+- Avoid duplicating project requirements, setup steps, architecture decisions, or implementation truth in the private notes when that information already belongs in code, the `README`, or shared docs.
+- When giving substantial educational guidance during Yum4Less implementation, update `.private/learning-notes.md` instead of scattering the same teaching content across multiple files.
+- Keep shared docs and code comments focused on the project itself; keep personalized learning content in the private notes file.

@@ -1,0 +1,13 @@
+---
+description: Keep the Yum4Less README current and investor-ready
+globs: README*
+alwaysApply: false
+---
+
+# README Living Document
+
+- Keep the `README` professional, business-oriented, and suitable for collaborators, public readers, and potential investors.
+- Reflect the distinction between current implementation and planned roadmap clearly; do not present planned features as already built.
+- Update setup steps, commands, environment variables, architectural decisions, and supported data sources when the codebase changes.
+- Avoid `TODO` placeholders, duplicate explanations, and speculative implementation details that are not yet true in the repository.
+- Prefer a clean flow: product vision, current scope, technical direction, security posture, competitive position, roadmap, and then practical setup details.

@@ -1,0 +1,20 @@
+---
+description: Yum4Less MVP product and architecture direction
+alwaysApply: true
+---
+
+# Yum4Less Product Direction
+
+- Keep the MVP centered on local dinner meal planning, starting around ZIP code `23111`.
+- Keep the MVP hard-limited to the initial supported local area and say so clearly when a user falls outside it.
+- Optimize for the core loop: determine location from browser geolocation and/or ZIP, choose a radius, discover nearby food-selling stores, price ingredients, rank dinner options, and explain the shopping plan clearly.
+- Treat grocery stores, big-box retailers, and dollar-store-style sellers as valid sources when they offer meaningful grocery ingredients.
+- Preserve the current no-login MVP direction unless the user explicitly changes it.
+- Prioritize the first live-chain rollout around `23111` in this order: `Kroger`, then `Publix`, then `Walmart`; treat `Aldi` and `BJ's` as later targets unless the user reprioritizes them.
+- Use `Leaflet` for map UI with both browser geolocation and ZIP-code search, backed by a separate geocoding or search provider, but only after the core store/pricing/recommendation flow is stable.
+- Prefer a curated internal dinner recipe library first; add free external recipe APIs only after the internal library is established and only when they improve coverage without weakening matching quality.
+- Keep the cache-first model: reuse recent store and pricing data, then refresh when fresh search results differ materially.
+- Favor simple, shippable decisions that strengthen budget filtering, ingredient-count limits, dietary filters, and one-store versus multi-store tradeoffs.
+- Hide chains from recommendation pricing until their sale and price coverage is strong enough to support trustworthy output.
+- Show unsupported chains as coming soon or disabled with explanation rather than presenting them as live.
+- Prefer refining existing project agents, rules, and hooks before adding new custom agents; create a new agent only when there is a clear workflow gap.

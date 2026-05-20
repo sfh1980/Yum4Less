@@ -1,0 +1,40 @@
+{
+  "name": "yum4less",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d db",
+    "db:logs": "docker compose logs -f db"
+  },
+  "dependencies": {
+    "next": "^15.3.2",
+    "pg": "^8.21.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.15.21",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^6.0.2",
+    "eslint": "^9.27.0",
+    "eslint-config-next": "^15.3.2",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.8.3",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.6"
+  }
+}

@@ -1,0 +1,15 @@
+---
+description: Testing and release gates for the Yum4Less MVP
+alwaysApply: true
+---
+
+# Yum4Less Testing And Release Gates
+
+- MVP-complete work requires automated coverage for recommendation logic, request validation, fallback behavior, and the core location-to-results flow.
+- Favor deterministic tests that do not depend on live external APIs, real scraping runs, or unstable provider responses.
+- Keep provider, geolocation, geocoding, and recipe-source behavior mocked or fixture-backed in fast suites.
+- Treat DB-backed and seed-fallback behavior as first-class test paths, not edge cases.
+- Ranking changes should include fixture-based before/after checks on representative searches so trust-sensitive regressions are visible.
+- Add the smallest high-value tests first: unit logic, route tests, DB/seed fallback checks, then UI smoke coverage.
+- CI should run the local MVP test gates automatically before changes are treated as verified.
+- Do not call trust-sensitive behavior verified if only manual spot checks exist.

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/check-package-command.ps1",
+        "timeout": 5,
+        "matcher": "\\bnpm\\b|\\bnpx\\b|\\bpnpm\\b|\\byarn\\b"
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/check-readme.ps1",
+        "timeout": 5
+      }
+    ]
+  }
+}

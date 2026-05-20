@@ -1,0 +1,16 @@
+---
+description: Lean MCP adoption strategy for Yum4Less
+alwaysApply: true
+---
+
+# MCP Adoption Strategy
+
+- Prefer Cursor native tools first for code search, shell, web research, and browser inspection.
+- Do not add MCP servers to Yum4Less just because they exist; add one only when it removes repetitive work tied to an external system.
+- Keep the active MCP set small, ideally `2-4` servers max, and prefer read-only or least-privilege configurations first.
+- While the repo is planning-only, do not install MCP servers just to prepare for future work.
+- The first MCP to add should be a read-only `PostgreSQL` MCP, but only after a dev database exists.
+- Add `GitHub` MCP only after the repo has active pull requests, CI, and issue workflows worth querying.
+- Do not add `Playwright MCP` until the Yum4Less UI exists and native Cursor Browser tooling has been compared on real map, ZIP, and geolocation flows.
+- Treat `Context7`, `Postman`, `Sentry`, and hosted browser MCPs as later-stage options driven by real workflow pain, not default setup.
+- Avoid overlapping browser, filesystem, and shell MCPs unless there is a clear workflow gap that native tools do not cover.

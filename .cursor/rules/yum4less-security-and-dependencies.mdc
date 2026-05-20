@@ -1,0 +1,16 @@
+---
+description: Security-first architecture and dependency discipline
+alwaysApply: true
+---
+
+# Yum4Less Security And Dependency Discipline
+
+- Keep the stack small, deliberate, and easy to audit; avoid adding packages unless they materially improve delivery, safety, or correctness.
+- Prefer built-in platform capabilities, direct implementations, and mature libraries over dependency-heavy shortcuts.
+- Never hardcode secrets, credentials, API keys, tokens, or connection strings; use environment variables and keep sensitive logic server-side.
+- Treat location data, store feeds, scraped content, recipe imports, and all external API responses as untrusted input.
+- For data acquisition, prefer official APIs first and use scraping only where terms, reliability, and maintenance burden are acceptable.
+- When proposing a new dependency, explain why it is needed, what risk it adds, and whether a smaller alternative exists.
+- Favor architectures that are cache-first, rate-aware, and resilient to upstream data instability.
+- Protect user privacy by storing only the minimum location and preference data needed for the product to function.
+- Keep project automation lean too: prefer tightening existing agents, hooks, and rules over multiplying overlapping custom agents.

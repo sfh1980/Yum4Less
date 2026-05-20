@@ -1,0 +1,15 @@
+---
+description: Trust, provenance, and degraded-mode guidance for Yum4Less
+alwaysApply: true
+---
+
+# Yum4Less Trust And Fallbacks
+
+- Treat freshness, provenance, fallback state, and estimate quality as product features, not optional polish.
+- Explain source, freshness, fallback, and trust concepts in a dismissible explainer or modal before or alongside results.
+- Show strong trust signals on recommendation cards; deeper provenance may be expandable, but it must not be hidden entirely in a summary panel.
+- If data is stale, incomplete, fallback-backed, or directional, use explicit language like `estimated`, `directional`, or `limited coverage` instead of stronger claims.
+- Include stale or uncertain prices only with clear warnings and visibly lower confidence.
+- Never treat degraded mode as success-equivalent mode. If the app falls back from live/provider or DB-backed data, surface that clearly near the affected results.
+- Hide chains from recommendation pricing until their sale and price coverage is strong enough; unsupported chains should appear as coming soon or disabled with explanation.
+- Do not claim `cheapest`, `best`, `high confidence`, or `fresh` unless the code and evidence support those claims.

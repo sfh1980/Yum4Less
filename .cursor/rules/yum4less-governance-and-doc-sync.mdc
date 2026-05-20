@@ -1,0 +1,12 @@
+---
+description: Approval workflow and documentation sync for Yum4Less
+alwaysApply: true
+---
+
+# Yum4Less Governance And Doc Sync
+
+- Pause development and ask for explicit user approval before installing new MCP servers or adding/updating repo rules.
+- Keep `README.md`, `PROJECT_CONTINUITY.md`, and `.private/learning-notes.md` current when architecture, MVP scope, trust behavior, setup steps, or implementation direction materially change.
+- Keep shared docs truthful about what is implemented versus planned; do not let roadmap items read like shipped features.
+- If tooling setup succeeds but still needs restart, first launch, admin approval, or manual sign-in, document that clearly instead of implying the setup is finished.
+- Treat local/dev completion and hosted/deployed completion as different milestones until the user explicitly chooses a deployment target.
