@@ -5,11 +5,23 @@ alwaysApply: true
 
 # Yum4Less Testing And Release Gates
 
-- MVP-complete work requires automated coverage for recommendation logic, request validation, fallback behavior, and the core location-to-results flow.
+Follow **`.cursor/rules/yum4less-agent-orchestration.mdc`** and **`AGENTS.md`** for when to run MCP and project agents.
+
+- MVP-complete work **MUST** include automated coverage for recommendation logic, request validation, fallback behavior, and the core location-to-results flow.
 - Favor deterministic tests that do not depend on live external APIs, real scraping runs, or unstable provider responses.
 - Keep provider, geolocation, geocoding, and recipe-source behavior mocked or fixture-backed in fast suites.
 - Treat DB-backed and seed-fallback behavior as first-class test paths, not edge cases.
-- Ranking changes should include fixture-based before/after checks on representative searches so trust-sensitive regressions are visible.
+- **MUST** run `npm test` before calling any implementation slice verified or complete.
+- **MUST** run `npm run test:integration` when Postgres merge-gating behavior changed (`npm run db:up` first).
+- **MUST** use **Postgres MCP** (read-only, port `5433`) to verify schema, seeded stores, and latest `price_observations` after ingest or integration work when automated tests alone do not answer the question.
+- **MUST** use **GitHub MCP** or `gh` to inspect PR checks and workflow failures before claiming release readiness or CI green; prefer `gh` CLI for mutating GitHub operations.
+- Ranking changes **MUST** include fixture-based before/after checks on representative searches so trust-sensitive regressions are visible.
 - Add the smallest high-value tests first: unit logic, route tests, DB/seed fallback checks, then UI smoke coverage.
+- **MUST** use **Playwright MCP** when Vitest cannot prove trust-sensitive UI (ZIP flow, map, carousel, trust/fallback labels, modals); run `npm run dev` first on `localhost:3000` with ZIP `23111` and seeded/fixture data.
+- Keep Playwright checks deterministic; do not gate merge on live retailer pages or unstable external sites.
+- Prefer Vitest for merge-gating CI; `npm run test:e2e:ci` is an additional CI job — Playwright MCP remains for agent-driven checks beyond that suite.
+- Security-sensitive routes **MUST** keep deterministic tests for validation bounds, public API read-only behavior (`YUM4LESS_ENABLE_API_DB_WRITES`), response sanitization, and shopping-route stop limits.
+- When Playwright verifies trust-sensitive UI, **MUST** assert explicit wording (`estimated`, `directional`, `limited coverage`, coming soon) rather than only that elements render.
 - CI should run the local MVP test gates automatically before changes are treated as verified.
-- Do not call trust-sensitive behavior verified if only manual spot checks exist.
+- **MUST NOT** call trust-sensitive behavior verified if only manual spot checks exist.
+- **MUST** invoke `@verifier` or apply its readonly checklist before merge-ready claims on trust-sensitive work.

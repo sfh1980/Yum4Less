@@ -1,3 +1,6 @@
+import { consumeRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { isWithinMvpBrowserRadius } from "@/lib/mvp-area";
+
 export type ResolvedZipLocation = {
   zipCode: string;
   city: string;
@@ -70,6 +73,18 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
     );
   }
 
+  const rateLimit = consumeRateLimit(
+    "geocodio:global",
+    RATE_LIMITS.geocodioUpstream,
+  );
+  if (!rateLimit.ok) {
+    return getSeedFallback(
+      normalizedZipCode,
+      "Live ZIP lookup is temporarily rate limited. Using local fallback when available.",
+      true,
+    );
+  }
+
   try {
     const response = await fetch(
       `https://api.geocod.io/v1.7/geocode?q=${encodeURIComponent(normalizedZipCode)}&api_key=${encodeURIComponent(geocodioKey)}`,
@@ -94,6 +109,20 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
     const parsedLocation = firstResult ? parseGeocodioResult(firstResult, normalizedZipCode) : undefined;
 
     if (parsedLocation) {
+      if (
+        !isWithinMvpBrowserRadius({
+          latitude: parsedLocation.latitude,
+          longitude: parsedLocation.longitude,
+        })
+      ) {
+        return {
+          ok: false,
+          error:
+            "That ZIP is outside the current Yum4Less MVP service area near ZIP 23111. Try a nearby local ZIP instead.",
+          providerConfigured: true,
+        };
+      }
+
       return {
         ok: true,
         location: parsedLocation,

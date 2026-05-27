@@ -12,3 +12,22 @@ out/
 
 # Private learning notes for the repo owner
 .private/
+
+# Local MCP config may contain user-scoped tokens — copy from mcp.json.example
+.cursor/mcp.json
+
+# Credentials and key material
+*.pem
+credentials.json
+secrets/
+
+# Local weekly-ad capture artifacts from failed live ingest runs
+captures/
+.playwright-mcp/
+playwright-report/
+test-results/
+blob-report/
+
+# Local ingest/API probe logs (not source of truth)
+live-probe-*.txt
+playwright-full-test-final.png

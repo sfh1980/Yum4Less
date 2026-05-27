@@ -1,12 +1,37 @@
 import { NextResponse } from "next/server";
-import { resolveZipLocation } from "@/lib/geocoding";
+import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
+import {
+  API_LIMITS,
+  clampInteger,
+  clampNumber,
+  isValidCoordinatePair,
+  isValidZipCode,
+  parseJsonBody,
+} from "@/lib/api-request";
+import { sanitizeMarketSummaryForPublicApi } from "@/lib/public-api-response-sanitizer";
+import { resolveLocationInput } from "@/lib/location-resolution";
 import {
   getRecommendationExperience,
   type MealPreferenceForm,
-} from "@/lib/mock-recommendations";
+} from "@/lib/recommendation-service";
+import {
+  getDefaultRecipeSource,
+  listSelectableRecipeSources,
+} from "@/lib/recipe-sources/recipe-source-registry";
+import type { RecipeSourceSelection } from "@/lib/recipe-sources/recipe-source-types";
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Partial<MealPreferenceForm>;
+  const rateLimit = enforceApiRateLimit(request, "apiRecommendations");
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
+  }
+
+  const parsedBody = await parseJsonBody(request);
+  if (!parsedBody.ok) {
+    return NextResponse.json({ ok: false, error: parsedBody.error }, { status: 400 });
+  }
+
+  const body = parsedBody.body as Partial<RecommendationRequestPayload>;
   const preferences = validatePreferences(body);
 
   if (!preferences) {
@@ -19,13 +44,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const zipLookup = await resolveZipLocation(preferences.zipCode);
-  if (!zipLookup.ok) {
+  const locationResult = await resolveLocationInput(body);
+  if (!locationResult.ok) {
     return NextResponse.json(
       {
         ok: false,
-        error: zipLookup.error,
-        providerConfigured: zipLookup.providerConfigured,
+        error: locationResult.error,
+        providerConfigured: locationResult.providerConfigured,
       },
       { status: 404 },
     );
@@ -33,18 +58,21 @@ export async function POST(request: Request) {
 
   const experience = await getRecommendationExperience(
     preferences,
-    zipLookup.location,
-    zipLookup.providerConfigured,
+    locationResult.location,
+    locationResult.providerConfigured,
   );
 
   return NextResponse.json({
     ok: true,
-    experience,
+    experience: {
+      ...experience,
+      market: sanitizeMarketSummaryForPublicApi(experience.market),
+    },
   });
 }
 
 function validatePreferences(
-  body: Partial<MealPreferenceForm>,
+  body: Partial<RecommendationRequestPayload>,
 ): MealPreferenceForm | undefined {
   const shoppingStyle = body.shoppingStyle;
   const dietaryFocus = body.dietaryFocus;
@@ -56,27 +84,64 @@ function validatePreferences(
     body.dietaryFocus === "vegan" ||
     body.dietaryFocus === "quick";
 
+  const radiusMiles = clampInteger(body.radiusMiles, API_LIMITS.radiusMiles);
+  const budget = clampNumber(body.budget, API_LIMITS.budget);
+  const maxIngredients = clampInteger(body.maxIngredients, API_LIMITS.maxIngredients);
+  const dinnersWanted = clampInteger(body.dinnersWanted, API_LIMITS.dinnersWanted);
+  const hasCoordinates = isValidCoordinatePair(body);
+  const zipCode = typeof body.zipCode === "string" ? body.zipCode.trim() : "";
+
   if (
-    typeof body.zipCode !== "string" ||
-    typeof body.radiusMiles !== "number" ||
-    typeof body.budget !== "number" ||
-    typeof body.maxIngredients !== "number" ||
-    typeof body.dinnersWanted !== "number" ||
+    radiusMiles === undefined ||
+    budget === undefined ||
+    maxIngredients === undefined ||
+    dinnersWanted === undefined ||
     !validShoppingStyle ||
-    !validDietaryFocus
+    !validDietaryFocus ||
+    (!hasCoordinates && !isValidZipCode(zipCode))
   ) {
     return undefined;
   }
 
   const resolvedDietaryFocus = dietaryFocus as MealPreferenceForm["dietaryFocus"];
+  const recipeSource = resolveRecipeSource(body.recipeSource);
+
+  if (!recipeSource) {
+    return undefined;
+  }
 
   return {
-    zipCode: body.zipCode,
-    radiusMiles: body.radiusMiles,
-    budget: body.budget,
-    maxIngredients: body.maxIngredients,
-    dinnersWanted: body.dinnersWanted,
+    zipCode: hasCoordinates && !isValidZipCode(zipCode) ? "" : zipCode,
+    radiusMiles,
+    budget,
+    maxIngredients,
+    dinnersWanted,
     shoppingStyle,
     dietaryFocus: resolvedDietaryFocus,
+    recipeSource,
   };
 }
+
+function resolveRecipeSource(
+  value: unknown,
+): RecipeSourceSelection | undefined {
+  if (value === undefined || value === null || value === "") {
+    return getDefaultRecipeSource();
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const allowed = listSelectableRecipeSources().map((source) => source.id);
+  if (!allowed.includes(value as RecipeSourceSelection)) {
+    return undefined;
+  }
+
+  return value as RecipeSourceSelection;
+}
+
+type RecommendationRequestPayload = MealPreferenceForm & {
+  latitude?: number;
+  longitude?: number;
+};

@@ -1,0 +1,20 @@
+---
+description: Backend API and server-side workflow for Yum4Less
+globs: src/app/api/**,src/lib/recommendation-service.ts,src/lib/provider-*.ts,src/lib/providers/**,src/lib/rate-limit*.ts,src/lib/public-api-*.ts,src/lib/geocoding.ts,src/lib/location-resolution.ts,src/lib/multi-store-shopping-route.ts
+alwaysApply: false
+---
+
+# Yum4Less Backend API Workflow
+
+Applies when editing route handlers, validation, rate limits, provider services, or recommendation/market logic.
+
+## Before marking done
+
+1. Run `npm test` — route tests and service tests must pass.
+2. For public routes: confirm read-only default (`YUM4LESS_ENABLE_API_DB_WRITES` off), response sanitization, and input bounds unchanged or explicitly tested.
+3. Follow **`yum4less-agent-orchestration`**; use `@web-backend-standards` for non-trivial API changes.
+
+## Security reminders
+
+- Parameterized SQL only; no client-supplied resource IDs.
+- Honor MVP geographic bounds and shopping-route stop limits when touched.

@@ -1,0 +1,92 @@
+---
+description: Mandatory agent, MCP, and verification orchestration for Yum4Less
+alwaysApply: true
+---
+
+# Yum4Less Agent Orchestration
+
+Use this rule on **every implementation slice**. Do not mark work verified, complete, or merge-ready until the checklist for the touched area passes.
+
+See also: `AGENTS.md` (repo root) and project agents in `.cursor/agents/`.
+
+## User question routing (every conversation)
+
+When the user asks an implementation, debugging, verification, planning, or MVP question and did **not** already `@` the best project agent:
+
+1. Open the response with a short **Routing** section:
+   - suggested `@` agent (if any)
+   - one optional rephrased prompt they can paste next time for sharper triggers
+   - likely tests/MCP for that slice
+2. Then answer or implement.
+
+Skip Routing only for trivial acknowledgments, pure Cursor/meta questions, or when the user already `@` the correct agent.
+
+The `beforeSubmitPrompt` hook may inject routing hints; follow them unless clearly wrong for the question.
+
+## MVP shoring-up phase
+
+Until local MVP is complete to the repo owner's liking:
+
+- Do **not** claim **MVP-complete** without: ZIP `23111` core loop, visible trust/fallback labels, `npm test`, and integration/e2e where the slice touches DB/CI.
+- Acceptable ranked pricing path: **fixture ingest + seed/DB**; live ingest gaps (Walmart matching, Aldi/Food Lion parsers, deployment) must stay documented honestly.
+- For unfamiliar multi-file work, **MUST** use Task `explore` (or equivalent codebase search) before large edits.
+- For non-trivial slices, **MUST** invoke the matching `@` project agent or apply its checklist yourself — not optional.
+
+## Before you respond "done"
+
+1. Identify which rows in the trigger table below apply to files you changed.
+2. Run the **required** commands and MCP checks for those rows.
+3. If trust-sensitive UI or pricing claims changed, invoke **`verifier`** (project agent) or apply its checklist yourself in readonly mode.
+4. State what you ran and what you did **not** run (with reason).
+
+Do **not** claim `verified`, `production-ready`, `CI green`, or `MVP-complete` without evidence from tests, MCP, or `gh`/GitHub MCP.
+
+## Trigger table
+
+| If you changed… | Required before done | MCP / agent |
+|---|---|---|
+| `src/components/**`, `src/app/globals.css`, map/UI, trust copy | `npm test`; Playwright MCP on `localhost:3000` after `npm run dev` when Vitest cannot prove visible UI/trust copy | `@web-frontend-standards`; `@verifier` for trust-label changes |
+| `src/app/api/**`, `src/lib/rate-limit*`, `src/lib/public-api-*`, recommendation/market routes | `npm test`; route tests for validation/sanitization bounds | `@web-backend-standards` |
+| `db/init/**`, `src/lib/market-repository*`, weekly-ad ingest, `price_observations` | `npm test`; `npm run test:integration` when DB merge behavior changed | Postgres MCP after `npm run db:up`; `@database-codegen-standards` |
+| `.github/workflows/**`, release/CI claims | Inspect workflow result | GitHub MCP or `gh` (read-only for status) |
+| Provider/pricing/trust rollout logic | `npm test` + fixture-based before/after when ranking changes | `@verifier`; Postgres MCP when DB rows matter |
+
+## MCP usage (mandatory when triggered)
+
+Read each MCP tool schema under `mcps/<server>/tools/` before calling `CallMcpTool`.
+
+| MCP | MUST use when… | Prerequisites |
+|---|---|---|
+| **Postgres** | Answering schema/seed/`price_observations`/ingest state; verifying DB after ingest or integration work | `npm run db:up`; read-only only |
+| **Playwright** | UI/map/trust/fallback copy changed and Vitest alone is insufficient | `npm run dev`; ZIP `23111`; fixture/seed data |
+| **GitHub** | PR/workflow/CI status questions or release-readiness claims | `GITHUB_PERSONAL_ACCESS_TOKEN`; prefer `gh` for mutating GitHub actions |
+
+Do **not** add MCP servers without explicit user approval (see governance rule).
+
+## Project agents (invoke when triggered)
+
+Project agents live in `.cursor/agents/`. Invoke via **@ mention** (e.g. `@verifier`) or by following the agent file checklist yourself.
+
+| Agent | Invoke when… |
+|---|---|
+| `verifier` | Trust/freshness/coverage claims; before merge-ready or "verified" language |
+| `web-frontend-standards` | UI, map, carousel, forms, accessibility, trust modals |
+| `web-backend-standards` | API routes, validation, rate limits, provider services |
+| `database-codegen-standards` | Schema, seed, SQL, ingest persistence |
+| `testing-cicd-standards` | CI gates, test strategy, release readiness |
+| `senior-auditor` | Security/dependency audit requests |
+
+Prefer **native tools first** (grep, shell, Vitest). Use MCP and project agents when the trigger table says so — not instead of fast tests.
+
+## Hooks
+
+Project hooks in `.cursor/hooks.json` inject session context, prompt routing, after-edit nudges, MCP schema reminders, explore handoff, and a diff-aware stop-turn verification reminder. Follow them when present.
+
+## Default test gates (any code change)
+
+At minimum before done:
+
+- `npm test` for logic/UI unit changes
+- `npm run build` when imports, routes, or Next.js config changed
+- `npm run test:integration` when Postgres behavior changed
+- `npm run test:e2e:ci` only when explicitly validating full MVP browser flow (heavy; not every slice)

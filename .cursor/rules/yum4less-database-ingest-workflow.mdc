@@ -1,0 +1,21 @@
+---
+description: Database, seed, and weekly-ad ingest workflow for Yum4Less
+globs: db/**,src/lib/market-repository*.ts,src/lib/weekly-ad-ingestion/**,src/lib/price-observation*.ts,scripts/*weekly*,scripts/ensure-test-db.mjs,vitest.integration.config.ts
+alwaysApply: false
+---
+
+# Yum4Less Database And Ingest Workflow
+
+Applies when editing schema, seed, market repository, or weekly-ad ingest.
+
+## Before marking done
+
+1. Run `npm test`.
+2. Run `npm run test:integration` when merge-gating DB behavior changed (`npm run db:up` first).
+3. Use **Postgres MCP** (read-only) after ingest or schema work when answering what is in `price_observations`, seed stores, or promotion state — run `npm run db:up` first.
+4. Follow **`yum4less-agent-orchestration`**; use `@database-codegen-standards` for schema/SQL changes.
+
+## Data discipline
+
+- Schema changes belong in `db/init/`; do not use MCP SQL as a write path.
+- Ingest scripts are the primary write path; public API routes stay read-only by default.

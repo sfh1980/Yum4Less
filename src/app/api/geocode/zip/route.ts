@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
+import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
 import { resolveZipLocation } from "@/lib/geocoding";
 
 export async function GET(request: Request) {
+  const rateLimit = enforceApiRateLimit(request, "apiGeocodeZip");
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
+  }
+
   const { searchParams } = new URL(request.url);
   const zipCode = searchParams.get("zip")?.trim();
 

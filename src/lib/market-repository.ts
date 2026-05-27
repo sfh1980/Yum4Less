@@ -1,12 +1,10 @@
 import { getDbPool } from "@/lib/db";
-import {
-  mockPriceObservations,
-  mockRecipes,
-  mockStores,
-  type MockPriceObservation,
-  type MockRecipeRecord,
-  type MockStore,
+import type {
+  MockPriceObservation,
+  MockRecipeRecord,
+  MockStore,
 } from "@/lib/mock-market-data";
+import { LIVE_PRICE_SQL_FILTER } from "@/lib/price-source-policy";
 
 export type MarketDataSnapshot = {
   stores: MockStore[];
@@ -14,7 +12,13 @@ export type MarketDataSnapshot = {
   priceObservations: MockPriceObservation[];
 };
 
-export type MarketDataSource = "database" | "seed";
+export type MarketDataSource = "database" | "unavailable";
+
+const EMPTY_SNAPSHOT: MarketDataSnapshot = {
+  stores: [],
+  recipes: [],
+  priceObservations: [],
+};
 
 export async function getMarketDataSnapshot(): Promise<{
   snapshot: MarketDataSnapshot;
@@ -47,8 +51,11 @@ export async function getMarketDataSnapshot(): Promise<{
             price,
             sale_label,
             in_stock,
+            source_name,
+            confidence_score,
             greatest(0, round(extract(epoch from (now() - observed_at)) / 86400))::int as freshness_days_ago
           from price_observations
+          where ${LIVE_PRICE_SQL_FILTER}
           order by store_id, ingredient_id, observed_at desc
         `),
       ]);
@@ -97,19 +104,35 @@ export async function getMarketDataSnapshot(): Promise<{
           saleLabel: row.sale_label ?? undefined,
           freshnessDaysAgo: row.freshness_days_ago,
           inStock: row.in_stock,
+          priceSource: row.source_name ?? undefined,
+          matchConfidence:
+            row.confidence_score !== null && row.confidence_score !== undefined
+              ? Number(row.confidence_score)
+              : undefined,
         })),
       },
     };
   } catch {
     return {
-      source: "seed",
-      snapshot: {
-        stores: mockStores,
-        recipes: mockRecipes,
-        priceObservations: mockPriceObservations,
-      },
+      source: "unavailable",
+      snapshot: EMPTY_SNAPSHOT,
     };
   }
+}
+
+export async function countLivePriceObservationsForStore(storeId: string) {
+  const pool = getDbPool();
+  const result = await pool.query<{ count: string }>(
+    `
+      select count(*)::text as count
+      from price_observations
+      where store_id = $1
+        and ${LIVE_PRICE_SQL_FILTER}
+    `,
+    [storeId],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 function normalizeDietaryTags(
@@ -156,5 +179,7 @@ type PriceObservationRow = {
   price: string;
   sale_label: string | null;
   in_stock: boolean;
+  source_name: string | null;
+  confidence_score: string | null;
   freshness_days_ago: number;
 };

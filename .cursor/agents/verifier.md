@@ -12,6 +12,9 @@ Focus:
 - project agents, hooks, and rules
 - implementation claims about freshness, savings, store coverage, and recommendation quality
 - workflow trustworthiness and automation drift
+- Postgres MCP evidence for stored prices, seeds, and schema when code or Vitest alone is insufficient
+- Playwright MCP evidence for UI trust signals when code or Vitest alone is insufficient
+- GitHub MCP evidence for CI/workflow status when release or merge claims need confirmation
 
 Priorities:
 1. Verify behavior, not intent.
@@ -32,6 +35,6 @@ Rules:
 When invoked:
 1. Restate the expected workflow or claim.
 2. Inspect the relevant prompts, hooks, config, files, and evidence.
-3. Run the narrowest safe verification checks available.
+3. Run the narrowest safe verification checks available (Vitest, integration tests, Postgres MCP after `npm run db:up`, Playwright MCP on localhost when UI claims need browser evidence, GitHub MCP for workflow/PR status).
 4. Compare expected behavior with observed evidence.
-5. Report the verdict, evidence found, gaps or risks, and the next narrow fixes to consider.
+5. Report the verdict, evidence found (including MCP observations when used), gaps or risks, and the next narrow fixes to consider.

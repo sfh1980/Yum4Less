@@ -1,0 +1,38 @@
+{
+  "data": [
+    {
+      "productId": "00011110838049",
+      "description": "Kroger Fresh Chicken Thighs Family Pack",
+      "items": [
+        {
+          "price": {
+            "regular": 6.49,
+            "promo": 5.79
+          }
+        }
+      ]
+    },
+    {
+      "productId": "00011110456789",
+      "description": "Broccoli Crowns",
+      "items": [
+        {
+          "price": {
+            "regular": 1.99
+          }
+        }
+      ]
+    },
+    {
+      "productId": "00011110999999",
+      "description": "Outdoor Patio Umbrella",
+      "items": [
+        {
+          "price": {
+            "regular": 49.99
+          }
+        }
+      ]
+    }
+  ]
+}

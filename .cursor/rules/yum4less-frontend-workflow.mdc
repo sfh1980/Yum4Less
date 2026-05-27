@@ -1,0 +1,21 @@
+---
+description: Frontend UI, map, and trust-signal workflow for Yum4Less
+globs: src/components/**,src/app/globals.css,src/app/page.tsx,src/app/layout.tsx,e2e/**
+alwaysApply: false
+---
+
+# Yum4Less Frontend Workflow
+
+Applies when editing UI, map, carousel, forms, or trust copy.
+
+## Before marking done
+
+1. Run `npm test` (includes `recommendation-demo` smoke when present).
+2. If trust labels, fallback wording, map markers, or modal copy changed: start `npm run dev` and use **Playwright MCP** on `localhost:3000` with ZIP `23111`; assert explicit wording (`estimated`, `directional`, `limited coverage`, coming soon, seed preview) — not just that elements render.
+3. Follow **`yum4less-agent-orchestration`** for `@web-frontend-standards` and `@verifier` when trust-sensitive.
+
+## UI trust
+
+- Never imply all map pins or stores are priced equally.
+- Keep degraded/fallback mode visible near affected results.
+- Do not hide provenance entirely in internal-only panels without user-facing summary labels on cards.

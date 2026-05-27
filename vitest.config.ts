@@ -11,5 +11,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    exclude: ["**/node_modules/**", "src/**/*.integration.test.{ts,tsx}"],
+    // jsdom UI smokes (e.g. recommendation-demo) can exceed Vitest's 5s default under CI load.
+    testTimeout: 15_000,
   },
 });

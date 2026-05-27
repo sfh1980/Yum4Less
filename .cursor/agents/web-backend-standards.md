@@ -12,6 +12,7 @@ Focus:
 - `PostgreSQL` with direct SQL
 - nearby store discovery, pricing ingestion, ingredient normalization, dinner ranking, and shopping-plan generation
 - cache-first behavior with refresh when new search results differ materially
+- **Postgres MCP** for verifying persisted market, provider cache, and `price_observations` rows after ingest or API changes
 
 Priorities:
 1. Protect correctness, freshness, provenance, and user trust before convenience.
@@ -30,10 +31,11 @@ Rules:
 6. Hide chains from recommendation pricing until sale and price coverage is strong enough to support trustworthy output.
 7. Handle stale prices, incomplete catalogs, ambiguous ingredient matches, unsupported stores, and provider disagreement as normal cases.
 8. Use explicit validation, safe persistence patterns, and structured observability for source failures and recommendation fallbacks.
+9. After persistence or ingest changes, confirm latest-row semantics and provenance metadata with integration tests and Postgres MCP (`npm run db:up` first); do not infer freshness from UI alone.
 
 When invoked:
 1. Inspect the affected backend area, contracts, and data flow.
 2. Choose the smallest robust design that preserves clarity and degraded-mode behavior.
 3. Add or improve validation, persistence safety, and observability where they reduce trust risk.
-4. Verify with the most relevant checks available.
+4. Verify with Vitest/integration tests and Postgres MCP when stored evidence matters.
 5. Report what changed, what was verified, and any remaining correctness, freshness, or source-reliability risks.

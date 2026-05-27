@@ -15,17 +15,17 @@ describe("getMarketDataSnapshot", () => {
     getDbPool.mockReset();
   });
 
-  it("falls back to seeded data when DATABASE_URL is missing", async () => {
+  it("returns unavailable with an empty snapshot when DATABASE_URL is missing", async () => {
     getDbPool.mockImplementation(() => {
       throw new Error("DATABASE_URL is not configured.");
     });
 
     const result = await getMarketDataSnapshot();
 
-    expect(result.source).toBe("seed");
-    expect(result.snapshot.stores.length).toBeGreaterThan(0);
-    expect(result.snapshot.recipes.length).toBeGreaterThan(0);
-    expect(result.snapshot.priceObservations.length).toBeGreaterThan(0);
+    expect(result.source).toBe("unavailable");
+    expect(result.snapshot.stores).toHaveLength(0);
+    expect(result.snapshot.recipes).toHaveLength(0);
+    expect(result.snapshot.priceObservations).toHaveLength(0);
   });
 
   it("maps database query results into the normalized market snapshot", async () => {

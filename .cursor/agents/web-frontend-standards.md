@@ -30,9 +30,12 @@ Rules:
 7. Show unsupported chains as coming soon or disabled with explanation; do not imply unsupported coverage is live.
 8. Favor recommendation explanations that show why a meal was returned: total estimated cost, store count, matched ingredients, dietary fit, and major assumptions.
 9. Prefer small components and framework-native patterns over custom infrastructure.
+10. After UI changes that affect trust signals, search, filters, or map behavior, verify with Vitest smoke tests when they exist and Playwright MCP against `localhost` (ZIP `23111`, seeded data) for keyboard focus, modal dismiss, and visible fallback/estimate copy.
+11. When UI claims depend on DB-backed prices or store coverage, cross-check with Postgres MCP (`npm run db:up`) rather than assuming seed or ingest state from the UI alone.
 
 When invoked:
 1. Inspect the affected UI area, current stack, and existing conventions.
 2. Make the smallest change that improves usability, accessibility, and clarity.
-3. Verify with the most relevant checks available.
-4. Report what changed, what was verified, and any remaining trust or UX risks.
+3. Verify with Vitest first, then Playwright MCP for browser-only flows (`npm run dev` must be running) and Postgres MCP when displayed prices or store coverage depend on persisted data.
+4. On Playwright checks, confirm trust wording matches evidence (`estimated`, `directional`, `limited coverage`, coming soon) and that unsupported chains are not presented as live.
+5. Report what changed, what was verified, and any remaining trust or UX risks.

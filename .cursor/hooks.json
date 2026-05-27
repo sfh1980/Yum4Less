@@ -8,10 +8,49 @@
         "matcher": "\\bnpm\\b|\\bnpx\\b|\\bpnpm\\b|\\byarn\\b"
       }
     ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/route-user-prompt.ps1",
+        "timeout": 5,
+        "matcher": "UserPromptSubmit"
+      }
+    ],
     "sessionStart": [
       {
         "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/check-readme.ps1",
         "timeout": 5
+      },
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/inject-orchestration-session-context.ps1",
+        "timeout": 5
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/nudge-after-file-edit.ps1",
+        "timeout": 5,
+        "matcher": "Write|TabWrite"
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/remind-mcp-schema.ps1",
+        "timeout": 5
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/subagent-explore-handoff.ps1",
+        "timeout": 5,
+        "matcher": "explore",
+        "loop_limit": 1
+      }
+    ],
+    "stop": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/stop-verification-reminder.ps1",
+        "timeout": 5,
+        "loop_limit": 1
       }
     ]
   }

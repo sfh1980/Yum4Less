@@ -41,17 +41,37 @@ export type MockPriceObservation = {
   saleLabel?: string;
   freshnessDaysAgo: number;
   inStock: boolean;
+  priceSource?: string;
+  matchConfidence?: number;
 };
 
 export const mockStores: MockStore[] = [
+  {
+    id: "kroger-mechanicsville",
+    name: "Kroger",
+    kind: "grocery",
+    city: "Mechanicsville",
+    state: "VA",
+    latitude: 37.6153,
+    longitude: -77.3491,
+  },
   {
     id: "food-lion-mechanicsville",
     name: "Food Lion",
     kind: "grocery",
     city: "Mechanicsville",
     state: "VA",
-    latitude: 37.6153,
-    longitude: -77.3491,
+    latitude: 37.6095,
+    longitude: -77.3736,
+  },
+  {
+    id: "publix-atlee",
+    name: "Publix",
+    kind: "grocery",
+    city: "Mechanicsville",
+    state: "VA",
+    latitude: 37.6458,
+    longitude: -77.3989,
   },
   {
     id: "aldi-mechanicsville",
@@ -119,6 +139,29 @@ export const mockIngredients: MockIngredient[] = [
   { id: "bell-peppers", name: "Bell peppers", category: "produce" },
   { id: "soy-sauce", name: "Soy sauce", category: "pantry" },
   { id: "green-onion", name: "Green onion", category: "produce" },
+  { id: "ground-beef", name: "Ground beef", category: "protein" },
+  { id: "chicken-breast", name: "Chicken breast", category: "protein" },
+  { id: "ground-turkey", name: "Ground turkey", category: "protein" },
+  { id: "yellow-onion", name: "Yellow onion", category: "produce" },
+  { id: "garlic", name: "Garlic", category: "pantry" },
+  { id: "carrots", name: "Carrots", category: "produce" },
+  { id: "green-beans", name: "Green beans", category: "produce" },
+  { id: "eggs", name: "Eggs", category: "dairy" },
+  { id: "cheddar-cheese", name: "Cheddar cheese", category: "dairy" },
+  { id: "whole-milk", name: "Whole milk", category: "dairy" },
+  { id: "pasta-sauce", name: "Pasta sauce", category: "pantry" },
+  { id: "canned-tomatoes", name: "Canned tomatoes", category: "pantry" },
+  { id: "chicken-broth", name: "Chicken broth", category: "pantry" },
+  { id: "pinto-beans", name: "Pinto beans", category: "pantry" },
+  { id: "chickpeas", name: "Chickpeas", category: "pantry" },
+  { id: "flour-tortillas", name: "Flour tortillas", category: "pantry" },
+  { id: "penne-pasta", name: "Penne pasta", category: "pantry" },
+  { id: "roma-tomatoes", name: "Roma tomatoes", category: "produce" },
+  { id: "zucchini", name: "Zucchini", category: "produce" },
+  { id: "mushrooms", name: "Mushrooms", category: "produce" },
+  { id: "italian-sausage", name: "Italian sausage", category: "protein" },
+  { id: "sour-cream", name: "Sour cream", category: "dairy" },
+  { id: "mozzarella", name: "Mozzarella", category: "dairy" },
 ];
 
 export const mockRecipes: MockRecipeRecord[] = [
@@ -211,22 +254,78 @@ export const mockRecipes: MockRecipeRecord[] = [
       "Build bowls with rice, vegetables, and tofu for a meal-prep friendly dinner.",
     ],
   },
+  {
+    id: "weeknight-beef-chili",
+    title: "Weeknight Beef and Bean Chili",
+    summary:
+      "A one-pot chili built from ground beef, beans, and pantry staples that stays budget-friendly for busy weeknights.",
+    cookTimeMinutes: 40,
+    difficulty: "easy",
+    tags: ["quick", "family", "budget", "single-store friendly"],
+    dietaryTags: [],
+    ingredients: [
+      { ingredientId: "ground-beef", displayName: "Ground beef", quantityNote: "1 lb" },
+      { ingredientId: "pinto-beans", displayName: "Pinto beans", quantityNote: "2 cans" },
+      { ingredientId: "canned-tomatoes", displayName: "Canned tomatoes", quantityNote: "2 cans" },
+      { ingredientId: "yellow-onion", displayName: "Yellow onion", quantityNote: "1" },
+      { ingredientId: "chicken-broth", displayName: "Chicken broth", quantityNote: "2 cups" },
+      { ingredientId: "sour-cream", displayName: "Sour cream", quantityNote: "1 tub" },
+    ],
+    steps: [
+      "Brown the ground beef with diced onion until no longer pink.",
+      "Stir in canned tomatoes, pinto beans, and chicken broth; simmer until flavors meld.",
+      "Serve with optional sour cream once the chili thickens slightly.",
+    ],
+  },
+  {
+    id: "italian-sausage-penne",
+    title: "Italian Sausage Penne Skillet",
+    summary:
+      "A skillet pasta dinner that pairs browned sausage with penne, sauce, and melted mozzarella.",
+    cookTimeMinutes: 30,
+    difficulty: "easy",
+    tags: ["quick", "family", "single-store friendly"],
+    dietaryTags: [],
+    ingredients: [
+      { ingredientId: "italian-sausage", displayName: "Italian sausage", quantityNote: "1 lb" },
+      { ingredientId: "penne-pasta", displayName: "Penne pasta", quantityNote: "1 box" },
+      { ingredientId: "pasta-sauce", displayName: "Pasta sauce", quantityNote: "1 jar" },
+      { ingredientId: "mozzarella", displayName: "Mozzarella", quantityNote: "8 oz" },
+    ],
+    steps: [
+      "Brown Italian sausage in a skillet and drain excess fat if needed.",
+      "Cook penne until al dente, then toss with pasta sauce and sausage.",
+      "Top with mozzarella and cover briefly until the cheese melts.",
+    ],
+  },
 ];
 
 export const mockPriceObservations: MockPriceObservation[] = [
-  { storeId: "food-lion-mechanicsville", ingredientId: "chicken-thighs", price: 6.49, freshnessDaysAgo: 1, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "baby-potatoes", price: 2.79, freshnessDaysAgo: 1, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "broccoli", price: 2.39, freshnessDaysAgo: 2, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "lemon", price: 0.89, freshnessDaysAgo: 2, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "olive-oil", price: 2.84, freshnessDaysAgo: 3, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "black-beans", price: 1.09, freshnessDaysAgo: 3, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "corn-tortillas", price: 2.29, freshnessDaysAgo: 4, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "cabbage", price: 2.19, freshnessDaysAgo: 2, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "lime", price: 0.59, freshnessDaysAgo: 2, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "spaghetti", price: 1.59, freshnessDaysAgo: 2, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "spinach", price: 2.49, freshnessDaysAgo: 1, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "parmesan", price: 3.59, freshnessDaysAgo: 3, inStock: true },
-  { storeId: "food-lion-mechanicsville", ingredientId: "butter", price: 2.79, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "chicken-thighs", price: 6.49, saleLabel: "Weekly deal", freshnessDaysAgo: 1, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "baby-potatoes", price: 2.79, freshnessDaysAgo: 1, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "broccoli", price: 2.39, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "lemon", price: 0.89, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "olive-oil", price: 2.84, freshnessDaysAgo: 3, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "black-beans", price: 1.09, freshnessDaysAgo: 3, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "corn-tortillas", price: 2.29, freshnessDaysAgo: 4, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "cabbage", price: 2.19, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "lime", price: 0.59, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "spaghetti", price: 1.59, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "spinach", price: 2.49, freshnessDaysAgo: 1, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "parmesan", price: 3.59, freshnessDaysAgo: 3, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "butter", price: 2.79, freshnessDaysAgo: 2, inStock: true },
+
+  { storeId: "food-lion-mechanicsville", ingredientId: "chicken-thighs", price: 6.29, saleLabel: "Weekly special", freshnessDaysAgo: 1, inStock: true },
+  { storeId: "food-lion-mechanicsville", ingredientId: "broccoli", price: 2.19, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "food-lion-mechanicsville", ingredientId: "baby-potatoes", price: 2.59, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "food-lion-mechanicsville", ingredientId: "black-beans", price: 0.99, freshnessDaysAgo: 3, inStock: true },
+  { storeId: "food-lion-mechanicsville", ingredientId: "spinach", price: 2.29, freshnessDaysAgo: 1, inStock: true },
+
+  { storeId: "publix-atlee", ingredientId: "chicken-thighs", price: 6.79, saleLabel: "Weekly ad", freshnessDaysAgo: 1, inStock: true },
+  { storeId: "publix-atlee", ingredientId: "broccoli", price: 2.49, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "publix-atlee", ingredientId: "lemon", price: 0.79, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "publix-atlee", ingredientId: "butter", price: 2.89, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "publix-atlee", ingredientId: "parmesan", price: 3.49, freshnessDaysAgo: 3, inStock: true },
 
   { storeId: "aldi-mechanicsville", ingredientId: "black-beans", price: 0.89, saleLabel: "Pantry value", freshnessDaysAgo: 2, inStock: true },
   { storeId: "aldi-mechanicsville", ingredientId: "corn-tortillas", price: 1.79, freshnessDaysAgo: 3, inStock: true },

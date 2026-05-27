@@ -13,4 +13,9 @@ alwaysApply: true
 - When proposing a new dependency, explain why it is needed, what risk it adds, and whether a smaller alternative exists.
 - Favor architectures that are cache-first, rate-aware, and resilient to upstream data instability.
 - Protect user privacy by storing only the minimum location and preference data needed for the product to function.
+- Public HTTP routes (`/api/recommendations`, `/api/market-search`) must stay **read-only by default**; Postgres writes from those paths require explicit `YUM4LESS_ENABLE_API_DB_WRITES=1` (ingest/cron scripts are the intended write path).
+- Strip internal snapshot and store IDs from public API JSON; never accept client-supplied resource IDs for direct DB fetch/update without auth and ownership checks.
+- Honor `X-Forwarded-For` / `X-Real-IP` for rate limiting only when `TRUST_PROXY_HEADERS=1` and a trusted reverse proxy is configured.
 - Keep project automation lean too: prefer tightening existing agents, hooks, and rules over multiplying overlapping custom agents.
+- **GitHub MCP** requires a user-scoped `GITHUB_PERSONAL_ACCESS_TOKEN`; use fine-grained repo read access where possible and never commit tokens into `.cursor/mcp.json` or tracked env files.
+- **Postgres MCP** is read-only against local dev data; do not use it to bypass migration discipline or run ad hoc writes in production-like workflows.

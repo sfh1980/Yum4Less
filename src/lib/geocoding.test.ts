@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveZipLocation } from "@/lib/geocoding";
 
 const originalGeocodioKey = process.env.GEOCODIO_API_KEY;
@@ -31,5 +31,37 @@ describe("resolveZipLocation", () => {
       expect(result.providerConfigured).toBe(false);
       expect(result.error).toContain("GEOCODIO_API_KEY");
     }
+  });
+
+  it("rejects geocoded ZIPs outside the MVP service radius", async () => {
+    process.env.GEOCODIO_API_KEY = "test-key";
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              location: { lat: 40.7128, lng: -74.006 },
+              address_components: {
+                city: "New York",
+                state: "NY",
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    const result = await resolveZipLocation("10001");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain("outside the current Yum4Less MVP service area");
+      expect(result.providerConfigured).toBe(true);
+    }
+
+    vi.unstubAllGlobals();
   });
 });

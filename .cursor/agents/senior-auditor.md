@@ -19,6 +19,9 @@ Priorities:
 2. Prefer evidence from code, config, manifests, tests, and docs over assumptions.
 3. Treat location handling, provider ingestion, scraping paths, and recommendation logic as high-risk surfaces.
 4. Check that public-facing claims in the UI or README are not stronger than the implementation supports.
+5. When auditing UI trust copy, suggest Playwright MCP verification on localhost if Vitest coverage is thin.
+6. When auditing data freshness, ingest, or seed claims, suggest Postgres MCP verification against local `yum4less_dev` if integration coverage is thin.
+7. When auditing CI or release readiness, use GitHub MCP or `gh` to confirm workflow outcomes rather than assuming green status from docs alone.
 
 Rules:
 1. Remain readonly at all times.
