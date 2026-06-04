@@ -44,31 +44,39 @@ export async function POST(request: Request) {
     );
   }
 
-  const locationResult = await resolveLocationInput(body);
-  if (!locationResult.ok) {
+  try {
+    const locationResult = await resolveLocationInput(body);
+    if (!locationResult.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: locationResult.error,
+          providerConfigured: locationResult.providerConfigured,
+        },
+        { status: 404 },
+      );
+    }
+
+    const experience = await getRecommendationExperience(
+      preferences,
+      locationResult.location,
+      locationResult.providerConfigured,
+    );
+
     return NextResponse.json(
       {
-        ok: false,
-        error: locationResult.error,
-        providerConfigured: locationResult.providerConfigured,
-      },
-      { status: 404 },
+        ok: true,
+        experience: {
+          ...experience,
+          market: sanitizeMarketSummaryForPublicApi(experience.market),
+        },
+      });
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Recommendations are temporarily unavailable." },
+      { status: 500 },
     );
   }
-
-  const experience = await getRecommendationExperience(
-    preferences,
-    locationResult.location,
-    locationResult.providerConfigured,
-  );
-
-  return NextResponse.json({
-    ok: true,
-    experience: {
-      ...experience,
-      market: sanitizeMarketSummaryForPublicApi(experience.market),
-    },
-  });
 }
 
 function validatePreferences(

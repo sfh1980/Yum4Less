@@ -9,7 +9,8 @@ export type PricingTrustHeadsUp = {
 const NON_LIVE_RANKED_SOURCES: RankedPricingSource[] = [
   "weekly-ad-cache",
   "official-api-cache",
-  "mixed-live-cache",
+  "online-cache",
+  "mixed-online-weekly-ad-cache",
   "limited-coverage",
 ];
 
@@ -62,7 +63,7 @@ export function buildPricingTrustHeadsUp(
 
   if (usesNonLivePricing) {
     reasons.push(
-      "Meal prices come from saved weekly ads and recent store prices, not live checkout totals.",
+      "Meal prices come from saved weekly ads and recently checked online store prices, not live checkout totals.",
     );
   } else if (
     market.recommendationReadyStoreCount > 0 &&

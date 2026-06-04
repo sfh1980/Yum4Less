@@ -1,4 +1,10 @@
-import type { ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { HelpHint, type HelpHintContent } from "@/components/help-hint";
 
 type FormFieldProps = {
@@ -18,6 +24,20 @@ export function FormField({
   error,
   children,
 }: FormFieldProps) {
+  const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
+  const describedChildren = Children.map(children, (child) => {
+    if (!isValidElement(child)) {
+      return child;
+    }
+
+    return cloneElement(child as ReactElement<Record<string, unknown>>, {
+      "aria-describedby": describedBy,
+      "aria-invalid": error ? true : undefined,
+    });
+  });
+
   return (
     <div className="field">
       <div className="field-label-row">
@@ -26,9 +46,17 @@ export function FormField({
           <HelpHint id={`${id}-help`} label={`${label} help`} {...helpHint} />
         ) : null}
       </div>
-      {children}
-      {hint ? <p className="field-hint">{hint}</p> : null}
-      {error ? <p className="field-error">{error}</p> : null}
+      {describedChildren}
+      {hint ? (
+        <p className="field-hint" id={hintId}>
+          {hint}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="field-error" id={errorId} role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

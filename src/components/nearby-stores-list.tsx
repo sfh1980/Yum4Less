@@ -54,10 +54,15 @@ export function NearbyStoresList({
       <ul className="nearby-stores-list" ref={listRef}>
         {stores.map((store) => {
           const isSelected = store.id === selectedStoreId;
+          const statusLabel = store.recommendationEnabled
+            ? "Weekly ad prices"
+            : "Context only";
 
           return (
             <li key={store.id}>
               <button
+                aria-label={buildStoreCardLabel(store, statusLabel, isSelected)}
+                aria-pressed={isSelected}
                 className={`nearby-stores-list-item${isSelected ? " is-selected" : ""}`}
                 data-store-id={store.id}
                 onClick={() => onStoreSelect(store.id)}
@@ -68,9 +73,7 @@ export function NearbyStoresList({
                   <span
                     className={`store-status-pill${store.recommendationEnabled ? " is-ready" : " is-context"}`}
                   >
-                    {store.recommendationEnabled
-                      ? "Weekly ad prices"
-                      : "Context only"}
+                    {statusLabel}
                   </span>
                 </span>
                 <span className="nearby-stores-list-item-meta">
@@ -96,4 +99,22 @@ export function NearbyStoresList({
       </div>
     </div>
   );
+}
+
+function buildStoreCardLabel(
+  store: NearbyStoreSummary,
+  statusLabel: string,
+  isSelected: boolean,
+) {
+  return [
+    store.name,
+    store.chainLabel,
+    formatStoreKind(store.kind),
+    `${store.distanceMiles} miles away`,
+    statusLabel,
+    store.rolloutNote,
+    isSelected ? "selected" : undefined,
+  ]
+    .filter(Boolean)
+    .join(", ");
 }

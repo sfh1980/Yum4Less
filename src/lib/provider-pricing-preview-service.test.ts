@@ -18,10 +18,67 @@ vi.mock("@/lib/provider-product-pricing-cache", () => ({
   getLatestProviderPricingPreviewSnapshot,
 }));
 
-import { buildProviderPricingPreviews } from "@/lib/provider-pricing-preview-service";
+import {
+  buildProviderPricingPreviews,
+  selectProviderDiscoveredStore,
+} from "@/lib/provider-pricing-preview-service";
 
 const originalDbWriteFlag = process.env.YUM4LESS_ENABLE_API_DB_WRITES;
 const originalNodeEnv = process.env.NODE_ENV;
+
+describe("selectProviderDiscoveredStore", () => {
+  it("picks the nearest store when multiple same-chain candidates include distance", () => {
+    const selected = selectProviderDiscoveredStore("kroger", [
+      {
+        provider: "kroger",
+        providerStoreId: "far",
+        name: "Kroger Atlee",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.665,
+        longitude: -77.44,
+        distanceMiles: 4.9,
+      },
+      {
+        provider: "kroger",
+        providerStoreId: "near",
+        name: "Kroger Mechanicsville",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        distanceMiles: 2.1,
+      },
+    ]);
+
+    expect(selected?.providerStoreId).toBe("near");
+  });
+
+  it("returns undefined when multiple same-chain stores lack distance evidence", () => {
+    expect(
+      selectProviderDiscoveredStore("kroger", [
+        {
+          provider: "kroger",
+          providerStoreId: "a",
+          name: "Kroger A",
+          city: "Mechanicsville",
+          state: "VA",
+          latitude: 37.6,
+          longitude: -77.3,
+        },
+        {
+          provider: "kroger",
+          providerStoreId: "b",
+          name: "Kroger B",
+          city: "Mechanicsville",
+          state: "VA",
+          latitude: 37.7,
+          longitude: -77.4,
+        },
+      ]),
+    ).toBeUndefined();
+  });
+});
 
 describe("buildProviderPricingPreviews", () => {
   beforeEach(() => {

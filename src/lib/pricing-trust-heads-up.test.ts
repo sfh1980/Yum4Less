@@ -42,7 +42,7 @@ describe("buildPricingTrustHeadsUp", () => {
       },
     });
 
-    expect(headsUp?.message).toContain("recent store prices");
+    expect(headsUp?.message).toContain("recently checked online store prices");
   });
 
   it("surfaces limited ZIP lookup fallback", () => {

@@ -1,11 +1,15 @@
 "use client";
 
+import { useModalDialog } from "@/components/use-modal-dialog";
+
 type TrustExplainerModalProps = {
   open: boolean;
   onClose: () => void;
 };
 
 export function TrustExplainerModal({ open, onClose }: TrustExplainerModalProps) {
+  const modal = useModalDialog({ open, onClose });
+
   if (!open) {
     return null;
   }
@@ -16,11 +20,19 @@ export function TrustExplainerModal({ open, onClose }: TrustExplainerModalProps)
         aria-labelledby="trust-explainer-title"
         aria-modal="true"
         className="modal-card"
+        onKeyDown={modal.onKeyDown}
+        ref={modal.dialogRef}
         role="dialog"
+        tabIndex={-1}
       >
         <div className="modal-header">
           <h3 id="trust-explainer-title">How to read these results</h3>
-          <button className="secondary-button" onClick={onClose} type="button">
+          <button
+            className="secondary-button"
+            onClick={onClose}
+            ref={modal.initialFocusRef}
+            type="button"
+          >
             Dismiss
           </button>
         </div>
@@ -37,13 +49,15 @@ export function TrustExplainerModal({ open, onClose }: TrustExplainerModalProps)
           </p>
           <p>
             <strong>Freshness</strong> tells you how recent the price information
-            is. Newer pricing is more trustworthy; older pricing is more
-            directional.
+            is. Online prices checked within the last hour are stronger signals,
+            but electronic shelf labels and checkout systems can still change
+            before you shop. Older pricing is more directional.
           </p>
           <p>
             <strong>Sale confidence</strong> on each line item tells you how much
-            trust to place in an advertised deal. Weekly ads change, and sample
-            data is not live — verify current deals in store.
+            trust to place in an advertised deal. Weekly ads and recently checked
+            online prices are not guaranteed checkout totals — verify current
+            shelf tags in store.
           </p>
           <p>
             <strong>Fallback</strong> means the app kept working with backup data

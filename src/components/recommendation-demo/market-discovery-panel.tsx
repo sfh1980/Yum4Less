@@ -48,7 +48,7 @@ export function MarketDiscoveryPanel({
         </span>
       </div>
 
-      <PricingTrustHeadsUpBanner market={market} />
+      <PricingTrustHeadsUpBanner instanceId="market" market={market} />
 
       {nearbyStoresMapModel && market ? (
         <div className="main-map-panel">

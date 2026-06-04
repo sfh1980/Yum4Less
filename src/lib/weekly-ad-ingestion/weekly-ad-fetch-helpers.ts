@@ -27,35 +27,88 @@ export async function fetchBrowserWithRetries<TResult extends Record<string, unk
     : new Error("Weekly-ad browser fetch failed after retries.");
 }
 
+export async function fetchWithRetries(
+  fetchRequest: () => Promise<Response>,
+  options: {
+    retryCount?: number;
+    backoffMs?: number;
+    shouldRetryStatus?: (status: number) => boolean;
+  } = {},
+): Promise<Response> {
+  const retryCount = options.retryCount ?? getConfiguredRetryCount();
+  const backoffMs = options.backoffMs ?? getConfiguredBackoffMs();
+  const shouldRetryStatus =
+    options.shouldRetryStatus ??
+    ((status: number) => status === 429 || (status >= 500 && status <= 504));
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= retryCount; attempt += 1) {
+    try {
+      const response = await fetchRequest();
+      if (!shouldRetryStatus(response.status) || attempt >= retryCount) {
+        return response;
+      }
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retryCount) {
+        break;
+      }
+    }
+
+    await sleep(backoffMs * attempt);
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Weekly-ad fetch failed after retries.");
+}
+
+function getConfiguredRetryCount() {
+  const configured = Number(process.env.YUM4LESS_WEEKLY_AD_HTTP_RETRIES);
+  return Number.isInteger(configured) && configured > 0 && configured <= 5
+    ? configured
+    : 3;
+}
+
+function getConfiguredBackoffMs() {
+  const configured = Number(process.env.YUM4LESS_WEEKLY_AD_BACKOFF_MS);
+  return Number.isInteger(configured) && configured >= 100 && configured <= 10_000
+    ? configured
+    : 1_000;
+}
+
 export async function fetchWeeklyAdHtmlOverHttp(input: {
   url: string;
   timeoutMs?: number;
   headers?: Record<string, string>;
 }): Promise<string> {
-  const controller = new AbortController();
   const timeoutMs = input.timeoutMs ?? 15_000;
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    const response = await fetch(input.url, {
-      signal: controller.signal,
-      headers: {
-        Accept: "text/html,application/xhtml+xml,application/json",
-        "Accept-Language": "en-US,en;q=0.9",
-        "User-Agent": getWeeklyAdBrowserContextOptions().userAgent,
-        ...input.headers,
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+  const response = await fetchWithRetries(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(input.url, {
+        signal: controller.signal,
+        headers: {
+          Accept: "text/html,application/xhtml+xml,application/json",
+          "Accept-Language": "en-US,en;q=0.9",
+          "User-Agent": getWeeklyAdBrowserContextOptions().userAgent,
+          ...input.headers,
+        },
+        cache: "no-store",
+      });
+    } finally {
+      clearTimeout(timeout);
     }
+  });
 
-    return response.text();
-  } finally {
-    clearTimeout(timeout);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
   }
+
+  return response.text();
 }
 
 export async function scrollPageForLazyContent(page: import("playwright").Page) {

@@ -49,6 +49,7 @@ Do **not** claim `verified`, `production-ready`, `CI green`, or `MVP-complete` w
 | `src/app/api/**`, `src/lib/rate-limit*`, `src/lib/public-api-*`, recommendation/market routes | `npm test`; route tests for validation/sanitization bounds | `@web-backend-standards` |
 | `db/init/**`, `src/lib/market-repository*`, weekly-ad ingest, `price_observations` | `npm test`; `npm run test:integration` when DB merge behavior changed | Postgres MCP after `npm run db:up`; `@database-codegen-standards` |
 | `.github/workflows/**`, release/CI claims | Inspect workflow result | GitHub MCP or `gh` (read-only for status) |
+| Security-sensitive code, dependency/config changes, auth/privacy/secrets surfaces | `npm test` where code changed; Semgrep Guardian scan when configured | `@senior-auditor`; Semgrep MCP/hooks |
 | Provider/pricing/trust rollout logic | `npm test` + fixture-based before/after when ranking changes | `@verifier`; Postgres MCP when DB rows matter |
 
 ## MCP usage (mandatory when triggered)
@@ -60,6 +61,7 @@ Read each MCP tool schema under `mcps/<server>/tools/` before calling `CallMcpTo
 | **Postgres** | Answering schema/seed/`price_observations`/ingest state; verifying DB after ingest or integration work | `npm run db:up`; read-only only |
 | **Playwright** | UI/map/trust/fallback copy changed and Vitest alone is insufficient | `npm run dev`; ZIP `23111`; fixture/seed data |
 | **GitHub** | PR/workflow/CI status questions or release-readiness claims | `GITHUB_PERSONAL_ACCESS_TOKEN`; prefer `gh` for mutating GitHub actions |
+| **Semgrep** | Security/dependency/secrets review, agent-written code scan, PR/release security pass | Semgrep CLI on PATH; `semgrep login` for Semgrep Guardian products |
 
 Do **not** add MCP servers without explicit user approval (see governance rule).
 
@@ -80,7 +82,7 @@ Prefer **native tools first** (grep, shell, Vitest). Use MCP and project agents 
 
 ## Hooks
 
-Project hooks in `.cursor/hooks.json` inject session context, prompt routing, after-edit nudges, MCP schema reminders, explore handoff, and a diff-aware stop-turn verification reminder. Follow them when present.
+Project hooks in `.cursor/hooks.json` inject session context, prompt routing, after-edit nudges, Semgrep Guardian scans, MCP schema reminders, explore handoff, and a diff-aware stop-turn verification reminder. Follow them when present.
 
 ## Default test gates (any code change)
 

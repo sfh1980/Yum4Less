@@ -9,6 +9,7 @@ import {
   validateLocationFields,
   validateMealFields,
 } from "@/components/recommendation-demo/form-validation";
+import { trackClientEvent } from "@/lib/analytics/track-client-event";
 import type {
   ActiveLocationRequest,
   FieldErrors,
@@ -111,6 +112,10 @@ export function useRecommendationDemo() {
   ) {
     setMarketSearchState({ status: "loading" });
     setRecommendationState(initialRecommendationState);
+    trackClientEvent("location_search_started", {
+      mode: request.mode,
+      radius_miles: payload.radiusMiles,
+    });
 
     try {
       const response = await fetch("/api/market-search", {
@@ -127,6 +132,10 @@ export function useRecommendationDemo() {
           providerConfigured: result.providerConfigured,
           error: result.error,
         });
+        trackClientEvent("location_search_failed", {
+          mode: request.mode,
+          error_code: result.providerConfigured === false ? "provider_unconfigured" : "not_found",
+        });
         return;
       }
 
@@ -135,6 +144,15 @@ export function useRecommendationDemo() {
       setIsEditingLocation(false);
       setFocusMealPreferencesToken((current) => current + 1);
       setSelectedStoreId(undefined);
+      trackClientEvent("location_search_completed", {
+        mode: request.mode,
+        in_mvp_area: result.market.dataSource !== "unavailable",
+        radius_miles: result.market.radiusMiles,
+        store_count_bucket: bucketCount(result.market.nearbyStores.length),
+        recommendation_ready_count_bucket: bucketCount(
+          result.market.recommendationReadyStoreCount,
+        ),
+      });
     } catch (error: unknown) {
       setMarketSearchState({
         status: "error",
@@ -142,6 +160,10 @@ export function useRecommendationDemo() {
           error instanceof Error
             ? error.message
             : "Nearby store lookup failed unexpectedly.",
+      });
+      trackClientEvent("location_search_failed", {
+        mode: request.mode,
+        error_code: "network",
       });
     }
   }
@@ -225,6 +247,11 @@ export function useRecommendationDemo() {
     }
 
     setRecommendationState({ status: "loading" });
+    trackClientEvent("rank_meals_started", {
+      shopping_style: preferences.shoppingStyle,
+      dietary_focus: preferences.dietaryFocus,
+      recipe_source: preferences.recipeSource,
+    });
 
     const payload: RecommendationRequest = {
       ...preferences,
@@ -248,6 +275,7 @@ export function useRecommendationDemo() {
 
       if (!result.ok) {
         setRecommendationState({ status: "error", error: result.error });
+        trackClientEvent("rank_meals_failed", { error_code: "not_found" });
         return;
       }
 
@@ -260,6 +288,16 @@ export function useRecommendationDemo() {
         recommendations: result.experience.recommendations,
         shopperNotice: result.experience.shopperNotice,
       });
+      trackClientEvent("rank_meals_completed", {
+        shopping_style: preferences.shoppingStyle,
+        dietary_focus: preferences.dietaryFocus,
+        recipe_source: preferences.recipeSource,
+        result_count_bucket: bucketCount(result.experience.recommendations.length),
+        market_data_source: result.experience.market.dataSource,
+        has_fallback_notice: result.experience.market.providerStoreSearches.some(
+          (search) => search.fallbackUsed,
+        ),
+      });
     } catch (error: unknown) {
       setRecommendationState({
         status: "error",
@@ -268,7 +306,25 @@ export function useRecommendationDemo() {
             ? error.message
             : "Recommendation lookup failed unexpectedly.",
       });
+      trackClientEvent("rank_meals_failed", { error_code: "network" });
     }
+  }
+
+  function handleStoreSelect(storeId: string) {
+    setSelectedStoreId(storeId);
+    const store = market?.nearbyStores.find((candidate) => candidate.id === storeId);
+    if (store) {
+      trackClientEvent("store_pin_selected", {
+        chain: store.chainLabel,
+        recommendation_enabled: store.recommendationEnabled,
+      });
+    }
+  }
+
+  function handleTrustExplainerClose() {
+    setIsTrustExplainerOpen(false);
+    setHasDismissedTrustExplainer(true);
+    trackClientEvent("trust_explainer_dismissed");
   }
 
   return {
@@ -286,16 +342,28 @@ export function useRecommendationDemo() {
     nearbyStoresMapModel,
     isTrustExplainerOpen,
     setIsTrustExplainerOpen,
-    setHasDismissedTrustExplainer,
+    handleTrustExplainerClose,
     isInternalDetailsOpen,
     setIsInternalDetailsOpen,
     isEditingLocation,
     setIsEditingLocation,
     focusMealPreferencesToken,
     selectedStoreId,
-    setSelectedStoreId,
+    handleStoreSelect,
     handleZipSearch,
     handleBrowserLocationSearch,
     handleRankMeals,
   };
+}
+
+function bucketCount(count: number) {
+  if (count <= 0) {
+    return "0";
+  }
+
+  if (count <= 3) {
+    return "1-3";
+  }
+
+  return "4+";
 }

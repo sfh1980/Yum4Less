@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true})}catch(_){}\" && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -22,6 +23,7 @@
     "test:e2e:ci": "node scripts/run-e2e-tests.mjs",
     "ingest:weekly-ads": "node scripts/run-weekly-ad-ingest.mjs",
     "ingest:weekly-ads:fixture": "node scripts/run-weekly-ad-ingest.mjs --fixture",
+    "sync:provider-prices": "tsx scripts/sync-provider-prices.ts",
     "ingest:weekly-ads:scheduled": "node scripts/run-scheduled-weekly-ad-ingest.mjs",
     "ingest:weekly-ads:scheduled:fixture": "node scripts/run-scheduled-weekly-ad-ingest.mjs --fixture",
     "ingest:weekly-ads:browser": "node scripts/run-weekly-ad-ingest.mjs --browser",

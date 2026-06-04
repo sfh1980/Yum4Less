@@ -1,5 +1,6 @@
-import { fetchFlippSearchOffersForMerchant } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
+import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
+import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
 import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import { fetchWeeklyAdPageContent } from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
@@ -49,13 +50,17 @@ async function ingestAldiWeeklyAd(
   }
 
   try {
-    let rawOffers = await fetchFlippSearchOffersForMerchant({
+    const flippResult = await resolveFlippWeeklyAdOffersForChain({
+      chain: "aldi",
       zipCode: input.zipCode,
       merchantName: ALDI_FLIPP_MERCHANT,
+      trackedIngredientIds: input.trackedIngredientIds,
     });
-    let retrievalLabel = "Flipp syndicated weekly-ad feed";
+    let rawOffers = flippResult.rawOffers;
+    let retrievalLabel = flippResult.retrievalLabel;
     let provenance: WeeklyAdIngestionResult["provenance"] = "weekly-ad-partner-feed";
     let fallbackUsed = true;
+    let captureHtml = "";
 
     if (rawOffers.length === 0) {
       const pageFetch = await fetchWeeklyAdPageContent({
@@ -63,6 +68,7 @@ async function ingestAldiWeeklyAd(
         fetchStrategy: config?.fetchStrategy ?? "browser-fallback",
         browserWaitSelector: config?.browserWaitSelector,
       });
+      captureHtml = pageFetch.html;
       rawOffers = parseWeeklyAdHtml(pageFetch.html);
       retrievalLabel = `${pageFetch.method} scrape`;
       provenance = "weekly-ad-scrape";
@@ -70,6 +76,15 @@ async function ingestAldiWeeklyAd(
     }
 
     if (rawOffers.length === 0) {
+      captureWeeklyAdArtifacts({
+        chain: "aldi",
+        zipCode: input.zipCode,
+        sourceUrl: ALDI_WEEKLY_SPECIALS_URL,
+        html: captureHtml,
+        errorMessage:
+          "Aldi Flipp lookup and direct page scrape returned no parseable weekly-ad offers.",
+      });
+
       return {
         chain: "aldi",
         label,
@@ -109,6 +124,14 @@ async function ingestAldiWeeklyAd(
       termsNote,
     };
   } catch (error) {
+    captureWeeklyAdArtifacts({
+      chain: "aldi",
+      zipCode: input.zipCode,
+      sourceUrl: ALDI_WEEKLY_SPECIALS_URL,
+      html: "",
+      errorMessage: error instanceof Error ? error.message : "unknown fetch error",
+    });
+
     return {
       chain: "aldi",
       label,

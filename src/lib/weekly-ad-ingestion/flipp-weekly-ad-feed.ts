@@ -1,4 +1,5 @@
 import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
+import { fetchWithRetries } from "@/lib/weekly-ad-ingestion/weekly-ad-fetch-helpers";
 
 export const FLIPP_WEEKLY_AD_SEARCH_URL =
   "https://backflipp.wishabi.com/flipp/items/search";
@@ -67,25 +68,15 @@ export async function fetchFlippWeeklyAdOffers(input: {
   fetchImpl?: typeof fetch;
 }): Promise<WeeklyAdRawOffer[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const response = await fetchImpl(
+  const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
     buildFlippWeeklyAdSearchUrl({
       zipCode: input.zipCode,
       merchantName: input.merchantName,
     }),
-    {
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    },
+    fetchImpl,
+    "Flipp weekly-ad search",
   );
-
-  if (!response.ok) {
-    throw new Error(`Flipp weekly-ad search failed with HTTP ${response.status}`);
-  }
-
-  const payload = (await response.json()) as FlippWeeklyAdSearchResponse;
-  return parseFlippWeeklyAdItems(payload.items ?? []);
+  return parseFlippWeeklyAdItems(payload!.items ?? []);
 }
 
 export async function fetchFlippSearchOffersForMerchant(input: {
@@ -94,27 +85,15 @@ export async function fetchFlippSearchOffersForMerchant(input: {
   fetchImpl?: typeof fetch;
 }): Promise<WeeklyAdRawOffer[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const response = await fetchImpl(
+  const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
     buildFlippWeeklyAdSearchUrl({
       zipCode: input.zipCode,
       merchantName: input.merchantName,
     }),
-    {
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    },
+    fetchImpl,
+    `Flipp weekly-ad search for ${input.merchantName}`,
   );
-
-  if (!response.ok) {
-    throw new Error(
-      `Flipp weekly-ad search for ${input.merchantName} failed with HTTP ${response.status}`,
-    );
-  }
-
-  const payload = (await response.json()) as FlippWeeklyAdSearchResponse;
-  return parseFlippWeeklyAdItemsForMerchant(payload.items ?? [], input.merchantName);
+  return parseFlippWeeklyAdItemsForMerchant(payload!.items ?? [], input.merchantName);
 }
 
 export async function fetchFlippFlyerSummaries(input: {
@@ -122,23 +101,16 @@ export async function fetchFlippFlyerSummaries(input: {
   fetchImpl?: typeof fetch;
 }): Promise<FlippFlyerSummary[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const response = await fetchImpl(buildFlippFlyersUrl(input.zipCode), {
-    headers: {
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Flipp flyers lookup failed with HTTP ${response.status}`);
-  }
-
-  const payload = (await response.json()) as FlippFlyersResponse | FlippFlyerSummary[];
+  const payload = await fetchFlippJson<FlippFlyersResponse | FlippFlyerSummary[]>(
+    buildFlippFlyersUrl(input.zipCode),
+    fetchImpl,
+    "Flipp flyers lookup",
+  );
   if (Array.isArray(payload)) {
     return payload;
   }
 
-  return payload.flyers ?? [];
+  return payload!.flyers ?? [];
 }
 
 export async function fetchFlippWeeklyAdOffersForMerchantFlyers(input: {
@@ -166,24 +138,20 @@ export async function fetchFlippWeeklyAdOffersForMerchantFlyers(input: {
       continue;
     }
 
-    const response = await fetchImpl(
+    const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
       buildFlippWeeklyAdSearchUrl({
         zipCode: input.zipCode,
         flyerId: flyer.id,
       }),
-      {
-        headers: {
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      },
+      fetchImpl,
+      `Flipp flyer ${flyer.id} lookup`,
+      { returnEmptyOnFailure: true },
     );
 
-    if (!response.ok) {
+    if (!payload) {
       continue;
     }
 
-    const payload = (await response.json()) as FlippWeeklyAdSearchResponse;
     appendUniqueFlippOffers(
       merged,
       parseFlippWeeklyAdItemsForMerchant(payload.items ?? [], input.merchantName),
@@ -216,24 +184,20 @@ export async function fetchFlippWeeklyAdOffersForSearchTerms(input: {
   const merged: WeeklyAdRawOffer[] = [];
 
   for (const searchTerm of input.searchTerms) {
-    const response = await fetchImpl(
+    const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
       buildFlippWeeklyAdSearchUrl({
         zipCode: input.zipCode,
         merchantName: `${input.merchantName} ${searchTerm}`,
       }),
-      {
-        headers: {
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      },
+      fetchImpl,
+      `Flipp ${input.merchantName} ${searchTerm} lookup`,
+      { returnEmptyOnFailure: true },
     );
 
-    if (!response.ok) {
+    if (!payload) {
       continue;
     }
 
-    const payload = (await response.json()) as FlippWeeklyAdSearchResponse;
     appendUniqueFlippOffers(
       merged,
       parseFlippWeeklyAdItems(payload.items ?? []).filter((offer) =>
@@ -253,6 +217,36 @@ export function mergeWeeklyAdRawOffers(
     appendUniqueFlippOffers(merged, group);
   }
   return merged;
+}
+
+async function fetchFlippJson<TPayload>(
+  url: string,
+  fetchImpl: typeof fetch,
+  context: string,
+  options: { returnEmptyOnFailure?: boolean } = {},
+): Promise<TPayload | undefined> {
+  try {
+    const response = await fetchWithRetries(() =>
+      fetchImpl(url, {
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      }),
+    );
+
+    if (!response.ok) {
+      throw new Error(`${context} failed with HTTP ${response.status}`);
+    }
+
+    return (await response.json()) as TPayload;
+  } catch (error) {
+    if (options.returnEmptyOnFailure) {
+      return undefined;
+    }
+
+    throw error;
+  }
 }
 
 function appendUniqueFlippOffers(target: WeeklyAdRawOffer[], nextOffers: WeeklyAdRawOffer[]) {

@@ -5,31 +5,79 @@ export const SAMPLE_PRICE_SOURCE = "mock-market-data";
 export const INTERNAL_CATALOG_SOURCE = "yum4less-internal-catalog";
 
 export const KROGER_OFFICIAL_PRICE_SOURCE = "kroger-official-api";
+export const WALMART_ONLINE_PRICE_SOURCE = "walmart-online-api";
+export const PUBLIX_ONLINE_PRICE_SOURCE = "publix-online-api";
+
+export type RankedPriceSourceKind =
+  | "official-online"
+  | "weekly-ad"
+  | "sample"
+  | "unknown";
 
 export type RankedPricingSource =
   | "weekly-ad-cache"
   | "official-api-cache"
-  | "mixed-live-cache"
+  | "online-cache"
+  | "mixed-online-weekly-ad-cache"
   | "none"
   | "limited-coverage";
+
+export const OFFICIAL_ONLINE_PRICE_SOURCES = [
+  KROGER_OFFICIAL_PRICE_SOURCE,
+  WALMART_ONLINE_PRICE_SOURCE,
+  PUBLIX_ONLINE_PRICE_SOURCE,
+] as const;
 
 export function isSamplePriceSource(sourceName: string | undefined): boolean {
   return sourceName === SAMPLE_PRICE_SOURCE;
 }
 
-export function isLiveRankedPriceSource(sourceName: string | undefined): boolean {
-  if (!sourceName || isSamplePriceSource(sourceName)) {
-    return false;
+export function getRankedPriceSourceKind(
+  sourceName: string | undefined,
+): RankedPriceSourceKind {
+  if (!sourceName) {
+    return "unknown";
   }
-
-  return (
-    sourceName.endsWith("-weekly-ad-scrape") ||
-    sourceName === KROGER_OFFICIAL_PRICE_SOURCE
-  );
+  if (isSamplePriceSource(sourceName)) {
+    return "sample";
+  }
+  if ((OFFICIAL_ONLINE_PRICE_SOURCES as readonly string[]).includes(sourceName)) {
+    return "official-online";
+  }
+  if (sourceName.endsWith("-weekly-ad-scrape")) {
+    return "weekly-ad";
+  }
+  return "unknown";
 }
 
-/** SQL fragment excluding sample pricing rows from ranked reads. */
-export const LIVE_PRICE_SQL_FILTER = `source_name is distinct from '${SAMPLE_PRICE_SOURCE}'`;
+export function getRankedPriceSourceTier(sourceName: string | undefined) {
+  switch (getRankedPriceSourceKind(sourceName)) {
+    case "official-online":
+      return 1;
+    case "weekly-ad":
+      return 2;
+    default:
+      return Number.POSITIVE_INFINITY;
+  }
+}
+
+export function isLiveRankedPriceSource(sourceName: string | undefined): boolean {
+  return getRankedPriceSourceTier(sourceName) !== Number.POSITIVE_INFINITY;
+}
+
+export const RANKED_PRICE_SOURCE_SQL_FILTER = [
+  ...OFFICIAL_ONLINE_PRICE_SOURCES.map((source) => `source_name = '${source}'`),
+  "source_name like '%-weekly-ad-scrape'",
+].join(" or ");
+
+/** SQL expression where lower values are preferred for ranked reads. */
+export const RANKED_PRICE_SOURCE_TIER_SQL = `
+  case
+    when source_name in (${OFFICIAL_ONLINE_PRICE_SOURCES.map((source) => `'${source}'`).join(", ")}) then 1
+    when source_name like '%-weekly-ad-scrape' then 2
+    else 99
+  end
+`;
 
 export function deriveRankedPricingSource(input: {
   priceSources: Array<string | undefined>;
@@ -44,10 +92,10 @@ export function deriveRankedPricingSource(input: {
   }
 
   const hasWeeklyAd = liveSources.some((source) =>
-    source?.endsWith("-weekly-ad-scrape"),
+    getRankedPriceSourceKind(source) === "weekly-ad",
   );
   const hasOfficial = liveSources.some(
-    (source) => source === KROGER_OFFICIAL_PRICE_SOURCE,
+    (source) => getRankedPriceSourceKind(source) === "official-online",
   );
 
   if (input.recommendationEnabledStoreCount === 0 && liveSources.length > 0) {
@@ -55,10 +103,10 @@ export function deriveRankedPricingSource(input: {
   }
 
   if (hasWeeklyAd && hasOfficial) {
-    return "mixed-live-cache";
+    return "mixed-online-weekly-ad-cache";
   }
   if (hasOfficial) {
-    return "official-api-cache";
+    return "online-cache";
   }
   if (hasWeeklyAd) {
     return "weekly-ad-cache";

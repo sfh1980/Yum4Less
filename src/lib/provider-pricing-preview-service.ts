@@ -9,7 +9,35 @@ import { getStoreDiscoveryProviders } from "@/lib/providers/provider-registry";
 import type {
   ProviderDiscoveredStore,
   ProviderPricingPreviewResult,
+  StoreDiscoveryProvider,
 } from "@/lib/providers/provider-types";
+
+export function selectProviderDiscoveredStore(
+  provider: StoreDiscoveryProvider,
+  providerStores: ProviderDiscoveredStore[],
+): ProviderDiscoveredStore | undefined {
+  const candidates = providerStores.filter((store) => store.provider === provider);
+  if (candidates.length === 0) {
+    return undefined;
+  }
+  if (candidates.length === 1) {
+    return candidates[0];
+  }
+
+  const withDistance = candidates.filter(
+    (store) => typeof store.distanceMiles === "number",
+  );
+  if (withDistance.length !== candidates.length) {
+    return undefined;
+  }
+
+  return withDistance.reduce((closest, store) =>
+    (store.distanceMiles ?? Number.POSITIVE_INFINITY) <
+    (closest.distanceMiles ?? Number.POSITIVE_INFINITY)
+      ? store
+      : closest,
+  );
+}
 
 export async function buildProviderPricingPreviews(input: {
   providerStores: ProviderDiscoveredStore[];
@@ -18,8 +46,9 @@ export async function buildProviderPricingPreviews(input: {
 
   return Promise.all(
     providers.map(async (provider) => {
-      const matchingStore = input.providerStores.find(
-        (store) => store.provider === provider.provider,
+      const matchingStore = selectProviderDiscoveredStore(
+        provider.provider,
+        input.providerStores,
       );
 
       if (!matchingStore) {

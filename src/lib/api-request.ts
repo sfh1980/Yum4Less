@@ -1,17 +1,34 @@
 export const API_LIMITS = {
+  maxJsonBodyBytes: 64 * 1024,
   radiusMiles: { min: 1, max: 25 },
   budget: { min: 5, max: 250 },
   maxIngredients: { min: 3, max: 20 },
   dinnersWanted: { min: 1, max: 12 },
   shoppingRouteStops: { max: 8 },
+  shoppingRouteStoreNameLength: { max: 120 },
+  shoppingRouteHomeLabelLength: { max: 80 },
 } as const;
 
 export async function parseJsonBody(request: Request): Promise<
   | { ok: true; body: unknown }
   | { ok: false; error: string }
 > {
+  const contentLength = request.headers.get("content-length");
+  if (
+    contentLength &&
+    Number.isFinite(Number(contentLength)) &&
+    Number(contentLength) > API_LIMITS.maxJsonBodyBytes
+  ) {
+    return { ok: false, error: "Request body is too large." };
+  }
+
   try {
-    return { ok: true, body: await request.json() };
+    const text = await request.text();
+    if (new TextEncoder().encode(text).length > API_LIMITS.maxJsonBodyBytes) {
+      return { ok: false, error: "Request body is too large." };
+    }
+
+    return { ok: true, body: JSON.parse(text) };
   } catch {
     return { ok: false, error: "Request body must be valid JSON." };
   }
@@ -67,4 +84,20 @@ export function isValidCoordinatePair(input: {
     input.longitude >= -180 &&
     input.longitude <= 180
   );
+}
+
+export function clampTrimmedString(
+  value: unknown,
+  bounds: { max: number },
+): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > bounds.max) {
+    return undefined;
+  }
+
+  return trimmed;
 }

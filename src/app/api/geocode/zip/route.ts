@@ -22,6 +22,13 @@ export async function GET(request: Request) {
     );
   }
 
-  const result = await resolveZipLocation(zipCode);
-  return NextResponse.json(result, { status: result.ok ? 200 : 404 });
+  try {
+    const result = await resolveZipLocation(zipCode);
+    return NextResponse.json(result, { status: result.ok ? 200 : 404 });
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "ZIP lookup is temporarily unavailable." },
+      { status: 500 },
+    );
+  }
 }

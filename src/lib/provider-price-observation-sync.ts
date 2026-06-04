@@ -100,7 +100,7 @@ export async function syncKrogerPreviewToPriceObservations(input: {
 
   const freshnessNote =
     input.preview.retrievalMode === "live"
-      ? "Live Kroger API prices"
+      ? "Recently checked Kroger online prices"
       : "Saved Kroger preview snapshot prices";
 
   return {
@@ -144,17 +144,30 @@ export function resolveInternalKrogerStoreId(input: {
     return undefined;
   }
 
-  const normalizedPreviewName = input.previewStoreName.trim().toLowerCase();
-  const byName = krogerStores.find((store) => {
-    const normalizedStoreName = store.name.trim().toLowerCase();
+  const normalizedProviderStoreId = normalizeStoreEvidence(input.providerStoreId);
+  const byProviderStoreId = krogerStores.filter((store) =>
+    normalizeStoreEvidence(store.id).includes(normalizedProviderStoreId),
+  );
+  if (byProviderStoreId.length === 1) {
+    return byProviderStoreId[0]?.id;
+  }
+
+  const normalizedPreviewName = normalizeStoreEvidence(input.previewStoreName);
+  const byStrongName = krogerStores.filter((store) => {
+    const normalizedStoreName = normalizeStoreEvidence(store.name);
     return (
-      normalizedPreviewName.includes(normalizedStoreName) ||
-      normalizedStoreName.includes(normalizedPreviewName) ||
-      normalizedPreviewName.includes("kroger")
+      normalizedPreviewName.length > "kroger".length &&
+      normalizedStoreName.length > "kroger".length &&
+      (normalizedPreviewName.includes(normalizedStoreName) ||
+        normalizedStoreName.includes(normalizedPreviewName))
     );
   });
 
-  return byName?.id ?? krogerStores[0]?.id;
+  return byStrongName.length === 1 ? byStrongName[0]?.id : undefined;
+}
+
+function normalizeStoreEvidence(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 async function persistPreviewItemAsPriceObservation(input: {
@@ -245,7 +258,9 @@ function buildObservationNotes(
   retrievalMode: ProviderPricingPreviewResult["retrievalMode"],
 ) {
   const modeLabel =
-    retrievalMode === "live" ? "live official Kroger API preview" : "saved Kroger preview snapshot";
+    retrievalMode === "live"
+      ? "recent official Kroger API preview"
+      : "saved Kroger preview snapshot";
   return `${modeLabel}; matched ${item.description}; ${item.matchReason}`;
 }
 

@@ -78,6 +78,10 @@ describe("getMarketDataSnapshot", () => {
               price: "6.49",
               sale_label: "Weekly deal",
               in_stock: true,
+              source_name: "kroger-weekly-ad-scrape",
+              confidence_score: "0.82",
+              source_tier: 2,
+              freshness_hours_ago: 24,
               freshness_days_ago: 1,
             },
           ],
@@ -85,6 +89,7 @@ describe("getMarketDataSnapshot", () => {
     });
 
     const result = await getMarketDataSnapshot();
+    const queryMock = getDbPool().query;
 
     expect(result.source).toBe("database");
     expect(result.snapshot.stores).toEqual([
@@ -114,8 +119,16 @@ describe("getMarketDataSnapshot", () => {
         price: 6.49,
         saleLabel: "Weekly deal",
         freshnessDaysAgo: 1,
+        freshnessHoursAgo: 24,
         inStock: true,
+        priceSource: "kroger-weekly-ad-scrape",
+        priceSourceKind: "weekly-ad",
+        priceSourceTier: 2,
+        matchConfidence: 0.82,
       },
     ]);
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining("valid_through is null or valid_through >= now()"),
+    );
   });
 });

@@ -52,12 +52,44 @@ describe("getSaleConfidence", () => {
     const confidence = getSaleConfidence({
       saleLabel: "Weekly ad special",
       freshnessDaysAgo: 0,
+      freshnessHoursAgo: 1,
       dataSource: "database",
       priceSource: "kroger-official-api",
       matchConfidence: 0.72,
     });
 
     expect(confidence.level).toBe("advertised-recent");
-    expect(confidence.label).toContain("Kroger");
+    expect(confidence.label).toBe("Recently checked Kroger promo — verify at shelf");
+  });
+
+  it("labels strong official Kroger regular prices as checked online estimates", () => {
+    const confidence = getSaleConfidence({
+      freshnessDaysAgo: 0,
+      freshnessHoursAgo: 6,
+      dataSource: "database",
+      priceSource: "kroger-official-api",
+      matchConfidence: 0.9,
+    });
+
+    expect(confidence.level).toBe("advertised-recent");
+    expect(confidence.label).toBe(
+      "Same-day checked online Kroger price — verify at shelf",
+    );
+    expect(confidence.note).toContain("not a guaranteed shelf or checkout total");
+  });
+
+  it("downgrades stale weekly-ad rows instead of labeling them recent", () => {
+    const confidence = getSaleConfidence({
+      saleLabel: "Weekly special",
+      freshnessDaysAgo: 9,
+      freshnessHoursAgo: 216,
+      dataSource: "database",
+      priceSource: "kroger-weekly-ad-scrape",
+      matchConfidence: 0.9,
+    });
+
+    expect(confidence.level).toBe("advertised-stale");
+    expect(confidence.label).toBe("Stale Kroger weekly-ad price");
+    expect(confidence.note).toContain("9 day(s) old");
   });
 });

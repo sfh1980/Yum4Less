@@ -33,7 +33,9 @@ describe("buildProviderCoverageRollup", () => {
     expect(rollup.overallCoverageStatus).toBe("none");
     expect(rollup.rankedPricingSource).toBe("none");
     expect(rollup.ingredientSummaries).toHaveLength(5);
-    expect(rollup.message).toContain("No ingested live prices are available yet");
+    expect(rollup.message).toContain(
+      "No eligible ingested price observations are available yet",
+    );
   });
 
   it("closes the trust gate when preview coverage is weak", () => {
@@ -99,7 +101,9 @@ describe("buildProviderCoverageRollup", () => {
     expect(rollup.overallCoverageStatus).toBe("limited");
     expect(rollup.ingredientSummaries.filter((summary) => !summary.matched)).toHaveLength(3);
     expect(rollup.message).toContain("informational only");
-    expect(rollup.message).toContain("No ingested live prices are available yet");
+    expect(rollup.message).toContain(
+      "No eligible ingested price observations are available yet",
+    );
   });
 
   it("marks cached previews separately in the rollup message", () => {
