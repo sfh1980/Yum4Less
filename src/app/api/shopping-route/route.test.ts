@@ -82,7 +82,7 @@ describe("POST /api/shopping-route", () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
       ok: false,
-      error: "Shopping route payload is invalid.",
+      error: "Request body must be valid JSON.",
     });
     expect(buildMultiStoreShoppingRoute).not.toHaveBeenCalled();
   });

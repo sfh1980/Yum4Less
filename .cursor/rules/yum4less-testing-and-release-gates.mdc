@@ -13,6 +13,7 @@ Follow **`.cursor/rules/yum4less-agent-orchestration.mdc`** and **`AGENTS.md`** 
 - Treat DB-backed and seed-fallback behavior as first-class test paths, not edge cases.
 - **MUST** run `npm test` before calling any implementation slice verified or complete.
 - **MUST** run `npm run test:integration` when Postgres merge-gating behavior changed (`npm run db:up` first).
+- **MUST** run or account for **Semgrep Guardian** before claiming security-sensitive, dependency, secrets, PR, or release-readiness work is clean; the Cursor hook is non-blocking/advisory, so if the CLI is missing or the hook reports an error, state that gap instead of implying a passed scan.
 - **MUST** use **Postgres MCP** (read-only, port `5433`) to verify schema, seeded stores, and latest `price_observations` after ingest or integration work when automated tests alone do not answer the question.
 - **MUST** use **GitHub MCP** or `gh` to inspect PR checks and workflow failures before claiming release readiness or CI green; prefer `gh` CLI for mutating GitHub operations.
 - Ranking changes **MUST** include fixture-based before/after checks on representative searches so trust-sensitive regressions are visible.

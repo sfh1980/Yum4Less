@@ -51,7 +51,7 @@ describe("weekly ad ingestion service", () => {
       trackedIngredientIds: ["chicken-thighs", "broccoli", "spinach", "black-beans"],
     });
 
-    expect(result.status).toBe("live");
+    expect(result.status).toBe("cached");
     expect(result.offers.length).toBeGreaterThan(0);
     expect(result.offers.some((offer) => offer.ingredientId === "chicken-thighs")).toBe(
       true,
@@ -95,7 +95,7 @@ describe("weekly ad ingestion service", () => {
       trackedIngredientIds: ["chicken-thighs", "broccoli", "spinach", "black-beans"],
     });
 
-    expect(result.status).toBe("live");
+    expect(result.status).toBe("cached");
     expect(result.offers.some((offer) => offer.ingredientId === "chicken-thighs")).toBe(
       true,
     );
@@ -115,7 +115,7 @@ describe("weekly ad ingestion service", () => {
       trackedIngredientIds: ["chicken-thighs", "broccoli", "lemon", "parmesan", "cabbage"],
     });
 
-    expect(result.status).toBe("live");
+    expect(result.status).toBe("cached");
     expect(result.offers.some((offer) => offer.ingredientId === "chicken-thighs")).toBe(
       true,
     );
@@ -142,7 +142,7 @@ describe("weekly ad ingestion service", () => {
       ],
     });
 
-    expect(result.status).toBe("live");
+    expect(result.status).toBe("cached");
     expect(result.offers.some((offer) => offer.ingredientId === "chicken-thighs")).toBe(
       true,
     );
@@ -170,7 +170,7 @@ describe("weekly ad ingestion service", () => {
       ],
     });
 
-    expect(result.status).toBe("live");
+    expect(result.status).toBe("cached");
     expect(result.offers.some((offer) => offer.ingredientId === "black-beans")).toBe(true);
     expect(result.offers.some((offer) => offer.ingredientId === "tofu")).toBe(true);
     expect(result.offers.some((offer) => offer.ingredientId === "jasmine-rice")).toBe(true);

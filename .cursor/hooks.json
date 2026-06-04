@@ -29,7 +29,12 @@
       {
         "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/nudge-after-file-edit.ps1",
         "timeout": 5,
-        "matcher": "Write|TabWrite"
+        "matcher": "Write|Edit|MultiEdit|ApplyPatch|TabWrite"
+      },
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/semgrep-guardian.ps1 -Event afterFileEdit",
+        "timeout": 60,
+        "matcher": "Write|Edit|MultiEdit|ApplyPatch|TabWrite"
       }
     ],
     "beforeMCPExecution": [
@@ -47,6 +52,11 @@
       }
     ],
     "stop": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/semgrep-guardian.ps1 -Event stop",
+        "timeout": 120,
+        "loop_limit": 1
+      },
       {
         "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/stop-verification-reminder.ps1",
         "timeout": 5,

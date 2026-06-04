@@ -34,8 +34,9 @@ vi.mock("@/lib/provider-market-service", () => ({
 }));
 
 const FRESHNESS_LABELS = [
-  "Recent prices",
-  "Prices from this week",
+  "Checked within 1 hour",
+  "Same-day online prices",
+  "Recent weekly-ad prices",
   "Older prices — verify in store",
 ] as const;
 

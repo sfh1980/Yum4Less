@@ -67,7 +67,9 @@ describe("RecommendationDemo", () => {
     expect(await screen.findByText("Nearby stores map")).toBeInTheDocument();
     expect(screen.queryByText("Seed preview pricing")).not.toBeInTheDocument();
     expect(await screen.findAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(2);
-    expect(screen.getAllByText(/saved weekly ads and recent store prices/i)).toHaveLength(2);
+    expect(
+      screen.getAllByText(/saved weekly ads and recently checked online store prices/i),
+    ).toHaveLength(2);
     expect(screen.getAllByText(/saved backup data instead of a fresh store search/i)).toHaveLength(2);
     expect(
       screen.queryByRole("button", { name: "Project & data details (internal)" }),
@@ -88,13 +90,13 @@ describe("RecommendationDemo", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Saved weekly-ad prices at Kroger Mechanicsville — not live checkout; confirm in store.",
+        "Directional saved weekly-ad prices at Kroger Mechanicsville — not live checkout; confirm in store.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Est\. \$6\.49/)).toBeInTheDocument();
     expect(screen.getAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(2);
     expect(screen.getAllByText(/Treat totals as estimates/i)).toHaveLength(2);
-    expect(await screen.findByText("Kroger weekly ad special — verify in store")).toBeInTheDocument();
+    expect(await screen.findByText("Kroger weekly-ad price — directional")).toBeInTheDocument();
     expect(screen.queryByText("Postgres catalog + ingested prices")).not.toBeInTheDocument();
     expect(screen.queryByText("Geocodio lookup")).not.toBeInTheDocument();
 
@@ -532,11 +534,12 @@ const recommendationPayload = {
             storeName: "Kroger Mechanicsville",
             price: 6.49,
             freshnessDaysAgo: 1,
+            freshnessHoursAgo: 24,
             saleLabel: "Weekly special",
             saleConfidence: {
               level: "advertised-recent",
-              label: "Kroger weekly ad special — verify in store",
-              note: "This sale came from a scraped Kroger weekly-ad pull (88% ingredient match). Weekly ads change often, so confirm price and package size in store.",
+              label: "Kroger weekly-ad price — directional",
+              note: "This sale came from a scraped Kroger weekly-ad pull (88% ingredient match). Weekly ads and electronic shelf labels can change before you shop, so confirm price and package size in store.",
             },
           },
         ],
@@ -556,7 +559,7 @@ const recommendationPayload = {
         },
         confidenceLabel: "Single-store estimate",
         tags: ["family-friendly"],
-        freshnessLabel: "Recent prices",
+        freshnessLabel: "Recent weekly-ad prices",
         explanation: "The meal fits the budget and keeps the trip simple.",
         providerPreviewComparisons: [
           {

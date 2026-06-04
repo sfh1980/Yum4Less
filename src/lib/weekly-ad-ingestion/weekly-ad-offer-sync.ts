@@ -102,6 +102,7 @@ async function persistWeeklyAdOffer(
       sourceRecordId: `${offer.storeId}:${offer.ingredientId}:${offer.productName}`,
       confidenceScore: offer.matchConfidence ?? offer.confidenceScore,
       notes: buildWeeklyAdObservationNotes(offer, result),
+      validThrough: parseOptionalObservationTimestamp(offer.validThrough),
     });
 
     if (outcome === "skipped-unchanged") {
@@ -119,13 +120,21 @@ async function persistWeeklyAdOffer(
   }
 }
 
+function parseOptionalObservationTimestamp(value: string | undefined) {
+  if (!value || Number.isNaN(Date.parse(value))) {
+    return undefined;
+  }
+
+  return new Date(value);
+}
+
 function buildWeeklyAdObservationNotes(
   offer: WeeklyAdOffer,
   result: WeeklyAdIngestionResult,
 ) {
   const modeLabel =
     result.retrievalMode === "live"
-      ? "live weekly-ad scrape"
+      ? "current weekly-ad scrape"
       : "saved weekly-ad snapshot";
   return `${modeLabel}; matched ${offer.productName}; verify package size and sale timing in store.`;
 }

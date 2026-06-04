@@ -86,7 +86,7 @@ export function MealResultsPanel({
         </div>
       </div>
 
-      <PricingTrustHeadsUpBanner market={market} />
+      <PricingTrustHeadsUpBanner instanceId="meals" market={market} />
 
       <div className="warning warning-with-hint">
         <p>

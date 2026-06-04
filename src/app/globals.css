@@ -667,6 +667,10 @@ select {
   line-height: 1.45;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

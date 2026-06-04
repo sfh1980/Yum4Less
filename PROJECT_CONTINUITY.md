@@ -96,7 +96,7 @@ Yum4Less is intended to differentiate by combining:
 The repo has a project-specific `.cursor` setup with:
 - project rules tuned to Yum4Less, including **`yum4less-agent-orchestration.mdc`** (always on) and scoped workflow rules for frontend, API, and DB/ingest
 - **`AGENTS.md`** at repo root — index of project agents, MCP servers, hooks, and verification gates
-- project hooks for README check, package-command review, session orchestration context with port preflight, prompt routing (`beforeSubmitPrompt`), after-edit nudges, MCP schema reminders, explore handoff, and diff-aware stop verification (`loop_limit: 1`)
+- project hooks for README check, package-command review, session orchestration context with port preflight, prompt routing (`beforeSubmitPrompt`), after-edit nudges, Semgrep Guardian scans, MCP schema reminders, explore handoff, and diff-aware stop verification (`loop_limit: 1`)
 - **`AGENTS.md`** includes MVP shoring-up routing, suggested prompt footer, and per-slice agent/MCP table
 - project agents specialized for frontend, backend, database, testing, audit, and verification
 
@@ -109,17 +109,18 @@ Important rule themes:
 
 ## MCP Strategy
 
-**Installed (project `.cursor/mcp.json`):**
+**Configured (local project `.cursor/mcp.json`, copied from `.cursor/mcp.json.example`):**
 - **postgres** — read-only `@modelcontextprotocol/server-postgres` against local `yum4less_dev` on port `5433`; used by rules/agents for schema, seed, and latest `price_observations` verification after `npm run db:up`
 - **github** — official `ghcr.io/github/github-mcp-server` via Docker (requires `GITHUB_PERSONAL_ACCESS_TOKEN`); used by rules/agents for PR/workflow inspection; `gh` CLI remains preferred for mutating GitHub actions
 - **playwright** — `@playwright/mcp` headless Chromium for UI/map/ZIP verification on localhost after `npm run dev`
+- **semgrep** — Semgrep Guardian MCP and hook wrapper for security/dependency/secrets review; requires local Semgrep CLI and `semgrep login` for Guardian products
 
-Rules and subagents reference all three MCPs for agent-driven verification; Vitest/integration tests remain the automated merge gate.
+Rules and subagents reference these MCPs for agent-driven verification; Vitest/integration tests remain the automated merge gate.
 
 The current MCP direction remains conservative beyond this set:
 - do not add MCPs just because they exist
 - use Cursor native tools first where they are already efficient
-- keep the active MCP set small (currently 3 project servers)
+- keep the active MCP set small (currently 4 project servers when Semgrep CLI is installed)
 
 Later candidates only if needed:
 - `Postman MCP`, `Context7`, `Sentry MCP`, hosted browser MCPs
@@ -144,7 +145,7 @@ What exists:
 - nearby-store discovery driven by resolved coordinates and a server-side market data-access layer
 - normalized mock store, ingredient, recipe, and price-observation data
 - local PostgreSQL foundation with schema and seed data matching the normalized market model
-- server-side recommendation reads that prefer Postgres ingested live prices (weekly-ad scrape and official API rows); no in-memory market fallback
+- server-side recommendation reads that prefer strongly matched official/online provider price rows, then unexpired weekly-ad observations; expired sale rows remain historical and do not feed current ranked pricing
 - a staged location-first UI that finds nearby stores before asking for deeper meal constraints
 - a browser-geolocation path alongside ZIP search for establishing the local market
 - an explicit provider-rollout layer that marks weekly-ad-preview, limited-coverage, or coming-soon chains before ranked recommendations are built
@@ -165,7 +166,12 @@ What exists:
 - weekly-ad promotion gates and dynamic `weekly-ad-preview` rollout (`weekly-ad-coverage.ts`, `weekly-ad-promotion-readiness.ts`, `resolveProviderRolloutForStore`)
 - `src/lib/recipe-sources/recipe-source-registry.ts` — external recipe research; only internal library active in rankings
 - recipe source selector in meal preferences (external options disabled) + Advanced → Recipe source research panel
-- official Kroger API preview matches can sync into PostgreSQL `price_observations` with source/confidence metadata so ranked reads prefer live Kroger rows when `DATABASE_URL` is configured — **public API sync is opt-in only** via `YUM4LESS_ENABLE_API_DB_WRITES=1`; ingest scripts remain the primary write path
+- official Kroger API preview matches can sync into PostgreSQL `price_observations` with source/confidence, valid-through, and hour-level freshness metadata so ranked reads prefer eligible online provider rows over weekly-ad rows when available — **public API sync is opt-in only** via `YUM4LESS_ENABLE_API_DB_WRITES=1`; `npm run sync:provider-prices` and scheduled ingest remain the primary write path
+- non-Walmart weekly-ad scraping has been strengthened: shared HTTP/Flipp retries, Aldi/Food Lion Flipp merchant + flyer + tracked-ingredient search fallback, and Aldi/Food Lion capture artifacts when enabled; Walmart ranked pricing/promotion remains intentionally skipped for the current phase even though fixture/live ingest code paths still exist
+- public API hardening now includes route-level JSON size validation, route-level generic failure handling, shopping-route store/home label bounds, and deeper public sanitizer removal of internal/provider/weekly-ad IDs including nested provider product IDs and weekly-ad readiness store IDs
+- first-party analytics scaffolding exists through `/api/analytics/events`, disabled by default, strict per-event allowlisted, and sinkable to memory/stdout/Postgres without storing raw ZIPs, coordinates, IPs, prices, meal titles, store IDs, provider IDs, or user agents; customer complaints, bug reports, wrong-price reports, and general feedback remain a separate planned feedback path
+- DB/test preflight starts Postgres automatically when Docker is running but no longer performs local stale-seed `db:reset` without explicit reset intent; CI remains automatic; MVP seed detection counts total `stores` rows (8) so integration runs that update `source_name` during Kroger sync do not falsely mark the DB stale
+- Semgrep CI is configured to run `semgrep ci` only when `SEMGREP_APP_TOKEN` is present; local Semgrep hooks remain advisory until the CLI is installed and a scan actually runs
 - chain rollout and official provider discovery panels are collapsed under **Project & data details (internal)** modal (temporary link; not primary user UI)
 - a local Vitest harness covering geocoding fallback, repository behavior, route validation (including 429 and bounds), recommendation behavior, ranking fixtures, rate limiting, public API write policy, response sanitization, shopping-route caps, weekly-ad parsing/matching, carousel UI, trust copy, and a UI smoke path
 - Playwright E2E CI gate via `npm run test:e2e:ci` (`e2e/mvp-flow.spec.ts` — **3/3**); Playwright MCP supplements agent-driven browser checks on localhost
@@ -196,20 +202,21 @@ Current file roles:
 - `src/lib/provider-promotion-readiness.ts` evaluates explicit per-provider promotion gates before provider preview could ever influence ranked meal pricing
 - `src/lib/seed-vs-provider-recipe-comparison.ts` compares seed/DB and each provider preview separately for overlapping recipe ingredients without affecting ranking
 - `src/lib/provider-tracked-ingredients.ts` defines the curated tracked-ingredient set used for provider preview coverage measurement
-- `src/lib/weekly-ad-ingestion/` — multi-chain weekly-ad boundary including Kroger/Publix dedicated fetchers, shared `weekly-ad-fetch-helpers.ts`, Flipp syndicated feed for Kroger/Walmart, Publix browser fetch, listed-savings-card HTML parser, capture artifacts under `captures/weekly-ad/`, Playwright devDependency for ingest scripts, Postgres sync, promotion gates, per-chain clients, HTML fixtures
+- `src/lib/weekly-ad-ingestion/` — multi-chain weekly-ad boundary including Kroger/Publix dedicated fetchers, shared `weekly-ad-fetch-helpers.ts`, Flipp syndicated feed with retry/flyer/search-term fallback for non-Walmart chains, Publix browser fetch, listed-savings-card HTML parser, capture artifacts under `captures/weekly-ad/`, Playwright devDependency for ingest scripts, Postgres sync, promotion gates, per-chain clients, HTML fixtures
+- `src/lib/analytics/` and `src/app/api/analytics/events/route.ts` provide disabled-by-default privacy-safe event tracking for local memory/stdout or deployed Postgres sinks
 - `src/lib/recipe-sources/` — external recipe API research registry and types
-- `npm run ingest:weekly-ads:scheduled` wraps Postgres startup plus a live weekly-ad pull for local Task Scheduler or cron use
-- `src/lib/sale-confidence.ts` labels shopping-plan sale references with explicit confidence/freshness wording
+- `npm run ingest:weekly-ads:scheduled` wraps Postgres startup plus a live weekly-ad pull and provider price sync for local Task Scheduler or cron use
+- `src/lib/sale-confidence.ts` labels shopping-plan sale references with explicit hourly freshness, source-quality, and verification wording
 - `src/lib/multi-store-shopping-route.ts` and `src/app/api/shopping-route/route.ts` estimate home → stores → home routes for multi-store browser-location trips (max 8 stops, coordinate bounds enforced)
 - `src/lib/rate-limit.ts` and `src/lib/api-rate-limit.ts` — in-memory per-IP API throttling and Geocodio upstream throttling (seed fallback when limited); proxy headers trusted only when `TRUST_PROXY_HEADERS=1`
 - `src/lib/public-api-db-write-policy.ts` — public API routes stay read-only by default; provider snapshot persistence and Kroger price sync require `YUM4LESS_ENABLE_API_DB_WRITES=1`
 - `src/lib/public-api-response-sanitizer.ts` — strips `persistedSnapshotId` and `internalStoreId` from `/api/recommendations` and `/api/market-search` JSON
-- `src/lib/price-source-policy.ts` defines live ranked price sources and excludes legacy `mock-market-data` rows from reads
+- `src/lib/price-source-policy.ts` defines ranked source tiers (official/online first, weekly-ad second) and excludes legacy `mock-market-data` or unknown rows from ranked reads
 - `src/lib/internal-catalog.ts` holds the curated Postgres-backed ingredient catalog for weekly-ad and provider matching
-- `src/lib/price-observation-writes.ts` append-only inserts with change-aware dedupe (`insertPriceObservationIfChanged`)
+- `src/lib/price-observation-writes.ts` append-only inserts with change-aware dedupe and `last_verified_at` refreshes for unchanged re-checks (`insertPriceObservationIfChanged`)
 - `src/lib/mock-market-data.ts` remains for unit-test fixtures only (not a runtime ranking path)
 - `src/lib/recommendation-service.ts` contains the recommendation, shopping-plan, and scoring logic (renamed from `mock-recommendations.ts`)
-- `src/lib/market-repository.ts` loads stores, recipes, and ingested live price observations from Postgres; returns empty snapshot when DB unavailable
+- `src/lib/market-repository.ts` loads stores, recipes, and ranked-eligible price observations from Postgres using source priority and hourly freshness; returns empty snapshot when DB unavailable
 - `src/lib/db.ts` manages the shared Postgres connection pool
 - `db/init/001_schema.sql` defines the first PostgreSQL schema
 - `db/init/002_seed.sql` seeds the curated Postgres catalog (stores, ingredients, recipes) without sample `price_observations`
@@ -241,7 +248,7 @@ Approved MVP direction:
 - keep the MVP no-login and hard-limited to the initial local area around ZIP `23111`
 - determine location from browser geolocation and/or ZIP
 - choose a radius and show nearby stores before asking for deeper meal constraints
-- prioritize live-chain work in this order: `Kroger`, then `Publix`, then `Walmart`
+- prioritize live-chain work in this order: `Kroger`, then `Publix`, then `Walmart`; when deployment is discussed, remind the owner to promote the Kroger API app to production and set `KROGER_API_ENV=production`
 - keep `Aldi` and `BJ's` as later targets unless reprioritized
 - use official APIs first, reputable third-party sources second, and only then carefully reviewed web collection
 - show unsupported chains as coming soon or disabled with explanation
@@ -288,12 +295,13 @@ Audited for SQL injection, IDOR, and BOLA — no classic issues. **Shipped harde
 
 - `npm run lint` — passes (map ref ESLint warning only)
 - `npm run build` — passes
-- `npm test` — **215** tests, **55** files
-- `npm run test:integration` — **5** tests, **3** files (Docker Postgres on port `5433`; auto-`db:reset` when seed stale)
+- `npm test` — **227** tests, **58** files (last verified 2026-06-02)
+- `npm run test:integration` — **6** tests, **3** files (Docker Postgres on port `5433`; auto-`db:reset` when seed stale; last verified 2026-06-02)
 - `npm run test:e2e:ci` — **3/3** Playwright tests (build + fixture ingest + browser on port `3100`)
 - `npm run test:all` — unit + integration
 - `npm audit --audit-level=high` — **0 high** (2 moderate postcss via next)
-- `.github/workflows/ci.yml` — `verify` + `integration` + `e2e` jobs (**remote status unverified** — `gh auth login` required locally)
+- `.github/workflows/ci.yml` — `verify` + `integration` + `e2e` jobs (**remote green** on first push 2026-05-27 — [run 26529795179](https://github.com/sfh1980/Yum4Less/actions/runs/26529795179))
+- **GitHub repo:** https://github.com/sfh1980/Yum4Less (private)
 
 ### Optional manual network probes (not CI merge gates)
 
@@ -306,8 +314,9 @@ Audited for SQL injection, IDOR, and BOLA — no classic issues. **Shipped harde
 
 - Docker Desktop available; Yum4Less Postgres on host port **5433** (host `5432` occupied by separate local Postgres)
 - **First-run demo (ZIP `23111`):** `npm run setup:local` — or manually `db:up` → copy `.env.example` to `.env.local` with `DATABASE_URL=postgresql://postgres:postgres@localhost:5433/yum4less_dev` → `ingest:weekly-ads:fixture` → `npm run dev`. Fixture ingest = **rehearsal data in real Postgres tables**, not live retailer feeds.
-- Cursor MCP: postgres, github, playwright configured in `.cursor/mcp.json`; rules/agents reference all three
+- Cursor MCP: postgres, github, playwright, and semgrep configured from `.cursor/mcp.json.example`; rules/agents reference them for the relevant verification paths
 - GitHub MCP requires `GITHUB_PERSONAL_ACCESS_TOKEN` (user-scoped, not committed)
+- Semgrep Guardian requires the local `semgrep` CLI and `semgrep login` for Code/Supply Chain/Secrets scans; project wrappers also check Python user-script installs, and hooks are non-blocking advisory checks that remind rather than pass silently when setup is incomplete
 
 ### Live weekly-ad ingest baseline (May 2026)
 
@@ -335,7 +344,7 @@ Browser fallback (`weekly-ad-page-fetcher.ts`, Playwright in ingest scripts) is 
 
 Near-term implementation direction:
 - **Done locally:** fixture weekly-ad ingest, promotion gates, browser fallback scaffolding, recipe source research registry, MCP/rules/agents, integration CI job, public API security hardening (read-only default, sanitization, route caps, MVP ZIP scope, proxy-aware rate limits)
-- **Partially unblocked:** live weekly-ad ingest — Publix and Kroger (Flipp) sync rows; Walmart fetch works but matching gap blocks sync; Aldi/Food Lion sync via Flipp syndicated feed (direct scrape still blocked or empty; rollout gates unchanged)
+- **Partially unblocked:** live weekly-ad ingest — Publix and Kroger (Flipp) sync rows; Walmart fetch/parser paths exist but ranked pricing/promotion stays intentionally locked; Aldi/Food Lion sync via Flipp syndicated feed (direct scrape still blocked or empty; rollout gates unchanged)
 - **Next:** Walmart ingredient matching; Kroger chain parser hardening; deployment; TheMealDB dev import prototype
 - **Defer:** Lidl, Dollar General, Spoonacular/Edamam production, official Kroger API production promotion for live store pricing
 

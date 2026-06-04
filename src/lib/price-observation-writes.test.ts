@@ -22,6 +22,7 @@ describe("price observation change-aware sync", () => {
     expect(
       priceObservationsMateriallyMatch(
         {
+          id: 1,
           storeId: "kroger-mechanicsville",
           ingredientId: "chicken-thighs",
           price: 6.49,
@@ -50,6 +51,7 @@ describe("price observation change-aware sync", () => {
       query: vi.fn().mockResolvedValueOnce({
         rows: [
           {
+            id: 1,
             store_id: "kroger-mechanicsville",
             ingredient_id: "chicken-thighs",
             price: "6.49",
@@ -69,6 +71,7 @@ describe("price observation change-aware sync", () => {
       price: 6.49,
       saleLabel: "Weekly deal",
       observedAt: new Date("2026-05-25T12:00:00.000Z"),
+      validThrough: new Date("2026-06-01T23:59:59.000Z"),
       sourceName: "kroger-weekly-ad-scrape",
       sourceRecordId:
         "kroger-mechanicsville:chicken-thighs:Kroger Fresh Chicken Thighs",
@@ -77,6 +80,14 @@ describe("price observation change-aware sync", () => {
     });
 
     expect(outcome).toBe("skipped-unchanged");
-    expect(getDbPool().query).toHaveBeenCalledTimes(1);
+    expect(getDbPool().query).toHaveBeenCalledTimes(2);
+    expect(getDbPool().query).toHaveBeenLastCalledWith(
+      expect.stringContaining("last_verified_at ="),
+      ["2026-05-25T12:00:00.000Z", "2026-06-01T23:59:59.000Z", 1],
+    );
+    expect(getDbPool().query).toHaveBeenLastCalledWith(
+      expect.stringContaining("valid_through = case"),
+      expect.any(Array),
+    );
   });
 });

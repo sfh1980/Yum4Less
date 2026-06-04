@@ -37,7 +37,7 @@ export function RecommendationDemo() {
           marketBlocked={demo.marketBlocked}
           marketSearchState={demo.marketSearchState}
           nearbyStoresMapModel={demo.nearbyStoresMapModel}
-          onStoreSelect={demo.setSelectedStoreId}
+          onStoreSelect={demo.handleStoreSelect}
           selectedStoreId={demo.selectedStoreId}
         />
       </div>
@@ -58,10 +58,7 @@ export function RecommendationDemo() {
 
       <TrustExplainerModal
         open={demo.isTrustExplainerOpen}
-        onClose={() => {
-          demo.setIsTrustExplainerOpen(false);
-          demo.setHasDismissedTrustExplainer(true);
-        }}
+        onClose={demo.handleTrustExplainerClose}
       />
       {showInternalDetails ? (
         <>

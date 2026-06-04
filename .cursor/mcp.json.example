@@ -27,6 +27,16 @@
         "--headless",
         "--browser=chromium"
       ]
+    },
+    "semgrep": {
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".cursor/hooks/semgrep-mcp.ps1"
+      ]
     }
   }
 }

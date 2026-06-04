@@ -33,7 +33,6 @@ export function RecommendationResultsCarousel({
     scrollElementTo(
       track,
       boundedIndex * track.clientWidth,
-      
       prefersReducedMotion() ? "auto" : "smooth",
     );
     setActiveIndex(boundedIndex);
@@ -122,6 +121,7 @@ export function RecommendationResultsCarousel({
           <div
             aria-hidden={index !== activeIndex}
             className="recommendation-carousel-slide"
+            inert={index !== activeIndex ? true : undefined}
             key={index}
           >
             {slide}
@@ -133,14 +133,12 @@ export function RecommendationResultsCarousel({
         <div
           aria-label="Recommendation pagination"
           className="recommendation-carousel-dots"
-          role="tablist"
         >
           {slides.map((_, index) => (
             <button
               key={index}
               type="button"
-              role="tab"
-              aria-selected={index === activeIndex}
+              aria-current={index === activeIndex ? "true" : undefined}
               aria-label={`Show recommendation ${index + 1}`}
               className={
                 index === activeIndex

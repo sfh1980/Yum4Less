@@ -34,6 +34,7 @@ $mcpPatterns = @(
     '\bmcp\b',
     '@playwright/mcp',
     'github-mcp',
+    'semgrep',
     'context7',
     'browserbase',
     'postman-mcp',

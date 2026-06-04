@@ -23,6 +23,7 @@ type BucketEntry = {
 const buckets = new Map<string, BucketEntry>();
 
 export const RATE_LIMITS = {
+  apiAnalyticsEvents: { windowMs: 60_000, maxRequests: 60 },
   apiMarketSearch: { windowMs: 60_000, maxRequests: 30 },
   apiRecommendations: { windowMs: 60_000, maxRequests: 20 },
   apiShoppingRoute: { windowMs: 60_000, maxRequests: 15 },

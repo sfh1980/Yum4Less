@@ -5,6 +5,7 @@ import type {
   MealRecommendation,
   RecommendationExperience,
 } from "@/lib/recommendation-service";
+import { useModalDialog } from "@/components/use-modal-dialog";
 import { buildInternalMarketDiagnosticLines } from "@/lib/internal-market-diagnostics";
 import { listSelectableRecipeSources } from "@/lib/recipe-sources/recipe-source-registry";
 
@@ -21,6 +22,8 @@ export function InternalDetailsModal({
   market,
   recommendations,
 }: InternalDetailsModalProps) {
+  const modal = useModalDialog({ open, onClose });
+
   if (!open) {
     return null;
   }
@@ -31,11 +34,19 @@ export function InternalDetailsModal({
         aria-labelledby="internal-details-title"
         aria-modal="true"
         className="modal-card modal-card-wide"
+        onKeyDown={modal.onKeyDown}
+        ref={modal.dialogRef}
         role="dialog"
+        tabIndex={-1}
       >
         <div className="modal-header">
           <h3 id="internal-details-title">Project &amp; data details (internal)</h3>
-          <button className="secondary-button" onClick={onClose} type="button">
+          <button
+            className="secondary-button"
+            onClick={onClose}
+            ref={modal.initialFocusRef}
+            type="button"
+          >
             Close
           </button>
         </div>
@@ -84,7 +95,7 @@ export function InternalDetailsModal({
                       .filter((summary) => summary.syncedCount > 0)
                       .map((summary) => (
                         <span className="pill" key={`${summary.provider}-price-sync`}>
-                          {summary.syncedCount} live price(s) synced to Postgres (
+                          {summary.syncedCount} checked price observation(s) synced to Postgres (
                           {summary.provider})
                         </span>
                       ))}
@@ -423,7 +434,7 @@ export function InternalDetailsModal({
             </p>
             <p>
               <strong>DATABASE_URL</strong> lets the app read the curated Postgres
-              catalog and ingested live price observations. Without it, ranked pricing
+              catalog and ranked-eligible price observations. Without it, ranked pricing
               is unavailable.
             </p>
             <p>
@@ -582,13 +593,14 @@ function formatRankedPricingSource(source: string) {
     case "weekly-ad-cache":
       return "Ingested weekly-ad cache pricing";
     case "official-api-cache":
-      return "Ingested official API cache pricing";
-    case "mixed-live-cache":
-      return "Mixed ingested live cache pricing";
+    case "online-cache":
+      return "Recently checked online cache pricing";
+    case "mixed-online-weekly-ad-cache":
+      return "Mixed online and weekly-ad cache pricing";
     case "limited-coverage":
       return "Limited ingested coverage (directional)";
     case "none":
-      return "No ingested live prices yet";
+      return "No eligible ingested prices yet";
     default:
       return source;
   }

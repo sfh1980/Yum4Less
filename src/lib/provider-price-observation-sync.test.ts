@@ -9,7 +9,7 @@ import type { NearbyStoreSummary } from "@/lib/recommendation-service";
 const nearbyStores: NearbyStoreSummary[] = [
   {
     id: "kroger-mechanicsville",
-    name: "Kroger",
+    name: "Kroger Mechanicsville",
     kind: "grocery",
     latitude: 37.6153,
     longitude: -77.3491,
@@ -32,7 +32,7 @@ describe("getSaleConfidence", () => {
       matchConfidence: 0.88,
     });
 
-    expect(confidence.label).toBe("Kroger promo — verify in store");
+    expect(confidence.label).toBe("Recently checked Kroger promo — verify at shelf");
     expect(confidence.note).toContain("official Kroger API");
   });
 
@@ -58,6 +58,31 @@ describe("resolveInternalKrogerStoreId", () => {
         nearbyStores,
       }),
     ).toBe("kroger-mechanicsville");
+  });
+
+  it("does not guess when multiple nearby Kroger stores are plausible", () => {
+    expect(
+      resolveInternalKrogerStoreId({
+        previewStoreName: "Kroger",
+        providerStoreId: "01100479",
+        nearbyStores: [
+          ...nearbyStores,
+          {
+            id: "kroger-atlee",
+            name: "Kroger Atlee",
+            kind: "grocery",
+            latitude: 37.665,
+            longitude: -77.44,
+            distanceMiles: 4.9,
+            chain: "kroger",
+            chainLabel: "Kroger",
+            rolloutStatus: "seed-preview",
+            recommendationEnabled: true,
+            rolloutNote: "Seed preview coverage.",
+          },
+        ],
+      }),
+    ).toBeUndefined();
   });
 });
 

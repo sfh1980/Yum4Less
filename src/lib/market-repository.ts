@@ -4,7 +4,11 @@ import type {
   MockRecipeRecord,
   MockStore,
 } from "@/lib/mock-market-data";
-import { LIVE_PRICE_SQL_FILTER } from "@/lib/price-source-policy";
+import {
+  getRankedPriceSourceKind,
+  RANKED_PRICE_SOURCE_SQL_FILTER,
+  RANKED_PRICE_SOURCE_TIER_SQL,
+} from "@/lib/price-source-policy";
 
 export type MarketDataSnapshot = {
   stores: MockStore[];
@@ -19,6 +23,8 @@ const EMPTY_SNAPSHOT: MarketDataSnapshot = {
   recipes: [],
   priceObservations: [],
 };
+const CURRENT_PRICE_OBSERVATION_SQL_FILTER =
+  "(valid_through is null or valid_through >= now())";
 
 export async function getMarketDataSnapshot(): Promise<{
   snapshot: MarketDataSnapshot;
@@ -53,10 +59,13 @@ export async function getMarketDataSnapshot(): Promise<{
             in_stock,
             source_name,
             confidence_score,
+            ${RANKED_PRICE_SOURCE_TIER_SQL} as source_tier,
+            greatest(0, floor(extract(epoch from (now() - coalesce(last_verified_at, observed_at))) / 3600))::int as freshness_hours_ago,
             greatest(0, round(extract(epoch from (now() - observed_at)) / 86400))::int as freshness_days_ago
           from price_observations
-          where ${LIVE_PRICE_SQL_FILTER}
-          order by store_id, ingredient_id, observed_at desc
+          where (${RANKED_PRICE_SOURCE_SQL_FILTER})
+            and ${CURRENT_PRICE_OBSERVATION_SQL_FILTER}
+          order by store_id, ingredient_id, source_tier asc, coalesce(last_verified_at, observed_at) desc, confidence_score desc nulls last, observed_at desc
         `),
       ]);
 
@@ -103,8 +112,11 @@ export async function getMarketDataSnapshot(): Promise<{
           price: Number(row.price),
           saleLabel: row.sale_label ?? undefined,
           freshnessDaysAgo: row.freshness_days_ago,
+          freshnessHoursAgo: row.freshness_hours_ago,
           inStock: row.in_stock,
           priceSource: row.source_name ?? undefined,
+          priceSourceKind: getRankedPriceSourceKind(row.source_name ?? undefined),
+          priceSourceTier: row.source_tier,
           matchConfidence:
             row.confidence_score !== null && row.confidence_score !== undefined
               ? Number(row.confidence_score)
@@ -127,7 +139,8 @@ export async function countLivePriceObservationsForStore(storeId: string) {
       select count(*)::text as count
       from price_observations
       where store_id = $1
-        and ${LIVE_PRICE_SQL_FILTER}
+        and (${RANKED_PRICE_SOURCE_SQL_FILTER})
+        and ${CURRENT_PRICE_OBSERVATION_SQL_FILTER}
     `,
     [storeId],
   );
@@ -181,5 +194,7 @@ type PriceObservationRow = {
   in_stock: boolean;
   source_name: string | null;
   confidence_score: string | null;
+  source_tier: number;
+  freshness_hours_ago: number;
   freshness_days_ago: number;
 };

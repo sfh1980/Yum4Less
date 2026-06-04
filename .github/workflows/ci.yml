@@ -7,6 +7,27 @@ on:
   pull_request:
 
 jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    if: github.actor != 'dependabot[bot]'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep CI when configured
+        run: |
+          if [ -z "$SEMGREP_APP_TOKEN" ]; then
+            echo "SEMGREP_APP_TOKEN is not configured; Semgrep CI did not run."
+            echo "Add the repository secret from Semgrep AppSec Platform to enable semgrep ci."
+            exit 0
+          fi
+          semgrep ci
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets['SEMGREP_APP_TOKEN'] }}
+
   verify:
     runs-on: ubuntu-latest
 

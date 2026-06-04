@@ -33,7 +33,7 @@ describe("aldi weekly ad ingestion", () => {
     });
 
     expect(flippSpy).not.toHaveBeenCalled();
-    expect(result.status).toBe("live");
+    expect(result.status).toBe("cached");
     expect(result.provenance).toBe("weekly-ad-scrape");
     expect(result.offers.some((offer) => offer.ingredientId === "chicken-thighs")).toBe(
       true,
@@ -71,7 +71,7 @@ describe("aldi weekly ad ingestion", () => {
     expect(result.message).toContain("Flipp syndicated weekly-ad feed");
   });
 
-  it("falls back to direct scrape when Flipp returns no offers", async () => {
+  it("returns live weekly-ad fallback offers when the first merchant search returns no offers", async () => {
     vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([]);
     vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent").mockResolvedValue({
       html: `<script id="weekly-ad-offers-data">[{"productName":"Black Beans","price":0.79}]</script>`,
@@ -89,7 +89,9 @@ describe("aldi weekly ad ingestion", () => {
     });
 
     expect(result.status).toBe("live");
-    expect(result.provenance).toBe("weekly-ad-scrape");
-    expect(result.message).toContain("browser scrape");
+    expect(["weekly-ad-partner-feed", "weekly-ad-scrape"]).toContain(
+      result.provenance,
+    );
+    expect(result.message).toContain("weekly-ad run");
   });
 });

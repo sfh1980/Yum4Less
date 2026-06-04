@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFoodLionWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/food-lion-weekly-ad-ingestion";
-import * as flippFeed from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
+import * as flippResolver from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import * as pageFetcher from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
 
 const originalFixtureFlag = process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
@@ -21,7 +21,7 @@ describe("food lion weekly ad ingestion", () => {
 
   it("uses fixture HTML when YUM4LESS_WEEKLY_AD_FIXTURE is set", async () => {
     process.env.YUM4LESS_WEEKLY_AD_FIXTURE = "1";
-    const flippSpy = vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant");
+    const flippSpy = vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain");
 
     const client = createFoodLionWeeklyAdIngestionClient();
     const result = await client.ingestWeeklyAd({
@@ -33,24 +33,27 @@ describe("food lion weekly ad ingestion", () => {
     });
 
     expect(flippSpy).not.toHaveBeenCalled();
-    expect(result.status).toBe("live");
+    expect(result.status).toBe("cached");
     expect(result.offers.some((offer) => offer.ingredientId === "chicken-thighs")).toBe(
       true,
     );
   });
 
   it("loads live offers from Flipp when direct HTTP would be blocked", async () => {
-    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([
-      {
-        productName: "Fresh Corn on the Cob",
-        price: 1,
-        saleLabel: "Directional — weekly ad syndicated feed",
-      },
-      {
-        productName: "Food Lion Mini Cucumbers",
-        price: 1.99,
-      },
-    ]);
+    vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
+      retrievalLabel: "Flipp syndicated weekly-ad feed",
+      rawOffers: [
+        {
+          productName: "Fresh Corn on the Cob",
+          price: 1,
+          saleLabel: "Directional — weekly ad syndicated feed",
+        },
+        {
+          productName: "Food Lion Mini Cucumbers",
+          price: 1.99,
+        },
+      ],
+    });
     const pageSpy = vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent");
 
     const client = createFoodLionWeeklyAdIngestionClient();
@@ -69,7 +72,10 @@ describe("food lion weekly ad ingestion", () => {
   });
 
   it("reports WAF blocking when Flipp and scrape both fail", async () => {
-    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([]);
+    vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
+      retrievalLabel: "Flipp syndicated weekly-ad feed",
+      rawOffers: [],
+    });
     vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent").mockRejectedValue(
       new Error("HTTP 403"),
     );

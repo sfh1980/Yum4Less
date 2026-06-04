@@ -39,7 +39,7 @@ export type ProviderCoverageRollup = {
 
 export function buildProviderCoverageRollup(
   previews: ProviderPricingPreviewResult[],
-  rankedPricingSource: RankedPricingSource,
+  rankedPricingSource: RankedPricingSource = "none",
 ): ProviderCoverageRollup {
   return buildSingleProviderCoverageRollup(
     selectPrimaryPricingPreview(previews),
@@ -238,12 +238,13 @@ function buildRankedPricingMessage(
     case "weekly-ad-cache":
       return `${prefix} Ranked meal pricing currently reads scraped weekly-ad observations from PostgreSQL.`;
     case "official-api-cache":
-      return `${prefix} Ranked meal pricing currently reads official Kroger API observations from PostgreSQL.`;
-    case "mixed-live-cache":
-      return `${prefix} Ranked meal pricing currently reads mixed ingested weekly-ad and official API observations from PostgreSQL.`;
+    case "online-cache":
+      return `${prefix} Ranked meal pricing currently reads recently checked online price observations from PostgreSQL.`;
+    case "mixed-online-weekly-ad-cache":
+      return `${prefix} Ranked meal pricing currently reads mixed ingested weekly-ad and online price observations from PostgreSQL.`;
     case "limited-coverage":
       return `${prefix} Some ingested prices exist, but ranked meal pricing stays limited until weekly-ad promotion gates pass.`;
     default:
-      return `${prefix} No ingested live prices are available yet for ranked meal pricing near this search.`;
+      return `${prefix} No eligible ingested price observations are available yet for ranked meal pricing near this search.`;
   }
 }

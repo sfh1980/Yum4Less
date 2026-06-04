@@ -50,7 +50,7 @@ async function runCoreMvpFlow(page: import("@playwright/test").Page) {
   ).toBeVisible();
   await expect(
     page
-      .getByText(/weekly ad special — verify in store|directional|estimated/i)
+      .getByText(/weekly-ad price — directional|directional|estimated/i)
       .first(),
   ).toBeVisible();
   await expect(

@@ -1,6 +1,11 @@
 import { buildMultiStoreShoppingRoute } from "@/lib/multi-store-shopping-route";
 import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
-import { API_LIMITS, isValidCoordinatePair } from "@/lib/api-request";
+import {
+  API_LIMITS,
+  clampTrimmedString,
+  isValidCoordinatePair,
+  parseJsonBody,
+} from "@/lib/api-request";
 
 export async function POST(request: Request) {
   const rateLimit = enforceApiRateLimit(request, "apiShoppingRoute");
@@ -8,28 +13,32 @@ export async function POST(request: Request) {
     return rateLimitResponse(rateLimit);
   }
 
-  let body: unknown;
-
-  try {
-    body = await request.json();
-  } catch {
+  const parsedBody = await parseJsonBody(request);
+  if (!parsedBody.ok) {
     return Response.json(
-      { ok: false, error: "Shopping route payload is invalid." },
+      { ok: false, error: parsedBody.error },
       { status: 400 },
     );
   }
 
-  const parsed = parseShoppingRouteRequest(body);
+  const parsed = parseShoppingRouteRequest(parsedBody.body);
   if (!parsed.ok) {
     return Response.json({ ok: false, error: parsed.error }, { status: 400 });
   }
 
-  const route = await buildMultiStoreShoppingRoute(parsed.value);
+  try {
+    const route = await buildMultiStoreShoppingRoute(parsed.value);
 
-  return Response.json({
-    ok: true,
-    route,
-  });
+    return Response.json({
+      ok: true,
+      route,
+    });
+  } catch {
+    return Response.json(
+      { ok: false, error: "Shopping route planning is temporarily unavailable." },
+      { status: 500 },
+    );
+  }
 }
 
 function parseShoppingRouteRequest(body: unknown):
@@ -72,7 +81,10 @@ function parseShoppingRouteRequest(body: unknown):
     }
 
     const storeRecord = store as Record<string, unknown>;
-    const storeName = typeof storeRecord.storeName === "string" ? storeRecord.storeName : "";
+    const storeName = clampTrimmedString(
+      storeRecord.storeName,
+      API_LIMITS.shoppingRouteStoreNameLength,
+    );
     const latitude = Number(storeRecord.latitude);
     const longitude = Number(storeRecord.longitude);
 
@@ -87,16 +99,22 @@ function parseShoppingRouteRequest(body: unknown):
     return { ok: false, error: "Each store stop must include a name and coordinates." };
   }
 
+  const homeLabel = clampOptionalHomeLabel(homeRecord.label);
+
+  if (homeRecord.label !== undefined && !homeLabel) {
+    return {
+      ok: false,
+      error: `Home label must be ${API_LIMITS.shoppingRouteHomeLabelLength.max} characters or fewer.`,
+    };
+  }
+
   return {
     ok: true,
     value: {
       home: {
         latitude: homeLatitude,
         longitude: homeLongitude,
-        label:
-          typeof homeRecord.label === "string" && homeRecord.label.trim()
-            ? homeRecord.label.trim()
-            : "Home",
+        label: homeLabel ?? "Home",
       },
       stores: parsedStores as Array<{
         storeName: string;
@@ -105,4 +123,25 @@ function parseShoppingRouteRequest(body: unknown):
       }>,
     },
   };
+}
+
+function clampOptionalHomeLabel(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "Home";
+  }
+
+  if (trimmed.length > API_LIMITS.shoppingRouteHomeLabelLength.max) {
+    return undefined;
+  }
+
+  return trimmed;
 }

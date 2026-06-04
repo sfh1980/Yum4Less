@@ -1,4 +1,5 @@
 import { getDbPool } from "@/lib/db";
+import { getRankedPriceSourceKind } from "@/lib/price-source-policy";
 
 export type PriceObservationInsert = {
   storeId: string;
@@ -8,10 +9,12 @@ export type PriceObservationInsert = {
   saleLabel?: string;
   inStock?: boolean;
   observedAt: Date;
+  lastVerifiedAt?: Date;
   sourceName: string;
   sourceRecordId: string;
   confidenceScore: number;
   notes: string;
+  validThrough?: Date;
 };
 
 export async function insertPriceObservation(input: PriceObservationInsert) {
@@ -29,9 +32,12 @@ export async function insertPriceObservation(input: PriceObservationInsert) {
         source_name,
         source_record_id,
         confidence_score,
-        notes
+        notes,
+        last_verified_at,
+        source_kind,
+        valid_through
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     `,
     [
       input.storeId,
@@ -45,6 +51,9 @@ export async function insertPriceObservation(input: PriceObservationInsert) {
       input.sourceRecordId,
       input.confidenceScore,
       input.notes,
+      (input.lastVerifiedAt ?? input.observedAt).toISOString(),
+      getRankedPriceSourceKind(input.sourceName),
+      input.validThrough?.toISOString() ?? null,
     ],
   );
 }
@@ -88,6 +97,7 @@ export function parseObservationTimestamp(value: string) {
 }
 
 export type LatestPriceObservation = {
+  id: number;
   storeId: string;
   ingredientId: string;
   price: number;
@@ -102,11 +112,14 @@ export type PriceObservationSyncOutcome = "inserted" | "skipped-unchanged";
 export async function getLatestPriceObservation(input: {
   storeId: string;
   ingredientId: string;
+  sourceName: string;
+  sourceRecordId: string;
 }): Promise<LatestPriceObservation | null> {
   const pool = getDbPool();
   const result = await pool.query<{
     store_id: string;
     ingredient_id: string;
+    id: number;
     price: string;
     sale_label: string | null;
     in_stock: boolean;
@@ -115,6 +128,7 @@ export async function getLatestPriceObservation(input: {
   }>(
     `
       select
+        id,
         store_id,
         ingredient_id,
         price,
@@ -125,10 +139,12 @@ export async function getLatestPriceObservation(input: {
       from price_observations
       where store_id = $1
         and ingredient_id = $2
-      order by observed_at desc
+        and source_name = $3
+        and source_record_id = $4
+      order by coalesce(last_verified_at, observed_at) desc, observed_at desc
       limit 1
     `,
-    [input.storeId, input.ingredientId],
+    [input.storeId, input.ingredientId, input.sourceName, input.sourceRecordId],
   );
 
   const row = result.rows[0];
@@ -137,6 +153,7 @@ export async function getLatestPriceObservation(input: {
   }
 
   return {
+    id: row.id,
     storeId: row.store_id,
     ingredientId: row.ingredient_id,
     price: Number(row.price),
@@ -174,9 +191,16 @@ export async function insertPriceObservationIfChanged(
   const latest = await getLatestPriceObservation({
     storeId: input.storeId,
     ingredientId: input.ingredientId,
+    sourceName: input.sourceName,
+    sourceRecordId: input.sourceRecordId,
   });
 
   if (latest && priceObservationsMateriallyMatch(latest, input)) {
+    await touchPriceObservationVerification({
+      id: latest.id,
+      verifiedAt: input.lastVerifiedAt ?? input.observedAt,
+      validThrough: input.validThrough,
+    });
     return "skipped-unchanged";
   }
 
@@ -201,4 +225,26 @@ export async function deletePriceObservationsForStore(storeId: string) {
 export async function deleteAllPriceObservations() {
   const pool = getDbPool();
   await pool.query(`delete from price_observations`);
+}
+
+async function touchPriceObservationVerification(input: {
+  id: number;
+  verifiedAt: Date;
+  validThrough?: Date;
+}) {
+  const pool = getDbPool();
+  await pool.query(
+    `
+      update price_observations
+      set
+        last_verified_at = greatest(coalesce(last_verified_at, observed_at), $1::timestamptz),
+        valid_through = case
+          when $2::timestamptz is null then valid_through
+          when valid_through is null then $2::timestamptz
+          else greatest(valid_through, $2::timestamptz)
+        end
+      where id = $3
+    `,
+    [input.verifiedAt.toISOString(), input.validThrough?.toISOString() ?? null, input.id],
+  );
 }

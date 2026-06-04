@@ -118,6 +118,24 @@ function Get-HookChangedPaths {
         } catch {
             # Fail open when git is unavailable.
         }
+
+        $gitStatusArgs = @('-C', $WorkspaceRoot, 'status', '--porcelain', '--untracked-files=all')
+        try {
+            $statusOutput = & git @gitStatusArgs 2>$null
+            foreach ($line in @($statusOutput)) {
+                if ([string]::IsNullOrWhiteSpace($line) -or $line.Length -lt 4) {
+                    continue
+                }
+
+                $statusPath = $line.Substring(3).Trim()
+                if ($statusPath -match ' -> ') {
+                    $statusPath = ($statusPath -split ' -> ')[-1].Trim()
+                }
+                Add-PathCandidate $statusPath.Trim('"')
+            }
+        } catch {
+            # Fail open when git is unavailable.
+        }
     }
 
     return @($paths)
@@ -201,6 +219,35 @@ function Test-TcpPortOpen {
     }
 
     return $false
+}
+
+function Add-PythonUserScriptsToPath {
+    if ($env:APPDATA) {
+        $pythonRoot = Join-Path $env:APPDATA 'Python'
+        if (Test-Path -LiteralPath $pythonRoot -PathType Container) {
+            $scriptDirs = Get-ChildItem -LiteralPath $pythonRoot -Directory -ErrorAction SilentlyContinue |
+                ForEach-Object { Join-Path $_.FullName 'Scripts' } |
+                Where-Object { Test-Path -LiteralPath $_ -PathType Container }
+
+            foreach ($scriptDir in @($scriptDirs)) {
+                if ($env:Path -notlike "*$scriptDir*") {
+                    $env:Path = "$scriptDir;$env:Path"
+                }
+            }
+        }
+    }
+
+    # Prefer pipx shims over legacy per-version Python Scripts installs (e.g. older semgrep.exe).
+    if ($env:USERPROFILE) {
+        $pipxBin = Join-Path $env:USERPROFILE '.local\bin'
+        if (Test-Path -LiteralPath $pipxBin -PathType Container) {
+            $pathParts = @(
+                $env:Path -split ';' |
+                    Where-Object { $_ -and ($_ -ne $pipxBin) }
+            )
+            $env:Path = (@($pipxBin) + $pathParts) -join ';'
+        }
+    }
 }
 
 function Write-HookJson {

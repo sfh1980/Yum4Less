@@ -35,7 +35,7 @@ describe("nearby stores map model", () => {
     expect(model.stores).toHaveLength(1);
     expect(model.trustNote).toContain("saved local store locations");
     expect(model.trustNote).toContain("Walmart pins are context only");
-    expect(model.trustNote).toContain("Live store lookups");
+    expect(model.trustNote).toContain("Store lookups");
   });
 
   it("computes bounds that include the anchor and store coordinates", () => {

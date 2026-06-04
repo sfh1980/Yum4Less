@@ -40,8 +40,11 @@ export type MockPriceObservation = {
   price: number;
   saleLabel?: string;
   freshnessDaysAgo: number;
+  freshnessHoursAgo?: number;
   inStock: boolean;
   priceSource?: string;
+  priceSourceKind?: "official-online" | "weekly-ad" | "sample" | "unknown";
+  priceSourceTier?: number;
   matchConfidence?: number;
 };
 

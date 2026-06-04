@@ -16,6 +16,7 @@ export type SaleConfidence = {
 export function getSaleConfidence(input: {
   saleLabel?: string;
   freshnessDaysAgo: number;
+  freshnessHoursAgo?: number;
   dataSource: "database" | "unavailable";
   priceSource?: string;
   matchConfidence?: number;
@@ -54,8 +55,8 @@ export function getSaleConfidence(input: {
 
   if (input.freshnessDaysAgo <= 1) {
     return {
-      level: "verified-recent",
-      label: "Recent advertised sale",
+      level: "advertised-recent",
+      label: "Recent advertised price — verify",
       note: "This item was tagged with a sale label from relatively fresh local data, but weekly ads can change before you shop. Confirm in store or in the chain app.",
     };
   }
@@ -86,6 +87,7 @@ export function getSaleConfidence(input: {
 function getWeeklyAdScrapeSaleConfidence(input: {
   saleLabel?: string;
   freshnessDaysAgo: number;
+  freshnessHoursAgo?: number;
   priceSource?: string;
   matchConfidence?: number;
 }): SaleConfidence {
@@ -96,14 +98,31 @@ function getWeeklyAdScrapeSaleConfidence(input: {
       : "directional ingredient match";
   const weakMatch =
     input.matchConfidence !== undefined && input.matchConfidence < 0.7;
+  const staleLevel =
+    input.freshnessDaysAgo > 7
+      ? "advertised-stale"
+      : input.freshnessDaysAgo > 3
+        ? "advertised-aging"
+        : undefined;
+
+  if (staleLevel) {
+    return {
+      level: staleLevel,
+      label:
+        staleLevel === "advertised-stale"
+          ? `Stale ${chainLabel} weekly-ad price`
+          : `Aging ${chainLabel} weekly-ad price`,
+      note: `This price came from a scraped ${chainLabel} weekly-ad pull (${matchPercent}) that is ${input.freshnessDaysAgo} day(s) old. Treat it as directional and verify the current shelf tag before shopping.`,
+    };
+  }
 
   if (input.saleLabel) {
     return {
       level: weakMatch ? "directional-provider-match" : "advertised-recent",
       label: weakMatch
         ? `Estimated ${chainLabel} weekly ad match`
-        : `${chainLabel} weekly ad special — verify in store`,
-      note: `This sale came from a scraped ${chainLabel} weekly-ad pull (${matchPercent}). Weekly ads change often, so confirm price and package size in store.`,
+        : `${chainLabel} weekly-ad price — directional`,
+      note: `This sale came from a scraped ${chainLabel} weekly-ad pull (${matchPercent}). Weekly ads and electronic shelf labels can change before you shop, so confirm price and package size in store.`,
     };
   }
 
@@ -111,8 +130,8 @@ function getWeeklyAdScrapeSaleConfidence(input: {
     level: weakMatch ? "directional-provider-match" : "advertised-recent",
     label: weakMatch
       ? `Estimated ${chainLabel} weekly ad price`
-      : `${chainLabel} weekly ad price — verify in store`,
-    note: `This price came from a scraped ${chainLabel} weekly-ad pull (${matchPercent}). Treat it as directional until you verify the exact product in store.`,
+      : `${chainLabel} weekly-ad price — directional`,
+    note: `This price came from a scraped ${chainLabel} weekly-ad pull (${matchPercent}). Treat it as directional until you verify the exact product and shelf tag in store.`,
   };
 }
 
@@ -131,6 +150,7 @@ function formatWeeklyAdChainLabel(priceSource?: string) {
 function getKrogerOfficialSaleConfidence(input: {
   saleLabel?: string;
   freshnessDaysAgo: number;
+  freshnessHoursAgo?: number;
   matchConfidence?: number;
 }): SaleConfidence {
   const matchPercent =
@@ -140,21 +160,29 @@ function getKrogerOfficialSaleConfidence(input: {
   const weakMatch =
     input.matchConfidence !== undefined && input.matchConfidence < 0.7;
 
+  const freshnessHours = input.freshnessHoursAgo ?? input.freshnessDaysAgo * 24;
+  const freshnessLabel =
+    freshnessHours <= 1
+      ? "Recently checked"
+      : freshnessHours <= 24
+        ? "Same-day checked"
+        : "Previously checked";
+
   if (input.saleLabel) {
     return {
       level: weakMatch ? "directional-provider-match" : "advertised-recent",
       label: weakMatch
         ? "Estimated Kroger promo — verify in store"
-        : "Kroger promo — verify in store",
-      note: `This promo/sale price came from the official Kroger API path (${matchPercent}). Weekly ads and in-store tags can still differ, so confirm before checkout.`,
+        : `${freshnessLabel} Kroger promo — verify at shelf`,
+      note: `This promo/sale price came from the official Kroger API path (${matchPercent}). Electronic shelf labels and checkout systems can still change before you shop, so confirm before checkout.`,
     };
   }
 
   return {
-    level: weakMatch ? "directional-provider-match" : "verified-recent",
+    level: weakMatch ? "directional-provider-match" : "advertised-recent",
     label: weakMatch
       ? "Estimated Kroger price — verify in store"
-      : "Kroger shelf price — verify in store",
-    note: `This price came from the official Kroger API path (${matchPercent}). Confirm the exact product and package size in store before relying on it.`,
+      : `${freshnessLabel} online Kroger price — verify at shelf`,
+    note: `This price came from the official Kroger API path (${matchPercent}). Treat it as a recently checked online price, not a guaranteed shelf or checkout total.`,
   };
 }

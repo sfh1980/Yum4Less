@@ -17,7 +17,7 @@ const baseMeal = {
       freshnessDaysAgo: 1,
       saleConfidence: {
         level: "advertised-recent" as const,
-        label: "Kroger weekly ad special — verify in store",
+        label: "Kroger weekly-ad price — directional",
         note: "Weekly ad pull.",
       },
     },
@@ -39,7 +39,7 @@ describe("buildMealPriceSourceSummary", () => {
     });
 
     expect(result.summary).toBe(
-      "Saved weekly-ad prices at Kroger Mechanicsville — not live checkout; confirm in store.",
+      "Directional saved weekly-ad prices at Kroger Mechanicsville — not live checkout; confirm in store.",
     );
     expect(result.detail).toContain("weekly-ad");
     expect(result.summary).not.toMatch(/postgres|provenance|api|seed/i);

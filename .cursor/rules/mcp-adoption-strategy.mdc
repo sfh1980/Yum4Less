@@ -7,9 +7,9 @@ alwaysApply: true
 
 - Prefer Cursor native tools first for code search, shell, web research, and browser inspection.
 - **Mandatory triggers** live in **`.cursor/rules/yum4less-agent-orchestration.mdc`** and **`AGENTS.md`** — use MCP when that table says MUST, not only when convenient.
-- **Installed in this repo (`.cursor/mcp.json`):** read-only Postgres, official GitHub (Docker), Playwright (headless). Use them where they remove repetitive verification work; do not add more without explicit approval.
+- **Installed in this repo (`.cursor/mcp.json`):** read-only Postgres, official GitHub (Docker), Playwright (headless), and Semgrep Guardian when the local Semgrep CLI is installed. Use them where they remove repetitive verification work; do not add more without explicit approval.
 - Do not add MCP servers to Yum4Less just because they exist; add one only when it removes repetitive work tied to an external system.
-- Keep the active MCP set small, ideally `2-4` servers max, and prefer read-only or least-privilege configurations first.
+- Keep the active MCP set small, ideally `3-5` servers max, and prefer read-only or least-privilege configurations first.
 
 ## Postgres MCP
 
@@ -29,6 +29,12 @@ alwaysApply: true
 
 - Use for repeatable browser verification of Yum4Less UI flows (ZIP search, recommendations, trust signals, map) when agents need evidence beyond Vitest; start `npm run dev` first and stay on localhost with seeded or fixture-backed data.
 - Do not use Playwright MCP for production weekly-ad scraping or as a substitute for fast unit/integration tests.
+
+## Semgrep Guardian MCP
+
+- Use for security, dependency, and secrets scanning around agent-written code, PR review, and release-readiness checks.
+- The project hook wrapper runs non-blocking local `semgrep scan` checks with explicit security/TypeScript configs after file edits and at stop; if Semgrep is unavailable or the hook reports an error, treat it as advisory setup/follow-up context, not a passed scan.
+- Semgrep complements, but does not replace, `npm test`, route validation tests, response-sanitization checks, and Yum4Less trust/freshness review.
 
 ## General
 

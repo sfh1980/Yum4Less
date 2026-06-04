@@ -23,6 +23,18 @@ function dockerAvailable() {
   }
 }
 
+function isCiEnvironment() {
+  return process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+}
+
+function canResetDatabaseAutomatically() {
+  return (
+    isCiEnvironment() ||
+    process.env.YUM4LESS_TEST_DB_RESET === "1" ||
+    process.env.YUM4LESS_ALLOW_DB_RESET === "1"
+  );
+}
+
 function containerHealthStatus() {
   try {
     return execSync(
@@ -54,7 +66,7 @@ async function waitForHealthyContainer() {
 function seedMatchesCurrentMvp() {
   try {
     const catalogStoreCount = execSync(
-      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from stores where source_name = 'yum4less-internal-catalog';"`,
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from stores;"`,
       { encoding: "utf8", shell: true },
     ).trim();
     const mockPriceCount = execSync(
@@ -65,11 +77,16 @@ function seedMatchesCurrentMvp() {
       `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from recipes where source_name = 'yum4less-internal-catalog';"`,
       { encoding: "utf8", shell: true },
     ).trim();
+    const dynamicPricingColumnCount = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.columns where table_name = 'price_observations' and column_name in ('last_verified_at', 'source_kind', 'valid_through');"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
 
     return (
       catalogStoreCount === "8" &&
       mockPriceCount === "0" &&
-      Number(recipeCount) >= 3
+      Number(recipeCount) >= 3 &&
+      dynamicPricingColumnCount === "3"
     );
   } catch {
     return false;
@@ -89,7 +106,7 @@ export async function ensureTestDatabase() {
 
   if (!dockerAvailable()) {
     throw new Error(
-      "Docker is not available. Start Docker Desktop or skip integration tests with `npm test` only.",
+      "Docker is not available. Start Docker Desktop, then rerun this command. Use `npm test` only for the non-DB suite.",
     );
   }
 
@@ -106,6 +123,12 @@ export async function ensureTestDatabase() {
   }
 
   if (!seedMatchesCurrentMvp()) {
+    if (!canResetDatabaseAutomatically()) {
+      throw new Error(
+        "Local Postgres seed looks stale. Start Docker Desktop if needed, then run `npm run db:reset` only after confirming you are okay recreating the local dev database volume.",
+      );
+    }
+
     console.log(
       "Local Postgres seed looks stale (missing expected MVP stores). Recreating volume...",
     );

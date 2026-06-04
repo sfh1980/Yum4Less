@@ -16,7 +16,7 @@ export const mealTotalHelp = {
   tooltip: "Estimated cost, not a checkout total.",
   popoverTitle: "Estimated meal total",
   popoverContent:
-    "This total combines ingredient prices from nearby stores that are on the trusted pricing rollout. Treat it as an estimate—verify price, package size, and current deals in the store before you buy.",
+    "This total combines recently checked online prices and saved weekly-ad prices from nearby stores on the trusted pricing rollout. Treat it as an estimate—verify price, package size, and current shelf tags before you buy.",
 } as const;
 
 export const confidenceLabelHelp = {
@@ -30,14 +30,14 @@ export const freshnessLabelHelp = {
   tooltip: "How recent the price data is.",
   popoverTitle: "Freshness label",
   popoverContent:
-    "Freshness tells you how recent the underlying price information is. Newer pricing is more trustworthy; older pricing is more directional and should be double-checked in store.",
+    "Freshness tells you how recently Yum4Less checked the underlying price information. Same-hour online prices are stronger signals, but electronic shelf labels and checkout systems can still change before you shop.",
 } as const;
 
 export const pricingTrustHeadsUpHelp = {
   tooltip: "Why these prices may differ from checkout.",
   popoverTitle: "Price trust signals",
   popoverContent:
-    "This banner appears when Yum4Less is using saved weekly ads, backup store data, limited ZIP lookup, or other non-live sources. Treat meal totals as estimates and confirm price, package size, and deals before you shop.",
+    "This banner appears when Yum4Less is using saved weekly ads, recently checked online prices, backup store data, limited ZIP lookup, or other non-checkout sources. Treat meal totals as estimates and confirm price, package size, and deals before you shop.",
 } as const;
 
 export const recipeSourceHelp = {
@@ -51,12 +51,12 @@ export const nearbyStoresMapHelp = {
   tooltip: "Not every map pin drives meal pricing.",
   popoverTitle: "Nearby stores map",
   popoverContent:
-    "Pins show stores in your radius. Green \"Weekly ad prices\" locations use saved weekly-ad data for ranked dinner totals when rollout allows; gray \"Context only\" stores are nearby but not used for meal pricing yet. Walmart is always context only until live weekly-ad ingest works—no current, actionable Walmart deals. Totals are estimates—not live checkout.",
+    "Pins show stores in your radius. Green \"Weekly ad prices\" locations use saved weekly-ad data for ranked dinner totals when rollout allows; gray \"Context only\" stores are nearby but not used for meal pricing yet. Walmart is always context only until current, actionable Walmart matching works. Totals are estimates—not live checkout.",
 } as const;
 
 export const mealPriceSourceHelp = {
   tooltip: "Where this meal total came from.",
   popoverTitle: "Price source",
   popoverContent:
-    "Each ranked meal total combines saved store prices from nearby locations on the trusted rollout—usually weekly-ad pulls or recent saved chain prices. Walmart is excluded until live weekly-ad pricing is available. These are estimates, not live checkout totals. Confirm price, package size, and deals in the store before you buy.",
+    "Each ranked meal total combines saved store prices from nearby locations on the trusted rollout—usually recently checked online prices or weekly-ad pulls. Walmart is excluded until live matching is trustworthy. These are estimates, not checkout totals. Confirm price, package size, and deals in the store before you buy.",
 } as const;

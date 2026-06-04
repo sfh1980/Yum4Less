@@ -20,7 +20,11 @@ import {
 import {
   searchOfficialProviderStores,
 } from "@/lib/provider-market-service";
-import { deriveRankedPricingSource } from "@/lib/price-source-policy";
+import {
+  deriveRankedPricingSource,
+  getRankedPriceSourceKind,
+  getRankedPriceSourceTier,
+} from "@/lib/price-source-policy";
 import {
   buildProviderCoverageRollup,
   type ProviderCoverageRollup,
@@ -126,8 +130,11 @@ export type ShoppingPlanItem = {
   storeName: string;
   price: number;
   freshnessDaysAgo: number;
+  freshnessHoursAgo?: number;
   saleLabel?: string;
   priceSource?: string;
+  priceSourceKind?: "official-online" | "weekly-ad" | "sample" | "unknown";
+  priceSourceTier?: number;
   matchConfidence?: number;
   saleConfidence: SaleConfidence;
 };
@@ -310,15 +317,21 @@ export async function getMarketSearchExperience(
     );
   }
 
+  const recommendationReadyStores = nearbyStores.filter(
+    (store) => store.recommendationEnabled,
+  );
+  const recommendationReadyStoreIds = new Set(
+    recommendationReadyStores.map((store) => store.id),
+  );
   const providerCoverageRollup = buildProviderCoverageRollup(
     providerPricingPreviews,
     deriveRankedPricingSource({
-      priceSources: snapshot.priceObservations.map(
-        (observation) => observation.priceSource,
-      ),
-      recommendationEnabledStoreCount: nearbyStores.filter(
-        (store) => store.recommendationEnabled,
-      ).length,
+      priceSources: snapshot.priceObservations
+        .filter((observation) =>
+          recommendationReadyStoreIds.has(observation.storeId),
+        )
+        .map((observation) => observation.priceSource),
+      recommendationEnabledStoreCount: recommendationReadyStores.length,
     }),
   );
   const providerPromotionReadiness = buildAllProviderPromotionReadiness({
@@ -593,9 +606,7 @@ function buildSingleStorePlan(
   }
 
   return candidatePlans.sort(
-    (left, right) =>
-      left.reduce((sum, item) => sum + item.price, 0) -
-      right.reduce((sum, item) => sum + item.price, 0),
+    (left, right) => comparePlanQuality(left, right),
   )[0]!;
 }
 
@@ -623,7 +634,9 @@ function buildMultiStorePlan(
         ): candidate is { store: NearbyStoreSummary; observation: MockPriceObservation } =>
           candidate.observation !== undefined,
       )
-      .sort((left, right) => left.observation.price - right.observation.price)[0];
+      .sort((left, right) =>
+        compareObservationQuality(left.observation, right.observation),
+      )[0];
 
     if (!bestObservation) {
       return [];
@@ -669,12 +682,18 @@ function toShoppingPlanItem(
     storeName,
     price: observation.price,
     freshnessDaysAgo: observation.freshnessDaysAgo,
+    freshnessHoursAgo: observation.freshnessHoursAgo,
     saleLabel: observation.saleLabel,
     priceSource: observation.priceSource,
+    priceSourceKind:
+      observation.priceSourceKind ?? getRankedPriceSourceKind(observation.priceSource),
+    priceSourceTier:
+      observation.priceSourceTier ?? getRankedPriceSourceTier(observation.priceSource),
     matchConfidence: observation.matchConfidence,
     saleConfidence: getSaleConfidence({
       saleLabel: observation.saleLabel,
       freshnessDaysAgo: observation.freshnessDaysAgo,
+      freshnessHoursAgo: observation.freshnessHoursAgo,
       dataSource,
       priceSource: observation.priceSource,
       matchConfidence: observation.matchConfidence,
@@ -694,9 +713,21 @@ function scoreCandidate({
   estimatedTotal: number;
 }): ScoreBreakdown {
   const storeCount = new Set(shoppingPlan.map((item) => item.storeName)).size;
-  const averageFreshnessDays =
-    shoppingPlan.reduce((sum, item) => sum + item.freshnessDaysAgo, 0) /
-    shoppingPlan.length;
+  const averageFreshnessHours =
+    shoppingPlan.reduce(
+      (sum, item) => sum + (item.freshnessHoursAgo ?? item.freshnessDaysAgo * 24),
+      0,
+    ) / shoppingPlan.length;
+  const averageSourceTier =
+    shoppingPlan.reduce(
+      (sum, item) => sum + (item.priceSourceTier ?? getRankedPriceSourceTier(item.priceSource)),
+      0,
+    ) / shoppingPlan.length;
+  const weakMatchPenalty = shoppingPlan.some(
+    (item) => item.matchConfidence !== undefined && item.matchConfidence < 0.7,
+  )
+    ? 3
+    : 0;
   const dietaryBoost =
     preferences.dietaryFocus !== "anything" &&
     recipe.dietaryTags.includes(preferences.dietaryFocus)
@@ -713,7 +744,16 @@ function scoreCandidate({
     0,
     30,
   );
-  const freshness = clamp(Math.round(20 - averageFreshnessDays * 3), 4, 20);
+  const freshness = clamp(
+    Math.round(
+      20 -
+        Math.min(averageFreshnessHours / 6, 12) -
+        Math.max(0, averageSourceTier - 1) * 3 -
+        weakMatchPenalty,
+    ),
+    4,
+    20,
+  );
   const fit = clamp(
     10 + (preferences.maxIngredients - recipe.ingredients.length) * 2 + dietaryBoost,
     0,
@@ -770,6 +810,7 @@ function toRecommendation(
       saleConfidence: getSaleConfidence({
         saleLabel: item.saleLabel,
         freshnessDaysAgo: item.freshnessDaysAgo,
+        freshnessHoursAgo: item.freshnessHoursAgo,
         dataSource,
         priceSource: item.priceSource,
         matchConfidence: item.matchConfidence,
@@ -795,24 +836,84 @@ function buildExplanation(candidate: Candidate, storeCount: number) {
       : "it balances savings across multiple nearby stores";
   const freshnessNote =
     candidate.score.freshness >= 16
-      ? "The current price observations are relatively fresh."
+      ? "The current price observations were checked recently, but they are not live checkout totals."
       : "Some price observations are older, so treat the total as more directional.";
 
   return `${candidate.recipe.title} ranks well because ${budgetNote} and ${storeNote}. ${freshnessNote}`;
 }
 
 function getFreshnessLabel(shoppingPlan: ShoppingPlanItem[]) {
+  const averageHours =
+    shoppingPlan.reduce(
+      (sum, item) => sum + (item.freshnessHoursAgo ?? item.freshnessDaysAgo * 24),
+      0,
+    ) / shoppingPlan.length;
   const averageDays =
     shoppingPlan.reduce((sum, item) => sum + item.freshnessDaysAgo, 0) /
     shoppingPlan.length;
 
-  if (averageDays <= 2) {
-    return "Recent prices";
+  const hasOnline = shoppingPlan.some(
+    (item) => item.priceSourceKind === "official-online",
+  );
+
+  if (hasOnline && averageHours <= 1) {
+    return "Checked within 1 hour";
+  }
+  if (hasOnline && averageHours <= 24) {
+    return "Same-day online prices";
   }
   if (averageDays <= 3.5) {
-    return "Prices from this week";
+    return "Recent weekly-ad prices";
   }
   return "Older prices — verify in store";
+}
+
+function comparePlanQuality(left: ShoppingPlanItem[], right: ShoppingPlanItem[]) {
+  const leftQuality = getPlanQuality(left);
+  const rightQuality = getPlanQuality(right);
+
+  return (
+    leftQuality.averageTier - rightQuality.averageTier ||
+    leftQuality.averageFreshnessHours - rightQuality.averageFreshnessHours ||
+    rightQuality.averageConfidence - leftQuality.averageConfidence ||
+    leftQuality.total - rightQuality.total
+  );
+}
+
+function getPlanQuality(plan: ShoppingPlanItem[]) {
+  return {
+    averageTier:
+      plan.reduce((sum, item) => sum + (item.priceSourceTier ?? 99), 0) /
+      plan.length,
+    averageFreshnessHours:
+      plan.reduce(
+        (sum, item) => sum + (item.freshnessHoursAgo ?? item.freshnessDaysAgo * 24),
+        0,
+      ) / plan.length,
+    averageConfidence:
+      plan.reduce((sum, item) => sum + (item.matchConfidence ?? 0.7), 0) /
+      plan.length,
+    total: plan.reduce((sum, item) => sum + item.price, 0),
+  };
+}
+
+function compareObservationQuality(
+  left: MockPriceObservation,
+  right: MockPriceObservation,
+) {
+  const leftTier = left.priceSourceTier ?? getRankedPriceSourceTier(left.priceSource);
+  const rightTier = right.priceSourceTier ?? getRankedPriceSourceTier(right.priceSource);
+  const leftFreshness = left.freshnessHoursAgo ?? left.freshnessDaysAgo * 24;
+  const rightFreshness = right.freshnessHoursAgo ?? right.freshnessDaysAgo * 24;
+  const leftConfidence = left.matchConfidence ?? 0.7;
+  const rightConfidence = right.matchConfidence ?? 0.7;
+
+  return (
+    leftTier - rightTier ||
+    leftFreshness - rightFreshness ||
+    rightConfidence - leftConfidence ||
+    left.price - right.price
+  );
 }
 
 function getConfidenceLabel(shoppingPlan: ShoppingPlanItem[]) {

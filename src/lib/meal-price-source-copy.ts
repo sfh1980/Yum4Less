@@ -69,9 +69,10 @@ export function buildResultsPanelPriceSourceLine(
     case "weekly-ad-cache":
       return "Ranked meal totals below use saved weekly-ad prices — not live checkout.";
     case "official-api-cache":
-      return "Ranked meal totals below use saved Kroger store prices — not live checkout.";
-    case "mixed-live-cache":
-      return "Ranked meal totals below use saved weekly ads and Kroger prices — not live checkout.";
+    case "online-cache":
+      return "Ranked meal totals below use recently checked online store prices — not live checkout.";
+    case "mixed-online-weekly-ad-cache":
+      return "Ranked meal totals below use recently checked online prices plus saved weekly ads — not live checkout.";
     case "limited-coverage":
       return "Ranked meal totals below use limited saved prices — treat them as directional estimates.";
     case "none":
@@ -93,16 +94,17 @@ function buildRankedSourceCopy(
           "This total combines ingredient prices from saved weekly-ad pulls for nearby stores on the trusted rollout. Weekly ads change often and are not the same as live checkout — verify price, package size, and deals before you buy.",
       };
     case "official-api-cache":
+    case "online-cache":
       return {
-        summary: `Saved Kroger store prices ${storePhrase} — not live checkout; confirm in store.`,
+        summary: `Recently checked online store prices ${storePhrase} — not live checkout; confirm at the shelf.`,
         detail:
-          "This total uses saved Kroger store prices from recent ingested observations. In-store tags and checkout totals can differ — verify the exact product and deal before you rely on this estimate.",
+          "This total uses recently checked online store prices from ingested observations. Electronic shelf labels and checkout systems can still change before you shop — verify the exact product and deal before you rely on this estimate.",
       };
-    case "mixed-live-cache":
+    case "mixed-online-weekly-ad-cache":
       return {
-        summary: `Saved weekly ads and Kroger prices ${storePhrase} — not live checkout; confirm in store.`,
+        summary: `Recently checked online prices and saved weekly ads ${storePhrase} — not live checkout; confirm in store.`,
         detail:
-          "This total mixes saved weekly-ad prices and saved Kroger store prices from nearby stores on the trusted rollout. Neither source is live checkout — confirm price, package size, and deals in store.",
+          "This total mixes recently checked online prices with saved weekly-ad prices from nearby stores on the trusted rollout. Neither source is live checkout — confirm price, package size, and deals in store.",
       };
     case "limited-coverage":
       return {

@@ -98,7 +98,7 @@ function buildMapTrustNote(
         ? "the ZIP you searched"
         : "the local MVP area";
 
-  return `Map pins use ${storeSource}, anchored to ${anchorLabel}. Walmart pins are context only—live weekly-ad pricing from Walmart is not available yet. Live store lookups are shown separately and do not replace these map pins yet.`;
+  return `Map pins use ${storeSource}, anchored to ${anchorLabel}. Walmart pins are context only—current, actionable Walmart pricing is not available yet. Store lookups are shown separately and do not replace these map pins yet.`;
 }
 
 export type MapBoundsResult =

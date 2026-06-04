@@ -35,28 +35,35 @@ export async function POST(request: Request) {
     );
   }
 
-  const locationResult = await resolveLocationInput(payload);
-  if (!locationResult.ok) {
+  try {
+    const locationResult = await resolveLocationInput(payload);
+    if (!locationResult.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: locationResult.error,
+          providerConfigured: locationResult.providerConfigured,
+        },
+        { status: 404 },
+      );
+    }
+
+    const experience = await getMarketSearchExperience(
+      payload.radiusMiles,
+      locationResult.location,
+      locationResult.providerConfigured,
+    );
+
+    return NextResponse.json({
+      ok: true,
+      market: sanitizeMarketSummaryForPublicApi(experience.market),
+    });
+  } catch {
     return NextResponse.json(
-      {
-        ok: false,
-        error: locationResult.error,
-        providerConfigured: locationResult.providerConfigured,
-      },
-      { status: 404 },
+      { ok: false, error: "Market search is temporarily unavailable." },
+      { status: 500 },
     );
   }
-
-  const experience = await getMarketSearchExperience(
-    payload.radiusMiles,
-    locationResult.location,
-    locationResult.providerConfigured,
-  );
-
-  return NextResponse.json({
-    ok: true,
-    market: sanitizeMarketSummaryForPublicApi(experience.market),
-  });
 }
 
 type MarketSearchPayload = {

@@ -27,10 +27,10 @@ Local MVP is **demo-complete for ZIP `23111`** on **fixture ingest + Postgres**.
 | Schema, seed, ingest, pricing rows | `@database-codegen-standards` | `npm test`; `npm run test:integration` | Postgres MCP after `npm run db:up` |
 | CI, e2e, merge-ready | `@testing-cicd-standards` | per change | GitHub MCP or `gh` |
 | Trust / verified / rollout claims | `@verifier` | tests + evidence | Playwright + Postgres as needed |
-| Security / dependency audit | `@senior-auditor` | review + route tests | — |
+| Security / dependency audit | `@senior-auditor` | review + route tests | Semgrep Guardian when configured |
 | Unknown multi-file area | normal agent + Task `explore` | then area-specific | explore first, then edit |
 
-**Open gaps (not hidden):** Walmart **live** ingredient matching (0 synced; fixture **7** rows); direct Aldi/Food Lion scrape still blocked but **Flipp syndicated feed** can sync live rows; deployment not started unless reprioritized; remote GitHub CI status requires `gh auth login` to verify.
+**Open gaps (not hidden):** Walmart ranked pricing/promotion is intentionally skipped for now even though fixture/live ingest code paths exist; Aldi/Food Lion use a stronger Flipp retry + flyer/search-term ladder before direct scrape, but live retailer pages can still block; analytics is first-party and off by default until env flags are set; deployment not started unless reprioritized. When deployment starts, move the Kroger API app from certification to production before live Kroger price claims. **Remote CI green** on https://github.com/sfh1980/Yum4Less (2026-05-27).
 
 ## Project agents (`.cursor/agents/`)
 
@@ -52,8 +52,9 @@ Invoke with **@agent-name** in chat or follow the agent checklist when the orche
 | **postgres** | Schema, seed, latest `price_observations`, ingest verification | `npm run db:up`; port `5433`; read-only |
 | **playwright** | UI/map/trust flows Vitest cannot prove | `npm run dev`; test ZIP `23111` |
 | **github** | PR checks, workflow failures, release status | `GITHUB_PERSONAL_ACCESS_TOKEN`; Docker for official server |
+| **semgrep** | Security, dependency, and secrets scanning for agent-written code and PR/release review | Semgrep CLI available locally; `semgrep login` for Guardian products |
 
-Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tokens.
+Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tokens. Semgrep requires the local `semgrep` CLI before its MCP server or hooks can run; the project wrappers also check Python user-script installs.
 
 ## Scoped rules (auto when matching files are open)
 
@@ -70,10 +71,11 @@ Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tok
 | `sessionStart` | README check + orchestration/MVP context + port 5433/3000 preflight |
 | `beforeSubmitPrompt` | Route user prompts to suggested @ agent + rephrase |
 | `afterFileEdit` | Nudge frontend/DB verification when matching paths edit |
+| `afterFileEdit` | Run non-blocking local Semgrep security/TypeScript scan when `semgrep` is installed; otherwise remind that setup is incomplete |
 | `beforeMCPExecution` | Remind agent to read MCP tool schema first |
 | `subagentStop` (`explore`) | Hand off to scoped rules + orchestration after explore |
 | `beforeShellExecution` | Package/MCP install guard |
-| `stop` | Diff-aware verification reminder (`loop_limit: 1`) |
+| `stop` | Non-blocking Semgrep Guardian final scan plus diff-aware verification reminder (`loop_limit: 1`) |
 
 ## Production-lean refactor (owner direction)
 
@@ -110,3 +112,4 @@ Use Task `explore` before phase 2–3 if touching many imports.
 3. `npm run test:integration` if Postgres behavior changed
 4. Playwright MCP if trust-sensitive UI changed
 5. Postgres MCP if DB/ingest truth claims are made
+6. Semgrep Guardian for security-sensitive, dependency, secrets, PR, or release-readiness claims
