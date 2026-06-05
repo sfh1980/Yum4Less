@@ -2,9 +2,9 @@
 
 import type { MealRecommendation, RecommendationExperience } from "@/lib/recommendation-service";
 import { HelpHint } from "@/components/help-hint";
-import { formatDifficulty } from "@/components/recommendation-demo/form-validation";
-import { MultiStoreRoutePanel } from "@/components/recommendation-demo/multi-store-route-panel";
-import type { ActiveLocationRequest, FormState } from "@/components/recommendation-demo/types";
+import { formatDifficulty } from "@/components/meal-planner/form-validation";
+import { MultiStoreRoutePanel } from "@/components/meal-planner/multi-store-route-panel";
+import type { ActiveLocationRequest, FormState } from "@/components/meal-planner/types";
 import { formatEstimatedCurrency } from "@/lib/format-estimated-currency";
 import {
   confidenceLabelHelp,

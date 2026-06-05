@@ -3,9 +3,9 @@ import {
   buildRecipeProviderPreviewComparison,
   buildRecipeProviderPreviewComparisons,
 } from "@/lib/seed-vs-provider-recipe-comparison";
-import type { MockRecipeRecord } from "@/lib/mock-market-data";
+import type { RecipeRecord } from "@/lib/market-types";
 
-const sampleRecipe: MockRecipeRecord = {
+const sampleRecipe: RecipeRecord = {
   id: "sheet-pan-lemon-chicken",
   title: "Sheet Pan Lemon Chicken and Vegetables",
   summary: "Sample recipe",

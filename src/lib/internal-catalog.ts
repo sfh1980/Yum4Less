@@ -1,7 +1,7 @@
-import type { MockIngredient } from "@/lib/mock-market-data";
+import type { IngredientRecord } from "@/lib/market-types";
 
 /** Postgres-backed dinner ingredient catalog used for weekly-ad and provider matching. */
-export const INTERNAL_CATALOG_INGREDIENTS: MockIngredient[] = [
+export const INTERNAL_CATALOG_INGREDIENTS: IngredientRecord[] = [
   { id: "chicken-thighs", name: "Chicken thighs", category: "protein" },
   { id: "baby-potatoes", name: "Baby potatoes", category: "produce" },
   { id: "broccoli", name: "Broccoli", category: "produce" },

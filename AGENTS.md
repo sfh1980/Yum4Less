@@ -79,7 +79,7 @@ Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tok
 
 ## Production-lean refactor (owner direction)
 
-**Keep:** current UI/UX (`recommendation-demo` is the real home-page flow), all meals/recipes/prices already in Postgres, fixture ingest for dev/CI only (honestly labeled).
+**Keep:** current UI/UX (`meal-planner` is the real home-page flow), all meals/recipes/prices already in Postgres, fixture ingest for dev/CI only (honestly labeled).
 
 **Remove over time:** runtime `mock-market-data` and misleading mock/demo naming on live paths; in-memory market fallbacks; copy that implies live store data when it is rehearsal or unavailable.
 
@@ -97,8 +97,8 @@ Yum4Less production-lean refactor: Keep the current UI/UX and every meal/recipe/
 
 | Phase | Prompt keywords | Agents | Gates |
 |-------|-----------------|--------|-------|
-| 1 — CI smoke stability | `vitest`, `recommendation-demo.test`, `CI-01`, `testTimeout` | `@testing-cicd-standards` | `npm test` |
-| 2 — Rename demo UI folder | `rename recommendation-demo`, `meal planner`, no UX redesign | `@web-frontend-standards` | `npm test`; Playwright if trust copy moves |
+| 1 — CI smoke stability | `vitest`, `meal-planner.test`, `CI-01`, `testTimeout` | `@testing-cicd-standards` | `npm test` |
+| 2 — Rename demo UI folder | **done** — `meal-planner` folder/exports | `@web-frontend-standards` | `npm test`; Playwright if trust copy moves |
 | 3 — Retire runtime mock catalog | `mock-market-data`, `database-first`, rename Mock* types | `@web-backend-standards` `@database-codegen-standards` | `npm test`; `npm run test:integration` |
 | 4 — Trust copy pass | `estimated`, `directional`, `limited coverage`, fallback banner | `@web-frontend-standards` `@verifier` | `npm test`; Playwright MCP |
 | 5 — Live API rollout | `Kroger`, `Publix`, weekly-ad ingest, chain parser | `@database-codegen-standards` | ingest + Postgres MCP |

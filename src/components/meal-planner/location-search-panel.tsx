@@ -4,9 +4,9 @@ import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction }
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 import { listSelectableRecipeSources } from "@/lib/recipe-sources/recipe-source-registry";
 import type { RecipeSourceSelection } from "@/lib/recipe-sources/recipe-source-types";
-import { FormField } from "@/components/recommendation-demo/form-field";
+import { FormField } from "@/components/meal-planner/form-field";
 import { radiusHelp, recipeSourceHelp, zipCodeHelp } from "@/lib/help-hint-content";
-import type { FieldErrors, FormState } from "@/components/recommendation-demo/types";
+import type { FieldErrors, FormState } from "@/components/meal-planner/types";
 import type { RecommendationExperience } from "@/lib/recommendation-service";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 

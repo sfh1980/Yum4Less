@@ -1,3 +1,5 @@
+import { isSamplePriceSource } from "@/lib/price-source-policy";
+
 export type SaleConfidenceLevel =
   | "verified-recent"
   | "advertised-recent"
@@ -37,7 +39,7 @@ export function getSaleConfidence(input: {
     };
   }
 
-  if (input.priceSource === "mock-market-data") {
+  if (isSamplePriceSource(input.priceSource)) {
     return {
       level: "no-sale-data",
       label: "Sample sale reference",

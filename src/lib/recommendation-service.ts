@@ -1,8 +1,8 @@
 import type {
-  MockPriceObservation,
-  MockRecipeRecord,
-  MockStore,
-} from "@/lib/mock-market-data";
+  PriceObservationRecord,
+  RecipeRecord,
+  StoreRecord,
+} from "@/lib/market-types";
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 import {
   getMarketDataSnapshot,
@@ -82,7 +82,7 @@ export type RecipeDifficulty = "easy" | "medium";
 export type NearbyStoreSummary = {
   id: string;
   name: string;
-  kind: MockStore["kind"];
+  kind: StoreRecord["kind"];
   latitude: number;
   longitude: number;
   distanceMiles: number;
@@ -182,7 +182,7 @@ export type RecommendationExperience = {
 };
 
 type Candidate = {
-  recipe: MockRecipeRecord;
+  recipe: RecipeRecord;
   shoppingPlan: ShoppingPlanItem[];
   estimatedTotal: number;
   score: ScoreBreakdown;
@@ -373,7 +373,7 @@ export async function getMarketSearchExperience(
 }
 
 function byDietaryFocus(
-  recipe: MockRecipeRecord,
+  recipe: RecipeRecord,
   dietaryFocus: MealPreferenceForm["dietaryFocus"],
 ) {
   if (dietaryFocus === "anything") {
@@ -384,10 +384,10 @@ function byDietaryFocus(
 }
 
 function getNearbyStores(
-  stores: MockStore[],
+  stores: StoreRecord[],
   location: ResolvedSearchLocation,
   radiusMiles: number,
-  priceObservations: MockPriceObservation[],
+  priceObservations: PriceObservationRecord[],
   recipeIngredientIds: string[],
 ): NearbyStoreSummary[] {
   return stores
@@ -432,7 +432,7 @@ function getNearbyStores(
     .sort((left, right) => left.distanceMiles - right.distanceMiles);
 }
 
-function collectRecipeIngredientIds(recipes: MockRecipeRecord[]): string[] {
+function collectRecipeIngredientIds(recipes: RecipeRecord[]): string[] {
   return [
     ...new Set(
       recipes.flatMap((recipe) =>
@@ -444,7 +444,7 @@ function collectRecipeIngredientIds(recipes: MockRecipeRecord[]): string[] {
 
 function buildWeeklyAdCoverageByStoreId(
   nearbyStores: NearbyStoreSummary[],
-  priceObservations: MockPriceObservation[],
+  priceObservations: PriceObservationRecord[],
   recipeIngredientIds: string[],
 ) {
   const coverageByStoreId = new Map<
@@ -536,10 +536,10 @@ function buildMarketSummary(
 }
 
 function buildCandidate(
-  recipe: MockRecipeRecord,
+  recipe: RecipeRecord,
   nearbyStores: NearbyStoreSummary[],
   preferences: MealPreferenceForm,
-  priceObservations: MockPriceObservation[],
+  priceObservations: PriceObservationRecord[],
   dataSource: MarketDataSource,
 ): Candidate | null {
   const shoppingPlan =
@@ -571,9 +571,9 @@ function buildCandidate(
 }
 
 function buildSingleStorePlan(
-  recipe: MockRecipeRecord,
+  recipe: RecipeRecord,
   nearbyStores: NearbyStoreSummary[],
-  priceObservations: MockPriceObservation[],
+  priceObservations: PriceObservationRecord[],
   dataSource: MarketDataSource,
 ): ShoppingPlanItem[] {
   const candidatePlans = nearbyStores
@@ -611,9 +611,9 @@ function buildSingleStorePlan(
 }
 
 function buildMultiStorePlan(
-  recipe: MockRecipeRecord,
+  recipe: RecipeRecord,
   nearbyStores: NearbyStoreSummary[],
-  priceObservations: MockPriceObservation[],
+  priceObservations: PriceObservationRecord[],
   dataSource: MarketDataSource,
 ): ShoppingPlanItem[] {
   const plan: ShoppingPlanItem[] = [];
@@ -631,7 +631,7 @@ function buildMultiStorePlan(
       .filter(
         (
           candidate,
-        ): candidate is { store: NearbyStoreSummary; observation: MockPriceObservation } =>
+        ): candidate is { store: NearbyStoreSummary; observation: PriceObservationRecord } =>
           candidate.observation !== undefined,
       )
       .sort((left, right) =>
@@ -657,7 +657,7 @@ function buildMultiStorePlan(
 }
 
 function getObservationForStore(
-  priceObservations: MockPriceObservation[],
+  priceObservations: PriceObservationRecord[],
   storeId: string,
   ingredientId: string,
 ) {
@@ -672,7 +672,7 @@ function getObservationForStore(
 function toShoppingPlanItem(
   ingredient: string,
   quantityNote: string,
-  observation: MockPriceObservation,
+  observation: PriceObservationRecord,
   storeName: string,
   dataSource: MarketDataSource,
 ): ShoppingPlanItem {
@@ -707,7 +707,7 @@ function scoreCandidate({
   preferences,
   estimatedTotal,
 }: {
-  recipe: MockRecipeRecord;
+  recipe: RecipeRecord;
   shoppingPlan: ShoppingPlanItem[];
   preferences: MealPreferenceForm;
   estimatedTotal: number;
@@ -898,8 +898,8 @@ function getPlanQuality(plan: ShoppingPlanItem[]) {
 }
 
 function compareObservationQuality(
-  left: MockPriceObservation,
-  right: MockPriceObservation,
+  left: PriceObservationRecord,
+  right: PriceObservationRecord,
 ) {
   const leftTier = left.priceSourceTier ?? getRankedPriceSourceTier(left.priceSource);
   const rightTier = right.priceSourceTier ?? getRankedPriceSourceTier(right.priceSource);

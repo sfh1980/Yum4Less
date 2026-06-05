@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockPriceObservations } from "@/lib/mock-market-data";
+import { fixturePriceObservations } from "@/lib/market-data-fixtures";
 import {
   buildWeeklyAdStoreCoverage,
   MIN_WEEKLY_AD_PROMOTION_MATCHES,
@@ -21,7 +21,7 @@ describe("weekly ad coverage", () => {
       storeId: "kroger-mechanicsville",
       chain: "kroger",
       priceObservations: [
-        ...mockPriceObservations,
+        ...fixturePriceObservations,
         {
           storeId: "kroger-mechanicsville",
           ingredientId: "chicken-thighs",

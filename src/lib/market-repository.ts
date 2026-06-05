@@ -1,9 +1,9 @@
 import { getDbPool } from "@/lib/db";
 import type {
-  MockPriceObservation,
-  MockRecipeRecord,
-  MockStore,
-} from "@/lib/mock-market-data";
+  PriceObservationRecord,
+  RecipeRecord,
+  StoreRecord,
+} from "@/lib/market-types";
 import {
   getRankedPriceSourceKind,
   RANKED_PRICE_SOURCE_SQL_FILTER,
@@ -11,9 +11,9 @@ import {
 } from "@/lib/price-source-policy";
 
 export type MarketDataSnapshot = {
-  stores: MockStore[];
-  recipes: MockRecipeRecord[];
-  priceObservations: MockPriceObservation[];
+  stores: StoreRecord[];
+  recipes: RecipeRecord[];
+  priceObservations: PriceObservationRecord[];
 };
 
 export type MarketDataSource = "database" | "unavailable";
@@ -80,7 +80,7 @@ export async function getMarketDataSnapshot(): Promise<{
         map.set(row.recipe_id, current);
         return map;
       },
-      new Map<string, MockRecipeRecord["ingredients"]>(),
+      new Map<string, RecipeRecord["ingredients"]>(),
     );
 
     return {
@@ -160,7 +160,7 @@ function normalizeDietaryTags(
 type StoreRow = {
   id: string;
   name: string;
-  kind: MockStore["kind"];
+  kind: StoreRecord["kind"];
   city: string;
   state: string;
   latitude: string;
@@ -172,7 +172,7 @@ type RecipeRow = {
   title: string;
   summary: string;
   cook_time_minutes: number;
-  difficulty: MockRecipeRecord["difficulty"];
+  difficulty: RecipeRecord["difficulty"];
   tags: string[] | null;
   dietary_tags: string[] | null;
   steps: string[] | null;

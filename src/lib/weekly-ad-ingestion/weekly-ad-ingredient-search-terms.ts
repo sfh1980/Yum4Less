@@ -1,4 +1,4 @@
-import type { MockIngredient } from "@/lib/mock-market-data";
+import type { IngredientRecord } from "@/lib/market-types";
 
 /** Weekly-ad product titles rarely mirror catalog names; use short grocery aliases. */
 const WEEKLY_AD_INGREDIENT_SEARCH_ALIASES: Record<string, string[]> = {
@@ -169,7 +169,7 @@ const WEEKLY_AD_INGREDIENT_SEARCH_ALIASES: Record<string, string[]> = {
   ],
 };
 
-export function getWeeklyAdIngredientSearchTerms(ingredient: MockIngredient): string[] {
+export function getWeeklyAdIngredientSearchTerms(ingredient: IngredientRecord): string[] {
   const aliases = WEEKLY_AD_INGREDIENT_SEARCH_ALIASES[ingredient.id] ?? [];
   const terms = [ingredient.name, ...aliases];
   return [...new Set(terms.map((term) => term.trim()).filter(Boolean))];

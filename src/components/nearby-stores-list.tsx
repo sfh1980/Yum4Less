@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
-import { formatStoreKind } from "@/components/recommendation-demo/form-validation";
+import { formatStoreKind } from "@/components/meal-planner/form-validation";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 type NearbyStoresListProps = {

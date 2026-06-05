@@ -317,7 +317,7 @@ The repo currently contains a **local MVP implementation** (ZIP `23111`, Postgre
 Current file roles:
 
 - `src/app/page.tsx` keeps the home page thin and compositional
-- `src/components/recommendation-demo.tsx` contains the mock location, preferences, and recommendation UI flow
+- `src/components/meal-planner/` contains the location, preferences, and recommendation UI flow (home page)
 - `src/components/recommendation-results-carousel.tsx` renders the swipeable ranked-dinner carousel
 - `src/components/nearby-stores-map.tsx` renders the client-side Leaflet map for nearby stores
 - `src/lib/nearby-stores-map-model.ts` builds trust-aware map markers and bounds from the market summary

@@ -1,9 +1,9 @@
 import {
-  mockPriceObservations,
-  mockRecipes,
-  mockStores,
-  type MockPriceObservation,
-} from "@/lib/mock-market-data";
+  fixturePriceObservations,
+  fixtureRecipes,
+  fixtureStores,
+  type PriceObservationRecord,
+} from "@/lib/market-data-fixtures";
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 
@@ -44,9 +44,9 @@ export function buildZip23111WeeklyAdPriceObservations(
   storeIds: ReadonlyArray<(typeof WEEKLY_AD_CHAINS)[number]["storeId"]> = [
     "kroger-mechanicsville",
   ],
-): MockPriceObservation[] {
+): PriceObservationRecord[] {
   const allowed = new Set(storeIds);
-  return mockPriceObservations
+  return fixturePriceObservations
     .filter((observation) => allowed.has(observation.storeId as (typeof storeIds)[number]))
     .map((observation) => {
       const chain = WEEKLY_AD_CHAINS.find((entry) => entry.storeId === observation.storeId);
@@ -64,13 +64,13 @@ export function buildZip23111RankingSnapshot(
   ],
 ) {
   return {
-    stores: mockStores,
-    recipes: mockRecipes,
+    stores: fixtureStores,
+    recipes: fixtureRecipes,
     priceObservations: buildZip23111WeeklyAdPriceObservations(storeIds),
   };
 }
 
-const blackBeanTacoRecipe = mockRecipes.find(
+const blackBeanTacoRecipe = fixtureRecipes.find(
   (recipe) => recipe.id === "black-bean-tacos",
 )!;
 
@@ -86,7 +86,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
     matchConfidence: 0.85,
   } as const;
 
-  const priceObservations: MockPriceObservation[] = [
+  const priceObservations: PriceObservationRecord[] = [
     {
       storeId: "kroger-mechanicsville",
       ingredientId: "black-beans",
@@ -132,7 +132,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
   ];
 
   return {
-    stores: mockStores,
+    stores: fixtureStores,
     recipes: [blackBeanTacoRecipe],
     priceObservations,
   };

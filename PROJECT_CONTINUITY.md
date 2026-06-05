@@ -180,7 +180,7 @@ What exists:
 
 Current file roles:
 - `src/app/page.tsx` keeps the top-level page simple
-- `src/components/recommendation-demo/` contains the split location, preference, and recommendation UI flow (`use-recommendation-demo.ts`, location/results panels, trust modal)
+- `src/components/meal-planner/` contains the split location, preference, and recommendation UI flow (`use-meal-planner.ts`, location/results panels, trust modal)
 - `src/components/internal-details-modal.tsx` houses dev/admin/investor diagnostics (provider rollout, ingest status, score breakdowns) behind a temporary internal link
 - `src/components/recommendation-results-carousel.tsx` renders the swipeable ranked-dinner carousel (scroll-snap, Previous/Next, dots, keyboard)
 - `src/components/nearby-stores-map.tsx` renders the client-side Leaflet map for nearby stores
@@ -214,7 +214,8 @@ Current file roles:
 - `src/lib/price-source-policy.ts` defines ranked source tiers (official/online first, weekly-ad second) and excludes legacy `mock-market-data` or unknown rows from ranked reads
 - `src/lib/internal-catalog.ts` holds the curated Postgres-backed ingredient catalog for weekly-ad and provider matching
 - `src/lib/price-observation-writes.ts` append-only inserts with change-aware dedupe and `last_verified_at` refreshes for unchanged re-checks (`insertPriceObservationIfChanged`)
-- `src/lib/mock-market-data.ts` remains for unit-test fixtures only (not a runtime ranking path)
+- `src/lib/market-types.ts` defines Postgres-backed store, recipe, ingredient, and price observation shapes used by the repository and recommendation service
+- `src/lib/market-data-fixtures.ts` holds unit-test and CI fixture rows only (not loaded at runtime)
 - `src/lib/recommendation-service.ts` contains the recommendation, shopping-plan, and scoring logic (renamed from `mock-recommendations.ts`)
 - `src/lib/market-repository.ts` loads stores, recipes, and ranked-eligible price observations from Postgres using source priority and hourly freshness; returns empty snapshot when DB unavailable
 - `src/lib/db.ts` manages the shared Postgres connection pool
@@ -593,7 +594,7 @@ This transcript covers:
 
 **Code health refactor**
 - renamed `mock-recommendations.ts` → `recommendation-service.ts` (with test renames)
-- split monolithic `recommendation-demo.tsx` into `src/components/recommendation-demo/` (hook, panels, meal card, route panel, trust modal)
+- split monolithic `recommendation-demo.tsx` into `src/components/meal-planner/` (hook, panels, meal card, route panel, trust modal); Phase 2 renamed folder/exports from demo naming
 - moved weekly-ad capture artifacts from `src/lib/weekly-ad-ingestion/captures/` to project-root `captures/weekly-ad/`
 - unified weekly-ad fetch helpers (`weekly-ad-fetch-helpers.ts`); Kroger/Publix/generic page fetcher share HTTP, retry, network capture, scroll, embedded JSON extraction
 - in-memory rate limiting: per-IP limits on all public API routes; Geocodio upstream limit with seed fallback

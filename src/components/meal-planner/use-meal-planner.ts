@@ -8,7 +8,7 @@ import {
   buildMealPreferencePayload,
   validateLocationFields,
   validateMealFields,
-} from "@/components/recommendation-demo/form-validation";
+} from "@/components/meal-planner/form-validation";
 import { trackClientEvent } from "@/lib/analytics/track-client-event";
 import type {
   ActiveLocationRequest,
@@ -20,7 +20,7 @@ import type {
   RecommendationRequest,
   RecommendationResponse,
   RecommendationState,
-} from "@/components/recommendation-demo/types";
+} from "@/components/meal-planner/types";
 
 const defaultForm: MealPreferenceForm = {
   zipCode: "23111",
@@ -47,7 +47,7 @@ const defaultFormState: FormState = {
 const initialMarketSearchState: MarketSearchState = { status: "idle" };
 const initialRecommendationState: RecommendationState = { status: "idle" };
 
-export function useRecommendationDemo() {
+export function useMealPlanner() {
   const [form, setForm] = useState<FormState>(defaultFormState);
   const [marketSearchState, setMarketSearchState] =
     useState<MarketSearchState>(initialMarketSearchState);

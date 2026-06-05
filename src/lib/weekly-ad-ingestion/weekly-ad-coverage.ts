@@ -1,4 +1,4 @@
-import type { MockPriceObservation } from "@/lib/mock-market-data";
+import type { PriceObservationRecord } from "@/lib/market-types";
 import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
 import type { ProviderPricingCoverageStatus } from "@/lib/providers/provider-types";
 import type { StoreChain } from "@/lib/provider-rollout";
@@ -29,7 +29,7 @@ export type WeeklyAdStoreCoverage = {
 export function buildWeeklyAdStoreCoverage(input: {
   storeId: string;
   chain: StoreChain;
-  priceObservations: MockPriceObservation[];
+  priceObservations: PriceObservationRecord[];
   recipeIngredientIds: string[];
 }): WeeklyAdStoreCoverage {
   const weeklyAdSource = getWeeklyAdSourceNameForChain(input.chain);

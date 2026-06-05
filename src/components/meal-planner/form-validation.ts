@@ -1,5 +1,5 @@
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
-import type { FieldErrors, FormState } from "@/components/recommendation-demo/types";
+import type { FieldErrors, FormState } from "@/components/meal-planner/types";
 
 function parseNumberField(value: string) {
   const parsed = Number(value);

@@ -7,9 +7,9 @@ import type {
   ShopperNotice,
 } from "@/lib/recommendation-service";
 import { RecommendationResultsCarousel } from "@/components/recommendation-results-carousel";
-import { MealRecommendationCard } from "@/components/recommendation-demo/meal-recommendation-card";
+import { MealRecommendationCard } from "@/components/meal-planner/meal-recommendation-card";
 import { HelpHint } from "@/components/help-hint";
-import { PricingTrustHeadsUpBanner } from "@/components/recommendation-demo/pricing-trust-heads-up";
+import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
 import { mealTotalHelp } from "@/lib/help-hint-content";
 import { buildResultsPanelPriceSourceLine } from "@/lib/meal-price-source-copy";
 import { buildMealRankingPausedStatus } from "@/lib/market-shopper-status";
@@ -18,7 +18,7 @@ import type {
   FormState,
   MarketSearchState,
   RecommendationState,
-} from "@/components/recommendation-demo/types";
+} from "@/components/meal-planner/types";
 
 type MealResultsPanelProps = {
   form: FormState;

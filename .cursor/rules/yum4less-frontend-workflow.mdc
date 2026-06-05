@@ -10,7 +10,7 @@ Applies when editing UI, map, carousel, forms, or trust copy.
 
 ## Before marking done
 
-1. Run `npm test` (includes `recommendation-demo` smoke when present).
+1. Run `npm test` (includes `meal-planner` smoke when present).
 2. If trust labels, fallback wording, map markers, or modal copy changed: start `npm run dev` and use **Playwright MCP** on `localhost:3000` with ZIP `23111`; assert explicit wording (`estimated`, `directional`, `limited coverage`, coming soon, seed preview) — not just that elements render.
 3. Follow **`yum4less-agent-orchestration`** for `@web-frontend-standards` and `@verifier` when trust-sensitive.
 

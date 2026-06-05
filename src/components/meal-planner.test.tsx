@@ -9,11 +9,11 @@ vi.mock("@/components/nearby-stores-map", () => ({
   NearbyStoresMap: () => createElement("div", { "data-testid": "nearby-stores-map-stub" }),
 }));
 
-import { RecommendationDemo } from "@/components/recommendation-demo";
+import { MealPlanner } from "@/components/meal-planner";
 
 const fetchMock = vi.fn();
 
-describe("RecommendationDemo", () => {
+describe("MealPlanner", () => {
   afterEach(() => {
     fetchMock.mockReset();
     vi.unstubAllGlobals();
@@ -43,7 +43,7 @@ describe("RecommendationDemo", () => {
       );
     vi.stubGlobal("fetch", fetchMock);
 
-    render(createElement(RecommendationDemo));
+    render(createElement(MealPlanner));
 
     expect(
       screen.getByRole("heading", { name: "Step 1: Find nearby stores" }),
@@ -134,7 +134,7 @@ describe("RecommendationDemo", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    render(createElement(RecommendationDemo));
+    render(createElement(MealPlanner));
 
     await user.click(screen.getByRole("button", { name: "Find nearby stores" }));
 
@@ -164,10 +164,10 @@ describe("RecommendationDemo", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const { RecommendationDemo: DemoWithInternal } = await import(
-      "@/components/recommendation-demo"
+    const { MealPlanner: PlannerWithInternal } = await import(
+      "@/components/meal-planner"
     );
-    render(createElement(DemoWithInternal));
+    render(createElement(PlannerWithInternal));
 
     await user.click(screen.getByRole("button", { name: "Find nearby stores" }));
     await screen.findByText("Kroger Mechanicsville");

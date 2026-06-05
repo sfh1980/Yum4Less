@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SAMPLE_PRICE_SOURCE } from "@/lib/price-source-policy";
 import { getSaleConfidence } from "@/lib/sale-confidence";
 
 describe("getSaleConfidence", () => {
@@ -17,7 +18,7 @@ describe("getSaleConfidence", () => {
       saleLabel: "Weekly ad special",
       freshnessDaysAgo: 1,
       dataSource: "database",
-      priceSource: "mock-market-data",
+      priceSource: SAMPLE_PRICE_SOURCE,
     });
 
     expect(confidence.level).toBe("no-sale-data");

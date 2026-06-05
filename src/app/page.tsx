@@ -1,4 +1,4 @@
-import { RecommendationDemo } from "@/components/recommendation-demo";
+import { MealPlanner } from "@/components/meal-planner";
 
 export default function HomePage() {
   return (
@@ -12,7 +12,7 @@ export default function HomePage() {
         </p>
       </section>
 
-      <RecommendationDemo />
+      <MealPlanner />
     </main>
   );
 }
