@@ -90,13 +90,9 @@ export function sanitizeMarketSummaryForPublicApi(
 
 function sanitizeNearbyStoreForPublicApi(
   store: NearbyStoreSummary,
-  index: number,
 ): NearbyStoreSummary {
-  const { id: _id, ...rest } = store;
-  return {
-    ...rest,
-    id: `store-${index + 1}`,
-  };
+  // Seed/catalog slugs (e.g. kroger-mechanicsville) are safe public identifiers.
+  return store;
 }
 
 function sanitizeProviderStoreSearchForPublicApi(

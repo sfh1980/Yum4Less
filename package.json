@@ -27,6 +27,7 @@
     "ingest:weekly-ads:scheduled": "node scripts/run-scheduled-weekly-ad-ingest.mjs",
     "ingest:weekly-ads:scheduled:fixture": "node scripts/run-scheduled-weekly-ad-ingest.mjs --fixture",
     "ingest:weekly-ads:browser": "node scripts/run-weekly-ad-ingest.mjs --browser",
+    "ingest:themealdb:from-sales": "node scripts/run-themealdb-import.mjs",
     "setup:local": "node scripts/setup-local.mjs",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",

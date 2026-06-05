@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetDbPoolForTests } from "@/lib/db";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
-import { deleteAllPriceObservations } from "@/lib/price-observation-writes";
+import { deleteAllPriceObservations } from "@/lib/test-only/price-observation-writes";
 import { getProviderRolloutForStore } from "@/lib/provider-rollout";
 import {
   getMarketSearchExperience,

@@ -3,6 +3,8 @@ import {
   readKrogerApiCredentialsFromEnv,
 } from "@/lib/providers/kroger/kroger-api-client";
 import {
+  getKrogerApiEnvironment,
+  isKrogerOfficialOnlinePricingEligible,
   isKrogerProductAvailableInStore,
   readKrogerItemPrices,
   type KrogerLocation,
@@ -123,11 +125,59 @@ export function createKrogerProviderClient(): StoreDiscoveryProviderClient {
       }
 
       try {
-        const items = await searchKrogerProductsForIngredients(api, input);
+        const environment = getKrogerApiEnvironment();
+        const rawItems = await searchKrogerProductsForIngredients(api, input);
+        const items = isKrogerOfficialOnlinePricingEligible()
+          ? rawItems.filter((item) => hasKrogerPreviewPrice(item))
+          : [];
         const coverageStatus = getPricingCoverageStatus({
           matchedIngredientCount: items.length,
           totalTrackedIngredients: input.ingredients.length,
         });
+
+        if (!isKrogerOfficialOnlinePricingEligible()) {
+          return {
+            provider: "kroger",
+            label: "Kroger official pricing preview",
+            status: "available",
+            provenance: "official-api",
+            retrievalMode: "live",
+            configured: true,
+            fallbackUsed: false,
+            storeName: input.store.name,
+            providerStoreId: input.store.providerStoreId,
+            coverageStatus: "none",
+            matchedIngredientCount: 0,
+            totalTrackedIngredients: input.ingredients.length,
+            items: [],
+            message:
+              environment === "certification"
+                ? "Kroger catalog lookup works in certification, but store-specific prices require production (api.kroger.com). Set KROGER_API_ENV=production after Kroger approves portal promotion, then re-run npm run test:kroger-api."
+                : "Kroger official-online pricing preview requires KROGER_API_ENV=production.",
+            fetchedAt: new Date().toISOString(),
+          };
+        }
+
+        if (items.length === 0) {
+          return {
+            provider: "kroger",
+            label: "Kroger official pricing preview",
+            status: "available",
+            provenance: "official-api",
+            retrievalMode: "live",
+            configured: true,
+            fallbackUsed: false,
+            storeName: input.store.name,
+            providerStoreId: input.store.providerStoreId,
+            coverageStatus: "none",
+            matchedIngredientCount: 0,
+            totalTrackedIngredients: input.ingredients.length,
+            items: [],
+            message:
+              "Kroger production API auth succeeded, but the sample product lookups did not return store prices yet. Weekly-ad and cached rows remain the ranked path until prices appear—verify any returned price in store before checkout.",
+            fetchedAt: new Date().toISOString(),
+          };
+        }
 
         return {
           provider: "kroger",
@@ -143,11 +193,11 @@ export function createKrogerProviderClient(): StoreDiscoveryProviderClient {
           matchedIngredientCount: items.length,
           totalTrackedIngredients: input.ingredients.length,
           items,
-          message: buildPricingCoverageMessage({
+          message: `${buildPricingCoverageMessage({
             matchedIngredientCount: items.length,
             totalTrackedIngredients: input.ingredients.length,
             coverageStatus,
-          }),
+          })} Prices came from the official Kroger production API—verify in store before checkout.`,
           fetchedAt: new Date().toISOString(),
         };
       } catch (error: unknown) {
@@ -271,4 +321,8 @@ async function searchKrogerProduct(
     .sort((left, right) => right.matchConfidence - left.matchConfidence);
 
   return candidateMatches[0];
+}
+
+function hasKrogerPreviewPrice(item: ProviderPricingPreviewItem) {
+  return typeof item.promoPrice === "number" || typeof item.regularPrice === "number";
 }

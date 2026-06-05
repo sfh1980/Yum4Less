@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDbPoolForTests } from "@/lib/db";
-import {
-  deleteAllPriceObservations,
-  insertPriceObservation,
-} from "@/lib/price-observation-writes";
+import { insertPriceObservation } from "@/lib/price-observation-writes";
+import { deleteAllPriceObservations } from "@/lib/test-only/price-observation-writes";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
 import { KROGER_OFFICIAL_PRICE_SOURCE } from "@/lib/price-source-policy";
 

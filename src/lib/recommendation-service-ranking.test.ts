@@ -61,7 +61,7 @@ describe("getRecommendationExperience ZIP 23111 ranking guards (CI-02)", () => {
     ]);
 
     const totals = experience.recommendations.map((meal) => meal.estimatedTotal);
-    expect(totals).toEqual([9, 13.3, 15.4]);
+    expect(totals).toEqual([10.68, 13.99, 15.4]);
     expect(totals[0]!).toBeLessThanOrEqual(totals[1]!);
     expect(totals[1]!).toBeLessThanOrEqual(totals[2]!);
 
@@ -91,7 +91,7 @@ describe("getRecommendationExperience ZIP 23111 ranking guards (CI-02)", () => {
 
     const titles = experience.recommendations.map((meal) => meal.title);
     expect(titles).toEqual(["Black Bean Tacos with Lime Slaw"]);
-    expect(experience.recommendations[0]?.estimatedTotal).toBe(9);
+    expect(experience.recommendations[0]?.estimatedTotal).toBe(10.68);
     expect(titles).not.toContain("Sheet Pan Lemon Chicken and Vegetables");
     expect(titles).not.toContain("Garlic Butter Pasta with Spinach");
   });
@@ -175,11 +175,13 @@ describe("getRecommendationExperience ZIP 23111 ranking guards (CI-02)", () => {
       { ingredient: "Cabbage", storeName: "Kroger", price: 2.19 },
       { ingredient: "Lime", storeName: "Publix", price: 0.5 },
       { ingredient: "Olive oil", storeName: "Publix", price: 2.68 },
+      { ingredient: "Taco seasoning", storeName: "Kroger", price: 0.89 },
+      { ingredient: "Ground cumin", storeName: "Kroger", price: 0.79 },
     ]);
     const planSubtotal = Math.round(
       shoppingPlan.reduce((sum, item) => sum + item.price, 0) * 100,
     ) / 100;
-    expect(planSubtotal).toBe(8.75);
+    expect(planSubtotal).toBe(10.43);
     expect(multiStore.recommendations[0]?.estimatedTotal).toBe(planSubtotal);
     expect(
       new Set(multiStore.recommendations[0]?.shoppingPlan.map((item) => item.storeName)),

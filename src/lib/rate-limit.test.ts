@@ -52,6 +52,18 @@ describe("rate-limit", () => {
     expect(getClientIp(request)).toBe("203.0.113.10");
   });
 
+  it("uses x-real-ip when proxy trust is enabled and forwarded-for is absent", () => {
+    process.env.TRUST_PROXY_HEADERS = "1";
+
+    const request = new Request("http://localhost/api/geocode/zip", {
+      headers: {
+        "x-real-ip": "198.51.100.5",
+      },
+    });
+
+    expect(getClientIp(request)).toBe("198.51.100.5");
+  });
+
   it("shares one rate-limit bucket for unknown IPs when proxy trust is off", () => {
     delete process.env.TRUST_PROXY_HEADERS;
     const config = { windowMs: 60_000, maxRequests: 1 };

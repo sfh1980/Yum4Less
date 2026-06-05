@@ -63,6 +63,10 @@ import {
   buildInactiveRecipeSourceShopperNotice,
   isRecipeSourceActive,
 } from "@/lib/recipe-sources/recipe-source-registry";
+import {
+  collectSaleIngredientIdsFromObservations,
+  filterRecipesForRanking,
+} from "@/lib/recipe-import/recipe-ranking-eligibility";
 
 import type { RecipeSourceSelection } from "@/lib/recipe-sources/recipe-source-types";
 
@@ -222,7 +226,15 @@ export async function getRecommendationExperience(
     };
   }
 
-  const candidates = snapshot.recipes
+  const saleIngredientIds = collectSaleIngredientIdsFromObservations(
+    snapshot.priceObservations,
+  );
+  const rankableRecipes = filterRecipesForRanking({
+    recipes: snapshot.recipes,
+    saleIngredientIds,
+  });
+
+  const candidates = rankableRecipes
     .filter((recipe) => byDietaryFocus(recipe, preferences.dietaryFocus))
     .map((recipe) =>
       buildCandidate(
@@ -800,7 +812,7 @@ function toRecommendation(
     matchedIngredients: candidate.shoppingPlan.length,
     cookTimeMinutes: candidate.recipe.cookTimeMinutes,
     difficulty: candidate.recipe.difficulty,
-    primaryStore: storePlan[0]?.storeName ?? "Mock store",
+    primaryStore: storePlan[0]?.storeName ?? "Unknown store",
     ingredientHighlights: candidate.recipe.ingredients
       .slice(0, 3)
       .map((ingredient) => ingredient.displayName.toLowerCase()),

@@ -37,7 +37,7 @@ export const pricingTrustHeadsUpHelp = {
   tooltip: "Why these prices may differ from checkout.",
   popoverTitle: "Price trust signals",
   popoverContent:
-    "This banner appears when Yum4Less is using saved weekly ads, recently checked online prices, backup store data, limited ZIP lookup, or other non-checkout sources. Treat meal totals as estimates and confirm price, package size, and deals before you shop.",
+    "This beta banner appears when Yum4Less is using saved weekly ads, recently checked online prices, backup store data, limited ZIP lookup, or other non-checkout sources. Not every nearby chain is live-priced yet. Treat meal totals as estimates and confirm price, package size, and deals before you shop.",
 } as const;
 
 export const recipeSourceHelp = {

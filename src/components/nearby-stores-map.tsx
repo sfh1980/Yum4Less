@@ -200,7 +200,6 @@ export function NearbyStoresMap({
         Chain badges are abbreviations for quick recognition, not official store
         logos. Hover or tap a badge for store details.
       </p>
-      <p className="field-hint">{model.trustNote}</p>
     </div>
   );
 }
@@ -209,7 +208,10 @@ function buildStorePopupHtml(store: NearbyStoresMapModel["stores"][number]) {
   const pricingLabel =
     store.chain === "walmart" && !store.recommendationEnabled
       ? "No live Walmart pricing yet"
-      : store.recommendationEnabled
+      : (store.chain === "aldi" || store.chain === "food-lion") &&
+          !store.recommendationEnabled
+        ? "BETA: meal pricing coming later"
+        : store.recommendationEnabled
         ? store.rolloutStatus === "weekly-ad-preview"
           ? "Weekly ad prices (verify in store)"
           : "Limited weekly ad coverage"

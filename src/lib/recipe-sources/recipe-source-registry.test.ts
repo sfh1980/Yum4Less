@@ -28,6 +28,9 @@ describe("recipe source registry", () => {
     expect(sources.find((source) => source.id === "themealdb")?.mvpRecommendation).toBe(
       "dev-only",
     );
+    expect(sources.find((source) => source.id === "internal-library")?.summary).not.toContain(
+      "in-memory",
+    );
   });
 
   it("summarizes that external sources remain research-only", () => {

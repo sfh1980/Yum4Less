@@ -9,6 +9,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { getMarketDataSnapshot } from "@/lib/market-repository";
+import * as serverLog from "@/lib/server-log";
 
 describe("getMarketDataSnapshot", () => {
   beforeEach(() => {
@@ -16,6 +17,7 @@ describe("getMarketDataSnapshot", () => {
   });
 
   it("returns unavailable with an empty snapshot when DATABASE_URL is missing", async () => {
+    const logSpy = vi.spyOn(serverLog, "logServerError").mockImplementation(() => {});
     getDbPool.mockImplementation(() => {
       throw new Error("DATABASE_URL is not configured.");
     });
@@ -26,6 +28,27 @@ describe("getMarketDataSnapshot", () => {
     expect(result.snapshot.stores).toHaveLength(0);
     expect(result.snapshot.recipes).toHaveLength(0);
     expect(result.snapshot.priceObservations).toHaveLength(0);
+    expect(logSpy).toHaveBeenCalledWith(
+      "market-repository.getMarketDataSnapshot",
+      expect.any(Error),
+    );
+    logSpy.mockRestore();
+  });
+
+  it("logs and returns unavailable when a market query fails", async () => {
+    const logSpy = vi.spyOn(serverLog, "logServerError").mockImplementation(() => {});
+    getDbPool.mockReturnValue({
+      query: vi.fn().mockRejectedValue(new Error("connection reset")),
+    });
+
+    const result = await getMarketDataSnapshot();
+
+    expect(result.source).toBe("unavailable");
+    expect(logSpy).toHaveBeenCalledWith(
+      "market-repository.getMarketDataSnapshot",
+      expect.objectContaining({ message: "connection reset" }),
+    );
+    logSpy.mockRestore();
   });
 
   it("maps database query results into the normalized market snapshot", async () => {

@@ -15,7 +15,9 @@ create table if not exists stores (
 create table if not exists ingredients (
   id text primary key,
   name text not null,
-  category text not null check (category in ('protein', 'produce', 'pantry', 'dairy')),
+  category text not null check (
+    category in ('protein', 'produce', 'pantry', 'dairy', 'seasoning', 'baking', 'frozen')
+  ),
   source_name text,
   source_record_id text,
   created_at timestamptz not null default now()

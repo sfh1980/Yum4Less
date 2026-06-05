@@ -109,6 +109,20 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ...weeklyAdBase,
     },
     {
+      storeId: "kroger-mechanicsville",
+      ingredientId: "taco-seasoning",
+      price: 0.89,
+      priceSource: "kroger-weekly-ad-scrape",
+      ...weeklyAdBase,
+    },
+    {
+      storeId: "kroger-mechanicsville",
+      ingredientId: "cumin",
+      price: 0.79,
+      priceSource: "kroger-weekly-ad-scrape",
+      ...weeklyAdBase,
+    },
+    {
       storeId: "publix-atlee",
       ingredientId: "lime",
       price: 0.5,

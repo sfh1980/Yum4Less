@@ -16,6 +16,7 @@ vi.mock("@/lib/recommendation-service", () => ({
 import { POST } from "@/app/api/market-search/route";
 import { isPublicApiDbWriteEnabled } from "@/lib/public-api-db-write-policy";
 import { RATE_LIMITS, resetRateLimitsForTests } from "@/lib/rate-limit";
+import * as serverLog from "@/lib/server-log";
 
 const originalDbWriteFlag = process.env.YUM4LESS_ENABLE_API_DB_WRITES;
 const originalNodeEnv = process.env.NODE_ENV;
@@ -141,6 +142,41 @@ describe("POST /api/market-search", () => {
     const retryAfter = limited.headers.get("Retry-After");
     expect(retryAfter).toMatch(/^\d+$/);
     expect(Number(retryAfter)).toBeGreaterThan(0);
+  });
+
+  it("returns 500 and logs when market search experience throws", async () => {
+    const logSpy = vi.spyOn(serverLog, "logServerError").mockImplementation(() => {});
+    resolveLocationInput.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: false,
+    });
+    getMarketSearchExperience.mockRejectedValue(new Error("service failure"));
+
+    const response = await POST(
+      new Request("http://localhost/api/market-search", {
+        method: "POST",
+        body: JSON.stringify({ zipCode: "23111", radiusMiles: 5 }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Market search is temporarily unavailable.",
+    });
+    expect(logSpy).toHaveBeenCalledWith(
+      "api.market-search",
+      expect.objectContaining({ message: "service failure" }),
+    );
+    logSpy.mockRestore();
   });
 
   it("returns a location resolution failure", async () => {
@@ -302,5 +338,99 @@ describe("POST /api/market-search", () => {
         dataSource: "seed",
       },
     });
+  });
+
+  it("preserves public catalog store ids while stripping internal provider fields", async () => {
+    resolveLocationInput.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: false,
+    });
+    getMarketSearchExperience.mockResolvedValue({
+      market: {
+        searchedZipCode: "23111",
+        locationLabel: "Mechanicsville, VA",
+        searchLatitude: 37.6085,
+        searchLongitude: -77.3321,
+        radiusMiles: 5,
+        nearbyStores: [
+          {
+            id: "kroger-mechanicsville",
+            name: "Kroger Mechanicsville",
+            kind: "grocery",
+            latitude: 37.6085,
+            longitude: -77.3321,
+            distanceMiles: 1.2,
+            chain: "kroger",
+            chainLabel: "Kroger",
+            rolloutStatus: "weekly-ad-preview",
+            recommendationEnabled: true,
+            rolloutNote: "Fixture coverage.",
+          },
+        ],
+        recommendationReadyStoreCount: 1,
+        providerRollout: [],
+        providerStoreSearches: [
+          {
+            provider: "kroger",
+            status: "cached",
+            persistedSnapshotId: "snap-secret-1",
+            storeCount: 1,
+            stores: [],
+          },
+        ],
+        providerPricingPreviews: [],
+        providerCoverageRollup: {
+          overallCoverageStatus: "none",
+          trustGate: "not-available",
+          rankedPricingSource: "seed-preview",
+          totalTrackedIngredients: 5,
+          matchedIngredientCount: 0,
+          unmatchedIngredientCount: 5,
+          averageMatchConfidence: null,
+          usesCachedPreview: false,
+          ingredientSummaries: [],
+          message: "Internal only.",
+        },
+        providerPromotionReadiness: [],
+        providerPriceObservationSync: [],
+        weeklyAdIngestionStatus: [],
+        weeklyAdPromotionReadiness: [],
+        lookupSource: "seed",
+        lookupProviderConfigured: false,
+        dataSource: "seed",
+        message: "Internal only.",
+      },
+      snapshot: {
+        stores: [],
+        recipes: [],
+        priceObservations: [],
+      },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/market-search", {
+        method: "POST",
+        body: JSON.stringify({
+          zipCode: "23111",
+          radiusMiles: 5,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.market.nearbyStores[0]?.id).toBe("kroger-mechanicsville");
+    expect(body.market.providerStoreSearches[0]).not.toHaveProperty(
+      "persistedSnapshotId",
+    );
+    expect(body.market).not.toHaveProperty("message");
   });
 });

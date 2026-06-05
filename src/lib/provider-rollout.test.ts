@@ -21,6 +21,16 @@ describe("provider rollout", () => {
     expect(rollout.chain).toBe("aldi");
     expect(rollout.status).toBe("coming-soon");
     expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toContain("BETA");
+    expect(rollout.note).toContain("coming later");
+  });
+
+  it("labels Food Lion as beta coming later on the map", () => {
+    const rollout = getProviderRolloutForStore("Food Lion");
+
+    expect(rollout.chain).toBe("food-lion");
+    expect(rollout.note).toContain("BETA");
+    expect(rollout.note).toContain("coming later");
   });
 
   it("lists the approved rollout order for the MVP roadmap", () => {
@@ -75,6 +85,31 @@ describe("resolveProviderRolloutForStore", () => {
     expect(rollout.status).toBe("coming-soon");
     expect(rollout.recommendationEnabled).toBe(false);
     expect(rollout.note).toContain("Live, current weekly-ad pricing from Walmart is not available");
+  });
+
+  it("never enables Aldi ranked pricing even when weekly-ad promotion context is passed", () => {
+    const rollout = resolveProviderRolloutForStore("Aldi", {
+      matchedIngredientCount: 6,
+      usesWeeklyAdSource: true,
+      weeklyAdPromotionPassed: true,
+    });
+
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toContain("coming later");
+    expect(rollout.note).toContain("Rehearsal or fixture");
+  });
+
+  it("never enables Food Lion ranked pricing with limited weekly-ad context", () => {
+    const rollout = resolveProviderRolloutForStore("Food Lion", {
+      matchedIngredientCount: 4,
+      usesWeeklyAdSource: true,
+      weeklyAdPromotionPassed: false,
+    });
+
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toContain("BETA");
   });
 
   it("lists resolved rollout entries for promoted chains", () => {

@@ -1,6 +1,6 @@
 # Yum4Less
 
-Yum4Less is a location-aware grocery search and dinner meal-planning platform designed to help people find affordable meals using nearby store pricing, sale data, and practical shopping preferences. The product is built around a simple goal: help users identify the cheapest realistic dinner options in their area without forcing them to manually compare stores, ingredients, and recipes.
+Yum4Less is a location-aware grocery search and dinner meal-planning platform designed to help people find affordable meals using nearby store pricing, sale data, and practical shopping preferences. The product is built around a simple goal: help users identify low-cost, estimated dinner options in their area without forcing them to manually compare stores, ingredients, and recipes.
 
 The initial vision focuses on public use and long-term scalability. The MVP is being designed as a professional, consumer-facing web application that can later expand into a broader food savings ecosystem.
 
@@ -112,11 +112,11 @@ Expired sale rows remain in `price_observations` as history but are excluded fro
 
 Initial store research around the ZIP `23111` / US-360 and I-295 Mechanicsville area found these nearby grocery sources to track first: Kroger Marketplace at `6468 Mechanicsville Turnpike` (replacing the older `6335 Mechanicsville Turnpike` store), Kroger Atlee Road (`9351 Atlee Road`), Publix at `6603 Mechanicsville Turnpike`, Walmart Supercenter at `7430 Bell Creek Road`, Food Lion at `7095 Mechanicsville Turnpike` and `8319 Bell Creek Road`, Aldi at `7003 Mechanicsville Turnpike`, and BJ's Wholesale Club at `7260 Bell Creek Road`. Store numbers should be confirmed from the chain locator or provider API before using them as write keys.
 
-Kroger is the only researched chain with a public developer API path suitable for store and product lookups in this phase. Use the Kroger developer portal credentials, `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV`, and optionally `KROGER_LOCATION_ID`; test with `npm run test:kroger-api`. Certification supports OAuth, location lookup, and catalog search, but production promotion is required before live store-specific price claims. Publix does not publish a direct public developer API; treat Publix sale data as website/weekly-ad backed unless an approved partner/feed path is chosen. Walmart Marketplace APIs are seller/partner oriented and are not treated as a public shopper sale-price API for Yum4Less ranked pricing. Food Lion, Aldi, and BJ's remain weekly-ad/website/feed candidates until an approved API/feed is confirmed.
+Kroger is the only researched chain with a public developer API path suitable for store and product lookups in this phase. Use the Kroger developer portal credentials, `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`, and optionally `KROGER_LOCATION_ID`; test with `npm run test:kroger-api`. The Yum4Less Kroger app is promoted to **production** (`https://api.kroger.com`); certification (`https://api-ce.kroger.com`) supports OAuth, location lookup, and catalog search only and omits store-specific prices. Official Kroger online prices sync into ranked reads only when production returns `item.price.regular` or `item.price.promo`—always verify in store before checkout. Publix does not publish a direct public developer API; treat Publix sale data as website/weekly-ad backed unless an approved partner/feed path is chosen. Walmart Marketplace APIs are seller/partner oriented and are not treated as a public shopper sale-price API for Yum4Less ranked pricing. Food Lion, Aldi, and BJ's remain weekly-ad/website/feed candidates until an approved API/feed is confirmed.
 
-Analytics remain privacy-safe and strict per event. Unknown event properties and case variants are rejected, and analytics must not collect raw ZIPs, exact coordinates, prices, meal titles, store IDs, provider IDs, IPs, or user agents. Customer feedback is a separate planned path for complaints, bug reports, wrong-price reports, and general feedback; see `docs/feedback-path.md`. Do not overload analytics events with free-form feedback text or identifying details.
+Analytics remain privacy-safe and strict per event. Unknown event properties and case variants are rejected, and analytics must not collect raw ZIPs, exact coordinates, prices, meal titles, store IDs, provider IDs, IPs, or user agents. Customer feedback is a separate path at `/feedback` for complaints, bug reports, wrong-price reports, and general feedback (disabled by default via `YUM4LESS_FEEDBACK_ENABLED`); see `docs/feedback-path.md`. Do not overload analytics events with free-form feedback text or identifying details.
 
-Semgrep is configured as advisory local hook/MCP support and a CI job that runs only when `SEMGREP_APP_TOKEN` is configured. If the local `semgrep` CLI is not installed or logged in, do not claim security-clean; document that setup gap and rely on normal tests plus review until Semgrep actually runs.
+Semgrep is configured as **advisory** local hook/MCP support and an optional GitHub Actions job. The CI `semgrep` job **succeeds without scanning** until you add `SEMGREP_APP_TOKEN`; lint, unit tests, build, integration, and E2E remain the merge gates. See [Semgrep CI on GitHub Actions](#semgrep-ci-on-github-actions) for the owner token walkthrough and [Cursor MCP setup](#cursor-mcp-servers-project) step 8 for local CLI/MCP. If the local `semgrep` CLI is not installed or logged in, do not claim security-clean; document that setup gap and rely on normal tests plus review until Semgrep actually runs.
 
 DB/integration/e2e preflight starts the local Postgres container automatically when Docker is running and the test DB is stopped. If Docker is unavailable, start Docker Desktop and rerun the command. Local stale-seed resets are no longer automatic unless explicitly requested with the test reset flag or `YUM4LESS_ALLOW_DB_RESET=1`; CI remains automatic.
 
@@ -187,7 +187,7 @@ The local ZIP `23111` demo and a hosted deployment are different milestones. Loc
 3. Add platform or Redis rate limits if running more than one app instance.
 4. Keep retailer credentials and `DATABASE_URL` in host secrets — never in client bundles or git.
 5. Run scheduled weekly-ad ingest out-of-band; do not rely on user traffic to refresh prices.
-6. Before live pricing claims, promote the Kroger developer app to production and set `KROGER_API_ENV=production`; certification does not return store-specific prices.
+6. Set `KROGER_API_ENV=production` and run `npm run test:kroger-api` to confirm store-specific prices before live Kroger price claims; certification does not return store-specific prices.
 
 Hosting provider setup (Vercel, Docker, etc.) is not documented here yet — this section only records deploy-safe defaults the codebase enforces today.
 
@@ -209,7 +209,8 @@ Current local environment setup:
 - set `DATABASE_URL` when you want recommendation reads to come from Postgres
 - optional `YUM4LESS_ENABLE_API_DB_WRITES=1` when you want public API calls to persist provider snapshots and sync Kroger preview prices into Postgres (default is read-only; **never set in production** — code blocks it when `NODE_ENV=production`)
 - optional `TRUST_PROXY_HEADERS=1` only when deployed behind a trusted reverse proxy that sets client IP headers (without it, rate limits use a shared `"unknown"` bucket)
-- optional analytics flags: `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` on the client plus `YUM4LESS_ENABLE_ANALYTICS=1` on the server; use `YUM4LESS_ANALYTICS_SINK=memory`, `stdout`, or `postgres`
+- optional analytics flags (both required to record events): `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` on the client plus `YUM4LESS_ENABLE_ANALYTICS=1` on the server; use `YUM4LESS_ANALYTICS_SINK=memory`, `stdout`, or `postgres`; see `/feedback` for the allowlisted event transparency copy
+- optional feedback flag: `YUM4LESS_FEEDBACK_ENABLED=1` to accept anonymous feedback at `/feedback` and `POST /api/feedback` (requires `db/init/007_customer_feedback.sql`)
 
 If `GEOCODIO_API_KEY` is missing, the app still works for the small seeded local ZIP set used by the current MVP slice.
 If `DATABASE_URL` is missing or Postgres is unavailable, market reads return an empty catalog and the UI shows infrastructure messaging — configure Postgres and run fixture ingest for the ZIP `23111` demo (see **Quick start** below).
@@ -254,7 +255,36 @@ This repo includes `.cursor/mcp.json.example` for project-scoped MCP servers. Co
    ```
    Yum4Less hooks prepend `%USERPROFILE%\.local\bin` ahead of legacy Python `Scripts` shims. Avoid a second `pip install semgrep` install that can shadow pipx. Run `semgrep login` only if you use Semgrep Code/Supply Chain/Secrets through Guardian; OSS rule scans still work without login.
 
-Do **not** commit PATs into `.cursor/mcp.json` or `.env.local`.
+### Semgrep CI on GitHub Actions
+
+The workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs a parallel `semgrep` job in the `semgrep/semgrep` container. Behavior:
+
+| `SEMGREP_APP_TOKEN` in repo secrets | What happens |
+|-------------------------------------|--------------|
+| **Not set** (default today) | Job prints a skip message and **exits 0** — advisory only; overall CI can still be green **without** a Semgrep scan. |
+| **Set** | Job runs `semgrep ci` and **fails the workflow** if Semgrep reports blocking findings (same as AppSec Platform policy for the linked project). |
+
+**Owner walkthrough — enable CI scanning**
+
+1. Sign in to [Semgrep AppSec Platform](https://semgrep.dev/orgs/-/projects) and open or create the Yum4Less project (connect the GitHub repo if prompted).
+2. Create an **App token** (org/project **Settings → Tokens**).
+3. In GitHub: **Repository → Settings → Secrets and variables → Actions → New repository secret**, name **`SEMGREP_APP_TOKEN`**, paste the token (never commit it).
+4. Push to `master` or re-run the latest workflow; confirm the job ran a real scan:
+
+   ```powershell
+   gh run list --workflow=ci.yml --limit 3
+   gh run view <run-id> --log | Select-String -Pattern "semgrep ci|not configured"
+   ```
+
+   Before the secret: logs include `SEMGREP_APP_TOKEN is not configured`. After: you should see `semgrep ci` output instead of the skip message.
+
+**Local full-repo audits** (optional, not a merge gate) may write `semgrep-full.json` — that file is in `.gitignore`; do not commit it. Example from `docs/full-repo-audit-prompt.md`:
+
+```powershell
+semgrep scan --config auto --config p/secrets --config p/typescript --metrics off --json -o semgrep-full.json .
+```
+
+Do **not** commit PATs, Semgrep App tokens, or scan artifacts into git or `.cursor/mcp.json` / `.env.local`.
 
 ### Verify
 
@@ -317,7 +347,7 @@ The repo currently contains a **local MVP implementation** (ZIP `23111`, Postgre
 Current file roles:
 
 - `src/app/page.tsx` keeps the home page thin and compositional
-- `src/components/recommendation-demo.tsx` contains the mock location, preferences, and recommendation UI flow
+- `src/components/recommendation-demo/` contains the location, preferences, and recommendation UI flow (`RecommendationDemo` export; `meal-planner-*` layout classes)
 - `src/components/recommendation-results-carousel.tsx` renders the swipeable ranked-dinner carousel
 - `src/components/nearby-stores-map.tsx` renders the client-side Leaflet map for nearby stores
 - `src/lib/nearby-stores-map-model.ts` builds trust-aware map markers and bounds from the market summary
@@ -329,7 +359,7 @@ Current file roles:
 - `src/lib/location-resolution.ts` centralizes ZIP-or-browser location resolution for server routes
 - `src/lib/public-api-db-write-policy.ts` gates provider snapshot persistence and price sync on public API routes (opt-in via env)
 - `src/lib/public-api-response-sanitizer.ts` strips internal snapshot and store IDs from public market JSON
-- `src/lib/rate-limit.ts` and `src/lib/api-rate-limit.ts` provide in-memory per-IP throttling and Geocodio upstream throttling
+- `src/lib/rate-limit.ts` and `src/lib/api-rate-limit.ts` provide in-memory per-IP throttling and Geocodio upstream throttling (`TRUST_PROXY_HEADERS=1` required for per-client IP behind a proxy; limits are per-process and do not share state across multiple app instances — see [Production deployment safety](#production-deployment-safety-local-vs-hosted))
 - `src/lib/provider-rollout.ts` defines the current trusted chain rollout and gates ranked recommendations accordingly
 - `src/lib/providers/provider-types.ts`, `src/lib/providers/provider-registry.ts`, `src/lib/providers/kroger-provider.ts`, `src/lib/providers/publix-provider.ts`, and `src/lib/providers/walmart-provider.ts` define the official store-discovery provider boundary
 - `src/lib/provider-market-service.ts` runs official provider store discovery alongside the local market-search flow
@@ -459,7 +489,7 @@ GEOCODIO_API_KEY=your_key_here
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/yum4less_dev
 KROGER_CLIENT_ID=your_kroger_client_id
 KROGER_CLIENT_SECRET=your_kroger_client_secret
-KROGER_API_ENV=certification
+KROGER_API_ENV=production
 # Optional: pin a known Kroger locationId (example for ZIP 23111: 02900529)
 # KROGER_LOCATION_ID=
 WALMART_CLIENT_ID=your_walmart_client_id
@@ -468,19 +498,23 @@ WALMART_CLIENT_SECRET=your_walmart_client_secret
 # YUM4LESS_ENABLE_API_DB_WRITES=1
 # Optional: trust X-Forwarded-For only when behind a known reverse proxy that strips spoofed headers
 # TRUST_PROXY_HEADERS=1
-# Optional: first-party analytics, disabled by default
+# Optional: first-party analytics, disabled by default (both flags required)
 # NEXT_PUBLIC_YUM4LESS_ANALYTICS=1
 # YUM4LESS_ENABLE_ANALYTICS=1
 # YUM4LESS_ANALYTICS_SINK=memory
+# Optional: anonymous customer feedback at /feedback (apply db/init/007_customer_feedback.sql)
+# YUM4LESS_FEEDBACK_ENABLED=1
 ```
 
-New Kroger developer apps start in **certification** (`https://api-ce.kroger.com`). That environment supports OAuth, nearby store lookup, and product catalog search, but it does **not** return store-specific prices. **Deployment reminder:** when this project moves toward live deployment, promote the Kroger app to production in the Kroger developer portal and set `KROGER_API_ENV=production` before making live Kroger price claims.
+The Yum4Less Kroger developer app runs in **production** (`https://api.kroger.com`). Set `KROGER_API_ENV=production` in `.env.local` with your portal credentials. New Kroger apps start in **certification** (`https://api-ce.kroger.com`), which supports OAuth, nearby store lookup, and catalog search but does **not** return store-specific prices.
 
-Verify Kroger credentials locally with:
+Verify Kroger credentials and store pricing locally with:
 
 ```bash
 npm run test:kroger-api
 ```
+
+Expect `Environment: production`, `Store pricing available: true`, and `item.price.regular` or `item.price.promo` in the probe output when production is wired correctly. Yum4Less labels official Kroger prices as recently checked online estimates—verify in store before checkout.
 
 Verify Publix store discovery (website store-locator, no token required):
 
@@ -548,7 +582,7 @@ Yum4Less uses host port `5433` because many machines already have another Postgr
 - `npm run test:all` runs unit tests plus integration tests
 - `npm run test:e2e` runs Playwright browser tests against localhost (reuses an existing dev server when port 3000 is free)
 - `npm run test:e2e:ci` builds, fixture-ingests, starts the app on port **3100**, and runs Playwright (CI path)
-- `npm run test:kroger-api` probes Kroger OAuth, location lookup, and catalog search (certification)
+- `npm run test:kroger-api` probes Kroger OAuth, location lookup, catalog search, and store pricing (`KROGER_API_ENV=production`)
 - `npm run test:publix-api` probes Publix website store-locator for a ZIP
 - `npm run test:kroger-live-scrape` live Kroger weekly-ad browser scrape probe (network)
 - `npm run test:publix-live-scrape` live Publix weekly-ad browser scrape probe (network)
@@ -562,7 +596,48 @@ Yum4Less uses host port `5433` because many machines already have another Postgr
 - `npm run sync:provider-prices` syncs eligible official/online provider price previews into `price_observations`
 - `npm run ingest:weekly-ads:scheduled` cron/Task Scheduler wrapper for live weekly-ad ingest plus provider price sync (use `--fixture` to skip live provider sync)
 
-Integration tests use Docker Postgres on port `5433`. The harness runs `npm run db:up` when the container is missing and `npm run db:reset` when the seed looks stale (for example after schema/seed changes). Use `npm run test:integration:reset` to force a full volume reset before tests.
+### Troubleshooting
+
+#### Port 3000 already in use (Windows)
+
+`npm run dev` and Playwright E2E expect the app on port **3000**. If another process holds that port, Next.js may pick a different port or fail to start.
+
+Find and stop the process on Windows:
+
+```powershell
+netstat -ano | findstr :3000
+```
+
+Note the PID in the last column, then:
+
+```powershell
+taskkill /PID <PID> /F
+```
+
+PowerShell alternative:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3000 | Select-Object -Unique OwningProcess
+Stop-Process -Id <PID> -Force
+```
+
+Then rerun `npm run dev` and open [http://localhost:3000](http://localhost:3000).
+
+Integration tests use Docker Postgres on port `5433`. The harness runs `npm run db:up` when the container is missing. Local stale-seed `db:reset` is **not** automatic unless you pass `--reset` to the integration runner, set `YUM4LESS_TEST_DB_RESET=1`, or set `YUM4LESS_ALLOW_DB_RESET=1`; CI resets automatically when the seed looks stale. Use `npm run test:integration:reset` to force a full volume reset before tests.
+
+#### Provider cache or snapshot errors (stale Docker volume)
+
+If provider store search or pricing snapshots fail with missing-table errors (`provider_store_search_snapshots`, `provider_product_pricing_snapshots`), or saved discovery/pricing cache never persists, your local Docker volume likely predates `db/init/003` and `004`.
+
+**Back up first** if you have local ingest or price rows you care about (export from Postgres or note that `db:reset` wipes the volume).
+
+Then recreate schema and seed:
+
+```bash
+npm run db:reset
+```
+
+After reset, rerun `npm run dev` or your ingest command. Provider cache tables are created on volume init; no separate migration step is required locally.
 
 **Agent verification (MCP):** project rules and agents layer MCP tools after automated tests:
 
@@ -571,9 +646,9 @@ Integration tests use Docker Postgres on port `5433`. The harness runs `npm run 
 | **Postgres** | Verify seed stores, latest `price_observations`, ingest append semantics | `npm run db:up` |
 | **Playwright** | ZIP search, trust copy, map, weekly-ad status UI | `npm run dev` |
 | **GitHub** | Failed CI checks, workflow runs, PR status | `GITHUB_PERSONAL_ACCESS_TOKEN` |
-| **Semgrep** | Security/dependency/secrets scan for agent-written code, PR review, and release readiness | Semgrep CLI available locally; `semgrep login` for Guardian products |
+| **Semgrep** | Security/dependency/secrets scan for agent-written code, PR review, and release readiness | Semgrep CLI locally; optional CI via `SEMGREP_APP_TOKEN` ([setup](#semgrep-ci-on-github-actions)) |
 
-Playwright E2E is a **CI merge gate** via `npm run test:e2e:ci` (`e2e/mvp-flow.spec.ts`). Cursor **Playwright MCP** remains for agent-driven spot checks beyond the committed suite.
+Playwright E2E is a **CI merge gate** via `npm run test:e2e:ci` (`e2e/mvp-flow.spec.ts`). Cursor **Playwright MCP** remains for agent-driven spot checks beyond the committed suite — see **`AGENTS.md` → Playwright MCP agent checklist** for the ZIP `23111` flow and required Est./directional/BETA/feedback-link assertions.
 
 ### Weekly-ad ingestion (pricing refresh)
 
@@ -586,6 +661,7 @@ Weekly-ad and provider-price ingestion are **offline from user searches** — th
 | `npm run ingest:weekly-ads:browser` | Force headless browser fetch |
 | `npm run sync:provider-prices` | Sync eligible official/online provider preview rows into `price_observations` without relying on public API traffic |
 | `npm run ingest:weekly-ads:scheduled` | Task Scheduler/cron wrapper (starts Postgres, then live weekly-ad pull plus provider price sync) |
+| `npm run ingest:themealdb:from-sales` | **Research/dev only** — sale-driven TheMealDB recipe import after weekly-ad rows exist (test API key `1`; not user-search triggered) |
 
 Ingest env flags (scripts only; see `.env.example`):
 
@@ -594,6 +670,9 @@ Ingest env flags (scripts only; see `.env.example`):
 | `YUM4LESS_WEEKLY_AD_FIXTURE=1` | Use checked-in HTML fixtures |
 | `YUM4LESS_WEEKLY_AD_BROWSER=1` | Force browser fetch |
 | `YUM4LESS_WEEKLY_AD_NO_BROWSER=1` | Disable browser fallback |
+| `THEMEALDB_API_KEY=1` | Dev/test TheMealDB key only (supporter key + attribution required for public release) |
+| `THEMEALDB_IMPORT_MAX_PER_RUN=15` | Cap new TheMealDB recipes per import run |
+| `THEMEALDB_IMPORT_AFTER_WEEKLY_AD=1` | Opt-in post-ingest hook in `ingest:weekly-ads` script |
 
 First browser ingest may require `npx playwright install chromium`.
 
@@ -603,8 +682,8 @@ When fixture ingest has run and promotion gates pass, Kroger and Publix can show
 
 ### Recipe sources
 
-- **Active:** internal Postgres/seed recipe library (`recipeSource: internal-library`)
-- **Research only:** TheMealDB (dev-only), Spoonacular (later), Edamam (not approved for commercial free tier)
+- **Active:** internal Postgres recipe library (`recipeSource: internal-library`)
+- **Research only:** TheMealDB (dev import via `npm run ingest:themealdb:from-sales` after weekly-ad ingest; test key `1` only; hidden from rankings until sale overlap + price coverage), Spoonacular (later), Edamam (not approved for commercial free tier)
 - Registry: `src/lib/recipe-sources/recipe-source-registry.ts`
 - UI: meal-preferences **Recipe source** dropdown (external options disabled) + **Advanced → Recipe source research**
 
@@ -620,7 +699,7 @@ Yum4Less has a **runnable local MVP** around ZIP `23111` with Postgres, trust-aw
 - multi-chain weekly-ad ingest pipeline with promotion gates (`weekly-ad-preview` when fixture/scraped data passes gates)
 - Playwright browser fallback for live ingest scripts (devDependency + ingest path, separate from Cursor Playwright MCP)
 - external recipe source research registry + UI scaffold
-- **227** unit tests (**58** files), **6** Postgres integration tests (**3** files), **3** Playwright E2E tests; CI runs lint, unit tests, build, integration (Docker Postgres), and E2E (fixture ingest + browser on port **3100**)
+- **295** unit tests (**73** files), **8** Postgres integration tests (**4** files), **4** Playwright E2E tests; CI runs lint, `npm audit --audit-level=high`, unit tests, build, integration (Docker Postgres), and E2E (fixture ingest + browser on port **3100**); optional advisory `semgrep` job when `SEMGREP_APP_TOKEN` is set
 - public API read-only default (production write guard when `NODE_ENV=production`), response sanitization, shopping-route caps, MVP ZIP radius checks, proxy-aware rate limiting, and route-level validation/429 tests (May 2026 security + merge-gate pass)
 - first-run helper `npm run setup:local`; store pills say **Weekly ad prices** (not “Priced”); E2E covers ZIP `23111` core loop + trust vocabulary
 
@@ -648,9 +727,9 @@ Open [http://localhost:3000](http://localhost:3000), search ZIP **23111**, rank 
 
 ### Verified commands
 
-- `npm run build`, `npm test` (**227**), and `npm run test:integration` (**6**) pass locally (last verified 2026-06-02 for this hardening slice); prior full local gate also included `npm run lint`, `npm run test:all`, and `npm run test:e2e:ci` (**3/3**) on 2026-05-27
+- `npm run build`, `npm test` (**295**), and `npm run test:integration` (**8**) pass locally (last verified 2026-06-05); full local gate also includes `npm run lint`, `npm run test:all`, and `npm run test:e2e:ci` (**4/4**)
 - Optional network probes (manual): `npm run test:kroger-api`, `npm run test:publix-api`, `npm run test:publix-live-scrape`, `npm run test:publix-live-ingest`
-- `.github/workflows/ci.yml` — `verify` + `integration` + `e2e` jobs on **https://github.com/sfh1980/Yum4Less** (first push 2026-05-27: all jobs green)
+- `.github/workflows/ci.yml` — advisory `semgrep` + merge gates `verify` + `integration` + `e2e` on **https://github.com/sfh1980/Yum4Less** (latest green: [run 26981705172](https://github.com/sfh1980/Yum4Less/actions/runs/26981705172), 2026-06-04)
 
 ## Competitive Positioning
 
@@ -682,7 +761,7 @@ The strategic differentiator is not simply grocery comparison or recipe planning
 
 ### Product positioning statement
 
-Yum4Less is being positioned as a platform that helps users find the cheapest realistic dinners near them this week, then choose between a simpler one-store trip or a lower-cost multi-store plan.
+Yum4Less is being positioned as a platform that helps users find low-cost, estimated dinners near them this week, then choose between a simpler one-store trip or a lower-cost multi-store plan. In the current beta MVP, ranked pricing uses saved weekly-ad and recently checked online prices—not live checkout—and Walmart is not available for ranked meals yet.
 
 ## Roadmap
 

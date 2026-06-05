@@ -30,6 +30,9 @@ export type WeeklyAdRolloutContext = {
   weeklyAdPromotionPassed: boolean;
 };
 
+/** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
+const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>(["aldi", "food-lion"]);
+
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
     chain: "kroger",
@@ -65,7 +68,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 4,
     note:
-      "Aldi remains a later target and is intentionally hidden from trusted recommendation pricing for now.",
+      "BETA: Aldi meal pricing is coming later. Weekly-ad ingest uses the Flipp syndicated feed; ranked dinners do not use Aldi yet.",
   },
   bjs: {
     chain: "bjs",
@@ -83,7 +86,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 99,
     note:
-      "Food Lion is outside the current trusted rollout path, so it is shown only as nearby-store context.",
+      "BETA: Food Lion meal pricing is coming later. Flipp syndicated feed and scrape ladders run during ingest; ranked dinners do not use Food Lion yet.",
   },
   lidl: {
     chain: "lidl",
@@ -137,6 +140,10 @@ export function resolveProviderRolloutForStore(
     return resolveWalmartRollout(base, weeklyAdContext);
   }
 
+  if (MEAL_PRICING_COMING_LATER_CHAINS.has(base.chain)) {
+    return resolveComingLaterMealPricingRollout(base, weeklyAdContext);
+  }
+
   if (weeklyAdContext?.weeklyAdPromotionPassed) {
     return {
       ...base,
@@ -162,7 +169,7 @@ export function listResolvedProviderRollout(input?: {
   weeklyAdPromotionByChain?: Partial<Record<StoreChain, WeeklyAdRolloutContext>>;
 }): ProviderRolloutEntry[] {
   return listProviderRollout().map((entry) => {
-    if (entry.chain === "walmart") {
+    if (entry.chain === "walmart" || MEAL_PRICING_COMING_LATER_CHAINS.has(entry.chain)) {
       return entry;
     }
 
@@ -222,6 +229,23 @@ function inferStoreChain(storeName: string): StoreChain {
   }
 
   return "unknown";
+}
+
+function resolveComingLaterMealPricingRollout(
+  base: ProviderRolloutEntry,
+  weeklyAdContext?: WeeklyAdRolloutContext,
+): ProviderRolloutEntry {
+  const rehearsalNote =
+    weeklyAdContext?.usesWeeklyAdSource
+      ? " Rehearsal or fixture weekly-ad rows may exist in development; they are not used for ranked meal totals."
+      : "";
+
+  return {
+    ...base,
+    status: "coming-soon",
+    recommendationEnabled: false,
+    note: `${base.note}${rehearsalNote}`,
+  };
 }
 
 function resolveWalmartRollout(

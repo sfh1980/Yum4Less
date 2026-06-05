@@ -30,7 +30,7 @@ Local MVP is **demo-complete for ZIP `23111`** on **fixture ingest + Postgres**.
 | Security / dependency audit | `@senior-auditor` | review + route tests | Semgrep Guardian when configured |
 | Unknown multi-file area | normal agent + Task `explore` | then area-specific | explore first, then edit |
 
-**Open gaps (not hidden):** Walmart ranked pricing/promotion is intentionally skipped for now even though fixture/live ingest code paths exist; Aldi/Food Lion use a stronger Flipp retry + flyer/search-term ladder before direct scrape, but live retailer pages can still block; analytics is first-party and off by default until env flags are set; deployment not started unless reprioritized. When deployment starts, move the Kroger API app from certification to production before live Kroger price claims. **Remote CI green** on https://github.com/sfh1980/Yum4Less (2026-05-27).
+**Open gaps (not hidden):** Local MVP is **beta**—ranked meal prices are estimates from fixture/weekly-ad/Kroger-mixed sources, not live checkout totals; do not claim all nearby chains are live-priced. Kroger developer app is **promoted to production**; set `KROGER_API_ENV=production` in `.env.local` and run `npm run test:kroger-api` before claiming live Kroger store prices. Official Kroger online rows sync only when production returns prices—always label verify-in-store. Walmart ranked pricing/promotion is **unavailable in beta** (context-only on the map) even though fixture/live ingest code paths exist; Aldi/Food Lion use a stronger Flipp retry + flyer/search-term ladder before direct scrape, but live retailer pages can still block; analytics is first-party and off by default until env flags are set; deployment not started unless reprioritized. **Remote CI green** on https://github.com/sfh1980/Yum4Less ([run 26981705172](https://github.com/sfh1980/Yum4Less/actions/runs/26981705172), 2026-06-04).
 
 ## Project agents (`.cursor/agents/`)
 
@@ -56,6 +56,26 @@ Invoke with **@agent-name** in chat or follow the agent checklist when the orche
 
 Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tokens. Semgrep requires the local `semgrep` CLI before its MCP server or hooks can run; the project wrappers also check Python user-script installs.
 
+### Playwright MCP agent checklist (ZIP `23111`)
+
+Use this for agent-driven browser verification when Vitest cannot prove visible trust copy. It is **not** the CI merge gate — that is `npm run test:e2e:ci` (`e2e/mvp-flow.spec.ts`).
+
+**Prerequisites:** `npm run db:up`, `npm run ingest:weekly-ads:fixture` (if prices look empty), then `npm run dev` on port **3000**.
+
+**Flow:**
+
+1. Open `http://localhost:3000`.
+2. Assert hero **BETA** copy: `Yum4Less Local MVP · Beta`.
+3. Assert footer feedback link: role `link`, name `Send feedback or report a wrong price`, `href="/feedback"`.
+4. Enter ZIP **23111** → **Find nearby stores** → wait for Kroger/Publix/Food Lion context on the map.
+5. **Rank dinner options** → dismiss the trust explainer modal.
+6. Assert **Est.** totals (`Est. $…` on meal cards).
+7. Assert **directional** / weekly-ad trust copy (`weekly-ad price — directional`, `Treat totals as estimates`, heads-up note `Beta — heads up about these prices`).
+8. Assert results-panel **BETA** warning: `Beta MVP: totals are estimates`.
+9. When multiple meals rank, assert carousel pagination dots are **buttons** (`Show recommendation 1`, `Show recommendation 2`, …) inside `Recommendation pagination`; click a dot and confirm the `N of M` hint updates.
+
+Do not hit live retailer sites during MCP checks — use seeded/fixture-backed local data only.
+
 ## Scoped rules (auto when matching files are open)
 
 | Rule | Globs |
@@ -79,7 +99,7 @@ Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tok
 
 ## Production-lean refactor (owner direction)
 
-**Keep:** current UI/UX (`recommendation-demo` is the real home-page flow), all meals/recipes/prices already in Postgres, fixture ingest for dev/CI only (honestly labeled).
+**Keep:** current UI/UX (`src/components/recommendation-demo/` with `meal-planner-*` layout is the real home-page flow), all meals/recipes/prices already in Postgres, fixture ingest for dev/CI only (honestly labeled).
 
 **Remove over time:** runtime `mock-market-data` and misleading mock/demo naming on live paths; in-memory market fallbacks; copy that implies live store data when it is rehearsal or unavailable.
 
@@ -95,13 +115,13 @@ Yum4Less production-lean refactor: Keep the current UI/UX and every meal/recipe/
 
 ### Phased slices (one chat per slice)
 
-| Phase | Prompt keywords | Agents | Gates |
-|-------|-----------------|--------|-------|
-| 1 — CI smoke stability | `vitest`, `recommendation-demo.test`, `CI-01`, `testTimeout` | `@testing-cicd-standards` | `npm test` |
-| 2 — Rename demo UI folder | `rename recommendation-demo`, `meal planner`, no UX redesign | `@web-frontend-standards` | `npm test`; Playwright if trust copy moves |
-| 3 — Retire runtime mock catalog | `mock-market-data`, `database-first`, rename Mock* types | `@web-backend-standards` `@database-codegen-standards` | `npm test`; `npm run test:integration` |
-| 4 — Trust copy pass | `estimated`, `directional`, `limited coverage`, fallback banner | `@web-frontend-standards` `@verifier` | `npm test`; Playwright MCP |
-| 5 — Live API rollout | `Kroger`, `Publix`, weekly-ad ingest, chain parser | `@database-codegen-standards` | ingest + Postgres MCP |
+| Phase | Status | Prompt keywords | Agents | Gates |
+|-------|--------|-----------------|--------|-------|
+| 1 — CI smoke stability | **Done** | `vitest`, `recommendation-demo.test`, `CI-01`, `testTimeout` | `@testing-cicd-standards` | `npm test` |
+| 2 — Rename demo UI folder | **Partial** — `meal-planner-*` CSS/layout shipped; folder still `recommendation-demo/` | `rename recommendation-demo`, `meal planner`, no UX redesign | `@web-frontend-standards` | `npm test`; Playwright if trust copy moves |
+| 3 — Retire runtime mock catalog | **Partial** — `mock-market-data` test/fixture-only; ranked reads are database-first | `mock-market-data`, `database-first`, rename Mock* types | `@web-backend-standards` `@database-codegen-standards` | `npm test`; `npm run test:integration` |
+| 4 — Trust copy pass | **Done** | `estimated`, `directional`, `limited coverage`, fallback banner | `@web-frontend-standards` `@verifier` | `npm test`; Playwright MCP |
+| 5 — Live API rollout | **Ongoing** | `Kroger`, `Publix`, weekly-ad ingest, chain parser | `@database-codegen-standards` | ingest + Postgres MCP |
 
 Use Task `explore` before phase 2–3 if touching many imports.
 

@@ -81,12 +81,32 @@ function seedMatchesCurrentMvp() {
       `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.columns where table_name = 'price_observations' and column_name in ('last_verified_at', 'source_kind', 'valid_through');"`,
       { encoding: "utf8", shell: true },
     ).trim();
+    const providerStoreSearchTableCount = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_store_search_snapshots';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
+    const providerProductPricingTableCount = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_product_pricing_snapshots';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
+    const ingredientAliasesTableCount = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'ingredient_aliases';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
+    const recipeEligibilityColumnCount = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.columns where table_name = 'recipes' and column_name = 'eligible_for_ranking';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
 
     return (
       catalogStoreCount === "8" &&
       mockPriceCount === "0" &&
       Number(recipeCount) >= 3 &&
-      dynamicPricingColumnCount === "3"
+      dynamicPricingColumnCount === "3" &&
+      providerStoreSearchTableCount === "1" &&
+      providerProductPricingTableCount === "1" &&
+      ingredientAliasesTableCount === "1" &&
+      recipeEligibilityColumnCount === "1"
     );
   } catch {
     return false;
@@ -125,7 +145,7 @@ export async function ensureTestDatabase() {
   if (!seedMatchesCurrentMvp()) {
     if (!canResetDatabaseAutomatically()) {
       throw new Error(
-        "Local Postgres seed looks stale. Start Docker Desktop if needed, then run `npm run db:reset` only after confirming you are okay recreating the local dev database volume.",
+        "Local Postgres seed looks stale (missing expected MVP stores, pricing columns, or provider cache tables from db/init/003 and 004). Start Docker Desktop if needed, then run `npm run db:reset` only after confirming you are okay recreating the local dev database volume.",
       );
     }
 

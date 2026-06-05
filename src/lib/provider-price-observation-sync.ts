@@ -5,6 +5,7 @@ import {
   touchStoreVerification,
 } from "@/lib/price-observation-writes";
 import { KROGER_OFFICIAL_PRICE_SOURCE as OFFICIAL_API_SOURCE } from "@/lib/price-source-policy";
+import { isKrogerOfficialOnlinePricingEligible } from "@/lib/providers/kroger/kroger-api-types";
 import type {
   ProviderPricingPreviewItem,
   ProviderPricingPreviewResult,
@@ -37,6 +38,15 @@ export async function syncKrogerPreviewToPriceObservations(input: {
     return {
       ...baseSummary,
       message: "Only Kroger previews can be synced in this MVP slice.",
+    };
+  }
+
+  if (!isKrogerOfficialOnlinePricingEligible()) {
+    return {
+      ...baseSummary,
+      skippedCount: input.preview.items.length,
+      message:
+        "Kroger official-online price sync requires KROGER_API_ENV=production. Certification returns catalog data only, so Yum4Less kept existing ingested cache observations.",
     };
   }
 

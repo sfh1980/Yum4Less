@@ -163,4 +163,25 @@ describe("weekly ad coverage", () => {
     );
     expect(weeklyAdPromotionGatesPass(coverage, "walmart")).toBe(false);
   });
+
+  it("never promotes Aldi or Food Lion for ranked weekly-ad pricing", () => {
+    const strongCoverage = {
+      storeId: "aldi-mechanicsville",
+      chain: "aldi" as const,
+      matchedIngredientCount: 5,
+      totalRecipeIngredientCount: 6,
+      averageMatchConfidence: 0.88,
+      maxFreshnessDaysAgo: 0,
+      coverageStatus: "strong" as const,
+      usesWeeklyAdSource: true,
+    };
+
+    expect(weeklyAdPromotionGatesPass(strongCoverage, "aldi")).toBe(false);
+    expect(
+      weeklyAdPromotionGatesPass(
+        { ...strongCoverage, storeId: "food-lion-mechanicsville", chain: "food-lion" },
+        "food-lion",
+      ),
+    ).toBe(false);
+  });
 });

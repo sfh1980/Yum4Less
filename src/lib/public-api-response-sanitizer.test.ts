@@ -154,7 +154,7 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
       "providerProductId",
     );
     expect(sanitized.providerPriceObservationSync[0]).not.toHaveProperty("internalStoreId");
-    expect(sanitized.nearbyStores[0]?.id).toBe("store-1");
+    expect(sanitized.nearbyStores[0]?.id).toBe("kroger-mechanicsville");
     expect(sanitized.providerPriceObservationSync[0]?.message).not.toContain(
       "kroger-mechanicsville",
     );
@@ -166,5 +166,45 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
     expect(sanitized.weeklyAdPromotionReadiness[0]).not.toHaveProperty("storeId");
     expect(sanitized.providerPriceObservationSync[0]?.syncedCount).toBe(3);
     expect(sanitized).not.toHaveProperty("message");
+  });
+
+  it("preserves public catalog store ids for each nearby store", () => {
+    const sanitized = sanitizeMarketSummaryForPublicApi(
+      buildMarketSummary({
+        nearbyStores: [
+          {
+            id: "kroger-mechanicsville",
+            name: "Kroger Mechanicsville",
+            kind: "grocery",
+            latitude: 37.6085,
+            longitude: -77.3321,
+            distanceMiles: 1.2,
+            chain: "kroger",
+            chainLabel: "Kroger",
+            rolloutStatus: "weekly-ad-preview",
+            recommendationEnabled: true,
+            rolloutNote: "Fixture coverage.",
+          },
+          {
+            id: "publix-atlee",
+            name: "Publix Atlee",
+            kind: "grocery",
+            latitude: 37.65,
+            longitude: -77.35,
+            distanceMiles: 2.4,
+            chain: "publix",
+            chainLabel: "Publix",
+            rolloutStatus: "coming-soon",
+            recommendationEnabled: false,
+            rolloutNote: "Coming soon.",
+          },
+        ],
+      }),
+    );
+
+    expect(sanitized.nearbyStores.map((store) => store.id)).toEqual([
+      "kroger-mechanicsville",
+      "publix-atlee",
+    ]);
   });
 });

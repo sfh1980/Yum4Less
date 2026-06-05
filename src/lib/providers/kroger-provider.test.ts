@@ -3,6 +3,7 @@ import { createKrogerProviderClient } from "@/lib/providers/kroger-provider";
 
 const originalClientId = process.env.KROGER_CLIENT_ID;
 const originalClientSecret = process.env.KROGER_CLIENT_SECRET;
+const originalApiEnv = process.env.KROGER_API_ENV;
 
 describe("createKrogerProviderClient", () => {
   afterEach(() => {
@@ -16,6 +17,12 @@ describe("createKrogerProviderClient", () => {
       delete process.env.KROGER_CLIENT_SECRET;
     } else {
       process.env.KROGER_CLIENT_SECRET = originalClientSecret;
+    }
+
+    if (originalApiEnv === undefined) {
+      delete process.env.KROGER_API_ENV;
+    } else {
+      process.env.KROGER_API_ENV = originalApiEnv;
     }
 
     vi.unstubAllGlobals();
@@ -112,9 +119,70 @@ describe("createKrogerProviderClient", () => {
     ]);
   });
 
-  it("builds a Kroger pricing preview for tracked ingredients", async () => {
+  it("does not surface official-online prices in certification even when catalog matches exist", async () => {
     process.env.KROGER_CLIENT_ID = "client-id";
     process.env.KROGER_CLIENT_SECRET = "client-secret";
+    process.env.KROGER_API_ENV = "certification";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token-123" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                productId: "0001111000001",
+                description: "Fresh Chicken Thighs Family Pack",
+                brand: "Kroger",
+                items: [{ fulfillment: { instore: true } }],
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createKrogerProviderClient();
+    const result = await client.searchPricingPreview({
+      store: {
+        provider: "kroger",
+        providerStoreId: "01100479",
+        name: "Kroger Mechanicsville",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6652,
+        longitude: -77.3651,
+      },
+      ingredients: [
+        {
+          ingredientId: "chicken-thighs",
+          ingredientName: "Chicken thighs",
+          searchTerm: "Chicken thighs",
+        },
+      ],
+    });
+
+    expect(result.status).toBe("available");
+    expect(result.items).toEqual([]);
+    expect(result.matchedIngredientCount).toBe(0);
+    expect(result.message).toContain("certification");
+    expect(result.message).toContain("KROGER_API_ENV=production");
+  });
+
+  it("builds a Kroger pricing preview for tracked ingredients in production", async () => {
+    process.env.KROGER_CLIENT_ID = "client-id";
+    process.env.KROGER_CLIENT_SECRET = "client-secret";
+    process.env.KROGER_API_ENV = "production";
 
     const fetchMock = vi
       .fn()
@@ -186,5 +254,6 @@ describe("createKrogerProviderClient", () => {
         matchReason: expect.stringContaining("description contains"),
       }),
     ]);
+    expect(result.message).toContain("verify in store");
   });
 });

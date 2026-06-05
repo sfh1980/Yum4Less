@@ -22,7 +22,7 @@ async function runCoreMvpFlow(page: import("@playwright/test").Page) {
     page.getByRole("heading", { name: "Nearby stores map" }),
   ).toBeVisible();
   await expect(
-    page.getByText(/no live Walmart pricing, or no weekly ad rollout yet/i),
+    page.getByText(/no live Walmart pricing|context-only for ranked meals/i).first(),
   ).toBeVisible();
   await expect(page.getByText(/Weekly ad prices/i).first()).toBeVisible();
   await expect(page.getByText(/^Priced$/i)).toHaveCount(0);
@@ -78,11 +78,36 @@ test.describe("Yum4Less local MVP (ZIP 23111)", () => {
 
     if (await carouselHint.isVisible()) {
       await expect(page.getByText(/1 of \d+/)).toBeVisible();
-      await nextButton.click();
+
+      const pagination = page.locator('[aria-label="Recommendation pagination"]');
+      await expect(pagination).toBeVisible();
+      const dotButtons = pagination.getByRole("button");
+      await expect(dotButtons.first()).toBeVisible();
+      expect(await dotButtons.count()).toBeGreaterThan(1);
+
+      const secondDot = page.getByRole("button", { name: "Show recommendation 2" });
+      await expect(secondDot).toBeVisible();
+      await secondDot.click();
       await expect(page.getByText(/2 of \d+/)).toBeVisible();
+
       await page.getByRole("button", { name: "Previous recommendation" }).click();
       await expect(page.getByText(/1 of \d+/)).toBeVisible();
+      await nextButton.click();
+      await expect(page.getByText(/2 of \d+/)).toBeVisible();
     }
+  });
+
+  test("shows beta label and footer feedback link", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page.getByText(/Yum4Less Local MVP · Beta/i)).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Send feedback or report a wrong price" }),
+    ).toHaveAttribute("href", "/feedback");
+
+    await runCoreMvpFlow(page);
+
+    await expect(page.getByText(/Beta MVP: totals are estimates/i)).toBeVisible();
   });
 
   test("opens the trust explainer from the results panel", async ({ page }) => {
@@ -96,11 +121,13 @@ test.describe("Yum4Less local MVP (ZIP 23111)", () => {
       trustDialog.getByRole("heading", { name: "How to read these results" }),
     ).toBeVisible();
     await expect(trustDialog.getByText(/helpful estimates/i)).toBeVisible();
+    await expect(trustDialog.getByText(/Beta MVP/i)).toBeVisible();
+    await expect(trustDialog.getByText(/not as live-priced sources for meal totals/i)).toBeVisible();
     await expect(
       trustDialog.getByText(/estimated, directional, or limited coverage/i),
     ).toBeVisible();
     await expect(
-      trustDialog.getByText(/live, current weekly-ad pricing from Walmart is not available/i),
+      trustDialog.getByText(/ranked meal pricing does not use Walmart yet in this beta/i),
     ).toBeVisible();
   });
 });

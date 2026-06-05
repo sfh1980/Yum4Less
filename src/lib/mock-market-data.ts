@@ -10,11 +10,16 @@ export type MockStore = {
   longitude: number;
 };
 
+import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
+import type { IngredientCategory } from "@/lib/ingredient-category";
+
 export type MockIngredient = {
   id: string;
   name: string;
-  category: "protein" | "produce" | "pantry" | "dairy";
+  category: IngredientCategory;
 };
+
+export const mockIngredients: MockIngredient[] = INTERNAL_CATALOG_INGREDIENTS;
 
 export type MockRecipeIngredient = {
   ingredientId: string;
@@ -32,6 +37,9 @@ export type MockRecipeRecord = {
   dietaryTags: Array<"vegetarian" | "vegan" | "quick">;
   ingredients: MockRecipeIngredient[];
   steps: string[];
+  sourceName?: string;
+  sourceRecipeId?: string;
+  eligibleForRanking?: boolean;
 };
 
 export type MockPriceObservation = {
@@ -123,50 +131,6 @@ export const mockStores: MockStore[] = [
   },
 ];
 
-export const mockIngredients: MockIngredient[] = [
-  { id: "chicken-thighs", name: "Chicken thighs", category: "protein" },
-  { id: "baby-potatoes", name: "Baby potatoes", category: "produce" },
-  { id: "broccoli", name: "Broccoli", category: "produce" },
-  { id: "lemon", name: "Lemon", category: "produce" },
-  { id: "olive-oil", name: "Olive oil", category: "pantry" },
-  { id: "black-beans", name: "Black beans", category: "pantry" },
-  { id: "corn-tortillas", name: "Corn tortillas", category: "pantry" },
-  { id: "cabbage", name: "Green cabbage", category: "produce" },
-  { id: "lime", name: "Lime", category: "produce" },
-  { id: "spaghetti", name: "Spaghetti", category: "pantry" },
-  { id: "spinach", name: "Spinach", category: "produce" },
-  { id: "parmesan", name: "Parmesan", category: "dairy" },
-  { id: "butter", name: "Butter", category: "dairy" },
-  { id: "tofu", name: "Extra-firm tofu", category: "protein" },
-  { id: "jasmine-rice", name: "Jasmine rice", category: "pantry" },
-  { id: "bell-peppers", name: "Bell peppers", category: "produce" },
-  { id: "soy-sauce", name: "Soy sauce", category: "pantry" },
-  { id: "green-onion", name: "Green onion", category: "produce" },
-  { id: "ground-beef", name: "Ground beef", category: "protein" },
-  { id: "chicken-breast", name: "Chicken breast", category: "protein" },
-  { id: "ground-turkey", name: "Ground turkey", category: "protein" },
-  { id: "yellow-onion", name: "Yellow onion", category: "produce" },
-  { id: "garlic", name: "Garlic", category: "pantry" },
-  { id: "carrots", name: "Carrots", category: "produce" },
-  { id: "green-beans", name: "Green beans", category: "produce" },
-  { id: "eggs", name: "Eggs", category: "dairy" },
-  { id: "cheddar-cheese", name: "Cheddar cheese", category: "dairy" },
-  { id: "whole-milk", name: "Whole milk", category: "dairy" },
-  { id: "pasta-sauce", name: "Pasta sauce", category: "pantry" },
-  { id: "canned-tomatoes", name: "Canned tomatoes", category: "pantry" },
-  { id: "chicken-broth", name: "Chicken broth", category: "pantry" },
-  { id: "pinto-beans", name: "Pinto beans", category: "pantry" },
-  { id: "chickpeas", name: "Chickpeas", category: "pantry" },
-  { id: "flour-tortillas", name: "Flour tortillas", category: "pantry" },
-  { id: "penne-pasta", name: "Penne pasta", category: "pantry" },
-  { id: "roma-tomatoes", name: "Roma tomatoes", category: "produce" },
-  { id: "zucchini", name: "Zucchini", category: "produce" },
-  { id: "mushrooms", name: "Mushrooms", category: "produce" },
-  { id: "italian-sausage", name: "Italian sausage", category: "protein" },
-  { id: "sour-cream", name: "Sour cream", category: "dairy" },
-  { id: "mozzarella", name: "Mozzarella", category: "dairy" },
-];
-
 export const mockRecipes: MockRecipeRecord[] = [
   {
     id: "sheet-pan-lemon-chicken",
@@ -205,6 +169,8 @@ export const mockRecipes: MockRecipeRecord[] = [
       { ingredientId: "cabbage", displayName: "Cabbage", quantityNote: "1/2 head" },
       { ingredientId: "lime", displayName: "Lime", quantityNote: "2" },
       { ingredientId: "olive-oil", displayName: "Olive oil", quantityNote: "1 bottle" },
+      { ingredientId: "taco-seasoning", displayName: "Taco seasoning", quantityNote: "1 packet" },
+      { ingredientId: "cumin", displayName: "Ground cumin", quantityNote: "1 tsp" },
     ],
     steps: [
       "Warm the beans with pantry seasoning while the tortillas heat in a dry skillet.",
@@ -227,6 +193,7 @@ export const mockRecipes: MockRecipeRecord[] = [
       { ingredientId: "parmesan", displayName: "Parmesan", quantityNote: "1 wedge" },
       { ingredientId: "butter", displayName: "Butter", quantityNote: "1 stick" },
       { ingredientId: "olive-oil", displayName: "Olive oil", quantityNote: "1 bottle" },
+      { ingredientId: "garlic", displayName: "Garlic", quantityNote: "4 cloves" },
     ],
     steps: [
       "Cook the pasta and reserve a little pasta water before draining.",
@@ -273,6 +240,8 @@ export const mockRecipes: MockRecipeRecord[] = [
       { ingredientId: "yellow-onion", displayName: "Yellow onion", quantityNote: "1" },
       { ingredientId: "chicken-broth", displayName: "Chicken broth", quantityNote: "2 cups" },
       { ingredientId: "sour-cream", displayName: "Sour cream", quantityNote: "1 tub" },
+      { ingredientId: "cumin", displayName: "Ground cumin", quantityNote: "1 tbsp" },
+      { ingredientId: "chili-powder", displayName: "Chili powder", quantityNote: "1 tbsp" },
     ],
     steps: [
       "Brown the ground beef with diced onion until no longer pink.",
@@ -294,6 +263,7 @@ export const mockRecipes: MockRecipeRecord[] = [
       { ingredientId: "penne-pasta", displayName: "Penne pasta", quantityNote: "1 box" },
       { ingredientId: "pasta-sauce", displayName: "Pasta sauce", quantityNote: "1 jar" },
       { ingredientId: "mozzarella", displayName: "Mozzarella", quantityNote: "8 oz" },
+      { ingredientId: "italian-seasoning", displayName: "Italian seasoning", quantityNote: "1 tsp" },
     ],
     steps: [
       "Brown Italian sausage in a skillet and drain excess fat if needed.",
@@ -317,6 +287,11 @@ export const mockPriceObservations: MockPriceObservation[] = [
   { storeId: "kroger-mechanicsville", ingredientId: "spinach", price: 2.49, freshnessDaysAgo: 1, inStock: true },
   { storeId: "kroger-mechanicsville", ingredientId: "parmesan", price: 3.59, freshnessDaysAgo: 3, inStock: true },
   { storeId: "kroger-mechanicsville", ingredientId: "butter", price: 2.79, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "garlic", price: 0.69, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "cumin", price: 0.79, freshnessDaysAgo: 3, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "chili-powder", price: 0.99, freshnessDaysAgo: 3, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "taco-seasoning", price: 0.89, freshnessDaysAgo: 3, inStock: true },
+  { storeId: "kroger-mechanicsville", ingredientId: "italian-seasoning", price: 0.99, freshnessDaysAgo: 4, inStock: true },
 
   { storeId: "food-lion-mechanicsville", ingredientId: "chicken-thighs", price: 6.29, saleLabel: "Weekly special", freshnessDaysAgo: 1, inStock: true },
   { storeId: "food-lion-mechanicsville", ingredientId: "broccoli", price: 2.19, freshnessDaysAgo: 2, inStock: true },

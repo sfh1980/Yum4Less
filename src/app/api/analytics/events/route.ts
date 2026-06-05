@@ -4,6 +4,7 @@ import { parseJsonBody } from "@/lib/api-request";
 import { isAnalyticsEnabled } from "@/lib/analytics/analytics-policy";
 import { appendAnalyticsEvent } from "@/lib/analytics/analytics-sink";
 import { validateAnalyticsEventPayload } from "@/lib/analytics/analytics-validation";
+import { publicApiErrorResponse } from "@/lib/public-api-error";
 
 export async function POST(request: Request) {
   const rateLimit = enforceApiRateLimit(request, "apiAnalyticsEvents");
@@ -28,10 +29,11 @@ export async function POST(request: Request) {
   try {
     await appendAnalyticsEvent(validated.event);
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: "Analytics event could not be recorded." },
-      { status: 500 },
+  } catch (error) {
+    return publicApiErrorResponse(
+      "api.analytics.events",
+      error,
+      "Analytics event could not be recorded.",
     );
   }
 }

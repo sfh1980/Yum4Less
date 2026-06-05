@@ -16,6 +16,7 @@ vi.mock("@/lib/recommendation-service", () => ({
 import { POST } from "@/app/api/recommendations/route";
 import { isPublicApiDbWriteEnabled } from "@/lib/public-api-db-write-policy";
 import { RATE_LIMITS, resetRateLimitsForTests } from "@/lib/rate-limit";
+import * as serverLog from "@/lib/server-log";
 
 const originalDbWriteFlag = process.env.YUM4LESS_ENABLE_API_DB_WRITES;
 const originalNodeEnv = process.env.NODE_ENV;
@@ -167,7 +168,21 @@ describe("POST /api/recommendations", () => {
         searchLatitude: 37.6085,
         searchLongitude: -77.3321,
         radiusMiles: 5,
-        nearbyStores: [],
+        nearbyStores: [
+          {
+            id: "kroger-mechanicsville",
+            name: "Kroger Mechanicsville",
+            kind: "grocery",
+            latitude: 37.6085,
+            longitude: -77.3321,
+            distanceMiles: 1.2,
+            chain: "kroger",
+            chainLabel: "Kroger",
+            rolloutStatus: "weekly-ad-preview",
+            recommendationEnabled: true,
+            rolloutNote: "Fixture coverage.",
+          },
+        ],
         recommendationReadyStoreCount: 0,
         providerRollout: [],
         providerStoreSearches: [
@@ -242,7 +257,43 @@ describe("POST /api/recommendations", () => {
     expect(body.experience.market.providerPriceObservationSync[0]).not.toHaveProperty(
       "internalStoreId",
     );
+    expect(body.experience.market.nearbyStores[0]?.id).toBe("kroger-mechanicsville");
     expect(body.experience.market).not.toHaveProperty("message");
+  });
+
+  it("returns 500 and logs when recommendation experience throws", async () => {
+    const logSpy = vi.spyOn(serverLog, "logServerError").mockImplementation(() => {});
+    resolveLocationInput.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: false,
+    });
+    getRecommendationExperience.mockRejectedValue(new Error("db timeout"));
+
+    const response = await POST(
+      new Request("http://localhost/api/recommendations", {
+        method: "POST",
+        body: JSON.stringify(validPayload),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Recommendations are temporarily unavailable.",
+    });
+    expect(logSpy).toHaveBeenCalledWith(
+      "api.recommendations",
+      expect.objectContaining({ message: "db timeout" }),
+    );
+    logSpy.mockRestore();
   });
 
   it("returns a ZIP lookup failure when location resolution fails", async () => {

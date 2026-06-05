@@ -7,6 +7,7 @@ import {
   isValidZipCode,
   parseJsonBody,
 } from "@/lib/api-request";
+import { publicApiErrorResponse } from "@/lib/public-api-error";
 import { sanitizeMarketSummaryForPublicApi } from "@/lib/public-api-response-sanitizer";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { getMarketSearchExperience } from "@/lib/recommendation-service";
@@ -58,10 +59,11 @@ export async function POST(request: Request) {
       ok: true,
       market: sanitizeMarketSummaryForPublicApi(experience.market),
     });
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: "Market search is temporarily unavailable." },
-      { status: 500 },
+  } catch (error) {
+    return publicApiErrorResponse(
+      "api.market-search",
+      error,
+      "Market search is temporarily unavailable.",
     );
   }
 }

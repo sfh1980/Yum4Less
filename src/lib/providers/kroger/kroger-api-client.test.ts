@@ -1,10 +1,53 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createKrogerApiClient, probeKrogerApiSetup } from "@/lib/providers/kroger/kroger-api-client";
-import { KROGER_API_SPEC, getKrogerApiBaseUrl } from "@/lib/providers/kroger/kroger-api-types";
+import {
+  KROGER_API_SPEC,
+  getKrogerApiBaseUrl,
+} from "@/lib/providers/kroger/kroger-api-types";
+
+const originalApiEnv = process.env.KROGER_API_ENV;
 
 describe("createKrogerApiClient", () => {
   afterEach(() => {
+    if (originalApiEnv === undefined) {
+      delete process.env.KROGER_API_ENV;
+    } else {
+      process.env.KROGER_API_ENV = originalApiEnv;
+    }
     vi.unstubAllGlobals();
+  });
+
+  it("targets the production host when KROGER_API_ENV=production", async () => {
+    process.env.KROGER_API_ENV = "production";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token-locations" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = createKrogerApiClient({
+      clientId: "client-id",
+      clientSecret: "client-secret",
+    });
+    await api.searchLocations({ zipCodeNear: "23111", limit: 1 });
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      `${KROGER_API_SPEC.productionBaseUrl}${KROGER_API_SPEC.tokenPath}`,
+    );
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain(
+      `${KROGER_API_SPEC.productionBaseUrl}${KROGER_API_SPEC.locationsPath}`,
+    );
   });
 
   it("builds location search requests from the Location OpenAPI filters", async () => {
@@ -176,5 +219,76 @@ describe("createKrogerApiClient", () => {
     expect(probe.productionPromotionReady).toBe(false);
     expect(probe.productionPromotionSteps?.length).toBeGreaterThan(0);
     expect(probe.message).toContain("certification");
+  });
+
+  it("marks production promotion ready when production returns store prices", async () => {
+    process.env.KROGER_API_ENV = "production";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token-locations" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [{ locationId: "02900529", name: "Kroger Mechanicsville" }],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token-products" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                productId: "0001111000001",
+                description: "Fresh Broccoli Crowns",
+                items: [{ price: { regular: 1.99, promo: 1.49 }, fulfillment: { inStore: true } }],
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token-products-detail" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: {
+              productId: "0001111000001",
+              description: "Fresh Broccoli Crowns",
+              items: [{ price: { regular: 1.99, promo: 1.49 }, fulfillment: { inStore: true } }],
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const probe = await probeKrogerApiSetup("23111", {
+      clientId: "client-id",
+      clientSecret: "client-secret",
+    });
+
+    expect(probe.environment).toBe("production");
+    expect(probe.baseUrl).toBe(KROGER_API_SPEC.productionBaseUrl);
+    expect(probe.pricingAvailable).toBe(true);
+    expect(probe.productionPromotionReady).toBe(true);
+    expect(probe.message).toContain("store-specific pricing");
   });
 });

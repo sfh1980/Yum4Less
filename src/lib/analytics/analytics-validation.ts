@@ -8,7 +8,10 @@ import { validateAnalyticsProperties } from "@/lib/analytics/analytics-privacy";
 
 const EVENT_NAME_SET = new Set<string>(ANALYTICS_EVENT_NAMES);
 const SESSION_ID_PATTERN = /^[a-f0-9-]{16,64}$/i;
-const EVENT_PROPERTY_ALLOWLISTS: Record<AnalyticsEventName, readonly string[]> = {
+export const ANALYTICS_EVENT_PROPERTY_ALLOWLISTS: Record<
+  AnalyticsEventName,
+  readonly string[]
+> = {
   location_search_started: ["mode", "radius_miles"],
   location_search_completed: [
     "mode",
@@ -77,7 +80,7 @@ function validateEventPropertyAllowlist(
   eventName: AnalyticsEventName,
   properties: AnalyticsProperties,
 ): { ok: true } | { ok: false; error: string } {
-  const allowed = new Set(EVENT_PROPERTY_ALLOWLISTS[eventName]);
+  const allowed = new Set(ANALYTICS_EVENT_PROPERTY_ALLOWLISTS[eventName]);
 
   for (const key of Object.keys(properties)) {
     if (!allowed.has(key)) {

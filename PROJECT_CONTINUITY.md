@@ -174,13 +174,13 @@ What exists:
 - Semgrep CI is configured to run `semgrep ci` only when `SEMGREP_APP_TOKEN` is present; local Semgrep hooks remain advisory until the CLI is installed and a scan actually runs
 - chain rollout and official provider discovery panels are collapsed under **Project & data details (internal)** modal (temporary link; not primary user UI)
 - a local Vitest harness covering geocoding fallback, repository behavior, route validation (including 429 and bounds), recommendation behavior, ranking fixtures, rate limiting, public API write policy, response sanitization, shopping-route caps, weekly-ad parsing/matching, carousel UI, trust copy, and a UI smoke path
-- Playwright E2E CI gate via `npm run test:e2e:ci` (`e2e/mvp-flow.spec.ts` — **3/3**); Playwright MCP supplements agent-driven browser checks on localhost
+- Playwright E2E CI gate via `npm run test:e2e:ci` (`e2e/mvp-flow.spec.ts` — **4/4**); Playwright MCP supplements agent-driven browser checks on localhost
 - Postgres MCP read-only verification for schema, seed stores, and latest `price_observations` after ingest; complements integration tests
 - GitHub MCP for PR and workflow status inspection during review; `gh` CLI preferred for creating PRs and pushes
 
 Current file roles:
 - `src/app/page.tsx` keeps the top-level page simple
-- `src/components/recommendation-demo/` contains the split location, preference, and recommendation UI flow (`use-recommendation-demo.ts`, location/results panels, trust modal)
+- `src/components/recommendation-demo/` contains the split location, preference, and recommendation UI flow (`use-recommendation-demo.ts`, location/results panels, trust modal); layout uses neutral `meal-planner-*` CSS classes (folder rename to `meal-planner/` is a pending production-lean slice)
 - `src/components/internal-details-modal.tsx` houses dev/admin/investor diagnostics (provider rollout, ingest status, score breakdowns) behind a temporary internal link
 - `src/components/recommendation-results-carousel.tsx` renders the swipeable ranked-dinner carousel (scroll-snap, Previous/Next, dots, keyboard)
 - `src/components/nearby-stores-map.tsx` renders the client-side Leaflet map for nearby stores
@@ -248,7 +248,7 @@ Approved MVP direction:
 - keep the MVP no-login and hard-limited to the initial local area around ZIP `23111`
 - determine location from browser geolocation and/or ZIP
 - choose a radius and show nearby stores before asking for deeper meal constraints
-- prioritize live-chain work in this order: `Kroger`, then `Publix`, then `Walmart`; when deployment is discussed, remind the owner to promote the Kroger API app to production and set `KROGER_API_ENV=production`
+- prioritize live-chain work in this order: `Kroger`, then `Publix`, then `Walmart`; Kroger developer app **Yum4Less** is promoted to production — set `KROGER_API_ENV=production` in `.env.local` and run `npm run test:kroger-api` to confirm store prices before live Kroger price claims
 - keep `Aldi` and `BJ's` as later targets unless reprioritized
 - use official APIs first, reputable third-party sources second, and only then carefully reviewed web collection
 - show unsupported chains as coming soon or disabled with explanation
@@ -263,7 +263,7 @@ Approved MVP direction:
 
 ## Verification State
 
-Last updated: **2026-05-27** (eleventh epic re-audit — full local §2 checklist).
+Last updated: **2026-06-05** (Slice 11 — documentation sync; counts from local `npm test` / `npm run test:integration`).
 
 ### Security posture (May 2026)
 
@@ -282,7 +282,7 @@ Audited for SQL injection, IDOR, and BOLA — no classic issues. **Shipped harde
 
 | ID | Area | Status |
 |----|------|--------|
-| CI-19 / CI-05 | E2E ZIP flow + trust vocabulary | **Done** — `e2e/mvp-flow.spec.ts` **3/3** |
+| CI-19 / CI-05 | E2E ZIP flow + trust vocabulary | **Done** — `e2e/mvp-flow.spec.ts` **4/4** |
 | CI-03 / CI-04 / CI-07 | Geocode + 429 + validation bounds | **Done** — route test files |
 | CI-06 | Full DB recommendation integration | **Done** — `recommendation-service.integration.test.ts` |
 | CI-02 | Ranking fixture guards | **Done** |
@@ -291,21 +291,29 @@ Audited for SQL injection, IDOR, and BOLA — no classic issues. **Shipped harde
 | DOC-01 | First-run setup | **Done** — README + `npm run setup:local` |
 | SEC-01 / SEC-02 / API-03 | Production write guard + proxy/rate-limit docs | **Done** (Redis/platform limits deferred) |
 
-### Automated gates (2026-05-27)
+### Automated gates (2026-06-05)
 
-- `npm run lint` — passes (map ref ESLint warning only)
-- `npm run build` — passes
-- `npm test` — **227** tests, **58** files (last verified 2026-06-02)
-- `npm run test:integration` — **6** tests, **3** files (Docker Postgres on port `5433`; auto-`db:reset` when seed stale; last verified 2026-06-02)
-- `npm run test:e2e:ci` — **3/3** Playwright tests (build + fixture ingest + browser on port `3100`)
+- `npm run lint` — merge gate in CI `verify` job
+- `npm run build` — merge gate in CI `verify` job
+- `npm test` — **295** tests, **73** files (last verified 2026-06-05)
+- `npm run test:integration` — **8** tests, **4** files (Docker Postgres on port `5433`; harness auto-starts DB; stale-seed reset only with explicit reset flag or `YUM4LESS_ALLOW_DB_RESET=1` locally; last verified 2026-06-05)
+- `npm run test:e2e:ci` — **4/4** Playwright tests (build + fixture ingest + browser on port `3100`)
 - `npm run test:all` — unit + integration
-- `npm audit --audit-level=high` — **0 high** (2 moderate postcss via next)
-- `.github/workflows/ci.yml` — `verify` + `integration` + `e2e` jobs (**remote green** on first push 2026-05-27 — [run 26529795179](https://github.com/sfh1980/Yum4Less/actions/runs/26529795179))
+- `npm audit --audit-level=high` — merge gate in CI `verify` job
+- `.github/workflows/ci.yml` — advisory `semgrep` (skips when `SEMGREP_APP_TOKEN` unset) + merge gates `verify` + `integration` + `e2e` (**remote green** 2026-06-04 — [run 26981705172](https://github.com/sfh1980/Yum4Less/actions/runs/26981705172))
 - **GitHub repo:** https://github.com/sfh1980/Yum4Less (private)
+
+### Automated gates — Historical (2026-05-27)
+
+First remote CI green on initial push; counts superseded by 2026-06-05 block above.
+
+- `npm test` — **227** tests, **58** files (last verified 2026-06-02)
+- `npm run test:integration` — **6** tests, **3** files
+- `.github/workflows/ci.yml` — [run 26529795179](https://github.com/sfh1980/Yum4Less/actions/runs/26529795179)
 
 ### Optional manual network probes (not CI merge gates)
 
-- `npm run test:kroger-api` — Kroger OAuth, location, catalog (certification)
+- `npm run test:kroger-api` — Kroger OAuth, location, catalog, store pricing (`KROGER_API_ENV=production`)
 - `npm run test:publix-api` — Publix website store-locator
 - `npm run test:kroger-live-scrape` / `npm run test:publix-live-scrape` — live weekly-ad browser probes
 - `npm run test:publix-live-ingest` — live Publix scrape → Postgres sync + promotion gate report
@@ -345,8 +353,9 @@ Browser fallback (`weekly-ad-page-fetcher.ts`, Playwright in ingest scripts) is 
 Near-term implementation direction:
 - **Done locally:** fixture weekly-ad ingest, promotion gates, browser fallback scaffolding, recipe source research registry, MCP/rules/agents, integration CI job, public API security hardening (read-only default, sanitization, route caps, MVP ZIP scope, proxy-aware rate limits)
 - **Partially unblocked:** live weekly-ad ingest — Publix and Kroger (Flipp) sync rows; Walmart fetch/parser paths exist but ranked pricing/promotion stays intentionally locked; Aldi/Food Lion sync via Flipp syndicated feed (direct scrape still blocked or empty; rollout gates unchanged)
-- **Next:** Walmart ingredient matching; Kroger chain parser hardening; deployment; TheMealDB dev import prototype
-- **Defer:** Lidl, Dollar General, Spoonacular/Edamam production, official Kroger API production promotion for live store pricing
+- **Next:** Walmart ingredient matching; Kroger chain parser hardening; deployment
+- **Research shipped (dev):** sale-driven TheMealDB import via `npm run ingest:themealdb:from-sales` (test key `1` only; hidden from rankings until sale overlap + price coverage)
+- **Defer:** Lidl, Dollar General, Spoonacular/Edamam production; Kroger production price sync rollout until `npm run test:kroger-api` confirms store prices locally
 
 ### MVP completion status (local)
 
@@ -381,7 +390,7 @@ Every ingested sale must carry freshness, source, and confidence metadata compat
 
 ### Weekly-ad scraping research (Kroger first)
 
-Kroger developer app **Yum4Less** is registered in certification with Locations + Products (`product.compact`) scopes. OAuth, nearby store lookup, and catalog search work against `https://api-ce.kroger.com`, but certification responses omit store-specific prices. Promote to production for live pricing; until then weekly-ad ingest and seed/DB pricing remain the trusted ranked path.
+Kroger developer app **Yum4Less** is promoted to **production** with Locations + Products (`product.compact`) scopes. Set `KROGER_API_ENV=production` in `.env.local` and run `npm run test:kroger-api` to confirm `item.price.regular` or `item.price.promo` near ZIP `23111`. Certification (`https://api-ce.kroger.com`) still supports OAuth and catalog only. Official Kroger online prices sync into ranked reads only when production returns store prices; weekly-ad ingest remains the fallback ranked path until probe + sync confirm production pricing.
 
 Approved next implementation steps (live hardening):
 1. capture/save HTML on ingest failure for parser development
@@ -451,7 +460,7 @@ Research module: `src/lib/recipe-sources/recipe-source-registry.ts`
 | Source | MVP verdict | Key gate |
 |--------|-------------|----------|
 | **Internal library** | **Active** | Primary; ingredient IDs aligned to local pricing |
-| **TheMealDB** | Dev-only | Supporter key + attribution for commercial/app-store use; needs ingredient normalization |
+| **TheMealDB** | Dev/research only | Test key `1` for local import (`ingest:themealdb:from-sales`); supporter key + attribution for commercial/app-store; `ingredient_aliases` + sale-driven import; not selectable in ranked UI |
 | **Spoonacular** | Later | 1-hour cache limit on most fields; anti-competition clause; source attribution required |
 | **Edamam** | Not approved (commercial) | Free tier is personal/non-profit only; paid tier required for Yum4Less-style product |
 

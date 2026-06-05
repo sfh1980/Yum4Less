@@ -6,6 +6,11 @@ export type PricingTrustHeadsUp = {
   message: string;
 };
 
+export const PRICING_TRUST_HEADS_UP_TITLE = "Beta — heads up about these prices";
+
+const BETA_BASELINE =
+  "Yum4Less is in beta: the local MVP is still evolving, ranked prices are estimates (not live checkout), and not every nearby chain is live-priced yet.";
+
 const NON_LIVE_RANKED_SOURCES: RankedPricingSource[] = [
   "weekly-ad-cache",
   "official-api-cache",
@@ -72,12 +77,23 @@ export function buildPricingTrustHeadsUp(
     reasons.push("Meal pricing has limited coverage right now.");
   }
 
+  const hasStoreContext =
+    market.recommendationReadyStoreCount > 0 ||
+    market.providerStoreSearches.length > 0;
+
   if (reasons.length === 0) {
-    return null;
+    if (!hasStoreContext) {
+      return null;
+    }
+
+    return {
+      title: PRICING_TRUST_HEADS_UP_TITLE,
+      message: `${BETA_BASELINE} Treat totals as estimates and confirm price, package size, and deals in the store before you buy.`,
+    };
   }
 
   return {
-    title: "Heads up about these prices",
-    message: `${reasons.join(" ")} Treat totals as estimates and confirm price, package size, and deals in the store before you buy.`,
+    title: PRICING_TRUST_HEADS_UP_TITLE,
+    message: `${BETA_BASELINE} ${reasons.join(" ")} Treat totals as estimates and confirm price, package size, and deals in the store before you buy.`,
   };
 }

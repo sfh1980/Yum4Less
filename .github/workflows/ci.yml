@@ -20,8 +20,9 @@ jobs:
       - name: Run Semgrep CI when configured
         run: |
           if [ -z "$SEMGREP_APP_TOKEN" ]; then
-            echo "SEMGREP_APP_TOKEN is not configured; Semgrep CI did not run."
+            echo "SEMGREP_APP_TOKEN is not configured; Semgrep CI did not run (advisory — this job exits 0)."
             echo "Add the repository secret from Semgrep AppSec Platform to enable semgrep ci."
+            echo "Merge gates remain verify, integration, and e2e until the token is set."
             exit 0
           fi
           semgrep ci

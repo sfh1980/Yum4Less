@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { InternalDetailsModal } from "@/components/internal-details-modal";
 import { InternalDetailsDevTrigger } from "@/components/recommendation-demo/internal-details-dev-trigger";
 import { LocationSearchPanel } from "@/components/recommendation-demo/location-search-panel";
@@ -14,8 +15,8 @@ export function RecommendationDemo() {
   const showInternalDetails = isInternalDetailsUiEnabled();
 
   return (
-    <section className="demo-grid" aria-label="Local dinner recommendation flow">
-      <div className="demo-grid-col demo-grid-col--inputs">
+    <section className="meal-planner-grid" aria-label="Local dinner recommendation flow">
+      <div className="meal-planner-grid-col meal-planner-grid-col--inputs">
         <LocationSearchPanel
           displayedErrors={demo.displayedErrors}
           focusMealPreferencesToken={demo.focusMealPreferencesToken}
@@ -31,7 +32,7 @@ export function RecommendationDemo() {
         />
       </div>
 
-      <div className="demo-grid-col demo-grid-col--market">
+      <div className="meal-planner-grid-col meal-planner-grid-col--market">
         <MarketDiscoveryPanel
           market={demo.market}
           marketBlocked={demo.marketBlocked}
@@ -42,7 +43,7 @@ export function RecommendationDemo() {
         />
       </div>
 
-      <div className="demo-grid-col demo-grid-col--meals">
+      <div className="meal-planner-grid-col meal-planner-grid-col--meals">
         <MealResultsPanel
           activeLocationRequest={demo.activeLocationRequest}
           form={demo.form}
@@ -73,6 +74,12 @@ export function RecommendationDemo() {
           />
         </>
       ) : null}
+
+      <footer className="meal-planner-footer-links">
+        <Link className="text-link" href="/feedback">
+          Send feedback or report a wrong price
+        </Link>
+      </footer>
     </section>
   );
 }

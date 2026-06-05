@@ -54,6 +54,14 @@ async function main() {
     console.log(`  ${summary.message}`);
   }
 
+  if (process.env.THEMEALDB_IMPORT_AFTER_WEEKLY_AD === "1") {
+    const { runSaleDrivenThemealdbImport, summarizeThemealdbImportReport } =
+      await import("@/lib/recipe-import/sale-driven-themealdb-import");
+    console.log("\nRunning opt-in sale-driven TheMealDB import...");
+    const themealdbReport = await runSaleDrivenThemealdbImport();
+    console.log(summarizeThemealdbImportReport(themealdbReport));
+  }
+
   if (results.every((result) => result.offers.length === 0)) {
     console.log(
       "\nNo offers parsed. For a deterministic local run, use: npm run ingest:weekly-ads:fixture",

@@ -1,4 +1,5 @@
 import { getDbPool } from "@/lib/db";
+import { logServerError } from "@/lib/server-log";
 import type {
   MockPriceObservation,
   MockRecipeRecord,
@@ -41,7 +42,18 @@ export async function getMarketDataSnapshot(): Promise<{
           order by name
         `),
         pool.query<RecipeRow>(`
-          select id, title, summary, cook_time_minutes, difficulty, tags, dietary_tags, steps
+          select
+            id,
+            title,
+            summary,
+            cook_time_minutes,
+            difficulty,
+            tags,
+            dietary_tags,
+            steps,
+            source_name,
+            source_recipe_id,
+            eligible_for_ranking
           from recipes
           order by title
         `),
@@ -105,6 +117,9 @@ export async function getMarketDataSnapshot(): Promise<{
           dietaryTags: normalizeDietaryTags(row.dietary_tags ?? []),
           ingredients: recipeIngredientsByRecipe.get(row.id) ?? [],
           steps: row.steps ?? [],
+          sourceName: row.source_name ?? undefined,
+          sourceRecipeId: row.source_recipe_id ?? undefined,
+          eligibleForRanking: row.eligible_for_ranking,
         })),
         priceObservations: pricesResult.rows.map((row) => ({
           storeId: row.store_id,
@@ -124,7 +139,8 @@ export async function getMarketDataSnapshot(): Promise<{
         })),
       },
     };
-  } catch {
+  } catch (error) {
+    logServerError("market-repository.getMarketDataSnapshot", error);
     return {
       source: "unavailable",
       snapshot: EMPTY_SNAPSHOT,
@@ -176,6 +192,9 @@ type RecipeRow = {
   tags: string[] | null;
   dietary_tags: string[] | null;
   steps: string[] | null;
+  source_name: string | null;
+  source_recipe_id: string | null;
+  eligible_for_ranking: boolean;
 };
 
 type RecipeIngredientRow = {

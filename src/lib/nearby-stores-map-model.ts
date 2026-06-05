@@ -28,7 +28,6 @@ export type NearbyStoresMapModel = {
   };
   radiusMiles: number;
   stores: MapStoreMarker[];
-  trustNote: string;
 };
 
 export function buildNearbyStoresMapModel(
@@ -40,7 +39,6 @@ export function buildNearbyStoresMapModel(
     | "locationLabel"
     | "lookupSource"
     | "radiusMiles"
-    | "dataSource"
   >,
 ): NearbyStoresMapModel {
   const source = toMapAnchorSource(market.lookupSource);
@@ -65,7 +63,6 @@ export function buildNearbyStoresMapModel(
       rolloutStatus: store.rolloutStatus,
       rolloutNote: store.rolloutNote,
     })),
-    trustNote: buildMapTrustNote(market.dataSource, source),
   };
 }
 
@@ -81,24 +78,6 @@ function toMapAnchorSource(
   }
 
   return "seed";
-}
-
-function buildMapTrustNote(
-  dataSource: MarketSummary["dataSource"],
-  anchorSource: MapAnchorSource,
-) {
-  const storeSource =
-    dataSource === "database"
-      ? "saved local store locations with weekly ad prices when available"
-      : "saved store prices that are not loading right now — map pins may stay empty until they return";
-  const anchorLabel =
-    anchorSource === "browser"
-      ? "your current browser location"
-      : anchorSource === "zip"
-        ? "the ZIP you searched"
-        : "the local MVP area";
-
-  return `Map pins use ${storeSource}, anchored to ${anchorLabel}. Walmart pins are context only—current, actionable Walmart pricing is not available yet. Store lookups are shown separately and do not replace these map pins yet.`;
 }
 
 export type MapBoundsResult =

@@ -14,8 +14,24 @@ const baseMarket = {
 };
 
 describe("buildPricingTrustHeadsUp", () => {
-  it("returns null when no fallback or non-live pricing signals apply", () => {
+  it("returns null when no store context exists", () => {
     expect(buildPricingTrustHeadsUp(baseMarket)).toBeNull();
+  });
+
+  it("returns beta baseline when store searches exist without fallback signals", () => {
+    const headsUp = buildPricingTrustHeadsUp({
+      ...baseMarket,
+      providerStoreSearches: [
+        {
+          fallbackUsed: false,
+        } as (typeof baseMarket)["providerStoreSearches"][number],
+      ],
+    });
+
+    expect(headsUp?.title).toBe("Beta — heads up about these prices");
+    expect(headsUp?.message).toContain("Yum4Less is in beta");
+    expect(headsUp?.message).toContain("not every nearby chain is live-priced");
+    expect(headsUp?.message).toContain("estimates");
   });
 
   it("surfaces provider fallbackUsed in layman copy", () => {
@@ -28,9 +44,10 @@ describe("buildPricingTrustHeadsUp", () => {
       ],
     });
 
-    expect(headsUp?.title).toBe("Heads up about these prices");
+    expect(headsUp?.title).toBe("Beta — heads up about these prices");
     expect(headsUp?.message).toContain("backup data");
     expect(headsUp?.message).toContain("estimates");
+    expect(headsUp?.message).toContain("Yum4Less is in beta");
   });
 
   it("surfaces non-live ranked pricing when stores are recommendation-ready", () => {

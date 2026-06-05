@@ -33,9 +33,7 @@ describe("nearby stores map model", () => {
     expect(model.anchor.label).toBe("Mechanicsville, VA");
     expect(model.anchor.source).toBe("zip");
     expect(model.stores).toHaveLength(1);
-    expect(model.trustNote).toContain("saved local store locations");
-    expect(model.trustNote).toContain("Walmart pins are context only");
-    expect(model.trustNote).toContain("Store lookups");
+    expect(model.stores[0]?.rolloutNote).toBe("Seed preview pricing");
   });
 
   it("computes bounds that include the anchor and store coordinates", () => {
@@ -61,7 +59,6 @@ describe("nearby stores map model", () => {
           rolloutNote: "Seed preview pricing",
         },
       ],
-      trustNote: "Trust note",
     });
 
     expect(bounds.kind).toBe("bounds");

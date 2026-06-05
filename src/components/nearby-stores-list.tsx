@@ -94,7 +94,7 @@ export function NearbyStoresList({
         </span>
         <span className="map-legend-item">
           <span className="map-legend-swatch is-context" />
-          Nearby context only (coming soon, no live Walmart pricing, or no weekly ad rollout yet)
+          Nearby context only (Food Lion/Aldi meal pricing coming later, no live Walmart pricing, or other coming soon)
         </span>
       </div>
     </div>

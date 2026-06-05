@@ -37,6 +37,11 @@ export function getKrogerApiBaseUrl() {
     : KROGER_API_SPEC.certificationBaseUrl;
 }
 
+/** Official Kroger online/store prices require the production API host. */
+export function isKrogerOfficialOnlinePricingEligible() {
+  return getKrogerApiEnvironment() === "production";
+}
+
 export type KrogerProductFulfillmentFilter = "ais" | "csp" | "dth" | "sth";
 
 export type KrogerStockLevel = "HIGH" | "LOW" | "TEMPORARILY_OUT_OF_STOCK";

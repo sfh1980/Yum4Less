@@ -1,5 +1,4 @@
 export type SaleConfidenceLevel =
-  | "verified-recent"
   | "advertised-recent"
   | "advertised-aging"
   | "advertised-stale"

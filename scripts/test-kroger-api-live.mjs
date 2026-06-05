@@ -33,7 +33,15 @@ async function main() {
     for (const [index, step] of probe.productionPromotionSteps.entries()) {
       console.log(`  ${index + 1}. ${step}`);
     }
-    console.log(`Production-ready: ${probe.productionPromotionReady ? "yes" : "no (expected in certification)"}`);
+    console.log(
+      `Production-ready: ${
+        probe.productionPromotionReady
+          ? "yes"
+          : probe.environment === "certification"
+            ? "no (expected until KROGER_API_ENV=production)"
+            : "no (production auth/catalog ok but store prices missing)"
+      }`,
+    );
   }
   console.log(`\n${probe.message}\n`);
 

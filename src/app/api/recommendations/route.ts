@@ -8,6 +8,7 @@ import {
   isValidZipCode,
   parseJsonBody,
 } from "@/lib/api-request";
+import { publicApiErrorResponse } from "@/lib/public-api-error";
 import { sanitizeMarketSummaryForPublicApi } from "@/lib/public-api-response-sanitizer";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import {
@@ -71,10 +72,11 @@ export async function POST(request: Request) {
           market: sanitizeMarketSummaryForPublicApi(experience.market),
         },
       });
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: "Recommendations are temporarily unavailable." },
-      { status: 500 },
+  } catch (error) {
+    return publicApiErrorResponse(
+      "api.recommendations",
+      error,
+      "Recommendations are temporarily unavailable.",
     );
   }
 }

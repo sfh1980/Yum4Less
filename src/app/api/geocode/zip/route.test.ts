@@ -10,6 +10,7 @@ vi.mock("@/lib/geocoding", () => ({
 
 import { GET } from "@/app/api/geocode/zip/route";
 import { RATE_LIMITS, resetRateLimitsForTests } from "@/lib/rate-limit";
+import * as serverLog from "@/lib/server-log";
 
 const originalGeocodioKey = process.env.GEOCODIO_API_KEY;
 
@@ -93,6 +94,26 @@ describe("GET /api/geocode/zip", () => {
       },
       providerConfigured: false,
     });
+  });
+
+  it("returns 500 and logs when geocoding throws", async () => {
+    const logSpy = vi.spyOn(serverLog, "logServerError").mockImplementation(() => {});
+    resolveZipLocation.mockRejectedValue(new Error("upstream unavailable"));
+
+    const response = await GET(
+      new Request("http://localhost/api/geocode/zip?zip=23111"),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "ZIP lookup is temporarily unavailable.",
+    });
+    expect(logSpy).toHaveBeenCalledWith(
+      "api.geocode.zip",
+      expect.objectContaining({ message: "upstream unavailable" }),
+    );
+    logSpy.mockRestore();
   });
 
   it("returns 404 when geocoder rejects MVP-outside or unsupported ZIP", async () => {

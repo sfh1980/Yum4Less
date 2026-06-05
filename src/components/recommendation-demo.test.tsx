@@ -81,6 +81,9 @@ describe("RecommendationDemo", () => {
     expect(
       await screen.findByRole("heading", { name: "How to read these results" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Food Lion and Aldi meal pricing is coming later/i),
+    ).toBeInTheDocument();
     expect(await screen.findByText("Weeknight Lemon Chicken")).toBeInTheDocument();
     expect(screen.getByText("Est. $13.42")).toBeInTheDocument();
     expect(

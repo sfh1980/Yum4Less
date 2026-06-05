@@ -31,7 +31,7 @@ export function MarketDiscoveryPanel({
   const blockedStatus = market ? buildMarketShopperBlockedStatus(market) : null;
 
   return (
-    <div className="panel panel-padding demo-panel demo-panel--market">
+    <div className="panel panel-padding meal-planner-panel meal-planner-panel--market">
       <div className="panel-header">
         <div>
           <h2>Nearby stores</h2>

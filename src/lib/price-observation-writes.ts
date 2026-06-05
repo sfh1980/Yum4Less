@@ -222,11 +222,6 @@ export async function deletePriceObservationsForStore(storeId: string) {
   await pool.query(`delete from price_observations where store_id = $1`, [storeId]);
 }
 
-export async function deleteAllPriceObservations() {
-  const pool = getDbPool();
-  await pool.query(`delete from price_observations`);
-}
-
 async function touchPriceObservationVerification(input: {
   id: number;
   verifiedAt: Date;

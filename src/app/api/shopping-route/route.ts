@@ -1,5 +1,7 @@
+import { NextResponse } from "next/server";
 import { buildMultiStoreShoppingRoute } from "@/lib/multi-store-shopping-route";
 import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
+import { publicApiErrorResponse } from "@/lib/public-api-error";
 import {
   API_LIMITS,
   clampTrimmedString,
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
 
   const parsedBody = await parseJsonBody(request);
   if (!parsedBody.ok) {
-    return Response.json(
+    return NextResponse.json(
       { ok: false, error: parsedBody.error },
       { status: 400 },
     );
@@ -23,20 +25,21 @@ export async function POST(request: Request) {
 
   const parsed = parseShoppingRouteRequest(parsedBody.body);
   if (!parsed.ok) {
-    return Response.json({ ok: false, error: parsed.error }, { status: 400 });
+    return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }
 
   try {
     const route = await buildMultiStoreShoppingRoute(parsed.value);
 
-    return Response.json({
+    return NextResponse.json({
       ok: true,
       route,
     });
-  } catch {
-    return Response.json(
-      { ok: false, error: "Shopping route planning is temporarily unavailable." },
-      { status: 500 },
+  } catch (error) {
+    return publicApiErrorResponse(
+      "api.shopping-route",
+      error,
+      "Shopping route planning is temporarily unavailable.",
     );
   }
 }

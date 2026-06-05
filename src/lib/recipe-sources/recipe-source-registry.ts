@@ -11,7 +11,7 @@ export const RECIPE_SOURCE_RESEARCH: RecipeSourceEntry[] = [
     availability: "active",
     mvpRecommendation: "primary",
     summary:
-      "Curated Postgres/in-memory dinner recipes around ZIP 23111 with ingredient IDs aligned to local store pricing.",
+      "Curated Postgres dinner recipes around ZIP 23111 with ingredient IDs aligned to local store pricing.",
     trustNotes: [
       "Best control for ingredient matching and shopping-plan trust labels.",
       "No third-party attribution or caching rules apply.",
@@ -28,7 +28,8 @@ export const RECIPE_SOURCE_RESEARCH: RecipeSourceEntry[] = [
     trustNotes: [
       "Free test key (`1`) is fine for development only.",
       "Commercial or app-store use expects a paid Patreon supporter key and source attribution to TheMealDB.",
-      "Imported meals would need normalization to internal ingredient IDs before ranked pricing could be trustworthy.",
+      "Imported meals stay hidden from ranked results until weekly-ad sale overlap and price coverage support a defensible shopping plan.",
+      "Sale-driven import runs via npm script only — not on user search.",
     ],
     termsUrl: "https://www.themealdb.com/terms_of_use.php",
     requiredEnvVars: ["THEMEALDB_API_KEY"],

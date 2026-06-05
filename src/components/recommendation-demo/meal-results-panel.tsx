@@ -53,7 +53,7 @@ export function MealResultsPanel({
       : null;
 
   return (
-    <div className="panel panel-padding demo-panel demo-panel--meals">
+    <div className="panel panel-padding meal-planner-panel meal-planner-panel--meals">
       <div className="panel-header">
         <div>
           <h2>Dinner recommendations</h2>
@@ -90,8 +90,8 @@ export function MealResultsPanel({
 
       <div className="warning warning-with-hint">
         <p>
-          Totals are estimates. Check freshness and confidence labels on each
-          result before you shop.
+          Beta MVP: totals are estimates. Check freshness and confidence labels
+          on each result before you shop.
         </p>
         <HelpHint
           id="meal-totals-warning-help"

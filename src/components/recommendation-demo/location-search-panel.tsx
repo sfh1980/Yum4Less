@@ -58,7 +58,7 @@ export function LocationSearchPanel({
   }, [focusMealPreferencesToken, market]);
 
   return (
-    <div className="panel panel-padding demo-panel demo-panel--inputs location-panel">
+    <div className="panel panel-padding meal-planner-panel meal-planner-panel--inputs location-panel">
       {showCollapsedLocation ? (
         <CollapsedLocationSummary
           form={form}
