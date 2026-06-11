@@ -3,10 +3,13 @@
 import { useEffect, useRef } from "react";
 import type { NearbyStoresMapModel } from "@/lib/nearby-stores-map-model";
 import { getMapBounds } from "@/lib/nearby-stores-map-model";
+import { escapeHtml } from "@/lib/html-escape";
 import {
   buildStoreMarkerIconHtml,
   getStoreMarkerStyle,
 } from "@/lib/store-chain-marker-style";
+import { buildStoreMapPricingLabel } from "@/lib/store-pricing-status-copy";
+import { MAP_CATALOG_LOCATION_FOOTNOTE } from "@/lib/store-map-location-copy";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 type NearbyStoresMapProps = {
@@ -32,6 +35,7 @@ export function NearbyStoresMap({
   useEffect(() => {
     let cancelled = false;
     let resizeObserver: ResizeObserver | undefined;
+    const markers = markersRef.current;
 
     async function mountMap() {
       if (!containerRef.current || cancelled) {
@@ -108,8 +112,18 @@ export function NearbyStoresMap({
       for (const store of model.stores) {
         const style = getStoreMarkerStyle({
           chain: store.chain,
+          storeName: store.name,
           recommendationEnabled: store.recommendationEnabled,
         });
+        const pricingLabel = buildStoreMapPricingLabel({
+          chain: store.chain,
+          recommendationEnabled: store.recommendationEnabled,
+          rolloutStatus: store.rolloutStatus,
+        });
+        const safeName = escapeHtml(store.name);
+        const safeChainLabel = escapeHtml(store.chainLabel);
+        const safePricingLabel = escapeHtml(pricingLabel);
+        const safeLocationNote = escapeHtml(store.locationNote);
         const icon = leaflet.divIcon({
           className: "store-map-marker-wrap",
           html: buildStoreMarkerIconHtml(style),
@@ -124,10 +138,10 @@ export function NearbyStoresMap({
           })
           .addTo(map)
           .bindTooltip(
-            `<strong>${store.name}</strong><br/>${store.chainLabel} · ${store.distanceMiles} mi`,
+            `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationNote}</span>`,
             { direction: "top", opacity: 0.95, sticky: true },
           )
-          .bindPopup(buildStorePopupHtml(store));
+          .bindPopup(buildStorePopupHtml(store, pricingLabel));
 
         marker.on("click", () => {
           onStoreSelectRef.current?.(store.id);
@@ -165,11 +179,12 @@ export function NearbyStoresMap({
     return () => {
       cancelled = true;
       resizeObserver?.disconnect();
-      if (mapRef.current) {
-        mapRef.current.remove();
+      const map = mapRef.current;
+      if (map) {
+        map.remove();
         mapRef.current = null;
       }
-      markersRef.current.clear();
+      markers.clear();
     };
   }, [model]);
 
@@ -197,29 +212,33 @@ export function NearbyStoresMap({
         role="application"
       />
       <p className="field-hint map-marker-note">
-        Chain badges are abbreviations for quick recognition, not official store
-        logos. Hover or tap a badge for store details.
+        {MAP_CATALOG_LOCATION_FOOTNOTE} Chain badges are abbreviations for quick
+        recognition, not official store logos.
+        {model.usesOsmCatalogData ? (
+          <>
+            {" "}
+            Some store locations ©{" "}
+            <a href="https://www.openstreetmap.org/copyright" rel="noreferrer">
+              OpenStreetMap
+            </a>{" "}
+            contributors.
+          </>
+        ) : null}
       </p>
     </div>
   );
 }
 
-function buildStorePopupHtml(store: NearbyStoresMapModel["stores"][number]) {
-  const pricingLabel =
-    store.chain === "walmart" && !store.recommendationEnabled
-      ? "No live Walmart pricing yet"
-      : (store.chain === "aldi" || store.chain === "food-lion") &&
-          !store.recommendationEnabled
-        ? "BETA: meal pricing coming later"
-        : store.recommendationEnabled
-        ? store.rolloutStatus === "weekly-ad-preview"
-          ? "Weekly ad prices (verify in store)"
-          : "Limited weekly ad coverage"
-        : store.rolloutStatus === "limited-coverage"
-          ? "Limited weekly ad coverage"
-          : "Coming soon / context only";
-
-  return `<strong>${store.name}</strong><br/>${store.chainLabel} · ${store.distanceMiles} mi<br/>${pricingLabel}<br/><span style="opacity:0.85">${store.rolloutNote}</span>`;
+function buildStorePopupHtml(
+  store: NearbyStoresMapModel["stores"][number],
+  pricingLabel: string,
+) {
+  const safeName = escapeHtml(store.name);
+  const safeChainLabel = escapeHtml(store.chainLabel);
+  const safePricingLabel = escapeHtml(pricingLabel);
+  const safeLocationNote = escapeHtml(store.locationNote);
+  const safeRolloutNote = escapeHtml(store.rolloutNote);
+  return `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationNote}</span><br/><span style="opacity:0.85">${safeRolloutNote}</span>`;
 }
 
 function formatAnchorSource(source: NearbyStoresMapModel["anchor"]["source"]) {

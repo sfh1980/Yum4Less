@@ -7,7 +7,7 @@ import {
   isValidZipCode,
   parseJsonBody,
 } from "@/lib/api-request";
-import { isWithinMvpBrowserRadius } from "@/lib/mvp-area";
+import { isWithinContinentalUsBounds } from "@/lib/us-service-area";
 
 describe("api-request", () => {
   it("validates ZIP codes and bounded integers", () => {
@@ -40,19 +40,26 @@ describe("api-request", () => {
   });
 });
 
-describe("mvp-area", () => {
-  it("accepts browser coordinates near the MVP center and rejects distant points", () => {
+describe("us-service-area", () => {
+  it("accepts continental US coordinates and rejects points outside the lower 48", () => {
     expect(
-      isWithinMvpBrowserRadius({
+      isWithinContinentalUsBounds({
         latitude: 37.6085,
         longitude: -77.3321,
       }),
     ).toBe(true);
 
     expect(
-      isWithinMvpBrowserRadius({
+      isWithinContinentalUsBounds({
         latitude: 40.7128,
         longitude: -74.006,
+      }),
+    ).toBe(true);
+
+    expect(
+      isWithinContinentalUsBounds({
+        latitude: 21.3,
+        longitude: -157.8,
       }),
     ).toBe(false);
   });

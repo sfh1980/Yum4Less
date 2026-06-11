@@ -31,7 +31,7 @@ export type WeeklyAdRolloutContext = {
 };
 
 /** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
-const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>(["aldi", "food-lion"]);
+const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>([]);
 
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
@@ -41,7 +41,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 1,
     note:
-      "Kroger meal prices are not ready for ranked dinners in this area yet. Weekly ad coverage is still building near ZIP 23111.",
+      "Kroger meal estimates are not ready in this area yet. Weekly-ad or official online coverage is still building.",
   },
   publix: {
     chain: "publix",
@@ -50,7 +50,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 2,
     note:
-      "Publix is an approved next target, but it is not yet active for trusted recommendation pricing in this MVP.",
+      "BETA: Publix meal estimates use weekly-ad deals when ingested near you and promotion gates pass. Totals are directional—verify in store.",
   },
   walmart: {
     chain: "walmart",
@@ -68,7 +68,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 4,
     note:
-      "BETA: Aldi meal pricing is coming later. Weekly-ad ingest uses the Flipp syndicated feed; ranked dinners do not use Aldi yet.",
+      "BETA: Aldi meal estimates use weekly-ad deals when ingested near you and promotion gates pass. Totals are directional—verify in store.",
   },
   bjs: {
     chain: "bjs",
@@ -86,7 +86,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 99,
     note:
-      "BETA: Food Lion meal pricing is coming later. Flipp syndicated feed and scrape ladders run during ingest; ranked dinners do not use Food Lion yet.",
+      "BETA: Food Lion meal estimates use weekly-ad deals when ingested near you and promotion gates pass. Totals are directional—verify in store.",
   },
   lidl: {
     chain: "lidl",
@@ -197,10 +197,35 @@ export function listProviderRollout(): ProviderRolloutEntry[] {
   ];
 }
 
+const KROGER_FAMILY_NAME_MARKERS = [
+  "kroger",
+  "harris teeter",
+  "ralphs",
+  "fred meyer",
+  "king soopers",
+  "smith's",
+  "smiths",
+  "fry's",
+  "frys",
+  "qfc",
+  "mariano",
+  "pick n save",
+  "metro market",
+  "jay c",
+  "food 4 less",
+  "food4less",
+  "dillons",
+  "gerbes",
+  "baker's",
+  "bakers",
+  "city market",
+  "pay less",
+];
+
 function inferStoreChain(storeName: string): StoreChain {
   const normalized = storeName.trim().toLowerCase();
 
-  if (normalized.includes("kroger")) {
+  if (KROGER_FAMILY_NAME_MARKERS.some((marker) => normalized.includes(marker))) {
     return "kroger";
   }
   if (normalized.includes("publix")) {

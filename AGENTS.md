@@ -1,40 +1,42 @@
 # Yum4Less agent and MCP guide
 
-Quick index for Cursor agents, rules, hooks, and MCP servers. **Orchestration rule:** `.cursor/rules/yum4less-agent-orchestration.mdc` (always on).
+Index for Cursor **agents**, **MCP servers**, **hooks**, and **verification gates**.
 
-## Routing (every conversation)
+**Mandatory on every slice:** [`.cursor/rules/yum4less-agent-orchestration.mdc`](.cursor/rules/yum4less-agent-orchestration.mdc) (routing, trigger table, before-done checklist).
 
-When you ask an implementation, debugging, verification, or MVP question **without** `@` a project agent, the agent should open with a short **Routing** section:
+> **Also:** [`README.md`](README.md) — setup and commands · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) — history, decisions, verification snapshot
 
-- **Suggested @ agent** (if any)
-- **Optional rephrased prompt** you can paste next time
-- **Likely tests / MCP** for that slice
+---
 
-The `beforeSubmitPrompt` hook and session context reinforce this. Skip Routing only for trivial acks or when you already `@` the right agent.
+## Routing
 
-### Suggested prompt footer (implementation tasks)
+When you ask an implementation, debugging, or verification question **without** `@` a project agent, the agent opens with a short **Routing** section: suggested `@` agent, optional rephrased prompt, likely tests/MCP. Skip for trivial acks or when you already `@` the right agent.
+
+**Implementation footer:**
 
 > Follow `yum4less-agent-orchestration.mdc` and `AGENTS.md`; run the checklist and MCP for this slice before saying done.
 
-## MVP shoring-up (any conversation)
+---
 
-Local MVP is **demo-complete for ZIP `23111`** on **fixture ingest + Postgres**. Live ingest gaps stay documented honestly.
+## Slice router
 
-| Your goal | Start chat with | Tests before done | MCP / agent |
+| Your goal | Start with | Tests before done | MCP / agent |
 |---|---|---|---|
 | UI, map, carousel, trust copy | `@web-frontend-standards` | `npm test` | Playwright MCP after `npm run dev`; `@verifier` if trust wording changed |
 | API, providers, recommendations | `@web-backend-standards` | `npm test`; `npm run build` if routes changed | — |
 | Schema, seed, ingest, pricing rows | `@database-codegen-standards` | `npm test`; `npm run test:integration` | Postgres MCP after `npm run db:up` |
 | CI, e2e, merge-ready | `@testing-cicd-standards` | per change | GitHub MCP or `gh` |
 | Trust / verified / rollout claims | `@verifier` | tests + evidence | Playwright + Postgres as needed |
-| Security / dependency audit | `@senior-auditor` | review + route tests | Semgrep Guardian when configured |
-| Unknown multi-file area | normal agent + Task `explore` | then area-specific | explore first, then edit |
+| Security / dependency audit | `@senior-auditor` | review + route tests | Semgrep when configured |
+| Unknown multi-file area | Task `explore` | then row above | explore first |
 
-**Open gaps (not hidden):** Local MVP is **beta**—ranked meal prices are estimates from fixture/weekly-ad/Kroger-mixed sources, not live checkout totals; do not claim all nearby chains are live-priced. Kroger developer app is **promoted to production**; set `KROGER_API_ENV=production` in `.env.local` and run `npm run test:kroger-api` before claiming live Kroger store prices. Official Kroger online rows sync only when production returns prices—always label verify-in-store. Walmart ranked pricing/promotion is **unavailable in beta** (context-only on the map) even though fixture/live ingest code paths exist; Aldi/Food Lion use a stronger Flipp retry + flyer/search-term ladder before direct scrape, but live retailer pages can still block; analytics is first-party and off by default until env flags are set; deployment not started unless reprioritized. **Remote CI green** on https://github.com/sfh1980/Yum4Less ([run 26981705172](https://github.com/sfh1980/Yum4Less/actions/runs/26981705172), 2026-06-04).
+**Trust boundaries:** ranked totals are **estimates**; v1 ranked chains are **Kroger family + Aldi** only; Walmart ranked pricing is deferred; Tier C map/context is normal outside gate coverage; do not claim beta v1 demo-complete, deploy-ready, CI green, or verified without evidence. Current snapshot → [`PROJECT_CONTINUITY.md` → Resume](PROJECT_CONTINUITY.md#resume-as-of-2026-06-08).
+
+---
 
 ## Project agents (`.cursor/agents/`)
 
-Invoke with **@agent-name** in chat or follow the agent checklist when the orchestration rule triggers.
+Invoke with **@agent-name** or apply the agent checklist yourself when the orchestration trigger table applies.
 
 | Agent | Use when |
 |---|---|
@@ -45,91 +47,101 @@ Invoke with **@agent-name** in chat or follow the agent checklist when the orche
 | `@testing-cicd-standards` | CI, test strategy, release gates |
 | `@senior-auditor` | Security and dependency audits |
 
-## MCP servers (`.cursor/mcp.json`)
+---
 
-| Server | Use when | Setup |
+## MCP servers
+
+Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) → `.cursor/mcp.json` locally. **Never commit tokens.**
+
+| Server | Use when | Prerequisite |
 |---|---|---|
-| **postgres** | Schema, seed, latest `price_observations`, ingest verification | `npm run db:up`; port `5433`; read-only |
-| **playwright** | UI/map/trust flows Vitest cannot prove | `npm run dev`; test ZIP `23111` |
-| **github** | PR checks, workflow failures, release status | `GITHUB_PERSONAL_ACCESS_TOKEN`; Docker for official server |
-| **semgrep** | Security, dependency, and secrets scanning for agent-written code and PR/release review | Semgrep CLI available locally; `semgrep login` for Guardian products |
+| **postgres** | Schema, seed, latest `price_observations`, ingest verification | `npm run db:up`; port **5433**; read-only |
+| **playwright** | UI/map/trust flows Vitest cannot prove | `npm run dev`; ZIP **23111**; fixture data |
+| **github** | PR checks, workflow failures, release status | Docker + `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| **semgrep** | Security, dependency, secrets scan (agent code, PR review) | Local `semgrep` CLI; hooks are advisory if missing |
+| **context7** | Current library/framework docs | `npx @upstash/context7-mcp`; optional `CONTEXT7_API_KEY` |
 
-Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tokens. Semgrep requires the local `semgrep` CLI before its MCP server or hooks can run; the project wrappers also check Python user-script installs.
+Read each tool schema under `mcps/<server>/tools/` before calling MCP tools.
 
-### Playwright MCP agent checklist (ZIP `23111`)
+### One-time setup
 
-Use this for agent-driven browser verification when Vitest cannot prove visible trust copy. It is **not** the CI merge gate — that is `npm run test:e2e:ci` (`e2e/mvp-flow.spec.ts`).
+1. Copy `.cursor/mcp.json.example` → `.cursor/mcp.json`.
+2. **Restart Cursor** so MCP servers load.
+3. **Postgres:** `npm run db:up` before DB tools.
+4. **GitHub:** fine-grained PAT with repo read → user env `GITHUB_PERSONAL_ACCESS_TOKEN` (never commit). First run: `docker pull ghcr.io/github/github-mcp-server`.
+5. **Playwright:** optional `npx playwright install chromium`.
+6. **Semgrep (Windows):** `pipx install semgrep` → `semgrep login` for Guardian products; hooks prepend `%USERPROFILE%\.local\bin`.
+7. **Context7:** optional `CONTEXT7_API_KEY` for higher rate limits.
 
-**Prerequisites:** `npm run db:up`, `npm run ingest:weekly-ads:fixture` (if prices look empty), then `npm run dev` on port **3000**.
+**Semgrep CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs an advisory job that skips until repo secret `SEMGREP_APP_TOKEN` is set. Lint, unit, build, integration, and E2E remain merge gates.
 
-**Flow:**
+**Do not add MCP servers** without explicit owner approval (governance rule).
 
-1. Open `http://localhost:3000`.
-2. Assert hero **BETA** copy: `Yum4Less Local MVP · Beta`.
-3. Assert footer feedback link: role `link`, name `Send feedback or report a wrong price`, `href="/feedback"`.
-4. Enter ZIP **23111** → **Find nearby stores** → wait for Kroger/Publix/Food Lion context on the map.
-5. **Rank dinner options** → dismiss the trust explainer modal.
-6. Assert **Est.** totals (`Est. $…` on meal cards).
-7. Assert **directional** / weekly-ad trust copy (`weekly-ad price — directional`, `Treat totals as estimates`, heads-up note `Beta — heads up about these prices`).
-8. Assert results-panel **BETA** warning: `Beta MVP: totals are estimates`.
-9. When multiple meals rank, assert carousel pagination dots are **buttons** (`Show recommendation 1`, `Show recommendation 2`, …) inside `Recommendation pagination`; click a dot and confirm the `N of M` hint updates.
+---
 
-Do not hit live retailer sites during MCP checks — use seeded/fixture-backed local data only.
+## Playwright MCP checklist (ZIP `23111`)
 
-## Scoped rules (auto when matching files are open)
+Agent-driven browser checks when Vitest cannot prove visible trust copy. **Not** the CI merge gate — that is `npm run test:e2e:ci` (`e2e/mvp-flow.spec.ts`).
+
+**Prerequisites:** `npm run db:up`, `npm run ingest:weekly-ads:fixture` (if prices empty), `npm run dev` on port **3000** (or another port — see below).
+
+**Port in use?** If something already listens on 3000, run `npm run dev -- -p 3001` (or any free port), then set `PLAYWRIGHT_SKIP_WEBSERVER=1` and `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001` before `npm run test:e2e`. Playwright config reads `PORT` and `PLAYWRIGHT_BASE_URL` automatically when reusing an existing server.
+
+1. Open the app (default `http://localhost:3000`, or your chosen port).
+2. Assert hero eyebrow: **Yum4Less · Beta v1**.
+3. Assert footer link: `Send feedback or report a wrong price` → `/feedback`.
+4. ZIP **23111** → **Find nearby stores** → map shows nearby chains (Kroger-family / Aldi context expected with fixture data).
+5. **Suggest recipes** (ingredient-first) or **Rank dinner options** → dismiss trust explainer modal.
+6. Assert **Est.** totals on meal cards.
+7. Assert directional trust copy (`directional`, `Treat totals as estimates`, weekly-ad labels where applicable).
+8. Assert results-panel warning: **Beta v1: totals are estimates**.
+9. When multiple meals rank: carousel dots are buttons (`Show recommendation 1`, …); click updates `N of M` hint.
+
+Use fixture/seed data only — do not hit live retailer sites.
+
+---
+
+## Scoped rules (auto when matching paths are open)
 
 | Rule | Globs |
 |---|---|
+| `yum4less-continuity-journal` | `PROJECT_CONTINUITY.md` |
 | `yum4less-frontend-workflow` | `src/components/**`, `globals.css`, `e2e/**` |
 | `yum4less-backend-api-workflow` | `src/app/api/**`, provider/recommendation libs |
 | `yum4less-database-ingest-workflow` | `db/**`, weekly-ad ingest, market repository |
+
+Always-on: `yum4less-agent-orchestration`, `yum4less-governance-and-doc-sync`, trust/testing/security/product rules in `.cursor/rules/`.
+
+---
 
 ## Hooks (`.cursor/hooks.json`)
 
 | Event | Purpose |
 |---|---|
-| `sessionStart` | README check + orchestration/MVP context + port 5433/3000 preflight |
-| `beforeSubmitPrompt` | Route user prompts to suggested @ agent + rephrase |
-| `afterFileEdit` | Nudge frontend/DB verification when matching paths edit |
-| `afterFileEdit` | Run non-blocking local Semgrep security/TypeScript scan when `semgrep` is installed; otherwise remind that setup is incomplete |
-| `beforeMCPExecution` | Remind agent to read MCP tool schema first |
-| `subagentStop` (`explore`) | Hand off to scoped rules + orchestration after explore |
+| `sessionStart` | Orchestration context + ports 5433/3000 preflight |
+| `beforeSubmitPrompt` | Route to suggested @ agent |
+| `afterFileEdit` | Path-based verification nudge; advisory Semgrep scan |
+| `beforeMCPExecution` | Read MCP tool schema first |
+| `subagentStop` (`explore`) | Hand off to scoped rules + orchestration |
 | `beforeShellExecution` | Package/MCP install guard |
-| `stop` | Non-blocking Semgrep Guardian final scan plus diff-aware verification reminder (`loop_limit: 1`) |
+| `stop` | Advisory Semgrep + diff-aware verification reminder |
 
-## Production-lean refactor (owner direction)
+---
 
-**Keep:** current UI/UX (`src/components/recommendation-demo/` with `meal-planner-*` layout is the real home-page flow), all meals/recipes/prices already in Postgres, fixture ingest for dev/CI only (honestly labeled).
+## Verification gates
 
-**Remove over time:** runtime `mock-market-data` and misleading mock/demo naming on live paths; in-memory market fallbacks; copy that implies live store data when it is rehearsal or unavailable.
+**Any code change:** `npm test`.
 
-**Add later:** live retailer/recipe APIs layered on Postgres — do not wipe existing DB meal rows.
+**Also when triggered** (full table in orchestration rule):
 
-### Master prompt (paste to start a refactor chat)
+| Change | Extra gates |
+|---|---|
+| Routes / imports / config | `npm run build` |
+| Postgres merge behavior | `npm run test:integration` |
+| Trust-sensitive UI | Playwright MCP after `npm run dev` |
+| DB/ingest truth claims | Postgres MCP after `npm run db:up` |
+| Security / deps / secrets | Semgrep when configured; `@senior-auditor` for audits |
+| CI / merge-ready claims | GitHub MCP or `gh` |
+| Material slice | Update [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) per [continuity journal rule](.cursor/rules/yum4less-continuity-journal.mdc) |
 
-```text
-Yum4Less production-lean refactor: Keep the current UI/UX and every meal/recipe/price row already in Postgres. Remove runtime mock/demo code paths and rename misleading mock/demo identifiers so the live app is database-first; add external APIs later on top. Keep fixture weekly-ad ingest for dev/CI only (rehearsal data in real tables, never presented as live). Do not redesign the page. Do not delete Postgres content.
-
-@web-backend-standards @web-frontend-standards @database-codegen-standards — follow yum4less-agent-orchestration.mdc and AGENTS.md; run npm test (+ test:integration / Postgres MCP if DB paths change) before done.
-```
-
-### Phased slices (one chat per slice)
-
-| Phase | Status | Prompt keywords | Agents | Gates |
-|-------|--------|-----------------|--------|-------|
-| 1 — CI smoke stability | **Done** | `vitest`, `recommendation-demo.test`, `CI-01`, `testTimeout` | `@testing-cicd-standards` | `npm test` |
-| 2 — Rename demo UI folder | **Partial** — `meal-planner-*` CSS/layout shipped; folder still `recommendation-demo/` | `rename recommendation-demo`, `meal planner`, no UX redesign | `@web-frontend-standards` | `npm test`; Playwright if trust copy moves |
-| 3 — Retire runtime mock catalog | **Partial** — `mock-market-data` test/fixture-only; ranked reads are database-first | `mock-market-data`, `database-first`, rename Mock* types | `@web-backend-standards` `@database-codegen-standards` | `npm test`; `npm run test:integration` |
-| 4 — Trust copy pass | **Done** | `estimated`, `directional`, `limited coverage`, fallback banner | `@web-frontend-standards` `@verifier` | `npm test`; Playwright MCP |
-| 5 — Live API rollout | **Ongoing** | `Kroger`, `Publix`, weekly-ad ingest, chain parser | `@database-codegen-standards` | ingest + Postgres MCP |
-
-Use Task `explore` before phase 2–3 if touching many imports.
-
-## Minimum verification (any code change)
-
-1. `npm test`
-2. `npm run build` if routes/imports/config changed
-3. `npm run test:integration` if Postgres behavior changed
-4. Playwright MCP if trust-sensitive UI changed
-5. Postgres MCP if DB/ingest truth claims are made
-6. Semgrep Guardian for security-sensitive, dependency, secrets, PR, or release-readiness claims
+State what you ran and what you did **not** run before saying done.

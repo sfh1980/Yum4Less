@@ -8,7 +8,7 @@ import {
   buildMealPreferencePayload,
   validateLocationFields,
   validateMealFields,
-} from "@/components/recommendation-demo/form-validation";
+} from "@/components/meal-planner/form-validation";
 import { trackClientEvent } from "@/lib/analytics/track-client-event";
 import type {
   ActiveLocationRequest,
@@ -20,7 +20,7 @@ import type {
   RecommendationRequest,
   RecommendationResponse,
   RecommendationState,
-} from "@/components/recommendation-demo/types";
+} from "@/components/meal-planner/types";
 
 const defaultForm: MealPreferenceForm = {
   zipCode: "23111",
@@ -42,12 +42,14 @@ const defaultFormState: FormState = {
   shoppingStyle: defaultForm.shoppingStyle,
   dietaryFocus: defaultForm.dietaryFocus,
   recipeSource: defaultForm.recipeSource,
+  planningMode: "ingredient-first",
+  externalRecipeOptIn: false,
 };
 
 const initialMarketSearchState: MarketSearchState = { status: "idle" };
 const initialRecommendationState: RecommendationState = { status: "idle" };
 
-export function useRecommendationDemo() {
+export function useMealPlanner() {
   const [form, setForm] = useState<FormState>(defaultFormState);
   const [marketSearchState, setMarketSearchState] =
     useState<MarketSearchState>(initialMarketSearchState);
@@ -68,6 +70,7 @@ export function useRecommendationDemo() {
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [focusMealPreferencesToken, setFocusMealPreferencesToken] = useState(0);
   const [selectedStoreId, setSelectedStoreId] = useState<string>();
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
 
   const locationErrors = useMemo(
     () => validateLocationFields(form, locationValidationMode === "zip"),
@@ -104,6 +107,7 @@ export function useRecommendationDemo() {
     setHasAttemptedRanking(false);
     setIsEditingLocation(true);
     setSelectedStoreId(undefined);
+    setSelectedIngredientIds([]);
   }
 
   async function runMarketSearch(
@@ -144,6 +148,7 @@ export function useRecommendationDemo() {
       setIsEditingLocation(false);
       setFocusMealPreferencesToken((current) => current + 1);
       setSelectedStoreId(undefined);
+      setSelectedIngredientIds([]);
       trackClientEvent("location_search_completed", {
         mode: request.mode,
         in_mvp_area: result.market.dataSource !== "unavailable",
@@ -253,8 +258,15 @@ export function useRecommendationDemo() {
       recipe_source: preferences.recipeSource,
     });
 
+    const recipeSource = form.externalRecipeOptIn ? "themealdb" : "internal-library";
+
     const payload: RecommendationRequest = {
       ...preferences,
+      recipeSource,
+      recipeSourceOptIn: form.externalRecipeOptIn,
+      ...(form.planningMode === "ingredient-first"
+        ? { selectedIngredientIds }
+        : {}),
       ...(activeLocationRequest.mode === "zip"
         ? { zipCode: activeLocationRequest.zipCode }
         : {
@@ -327,6 +339,26 @@ export function useRecommendationDemo() {
     trackClientEvent("trust_explainer_dismissed");
   }
 
+  function handleToggleIngredient(ingredientId: string, checked: boolean) {
+    setSelectedIngredientIds((current) => {
+      if (checked) {
+        return current.includes(ingredientId) ? current : [...current, ingredientId];
+      }
+
+      return current.filter((id) => id !== ingredientId);
+    });
+  }
+
+  function handleSelectAllIngredients() {
+    setSelectedIngredientIds(
+      market?.saleIngredientChoices.map((choice) => choice.ingredientId) ?? [],
+    );
+  }
+
+  function handleClearIngredientSelection() {
+    setSelectedIngredientIds([]);
+  }
+
   return {
     form,
     setForm,
@@ -353,6 +385,10 @@ export function useRecommendationDemo() {
     handleZipSearch,
     handleBrowserLocationSearch,
     handleRankMeals,
+    selectedIngredientIds,
+    handleToggleIngredient,
+    handleSelectAllIngredients,
+    handleClearIngredientSelection,
   };
 }
 

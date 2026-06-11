@@ -70,18 +70,46 @@ const CHAIN_MARKER_STYLES: Record<StoreChain, StoreMarkerStyle> = {
   },
 };
 
+export function deriveStoreMarkerAbbreviation(
+  storeName: string,
+  chain: StoreChain,
+): string {
+  if (chain !== "unknown") {
+    return (CHAIN_MARKER_STYLES[chain] ?? CHAIN_MARKER_STYLES.unknown).abbreviation;
+  }
+
+  const normalized = storeName.trim();
+  if (!normalized) {
+    return "?";
+  }
+
+  if (/^7[\s-]?eleven/i.test(normalized)) {
+    return "7E";
+  }
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return `${words[0]![0] ?? ""}${words[1]![0] ?? ""}`.toUpperCase();
+  }
+
+  return normalized.slice(0, 2).toUpperCase();
+}
+
 export function getStoreMarkerStyle(input: {
   chain: StoreChain;
+  storeName: string;
   recommendationEnabled: boolean;
 }): StoreMarkerStyle {
   const base = CHAIN_MARKER_STYLES[input.chain] ?? CHAIN_MARKER_STYLES.unknown;
+  const abbreviation = deriveStoreMarkerAbbreviation(input.storeName, input.chain);
+  const styledBase = { ...base, abbreviation };
 
   if (input.recommendationEnabled) {
-    return base;
+    return styledBase;
   }
 
   return {
-    ...base,
+    ...styledBase,
     backgroundColor: "#334155",
     borderColor: "#ffc87e",
     textColor: "#f8fafc",

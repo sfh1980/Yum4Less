@@ -37,6 +37,13 @@
         "-File",
         ".cursor/hooks/semgrep-mcp.ps1"
       ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
     }
   }
 }

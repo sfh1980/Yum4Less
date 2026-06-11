@@ -116,21 +116,23 @@ describe("GET /api/geocode/zip", () => {
     logSpy.mockRestore();
   });
 
-  it("returns 404 when geocoder rejects MVP-outside or unsupported ZIP", async () => {
+  it("returns 404 when geocoder rejects non-continental or unsupported ZIP", async () => {
     resolveZipLocation.mockResolvedValue({
       ok: false,
-      error: "This ZIP is outside the current Yum4Less MVP service area.",
+      error:
+        "That ZIP is outside the continental US markets Yum4Less supports in this beta.",
       providerConfigured: true,
     });
 
     const response = await GET(
-      new Request("http://localhost/api/geocode/zip?zip=10001"),
+      new Request("http://localhost/api/geocode/zip?zip=96813"),
     );
 
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({
       ok: false,
-      error: "This ZIP is outside the current Yum4Less MVP service area.",
+      error:
+        "That ZIP is outside the continental US markets Yum4Less supports in this beta.",
       providerConfigured: true,
     });
   });

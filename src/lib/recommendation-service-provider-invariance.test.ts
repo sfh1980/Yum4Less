@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getRecommendationExperience, type MealPreferenceForm } from "@/lib/recommendation-service";
 import { resetDbPoolForTests } from "@/lib/db";
 import {
-  mockPriceObservations,
-  mockRecipes,
-  mockStores,
-} from "@/lib/mock-market-data";
+  fixturePriceObservations,
+  fixtureRecipes,
+  fixtureStores,
+} from "@/lib/fixtures/market-catalog.fixtures";
 
 const { buildProviderPricingPreviews } = vi.hoisted(() => ({
   buildProviderPricingPreviews: vi.fn(),
@@ -44,7 +44,7 @@ const location = {
   source: "seed" as const,
 };
 
-const liveCacheObservations = mockPriceObservations
+const liveCacheObservations = fixturePriceObservations
   .filter((observation) => observation.storeId === "kroger-mechanicsville")
   .map((observation) => ({
     ...observation,
@@ -58,8 +58,8 @@ describe("getRecommendationExperience provider preview invariance", () => {
     getMarketDataSnapshot.mockResolvedValue({
       source: "database",
       snapshot: {
-        stores: mockStores,
-        recipes: mockRecipes,
+        stores: fixtureStores,
+        recipes: fixtureRecipes,
         priceObservations: liveCacheObservations,
       },
     });

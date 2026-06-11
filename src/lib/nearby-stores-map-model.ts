@@ -3,6 +3,7 @@ import type {
   NearbyStoreSummary,
 } from "@/lib/recommendation-service";
 import type { StoreChain } from "@/lib/provider-rollout";
+import { buildStoreMapLocationNote } from "@/lib/store-map-location-copy";
 
 export type MapAnchorSource = "zip" | "browser" | "seed";
 
@@ -17,6 +18,7 @@ export type MapStoreMarker = {
   recommendationEnabled: boolean;
   rolloutStatus: NearbyStoreSummary["rolloutStatus"];
   rolloutNote: string;
+  locationNote: string;
 };
 
 export type NearbyStoresMapModel = {
@@ -28,6 +30,8 @@ export type NearbyStoresMapModel = {
   };
   radiusMiles: number;
   stores: MapStoreMarker[];
+  /** True when any visible pin came from OSM map-catalog ingest. */
+  usesOsmCatalogData: boolean;
 };
 
 export function buildNearbyStoresMapModel(
@@ -62,7 +66,15 @@ export function buildNearbyStoresMapModel(
       recommendationEnabled: store.recommendationEnabled,
       rolloutStatus: store.rolloutStatus,
       rolloutNote: store.rolloutNote,
+      locationNote: buildStoreMapLocationNote({
+        storeId: store.id,
+        sourceName: store.sourceName,
+        lastVerifiedAt: store.lastVerifiedAt,
+      }),
     })),
+    usesOsmCatalogData: market.nearbyStores.some((store) =>
+      store.id.startsWith("osm-"),
+    ),
   };
 }
 

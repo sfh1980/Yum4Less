@@ -39,15 +39,16 @@ export function TrustExplainerModal({ open, onClose }: TrustExplainerModalProps)
         </div>
         <div className="modal-copy">
           <p>
-            <strong>Beta MVP:</strong> Yum4Less is still an early local MVP, so
-            these meal results should be read as{" "}
-            <strong>helpful estimates</strong>, not guaranteed final checkout
-            totals.
+            <strong>Beta v1:</strong> Yum4Less is an early beta — read meal
+            results as <strong>helpful estimates</strong>, not guaranteed final
+            checkout totals.
           </p>
           <p>
-            <strong>Chain coverage:</strong> only stores on the trusted rollout
-            drive ranked meal pricing today. Other map pins may appear for nearby
-            context only—not as live-priced sources for meal totals.
+            <strong>Chain coverage:</strong> the current production release
+            ranks dinners from <strong>Kroger-family and Aldi</strong> when daily
+            ingest and promotion gates pass. Other map pins (Publix, Food Lion,
+            Walmart, OSM, and others) are context or coming in upcoming
+            releases—not live-priced sources for meal totals today.
           </p>
           <p>
             <strong>Confidence labels</strong> explain how simple the shopping plan
@@ -56,9 +57,10 @@ export function TrustExplainerModal({ open, onClose }: TrustExplainerModalProps)
           </p>
           <p>
             <strong>Freshness</strong> tells you how recent the price information
-            is. Online prices checked within the last hour are stronger signals,
-            but electronic shelf labels and checkout systems can still change
-            before you shop. Older pricing is more directional.
+            is. Ranked reads use a <strong>24-hour cache</strong> refreshed by daily
+            ingest — fresher rows are stronger signals, but electronic shelf labels
+            and checkout systems can still change before you shop. Older pricing is
+            more directional.
           </p>
           <p>
             <strong>Sale confidence</strong> on each line item tells you how much
@@ -72,18 +74,21 @@ export function TrustExplainerModal({ open, onClose }: TrustExplainerModalProps)
             estimated, directional, or limited coverage before you shop.
           </p>
           <p>
-            <strong>Food Lion and Aldi (beta):</strong> may appear on the map for
-            nearby context.{" "}
-            <strong>BETA: Food Lion and Aldi meal pricing is coming later</strong>
-            —weekly-ad ingest uses the Flipp syndicated feed, but ranked dinners do
-            not use these chains yet.
+            <strong>Kroger family and Aldi (production focus):</strong> ranked
+            dinner estimates use official Kroger online prices and/or weekly-ad
+            data when ingested near you and promotion gates pass. Totals are{" "}
+            <strong>estimated and directional</strong>—verify in store.
           </p>
           <p>
-            <strong>Walmart (beta):</strong> may appear on the map for nearby
-            context, but ranked meal pricing does not use Walmart yet in this
-            beta. Live, current weekly-ad pricing from Walmart is not available
-            for ranked dinners—do not treat Walmart as an actionable price source
-            until Yum4Less enables it.
+            <strong>Other chains (upcoming releases):</strong> Publix, Food Lion,
+            and additional retailers may appear on the map for context. Ranked
+            pricing for them is not part of the current production release.
+          </p>
+          <p>
+            <strong>Walmart and other map pins:</strong> may appear for nearby
+            context only in this beta. Walmart never feeds ranked meal totals
+            here; OSM and unsupported chains are map context only—not
+            live-priced sources for meal totals.
           </p>
           <p>
             Use these labels to judge how much confidence to place in a result

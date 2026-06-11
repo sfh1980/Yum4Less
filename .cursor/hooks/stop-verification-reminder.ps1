@@ -49,6 +49,8 @@ try {
     }
 
     [void]$lines.Add('')
+    [void]$lines.Add('Continuity journal: if this slice changed product behavior, architecture, trust, ingest, or verification gates, update PROJECT_CONTINUITY.md before done — changelog at top (newest first), refresh Resume, update Decision log / Verification snapshot as needed; no chat summaries (transcript index links only). See .cursor/rules/yum4less-continuity-journal.mdc')
+    [void]$lines.Add('')
     [void]$lines.Add('Use @verifier before verified or merge-ready language on trust-sensitive behavior.')
     [void]$lines.Add('Reference: AGENTS.md and .cursor/rules/yum4less-agent-orchestration.mdc')
 

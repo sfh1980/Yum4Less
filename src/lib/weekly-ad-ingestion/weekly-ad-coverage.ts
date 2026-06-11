@@ -1,4 +1,4 @@
-import type { MockPriceObservation } from "@/lib/mock-market-data";
+import type { CatalogPriceObservation } from "@/lib/market-catalog-types";
 import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
 import type { ProviderPricingCoverageStatus } from "@/lib/providers/provider-types";
 import type { StoreChain } from "@/lib/provider-rollout";
@@ -13,6 +13,8 @@ export const WEEKLY_AD_RANKED_PRICING_CHAINS = new Set<WeeklyAdChain>([
   "kroger",
   "publix",
   "walmart",
+  "aldi",
+  "food-lion",
 ]);
 
 export type WeeklyAdStoreCoverage = {
@@ -29,7 +31,7 @@ export type WeeklyAdStoreCoverage = {
 export function buildWeeklyAdStoreCoverage(input: {
   storeId: string;
   chain: StoreChain;
-  priceObservations: MockPriceObservation[];
+  priceObservations: CatalogPriceObservation[];
   recipeIngredientIds: string[];
 }): WeeklyAdStoreCoverage {
   const weeklyAdSource = getWeeklyAdSourceNameForChain(input.chain);

@@ -1,5 +1,5 @@
 import { consumeRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { isWithinMvpBrowserRadius } from "@/lib/mvp-area";
+import { isWithinContinentalUsBounds } from "@/lib/us-service-area";
 
 export type ResolvedZipLocation = {
   zipCode: string;
@@ -110,7 +110,7 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
 
     if (parsedLocation) {
       if (
-        !isWithinMvpBrowserRadius({
+        !isWithinContinentalUsBounds({
           latitude: parsedLocation.latitude,
           longitude: parsedLocation.longitude,
         })
@@ -118,7 +118,7 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
         return {
           ok: false,
           error:
-            "That ZIP is outside the current Yum4Less MVP service area near ZIP 23111. Try a nearby local ZIP instead.",
+            "That ZIP is outside the continental US markets Yum4Less supports in this beta.",
           providerConfigured: true,
         };
       }

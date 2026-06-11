@@ -383,8 +383,15 @@ select {
   font-weight: 700;
 }
 
-.primary-button:hover {
+.primary-button:hover:not(:disabled) {
   filter: brightness(1.05);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: none;
 }
 
 .secondary-button {
@@ -757,6 +764,120 @@ body.modal-open {
   border-top: 1px solid var(--panel-border);
 }
 
+.sale-ingredient-picker-shell {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sale-ingredient-picker-shell h4 {
+  margin: 0;
+}
+
+.sale-ingredient-picker-header {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sale-ingredient-picker-actions {
+  margin: 0;
+}
+
+.sale-ingredient-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.sale-ingredient-list-item {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: rgba(8, 17, 31, 0.55);
+  cursor: pointer;
+}
+
+.sale-ingredient-list-item:hover {
+  border-color: #75f0c0;
+}
+
+.sale-ingredient-list-item input {
+  margin-top: 0.2rem;
+}
+
+.sale-ingredient-list-item-body {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.sale-ingredient-list-item-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sale-ingredient-price {
+  color: #75f0c0;
+  white-space: nowrap;
+}
+
+.sale-ingredient-picker-shell--primary {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.sale-ingredient-freshness {
+  color: #9eb8d4;
+}
+
+.recipe-opt-in-panel {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.recipe-opt-in-label {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.recipe-opt-in-label input {
+  margin-top: 0.2rem;
+}
+
+.meal-planner-advanced-options {
+  margin-top: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--panel-border);
+}
+
+.meal-planner-advanced-options summary {
+  cursor: pointer;
+  color: #9eb8d4;
+  font-weight: 600;
+}
+
+.meal-planner-advanced-options-body {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.recipe-attribution {
+  margin-top: 0;
+}
+
 .map-discovery-layout {
   display: grid;
   gap: 1rem;
@@ -812,6 +933,12 @@ body.modal-open {
 .nearby-stores-list-item.is-selected {
   border-color: #75f0c0;
   background: rgba(117, 240, 192, 0.08);
+}
+
+.nearby-stores-list-item:focus-visible,
+.sale-ingredient-list-item:focus-within {
+  outline: 2px solid #75f0c0;
+  outline-offset: 2px;
 }
 
 .nearby-stores-list-item-topline {
@@ -871,7 +998,7 @@ body.modal-open {
 }
 
 .map-legend-swatch.is-ready {
-  background: #9fd4ff;
+  background: #004c97;
   border-color: #9fd4ff;
 }
 

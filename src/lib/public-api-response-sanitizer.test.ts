@@ -135,6 +135,7 @@ function buildMarketSummary(overrides: Partial<MarketSummary> = {}): MarketSumma
     lookupSource: "seed",
     lookupProviderConfigured: false,
     dataSource: "database",
+    saleIngredientChoices: [],
     message: "Ready.",
     ...overrides,
   };

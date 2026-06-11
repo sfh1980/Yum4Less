@@ -42,21 +42,21 @@ export function buildMarketShopperBlockedStatus(
   if (market.nearbyStores.length === 0) {
     return {
       kind: "no-stores-in-radius",
-      title: "No stores in this search area",
+      title: "No Kroger-family or Aldi stores in this search area",
       body:
-        "Yum4Less found your location but didn't see any saved stores inside the radius you chose.",
+        "Yum4Less found your location but didn't see Kroger-family or Aldi stores inside the radius you chose. These are the production-ranked chains for the current release.",
       extra:
-        "Try a larger radius or a ZIP closer to the supported local area.",
+        "Try a larger radius or another ZIP. Coverage varies by area in this beta.",
     };
   }
 
   return {
     kind: "no-trusted-rollout",
-    title: "No stores ready for meal rankings yet",
+    title: "Map ready — meal estimates not available here yet",
     body:
-      "Yum4Less found nearby stores, but none have enough trusted weekly-ad pricing to rank dinners right now.",
+      "Yum4Less found nearby Kroger-family or Aldi stores, but none have enough ingested sale data to rank dinner estimates right now. Other map pins may be context only until upcoming chain releases.",
     extra:
-      "Those stores may show as coming soon or limited coverage on the map.",
+      "This is normal in many ZIPs during beta. Pricing refreshes on a daily schedule — check rollout labels on the map for coming soon, limited coverage, or directional estimates.",
   };
 }
 
@@ -83,8 +83,8 @@ export function buildMealRankingPausedStatus(
   }
 
   return {
-    title: "Meal ranking is paused",
+    title: "Meal estimates not available for this area yet",
     body:
-      "Nearby stores were found, but none are on the trusted pricing rollout yet, so ranked dinners aren't available.",
+      "Nearby Kroger-family or Aldi stores are on the map, but ranked dinner estimates need more ingested sale coverage. Pricing refreshes on a daily schedule — browse the map and rollout labels for context.",
   };
 }

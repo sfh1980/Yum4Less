@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { MockPriceObservation, MockRecipeRecord } from "@/lib/mock-market-data";
+import type { CatalogPriceObservation, CatalogRecipeRecord } from "@/lib/market-catalog-types";
 import {
+  buildThemealdbAttribution,
   collectSaleIngredientIdsFromObservations,
   filterRecipesForRanking,
   isRecipeEligibleForRanking,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/recipe-import/recipe-ranking-eligibility";
 import { THEMEALDB_SOURCE_NAME } from "@/lib/recipe-import/themealdb-types";
 
-const internalRecipe: MockRecipeRecord = {
+const internalRecipe: CatalogRecipeRecord = {
   id: "sheet-pan-lemon-chicken",
   title: "Sheet Pan Lemon Chicken",
   summary: "Internal",
@@ -26,7 +27,7 @@ const internalRecipe: MockRecipeRecord = {
   eligibleForRanking: true,
 };
 
-const themealdbRecipe: MockRecipeRecord = {
+const themealdbRecipe: CatalogRecipeRecord = {
   id: "themealdb-52772-teriyaki",
   title: "Teriyaki Chicken Casserole",
   summary: "Research import",
@@ -42,6 +43,7 @@ const themealdbRecipe: MockRecipeRecord = {
   ],
   steps: [],
   sourceName: THEMEALDB_SOURCE_NAME,
+  sourceRecipeId: "52772",
   eligibleForRanking: false,
 };
 
@@ -91,8 +93,32 @@ describe("recipe ranking eligibility", () => {
     ]);
   });
 
+  it("builds TheMealDB attribution with meal link", () => {
+    const attribution = buildThemealdbAttribution({
+      recipe: themealdbRecipe,
+      nearbyStores: [
+        {
+          id: "kroger-mechanicsville",
+          name: "Kroger Mechanicsville",
+          kind: "grocery",
+          latitude: 37.6,
+          longitude: -77.3,
+          distanceMiles: 1,
+          chain: "kroger",
+          chainLabel: "Kroger",
+          rolloutStatus: "ranked",
+          recommendationEnabled: true,
+          rolloutNote: "Weekly-ad ranked",
+        },
+      ],
+    });
+
+    expect(attribution?.text).toContain("TheMealDB");
+    expect(attribution?.url).toBe("https://www.themealdb.com/meal/52772");
+  });
+
   it("collects sale ingredient ids from weekly-ad observations", () => {
-    const observations: MockPriceObservation[] = [
+    const observations: CatalogPriceObservation[] = [
       {
         storeId: "kroger-mechanicsville",
         ingredientId: "chicken-thighs",

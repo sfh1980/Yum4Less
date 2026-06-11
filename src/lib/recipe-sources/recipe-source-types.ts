@@ -14,7 +14,7 @@ export type RecipeSourceEntry = {
   id: RecipeSourceId;
   label: string;
   availability: RecipeSourceAvailability;
-  mvpRecommendation: "primary" | "dev-only" | "later" | "not-approved";
+  mvpRecommendation: "primary" | "secondary" | "dev-only" | "later" | "not-approved";
   summary: string;
   trustNotes: string[];
   termsUrl?: string;

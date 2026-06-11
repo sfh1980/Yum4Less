@@ -31,12 +31,25 @@ export function useModalDialog(input: {
     previousFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.classList.add("modal-open");
+
+    const backgroundColumns = document.querySelectorAll<HTMLElement>(
+      ".meal-planner-grid-col",
+    );
+    for (const column of backgroundColumns) {
+      column.inert = true;
+      column.setAttribute("aria-hidden", "true");
+    }
+
     window.setTimeout(() => {
       initialFocusRef.current?.focus();
     }, 0);
 
     return () => {
       document.body.classList.remove("modal-open");
+      for (const column of backgroundColumns) {
+        column.inert = false;
+        column.removeAttribute("aria-hidden");
+      }
       previousFocusRef.current?.focus?.();
     };
   }, [input.open]);

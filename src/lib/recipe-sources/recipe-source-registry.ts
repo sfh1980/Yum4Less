@@ -21,15 +21,15 @@ export const RECIPE_SOURCE_RESEARCH: RecipeSourceEntry[] = [
   {
     id: "themealdb",
     label: "TheMealDB",
-    availability: "research-only",
-    mvpRecommendation: "dev-only",
+    availability: "active",
+    mvpRecommendation: "secondary",
     summary:
-      "Large public recipe catalog useful for variety experiments; ingredient strings are weaker for local store alignment.",
+      "Public recipe catalog imported when meals overlap local weekly-ad sale ingredients. Ingredient strings are normalized but still weaker than the internal library.",
     trustNotes: [
       "Free test key (`1`) is fine for development only.",
       "Commercial or app-store use expects a paid Patreon supporter key and source attribution to TheMealDB.",
-      "Imported meals stay hidden from ranked results until weekly-ad sale overlap and price coverage support a defensible shopping plan.",
-      "Sale-driven import runs via npm script only — not on user search.",
+      "Imported meals rank only when at least three sale ingredients overlap and a defensible shopping plan exists.",
+      "Sale-driven import runs on scheduled ingest; opt-in ranking may refresh stale imports on search (24h cache, bounded per run).",
     ],
     termsUrl: "https://www.themealdb.com/terms_of_use.php",
     requiredEnvVars: ["THEMEALDB_API_KEY"],
@@ -91,7 +91,7 @@ export function buildRecipeSourceResearchSummary() {
     (entry) => entry.availability !== "active",
   );
 
-  return `MVP uses the internal library only. ${blocked.length} external provider(s) remain research-only until normalization, attribution, and terms gates are implemented.`;
+  return `MVP ranks from the internal library and sale-matched TheMealDB imports. ${blocked.length} external provider(s) remain blocked until licensing and matching gates are implemented.`;
 }
 
 export type InactiveRecipeSourceShopperNotice = {

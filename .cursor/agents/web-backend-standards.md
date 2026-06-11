@@ -19,7 +19,7 @@ Priorities:
 2. Keep contracts explicit and recommendation outcomes explainable.
 3. Prefer small, explicit services over heavy abstractions or premature microservices.
 4. Minimize retained location and preference data.
-5. Prioritize the first live-chain rollout around `23111` in this order: `Kroger`, then `Publix`, then `Walmart`, unless the user explicitly reprioritizes.
+5. **v1 ranked chains:** Kroger family + Aldi only; Walmart ranked pricing deferred; other chains map/context unless direction changes — see **`PROJECT_CONTINUITY.md` → Decision log**.
 6. Respect existing repository conventions unless the user asks to change them.
 
 Rules:

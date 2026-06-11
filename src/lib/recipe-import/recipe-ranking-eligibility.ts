@@ -1,17 +1,26 @@
 import { getDbPool } from "@/lib/db";
-import type { MockPriceObservation, MockRecipeRecord } from "@/lib/mock-market-data";
+import type { CatalogPriceObservation, CatalogRecipeRecord } from "@/lib/market-catalog-types";
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
+import {
+  buildThemealdbMealUrl,
+  THEMEALDB_ATTRIBUTION_URL,
+} from "@/lib/recipe-import/themealdb-recipe-cache-policy";
 import { MIN_SALE_INGREDIENT_MATCHES, THEMEALDB_SOURCE_NAME } from "@/lib/recipe-import/themealdb-types";
 
 export const THEMEALDB_RESEARCH_ATTRIBUTION =
-  "Recipe data from TheMealDB (research import). Verify ingredients and prices in store before shopping.";
+  "Recipe from TheMealDB — verify ingredients and prices in store before shopping.";
+
+export type ThemealdbAttribution = {
+  text: string;
+  url?: string;
+};
 
 /**
  * Internal library recipes are always eligible when other gates pass.
  * TheMealDB imports require sale overlap with this week's on-sale catalog set.
  */
 export function isRecipeEligibleForRanking(input: {
-  recipe: MockRecipeRecord;
+  recipe: CatalogRecipeRecord;
   saleIngredientIds: Set<string>;
 }): boolean {
   if (input.recipe.eligibleForRanking === false) {
@@ -29,7 +38,7 @@ export function isRecipeEligibleForRanking(input: {
 }
 
 export function passesThemealdbSaleOverlap(
-  recipe: MockRecipeRecord,
+  recipe: CatalogRecipeRecord,
   saleIngredientIds: Set<string>,
 ): boolean {
   if (saleIngredientIds.size === 0) {
@@ -44,7 +53,7 @@ export function passesThemealdbSaleOverlap(
 }
 
 export function collectSaleIngredientIdsFromObservations(
-  observations: MockPriceObservation[],
+  observations: CatalogPriceObservation[],
 ): Set<string> {
   const saleIds = new Set<string>();
 
@@ -63,9 +72,9 @@ export function collectSaleIngredientIdsFromObservations(
 }
 
 export function filterRecipesForRanking(input: {
-  recipes: MockRecipeRecord[];
+  recipes: CatalogRecipeRecord[];
   saleIngredientIds: Set<string>;
-}): MockRecipeRecord[] {
+}): CatalogRecipeRecord[] {
   return input.recipes.filter((recipe) =>
     isRecipeEligibleForRanking({ recipe, saleIngredientIds: input.saleIngredientIds }),
   );
@@ -87,17 +96,35 @@ export async function getSaleIngredientIdsForRanking(): Promise<Set<string>> {
   return new Set(result.rows.map((row) => row.ingredient_id));
 }
 
-export function buildThemealdbResearchNote(input: {
-  recipe: MockRecipeRecord;
+export function buildThemealdbAttribution(input: {
+  recipe: CatalogRecipeRecord;
   nearbyStores: NearbyStoreSummary[];
-}): string | undefined {
+}): ThemealdbAttribution | undefined {
   if (input.recipe.sourceName !== THEMEALDB_SOURCE_NAME) {
     return undefined;
   }
 
+  const mealUrl = input.recipe.sourceRecipeId
+    ? buildThemealdbMealUrl(input.recipe.sourceRecipeId)
+    : THEMEALDB_ATTRIBUTION_URL;
+
   if (input.nearbyStores.every((store) => !store.recommendationEnabled)) {
-    return THEMEALDB_RESEARCH_ATTRIBUTION;
+    return {
+      text: THEMEALDB_RESEARCH_ATTRIBUTION,
+      url: mealUrl,
+    };
   }
 
-  return `${THEMEALDB_RESEARCH_ATTRIBUTION} Imported from weekly-ad sale overlap — estimated meal totals only.`;
+  return {
+    text: `${THEMEALDB_RESEARCH_ATTRIBUTION} Sale-matched import — estimated meal totals only.`,
+    url: mealUrl,
+  };
+}
+
+/** @deprecated Use buildThemealdbAttribution for link support. */
+export function buildThemealdbResearchNote(input: {
+  recipe: CatalogRecipeRecord;
+  nearbyStores: NearbyStoreSummary[];
+}): string | undefined {
+  return buildThemealdbAttribution(input)?.text;
 }

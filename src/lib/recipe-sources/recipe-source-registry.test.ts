@@ -8,12 +8,12 @@ import {
 } from "@/lib/recipe-sources/recipe-source-registry";
 
 describe("recipe source registry", () => {
-  it("keeps internal library as the only active MVP source", () => {
+  it("keeps internal library and TheMealDB as active MVP sources", () => {
     expect(getDefaultRecipeSource()).toBe("internal-library");
     expect(isRecipeSourceActive("internal-library")).toBe(true);
+    expect(isRecipeSourceActive("themealdb")).toBe(true);
     expect(isRecipeSourceActive("spoonacular")).toBe(false);
     expect(isRecipeSourceActive("edamam")).toBe(false);
-    expect(isRecipeSourceActive("themealdb")).toBe(false);
   });
 
   it("documents external providers with terms and trust notes", () => {
@@ -26,15 +26,16 @@ describe("recipe source registry", () => {
       "not-approved",
     );
     expect(sources.find((source) => source.id === "themealdb")?.mvpRecommendation).toBe(
-      "dev-only",
+      "secondary",
     );
     expect(sources.find((source) => source.id === "internal-library")?.summary).not.toContain(
       "in-memory",
     );
   });
 
-  it("summarizes that external sources remain research-only", () => {
-    expect(buildRecipeSourceResearchSummary()).toContain("internal library only");
+  it("summarizes active and blocked recipe sources", () => {
+    expect(buildRecipeSourceResearchSummary()).toContain("internal library");
+    expect(buildRecipeSourceResearchSummary()).toContain("TheMealDB");
   });
 
   it("builds layman shopper copy for inactive recipe sources", () => {

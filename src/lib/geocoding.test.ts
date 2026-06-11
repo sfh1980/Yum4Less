@@ -33,7 +33,7 @@ describe("resolveZipLocation", () => {
     }
   });
 
-  it("rejects geocoded ZIPs outside the MVP service radius", async () => {
+  it("accepts geocoded continental US ZIPs when Geocodio is configured", async () => {
     process.env.GEOCODIO_API_KEY = "test-key";
 
     vi.stubGlobal(
@@ -56,9 +56,42 @@ describe("resolveZipLocation", () => {
 
     const result = await resolveZipLocation("10001");
 
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.location.city).toBe("New York");
+      expect(result.location.source).toBe("geocodio");
+      expect(result.providerConfigured).toBe(true);
+    }
+
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects geocoded ZIPs outside the continental US", async () => {
+    process.env.GEOCODIO_API_KEY = "test-key";
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              location: { lat: 21.3069, lng: -157.8583 },
+              address_components: {
+                city: "Honolulu",
+                state: "HI",
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    const result = await resolveZipLocation("96813");
+
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toContain("outside the current Yum4Less MVP service area");
+      expect(result.error).toContain("continental US");
       expect(result.providerConfigured).toBe(true);
     }
 

@@ -1,4 +1,5 @@
 import { getDbPool } from "@/lib/db";
+import { RANKED_PRICE_CACHE_TTL_MINUTES } from "@/lib/ranked-price-cache-policy";
 import type {
   ProviderDiscoveredStore,
   ProviderStoreSearchInput,
@@ -68,7 +69,7 @@ export async function getLatestProviderStoreSearchSnapshot(input: {
 }): Promise<ProviderStoreSearchResult | undefined> {
   try {
     const pool = getDbPool();
-    const maxAgeMinutes = input.maxAgeMinutes ?? 30;
+    const maxAgeMinutes = input.maxAgeMinutes ?? RANKED_PRICE_CACHE_TTL_MINUTES;
     const normalizedLatitude = normalizeCoordinate(input.search.location.latitude);
     const normalizedLongitude = normalizeCoordinate(
       input.search.location.longitude,

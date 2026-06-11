@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
-import { formatStoreKind } from "@/components/recommendation-demo/form-validation";
+import { formatStoreKind } from "@/components/meal-planner/form-validation";
+import { buildStoreListStatusPill } from "@/lib/store-pricing-status-copy";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 type NearbyStoresListProps = {
@@ -54,9 +55,11 @@ export function NearbyStoresList({
       <ul className="nearby-stores-list" ref={listRef}>
         {stores.map((store) => {
           const isSelected = store.id === selectedStoreId;
-          const statusLabel = store.recommendationEnabled
-            ? "Weekly ad prices"
-            : "Context only";
+          const statusLabel = buildStoreListStatusPill({
+            chain: store.chain,
+            recommendationEnabled: store.recommendationEnabled,
+            rolloutStatus: store.rolloutStatus,
+          });
 
           return (
             <li key={store.id}>
@@ -90,11 +93,11 @@ export function NearbyStoresList({
       <div aria-label="Map marker legend" className="map-legend">
         <span className="map-legend-item">
           <span className="map-legend-swatch is-ready" />
-          Saved weekly-ad prices feed ranked dinners when rollout allows
+          Chain-colored badges — est. ranked meal pricing when rollout allows
         </span>
         <span className="map-legend-item">
           <span className="map-legend-swatch is-context" />
-          Nearby context only (Food Lion/Aldi meal pricing coming later, no live Walmart pricing, or other coming soon)
+          Gray badges — context only (no ranked meal totals; Walmart always context-only)
         </span>
       </div>
     </div>

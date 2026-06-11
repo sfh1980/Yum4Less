@@ -22,12 +22,32 @@ async function runCoreMvpFlow(page: import("@playwright/test").Page) {
     page.getByRole("heading", { name: "Nearby stores map" }),
   ).toBeVisible();
   await expect(
-    page.getByText(/no live Walmart pricing|context-only for ranked meals/i).first(),
+    page
+      .getByText(
+        /Context only — no Walmart pricing|Walmart always context-only|Live, current weekly-ad pricing from Walmart is not available/i,
+      )
+      .first(),
   ).toBeVisible();
-  await expect(page.getByText(/Weekly ad prices/i).first()).toBeVisible();
+  await expect(page.getByText(/Est\. weekly-ad prices/i).first()).toBeVisible();
   await expect(page.getByText(/^Priced$/i)).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Rank dinner options" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Step 3: Browse nearby sale ingredients" }),
+  ).toBeVisible();
+
+  const suggestButton = page.getByRole("button", {
+    name: "Suggest recipes using my selected ingredients",
+  });
+  await expect(suggestButton).toBeDisabled();
+
+  const ingredientCheckbox = page
+    .locator(".sale-ingredient-list input[type=checkbox]")
+    .first();
+  await expect(ingredientCheckbox).toBeVisible({ timeout: 30_000 });
+  await ingredientCheckbox.check();
+  await expect(suggestButton).not.toBeDisabled();
+
+  await suggestButton.click();
 
   await expect(
     page.getByRole("heading", { name: "How to read these results" }),
@@ -53,19 +73,21 @@ async function runCoreMvpFlow(page: import("@playwright/test").Page) {
       .getByText(/weekly-ad price — directional|directional|estimated/i)
       .first(),
   ).toBeVisible();
-  await expect(
-    page.getByText(/limited local ZIP list|limited coverage/i).first(),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("note", { name: /heads up about these prices/i }).first(),
-  ).toBeVisible();
+  const headsUpNote = page.getByRole("note", { name: /heads up about these prices/i }).first();
+  await expect(headsUpNote).toBeVisible();
+  await expect(headsUpNote).toContainText(
+    /saved weekly ads and recently checked online store prices|Treat totals as estimates/i,
+  );
   await expect(page.getByText(/Treat totals as estimates/i).first()).toBeVisible();
+  await expect(
+    page.locator(".meal-card-price-age, .sale-ingredient-freshness").first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Project & data details (internal)" }),
   ).toHaveCount(0);
 }
 
-test.describe("Yum4Less local MVP (ZIP 23111)", () => {
+test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
   test("finds nearby stores and ranks dinners with trust labels", async ({ page }) => {
     await runCoreMvpFlow(page);
   });
@@ -100,14 +122,14 @@ test.describe("Yum4Less local MVP (ZIP 23111)", () => {
   test("shows beta label and footer feedback link", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText(/Yum4Less Local MVP · Beta/i)).toBeVisible();
+    await expect(page.getByText(/Yum4Less · Beta v1/i)).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Send feedback or report a wrong price" }),
     ).toHaveAttribute("href", "/feedback");
 
     await runCoreMvpFlow(page);
 
-    await expect(page.getByText(/Beta MVP: totals are estimates/i)).toBeVisible();
+    await expect(page.getByText(/Beta v1: totals are estimates/i)).toBeVisible();
   });
 
   test("opens the trust explainer from the results panel", async ({ page }) => {
@@ -121,13 +143,10 @@ test.describe("Yum4Less local MVP (ZIP 23111)", () => {
       trustDialog.getByRole("heading", { name: "How to read these results" }),
     ).toBeVisible();
     await expect(trustDialog.getByText(/helpful estimates/i)).toBeVisible();
-    await expect(trustDialog.getByText(/Beta MVP/i)).toBeVisible();
-    await expect(trustDialog.getByText(/not as live-priced sources for meal totals/i)).toBeVisible();
+    await expect(trustDialog.getByText(/Beta v1/i)).toBeVisible();
+    await expect(trustDialog.getByText(/not part of the current production release/i)).toBeVisible();
     await expect(
-      trustDialog.getByText(/estimated, directional, or limited coverage/i),
-    ).toBeVisible();
-    await expect(
-      trustDialog.getByText(/ranked meal pricing does not use Walmart yet in this beta/i),
+      trustDialog.getByText(/Kroger family and Aldi \(production focus\)/i),
     ).toBeVisible();
   });
 });

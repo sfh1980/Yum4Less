@@ -1,4 +1,4 @@
-/** Sample/bootstrap pricing rows — never used for ranked meal pricing. */
+/** Legacy sample/bootstrap `source_name` in Postgres — never used for ranked meal pricing. */
 export const SAMPLE_PRICE_SOURCE = "mock-market-data";
 
 /** Curated catalog entities (stores, ingredients, recipes) — not pricing. */

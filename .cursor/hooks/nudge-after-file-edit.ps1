@@ -20,6 +20,11 @@ try {
     $normalized = $filePath.Replace('\', '/')
     $lines = New-Object System.Collections.Generic.List[string]
 
+    if ($normalized -eq 'PROJECT_CONTINUITY.md' -or $normalized -like '*/PROJECT_CONTINUITY.md') {
+        [void]$lines.Add('PROJECT_CONTINUITY.md edited: keep journal format — Changelog newest-first at top, one-screen Resume, Decision log, Appendix tables; link transcripts only; do not paste chat summaries or duplicate README/AGENTS.md.')
+        [void]$lines.Add('See .cursor/rules/yum4less-continuity-journal.mdc')
+    }
+
     if (Test-FrontendOrchestrationPath -Path $normalized) {
         [void]$lines.Add("Frontend/trust file edited: $normalized")
         [void]$lines.Add('- Run npm test before done.')
@@ -41,6 +46,16 @@ try {
     if ($lines.Count -eq 0) {
         Write-HookJson $null
         exit 0
+    }
+
+    $touchedOrchestration = (Test-FrontendOrchestrationPath -Path $normalized) -or
+        (Test-DatabaseOrchestrationPath -Path $normalized) -or
+        (Test-ApiOrchestrationPath -Path $normalized) -or
+        (Test-CiOrchestrationPath -Path $normalized)
+
+    if ($touchedOrchestration -and $normalized -notlike '*PROJECT_CONTINUITY.md') {
+        [void]$lines.Add('')
+        [void]$lines.Add('When this slice is complete: update PROJECT_CONTINUITY.md (changelog top, Resume, Decision log / verification snapshot if applicable). No transcript dumps.')
     }
 
     [void]$lines.Insert(0, 'Yum4Less afterFileEdit orchestration nudge:')

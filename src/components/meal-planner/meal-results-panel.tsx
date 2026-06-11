@@ -7,9 +7,9 @@ import type {
   ShopperNotice,
 } from "@/lib/recommendation-service";
 import { RecommendationResultsCarousel } from "@/components/recommendation-results-carousel";
-import { MealRecommendationCard } from "@/components/recommendation-demo/meal-recommendation-card";
+import { MealRecommendationCard } from "@/components/meal-planner/meal-recommendation-card";
 import { HelpHint } from "@/components/help-hint";
-import { PricingTrustHeadsUpBanner } from "@/components/recommendation-demo/pricing-trust-heads-up";
+import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
 import { mealTotalHelp } from "@/lib/help-hint-content";
 import { buildResultsPanelPriceSourceLine } from "@/lib/meal-price-source-copy";
 import { buildMealRankingPausedStatus } from "@/lib/market-shopper-status";
@@ -18,7 +18,7 @@ import type {
   FormState,
   MarketSearchState,
   RecommendationState,
-} from "@/components/recommendation-demo/types";
+} from "@/components/meal-planner/types";
 
 type MealResultsPanelProps = {
   form: FormState;
@@ -76,11 +76,15 @@ export function MealResultsPanel({
           </button>
           <span className="badge">
             {recommendationState.status === "loading"
-              ? "Ranking dinner options..."
+              ? form.planningMode === "ingredient-first"
+                ? "Suggesting recipes..."
+                : "Ranking dinner options..."
               : recommendationState.status === "ready"
                 ? `${recommendations.length} options ranked`
                 : market && !marketBlocked
-                  ? "Ready to rank"
+                  ? form.planningMode === "ingredient-first"
+                    ? "Ready to suggest"
+                    : "Ready to rank"
                   : "Waiting for store search"}
           </span>
         </div>
@@ -90,7 +94,7 @@ export function MealResultsPanel({
 
       <div className="warning warning-with-hint">
         <p>
-          Beta MVP: totals are estimates. Check freshness and confidence labels
+          Beta v1: totals are estimates. Check freshness and confidence labels
           on each result before you shop.
         </p>
         <HelpHint
@@ -129,7 +133,11 @@ export function MealResultsPanel({
         ) : recommendationState.status !== "ready" ? (
           <StatusCard
             title="Ready when you are"
-            body="Use Step 2 on the left to set budget and preferences, then click Rank dinner options."
+            body={
+              form.planningMode === "ingredient-first"
+                ? "Select sale ingredients in Step 3, then use Suggest recipes using my selected ingredients."
+                : "Use Step 2 on the left to set budget and preferences, then click Rank dinner options."
+            }
           />
         ) : shopperNotice ? (
           <StatusCard title={shopperNotice.title} body={shopperNotice.body} />

@@ -81,6 +81,7 @@ describe("searchOfficialProviderStores", () => {
         zipCode: "23111",
       },
       radiusMiles: 5,
+      readMode: "live-allowed",
     });
 
     expect(searchStoresByLocation).toHaveBeenCalledWith({
@@ -156,6 +157,7 @@ describe("searchOfficialProviderStores", () => {
         zipCode: "23111",
       },
       radiusMiles: 5,
+      readMode: "live-allowed",
     });
 
     expect(getLatestProviderStoreSearchSnapshot).toHaveBeenCalledTimes(1);
@@ -204,6 +206,7 @@ describe("searchOfficialProviderStores", () => {
         zipCode: "23111",
       },
       radiusMiles: 5,
+      readMode: "live-allowed",
     });
 
     expect(persistProviderStoreSearchResult).not.toHaveBeenCalled();
@@ -246,9 +249,88 @@ describe("searchOfficialProviderStores", () => {
         zipCode: "23111",
       },
       radiusMiles: 5,
+      readMode: "live-allowed",
     });
 
     expect(persistProviderStoreSearchResult).not.toHaveBeenCalled();
     expect(result[0]).not.toHaveProperty("persistedSnapshotId");
+  });
+
+  it("does not call live provider discovery when cache-only and a fresh snapshot exists", async () => {
+    const searchStoresByLocation = vi.fn();
+    getStoreDiscoveryProviders.mockReturnValue([
+      {
+        provider: "kroger",
+        label: "Kroger official store discovery",
+        configured: true,
+        searchStoresByLocation,
+      },
+    ]);
+    getLatestProviderStoreSearchSnapshot.mockResolvedValue({
+      provider: "kroger",
+      label: "Kroger official store discovery",
+      status: "fallback",
+      provenance: "official-api",
+      retrievalMode: "cached",
+      configured: true,
+      fallbackUsed: true,
+      stores: [],
+      message: "Using saved snapshot.",
+      fetchedAt: "2026-05-20T12:00:00.000Z",
+      persistedSnapshotId: 9,
+      snapshotCapturedAt: "2026-05-20T12:10:00.000Z",
+      snapshotAgeMinutes: 120,
+    });
+
+    const result = await searchOfficialProviderStores({
+      location: {
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+        zipCode: "23111",
+      },
+      radiusMiles: 5,
+    });
+
+    expect(searchStoresByLocation).not.toHaveBeenCalled();
+    expect(getLatestProviderStoreSearchSnapshot).toHaveBeenCalledTimes(1);
+    expect(result[0]?.retrievalMode).toBe("cached");
+  });
+
+  it("returns a cache-miss fallback without calling live discovery when cache-only", async () => {
+    const searchStoresByLocation = vi.fn();
+    getStoreDiscoveryProviders.mockReturnValue([
+      {
+        provider: "kroger",
+        label: "Kroger official store discovery",
+        configured: true,
+        searchStoresByLocation,
+      },
+    ]);
+    getLatestProviderStoreSearchSnapshot.mockResolvedValue(undefined);
+
+    const result = await searchOfficialProviderStores({
+      location: {
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+        zipCode: "23111",
+      },
+      radiusMiles: 5,
+    });
+
+    expect(searchStoresByLocation).not.toHaveBeenCalled();
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        status: "fallback",
+        retrievalMode: "none",
+        stores: [],
+        message: expect.stringContaining("24 hours"),
+      }),
+    );
   });
 });

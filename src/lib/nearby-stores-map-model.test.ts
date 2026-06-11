@@ -26,6 +26,7 @@ describe("nearby stores map model", () => {
           rolloutStatus: "weekly-ad-preview",
           recommendationEnabled: true,
           rolloutNote: "Seed preview pricing",
+          sourceName: "yum4less-internal-catalog",
         },
       ],
     });
@@ -34,6 +35,38 @@ describe("nearby stores map model", () => {
     expect(model.anchor.source).toBe("zip");
     expect(model.stores).toHaveLength(1);
     expect(model.stores[0]?.rolloutNote).toBe("Seed preview pricing");
+    expect(model.stores[0]?.locationNote).toContain("Bootstrap seed");
+    expect(model.usesOsmCatalogData).toBe(false);
+  });
+
+  it("flags OSM map-catalog pins for attribution", () => {
+    const model = buildNearbyStoresMapModel({
+      locationLabel: "Mechanicsville, VA",
+      searchLatitude: 37.6085,
+      searchLongitude: -77.3321,
+      lookupSource: "geocodio",
+      radiusMiles: 12,
+      dataSource: "database",
+      nearbyStores: [
+        {
+          id: "osm-node-900001",
+          name: "Costco Wholesale",
+          kind: "big-box",
+          latitude: 37.6682,
+          longitude: -77.4561,
+          distanceMiles: 8.2,
+          chain: "unknown",
+          chainLabel: "Other stores",
+          rolloutStatus: "coming-soon",
+          recommendationEnabled: false,
+          rolloutNote: "Map context only",
+          sourceName: "openstreetmap-overpass",
+        },
+      ],
+    });
+
+    expect(model.usesOsmCatalogData).toBe(true);
+    expect(model.stores[0]?.locationNote).toContain("OpenStreetMap");
   });
 
   it("computes bounds that include the anchor and store coordinates", () => {
@@ -45,6 +78,7 @@ describe("nearby stores map model", () => {
         source: "zip",
       },
       radiusMiles: 5,
+      usesOsmCatalogData: false,
       stores: [
         {
           id: "kroger-mechanicsville",
@@ -57,6 +91,7 @@ describe("nearby stores map model", () => {
           recommendationEnabled: true,
           rolloutStatus: "weekly-ad-preview",
           rolloutNote: "Seed preview pricing",
+          locationNote: "Indicative beta map pin — verify the store address before visiting.",
         },
       ],
     });

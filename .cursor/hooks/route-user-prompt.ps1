@@ -47,14 +47,14 @@ try {
     Add-Route '(api|route handler|provider|recommendation|rate limit|geocod|market-search|shopping-route|backend|validation|saniti)' '@web-backend-standards' '@web-backend-standards Fix [route/service]; keep public API read-only default and run npm test + build if routes changed.' 'npm test; npm run build when routes/imports changed'
     Add-Route '(database|schema|seed|ingest|weekly-ad|postgres|price_observation|migration|sql|market repository)' '@database-codegen-standards' '@database-codegen-standards [schema/ingest task]; run npm run test:integration and Postgres MCP after npm run db:up when claiming row truth.' 'npm test; npm run test:integration; Postgres MCP'
     Add-Route '(ci|github actions|workflow|e2e|playwright test|release|merge-ready|pull request|\bpr\b|vitest config)' '@testing-cicd-standards' '@testing-cicd-standards [CI/test task]; inspect workflow status before claiming green.' 'GitHub MCP or gh; npm test / test:integration / test:e2e:ci as applicable'
-    Add-Route '(verify|verified|trust|fresh|coverage|fallback|promotion|rollout|merge-ready|mvp-complete|production-ready)' '@verifier' '@verifier Review [trust claim]; require test/MCP evidence before verified language.' '@verifier plus area-specific tests/MCP'
+    Add-Route '(verify|verified|trust|fresh|coverage|fallback|promotion|rollout|merge-ready|beta v1|demo-complete|deploy-ready|production-ready)' '@verifier' '@verifier Review [trust claim]; require test/MCP evidence before verified language.' '@verifier plus area-specific tests/MCP'
     Add-Route '(security|dependency|audit|secret|bola|rate limit bypass|vulnerability)' '@senior-auditor' '@senior-auditor Audit [area]; do not claim safe without evidence.' 'review + npm test for security-sensitive routes'
 
     if ($routes.Count -eq 0) {
-        if ($lower -match '(fix|implement|add|update|refactor|debug|ship|finish|mvp|yum4less)') {
+        if ($lower -match '(fix|implement|add|update|refactor|debug|ship|finish|beta v1|yum4less)') {
             $routes += [pscustomobject]@{
                 Agent    = '@web-backend-standards or the area-specific agent from AGENTS.md'
-                Rephrase = 'Start with the matching @ agent from AGENTS.md MVP routing table; end with: follow orchestration before done.'
+                Rephrase = 'Start with the matching @ agent from AGENTS.md slice router; end with: follow orchestration before done.'
                 Likely   = 'npm test at minimum'
             }
         } else {
@@ -80,7 +80,7 @@ try {
     }
 
     [void]$lines.Add('')
-    [void]$lines.Add('Reference: AGENTS.md MVP shoring-up table and .cursor/rules/yum4less-agent-orchestration.mdc')
+    [void]$lines.Add('Reference: AGENTS.md slice router and .cursor/rules/yum4less-agent-orchestration.mdc')
 
     Write-HookJson @{
         additional_context = ($lines -join "`n")

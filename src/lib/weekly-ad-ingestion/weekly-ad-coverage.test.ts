@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockPriceObservations } from "@/lib/mock-market-data";
+import { fixturePriceObservations } from "@/lib/fixtures/market-catalog.fixtures";
 import {
   buildWeeklyAdStoreCoverage,
   MIN_WEEKLY_AD_PROMOTION_MATCHES,
@@ -21,7 +21,7 @@ describe("weekly ad coverage", () => {
       storeId: "kroger-mechanicsville",
       chain: "kroger",
       priceObservations: [
-        ...mockPriceObservations,
+        ...fixturePriceObservations,
         {
           storeId: "kroger-mechanicsville",
           ingredientId: "chicken-thighs",
@@ -164,7 +164,7 @@ describe("weekly ad coverage", () => {
     expect(weeklyAdPromotionGatesPass(coverage, "walmart")).toBe(false);
   });
 
-  it("never promotes Aldi or Food Lion for ranked weekly-ad pricing", () => {
+  it("promotes Aldi and Food Lion for ranked weekly-ad pricing when gates pass", () => {
     const strongCoverage = {
       storeId: "aldi-mechanicsville",
       chain: "aldi" as const,
@@ -176,12 +176,12 @@ describe("weekly ad coverage", () => {
       usesWeeklyAdSource: true,
     };
 
-    expect(weeklyAdPromotionGatesPass(strongCoverage, "aldi")).toBe(false);
+    expect(weeklyAdPromotionGatesPass(strongCoverage, "aldi")).toBe(true);
     expect(
       weeklyAdPromotionGatesPass(
         { ...strongCoverage, storeId: "food-lion-mechanicsville", chain: "food-lion" },
         "food-lion",
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 });

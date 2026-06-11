@@ -1,9 +1,9 @@
 import {
-  mockPriceObservations,
-  mockRecipes,
-  mockStores,
-  type MockPriceObservation,
-} from "@/lib/mock-market-data";
+  fixturePriceObservations,
+  fixtureRecipes,
+  fixtureStores,
+} from "@/lib/fixtures/market-catalog.fixtures";
+import type { CatalogPriceObservation } from "@/lib/market-catalog-types";
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 
@@ -18,7 +18,7 @@ export const zip23111MechanicsvilleLocation: ResolvedSearchLocation = {
   source: "seed",
 };
 
-/** Default MVP preferences used in merge-gating ranking tests for ZIP 23111. */
+/** Default ranking preferences used in merge-gating tests for ZIP 23111. */
 export const zip23111RankingPreferences: MealPreferenceForm = {
   zipCode: "23111",
   radiusMiles: 6,
@@ -38,15 +38,15 @@ const WEEKLY_AD_CHAINS = [
 
 /**
  * Fixture price observations that enable weekly-ad-ranked stores near ZIP 23111.
- * No live APIs — mirrors ingested weekly-ad cache rows used in production-lean MVP tests.
+ * No live APIs — mirrors ingested weekly-ad cache rows used in ranking fixture tests.
  */
 export function buildZip23111WeeklyAdPriceObservations(
   storeIds: ReadonlyArray<(typeof WEEKLY_AD_CHAINS)[number]["storeId"]> = [
     "kroger-mechanicsville",
   ],
-): MockPriceObservation[] {
+): CatalogPriceObservation[] {
   const allowed = new Set(storeIds);
-  return mockPriceObservations
+  return fixturePriceObservations
     .filter((observation) => allowed.has(observation.storeId as (typeof storeIds)[number]))
     .map((observation) => {
       const chain = WEEKLY_AD_CHAINS.find((entry) => entry.storeId === observation.storeId);
@@ -64,13 +64,13 @@ export function buildZip23111RankingSnapshot(
   ],
 ) {
   return {
-    stores: mockStores,
-    recipes: mockRecipes,
+    stores: fixtureStores,
+    recipes: fixtureRecipes,
     priceObservations: buildZip23111WeeklyAdPriceObservations(storeIds),
   };
 }
 
-const blackBeanTacoRecipe = mockRecipes.find(
+const blackBeanTacoRecipe = fixtureRecipes.find(
   (recipe) => recipe.id === "black-bean-tacos",
 )!;
 
@@ -86,7 +86,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
     matchConfidence: 0.85,
   } as const;
 
-  const priceObservations: MockPriceObservation[] = [
+  const priceObservations: CatalogPriceObservation[] = [
     {
       storeId: "kroger-mechanicsville",
       ingredientId: "black-beans",
@@ -146,7 +146,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
   ];
 
   return {
-    stores: mockStores,
+    stores: fixtureStores,
     recipes: [blackBeanTacoRecipe],
     priceObservations,
   };

@@ -21,7 +21,7 @@ import {
   syncWeeklyAdOffersToPriceObservations,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-offer-sync";
 
-const DEFAULT_ZIP_CODE = "23111";
+const DEFAULT_ZIP_CODE = process.env.YUM4LESS_PROVIDER_SYNC_ZIP ?? "23111";
 
 export { WEEKLY_AD_CHAINS, isWeeklyAdChain };
 

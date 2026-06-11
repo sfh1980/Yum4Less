@@ -24,6 +24,8 @@
     "ingest:weekly-ads": "node scripts/run-weekly-ad-ingest.mjs",
     "ingest:weekly-ads:fixture": "node scripts/run-weekly-ad-ingest.mjs --fixture",
     "sync:provider-prices": "tsx scripts/sync-provider-prices.ts",
+    "ingest:map-catalog": "tsx scripts/ingest-map-catalog.ts",
+    "ingest:map-catalog:fixture": "tsx scripts/ingest-map-catalog.ts --fixture",
     "ingest:weekly-ads:scheduled": "node scripts/run-scheduled-weekly-ad-ingest.mjs",
     "ingest:weekly-ads:scheduled:fixture": "node scripts/run-scheduled-weekly-ad-ingest.mjs --fixture",
     "ingest:weekly-ads:browser": "node scripts/run-weekly-ad-ingest.mjs --browser",

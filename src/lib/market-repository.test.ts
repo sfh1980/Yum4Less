@@ -26,6 +26,7 @@ describe("getMarketDataSnapshot", () => {
 
     expect(result.source).toBe("unavailable");
     expect(result.snapshot.stores).toHaveLength(0);
+    expect(result.snapshot.ingredients).toHaveLength(0);
     expect(result.snapshot.recipes).toHaveLength(0);
     expect(result.snapshot.priceObservations).toHaveLength(0);
     expect(logSpy).toHaveBeenCalledWith(
@@ -65,6 +66,15 @@ describe("getMarketDataSnapshot", () => {
               state: "VA",
               latitude: "37.6085",
               longitude: "-77.3321",
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: "chicken-thighs",
+              name: "Chicken thighs",
+              category: "protein",
             },
           ],
         })
@@ -122,6 +132,13 @@ describe("getMarketDataSnapshot", () => {
         longitude: -77.3321,
       }),
     ]);
+    expect(result.snapshot.ingredients).toEqual([
+      {
+        id: "chicken-thighs",
+        name: "Chicken thighs",
+        category: "protein",
+      },
+    ]);
     expect(result.snapshot.recipes).toEqual([
       expect.objectContaining({
         id: "lemon-chicken",
@@ -152,6 +169,11 @@ describe("getMarketDataSnapshot", () => {
     ]);
     expect(queryMock).toHaveBeenCalledWith(
       expect.stringContaining("valid_through is null or valid_through >= now()"),
+    );
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "coalesce(last_verified_at, observed_at) >= now() - interval '24 hours'",
+      ),
     );
   });
 });

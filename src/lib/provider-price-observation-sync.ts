@@ -154,6 +154,12 @@ export function resolveInternalKrogerStoreId(input: {
     return undefined;
   }
 
+  const canonicalId = `kroger-${input.providerStoreId}`;
+  const byCanonicalId = krogerStores.find((store) => store.id === canonicalId);
+  if (byCanonicalId) {
+    return byCanonicalId.id;
+  }
+
   const normalizedProviderStoreId = normalizeStoreEvidence(input.providerStoreId);
   const byProviderStoreId = krogerStores.filter((store) =>
     normalizeStoreEvidence(store.id).includes(normalizedProviderStoreId),

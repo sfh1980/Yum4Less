@@ -1,4 +1,5 @@
 import type {
+  MealPlanningMode,
   MealPreferenceForm,
   RecommendationExperience,
   ShopperNotice,
@@ -14,6 +15,9 @@ export type FormState = {
   shoppingStyle: MealPreferenceForm["shoppingStyle"];
   dietaryFocus: MealPreferenceForm["dietaryFocus"];
   recipeSource: RecipeSourceSelection;
+  planningMode: MealPlanningMode;
+  /** Explicit shopper opt-in before TheMealDB (or other non-internal sources) affect ranking. */
+  externalRecipeOptIn: boolean;
 };
 
 export type FieldErrors = Partial<Record<keyof FormState, string>>;
@@ -75,4 +79,6 @@ export type MarketSearchRequest = {
 export type RecommendationRequest = MealPreferenceForm & {
   latitude?: number;
   longitude?: number;
+  selectedIngredientIds?: string[];
+  recipeSourceOptIn?: boolean;
 };

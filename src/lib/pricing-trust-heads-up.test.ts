@@ -30,7 +30,7 @@ describe("buildPricingTrustHeadsUp", () => {
 
     expect(headsUp?.title).toBe("Beta — heads up about these prices");
     expect(headsUp?.message).toContain("Yum4Less is in beta");
-    expect(headsUp?.message).toContain("not every nearby chain is live-priced");
+    expect(headsUp?.message).toContain("production release focuses on Kroger-family and Aldi");
     expect(headsUp?.message).toContain("estimates");
   });
 

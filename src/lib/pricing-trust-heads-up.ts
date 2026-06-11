@@ -9,7 +9,7 @@ export type PricingTrustHeadsUp = {
 export const PRICING_TRUST_HEADS_UP_TITLE = "Beta — heads up about these prices";
 
 const BETA_BASELINE =
-  "Yum4Less is in beta: the local MVP is still evolving, ranked prices are estimates (not live checkout), and not every nearby chain is live-priced yet.";
+  "Yum4Less is in beta: ranked prices are estimates (not live checkout), refreshed on a daily schedule, and the production release focuses on Kroger-family and Aldi when gates pass.";
 
 const NON_LIVE_RANKED_SOURCES: RankedPricingSource[] = [
   "weekly-ad-cache",

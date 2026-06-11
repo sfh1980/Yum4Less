@@ -28,13 +28,14 @@ Rules:
 2. Strongly favor tests that prove recommendation totals, matched items, store counts, and explanations stay consistent.
 3. Include stale-data, degraded-source, and weak-match scenarios when they affect user trust.
 4. Do not add low-value tests that mostly restate the implementation.
-5. Cover the local MVP flow with tests across these layers when relevant: unit logic, route/API behavior, DB/seed fallback behavior, Vitest UI smoke coverage, and Playwright MCP checks for critical browser-only paths.
+5. Cover the beta v1 location-to-results flow with tests across these layers when relevant: unit logic, route/API behavior, DB/seed fallback behavior, Vitest UI smoke coverage, and Playwright MCP checks for critical browser-only paths.
 6. Keep ranking changes fixture-backed so before/after recommendation drift is visible on representative searches.
 7. Use Playwright MCP after starting `npm run dev` for flows like ZIP `23111` search, recommendation trust labels, fallback banners, weekly-ad status pills, and map interactions; keep scenarios deterministic and off live retailer sites.
 8. When adding a committed `@playwright/test` suite later, mirror the same deterministic fixtures and seed data; do not gate CI on external scraping or geolocation APIs.
 9. Use Postgres MCP after `npm run db:up` to confirm seeded stores, latest `price_observations`, and ingest append semantics when integration tests pass but trust evidence is still unclear.
 10. Use GitHub MCP to inspect failed workflow runs and PR checks; use `gh` CLI for creating PRs and other write operations.
 11. Keep CI actionable, minimal, and secure; do not overcomplicate the pipeline for an early-stage project.
+12. After CI or merge-gate changes, update **`PROJECT_CONTINUITY.md`**: changelog at top, Resume, and **Verification snapshot** in the Appendix (no chat summaries).
 
 When invoked:
 1. Inspect the changed behavior, existing tests, and current automation.

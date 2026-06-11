@@ -1,0 +1,44 @@
+---
+description: PROJECT_CONTINUITY.md journal format and per-slice update discipline
+globs: PROJECT_CONTINUITY.md
+alwaysApply: false
+---
+
+# Yum4Less Continuity Journal
+
+`PROJECT_CONTINUITY.md` is the **linear project history + current snapshot**. It is not a second README, agent guide, or transcript dump.
+
+## Document map (do not duplicate elsewhere)
+
+| Topic | Owner file |
+|---|---|
+| How to run, env setup, public scope | `README.md` |
+| Agents, MCP, hooks, verification gates | `AGENTS.md` + `.cursor/rules/yum4less-agent-orchestration.mdc` |
+| Linear history, decisions, verification snapshot | `PROJECT_CONTINUITY.md` |
+| Owner teaching / walkthroughs | `.private/learning-notes.md` (gitignored) |
+
+## After each material implementation slice
+
+Before saying **done** on a slice that changed product behavior, architecture, trust, ingest, or verification gates:
+
+1. Add a **Changelog** entry at the **top** (newest first): date, theme, shipped, honest limits, evidence (tests/CI when run).
+2. Refresh **Resume**: bump as-of date; update working / not working / next (keep one screen).
+3. Update **Decision log** when direction locks or supersedes a prior row.
+4. Bump **Appendix → Verification snapshot** when test counts, CI status, or merge gates changed.
+
+Skip continuity updates for trivial typos, comment-only edits, or pure refactors with no behavior or direction change.
+
+## Forbidden in PROJECT_CONTINUITY.md
+
+- Pasting full chat summaries or multi-paragraph transcript recaps
+- Duplicating README setup steps, MCP server tables, or file-by-file inventories
+- Product pitch, competitive analysis, or long research essays (README or code comments instead)
+- Claiming shipped without matching repo evidence
+
+## Transcripts
+
+Link only in **Appendix → Transcript index** (`[title](uuid)`). Do not append new transcript prose blocks to the living doc.
+
+## Backup
+
+Major restructures: copy prior version to `.private/PROJECT_CONTINUITY.backup-YYYY-MM-DD.md` before large edits.

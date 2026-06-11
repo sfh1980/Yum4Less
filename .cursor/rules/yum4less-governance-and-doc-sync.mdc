@@ -6,7 +6,29 @@ alwaysApply: true
 # Yum4Less Governance And Doc Sync
 
 - Pause development and ask for explicit user approval before installing new MCP servers or adding/updating repo rules.
-- Keep `README.md`, `PROJECT_CONTINUITY.md`, and `.private/learning-notes.md` current when architecture, MVP scope, trust behavior, setup steps, or implementation direction materially change.
 - Keep shared docs truthful about what is implemented versus planned; do not let roadmap items read like shipped features.
 - If tooling setup succeeds but still needs restart, first launch, admin approval, or manual sign-in, document that clearly instead of implying the setup is finished.
 - Treat local/dev completion and hosted/deployed completion as different milestones until the user explicitly chooses a deployment target.
+
+## Documentation owners (link; do not duplicate)
+
+| File | Owns |
+|---|---|
+| `README.md` | Public vision, beta scope, setup, commands, troubleshooting |
+| `PROJECT_CONTINUITY.md` | Newest-first **changelog**, **Resume**, **Decision log**, verification snapshot |
+| `AGENTS.md` | Agent/MCP/hook index and verification gates |
+| `.env.example` | Environment variable truth |
+| `.private/learning-notes.md` | Owner-only teaching (never duplicate into shared docs) |
+
+## PROJECT_CONTINUITY.md — per-slice journal
+
+After each **material** implementation slice, update `PROJECT_CONTINUITY.md` per **`.cursor/rules/yum4less-continuity-journal.mdc`**:
+
+1. Changelog entry at the **top** (newest first)
+2. Refresh **Resume** (as-of date + honest working / deferred / next)
+3. **Decision log** and **Verification snapshot** when direction or gates changed
+4. **No chat summaries** — transcript links in Appendix only
+
+Update `README.md` only when setup steps, public scope, or onboarding change — not to mirror every slice (point to `PROJECT_CONTINUITY.md` for history).
+
+Update `.private/learning-notes.md` only for personalized teaching, not project source-of-truth.

@@ -1,5 +1,5 @@
 import { resolveZipLocation } from "@/lib/geocoding";
-import { isWithinMvpBrowserRadius } from "@/lib/mvp-area";
+import { isWithinContinentalUsBounds } from "@/lib/us-service-area";
 
 export type ResolvedSearchLocation = {
   zipCode?: string;
@@ -46,7 +46,7 @@ export async function resolveLocationInput(input: {
     }
 
     if (
-      !isWithinMvpBrowserRadius({
+      !isWithinContinentalUsBounds({
         latitude: input.latitude!,
         longitude: input.longitude!,
       })
@@ -54,7 +54,7 @@ export async function resolveLocationInput(input: {
       return {
         ok: false,
         error:
-          "Browser location is outside the current Yum4Less MVP service area near ZIP 23111. Try entering a local ZIP code instead.",
+          "Browser location is outside the continental US markets Yum4Less supports in this beta.",
         providerConfigured: Boolean(process.env.GEOCODIO_API_KEY),
       };
     }
@@ -63,7 +63,7 @@ export async function resolveLocationInput(input: {
       ok: true,
       location: {
         city: "Current location",
-        state: "VA",
+        state: "US",
         latitude: input.latitude!,
         longitude: input.longitude!,
         source: "browser",

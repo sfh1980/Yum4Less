@@ -55,6 +55,27 @@ describe("getRecommendationExperience", () => {
     expect(experience.market).not.toHaveProperty("message");
   });
 
+  it("blocks non-internal recipe sources unless recipeSourceOptIn is true", async () => {
+    delete process.env.DATABASE_URL;
+
+    const experience = await getRecommendationExperience(
+      { ...preferences, recipeSource: "themealdb" },
+      {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        county: "Hanover County",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      false,
+    );
+
+    expect(experience.recommendations).toHaveLength(0);
+    expect(experience.shopperNotice?.title).toBe("Recipe source requires opt-in");
+  });
+
   it("returns a layman shopper notice instead of market.message for inactive recipe sources", async () => {
     delete process.env.DATABASE_URL;
 

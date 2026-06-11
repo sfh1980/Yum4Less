@@ -24,6 +24,16 @@ async function main() {
     process.exit(fixtureIngest.status ?? 1);
   }
 
+  const mapCatalogFixture = spawnSync("npm run ingest:map-catalog:fixture", {
+    stdio: "inherit",
+    shell: true,
+    env: process.env,
+  });
+
+  if (mapCatalogFixture.status !== 0) {
+    process.exit(mapCatalogFixture.status ?? 1);
+  }
+
   const e2e = spawnSync("npx playwright test", {
     stdio: "inherit",
     shell: true,

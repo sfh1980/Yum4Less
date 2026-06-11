@@ -17,4 +17,4 @@ Applies when editing route handlers, validation, rate limits, provider services,
 ## Security reminders
 
 - Parameterized SQL only; no client-supplied resource IDs.
-- Honor MVP geographic bounds and shopping-route stop limits when touched.
+- Honor **continental US** geographic bounds (`us-service-area.ts`) and shopping-route stop limits when touched.

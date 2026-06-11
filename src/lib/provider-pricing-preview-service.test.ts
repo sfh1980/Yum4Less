@@ -145,6 +145,7 @@ describe("buildProviderPricingPreviews", () => {
           longitude: -77.3651,
         },
       ],
+      readMode: "live-allowed",
     });
 
     expect(result).toEqual([
@@ -212,6 +213,7 @@ describe("buildProviderPricingPreviews", () => {
           longitude: -77.3651,
         },
       ],
+      readMode: "live-allowed",
     });
 
     expect(result).toHaveLength(3);
@@ -293,6 +295,7 @@ describe("buildProviderPricingPreviews", () => {
           longitude: -77.3651,
         },
       ],
+      readMode: "live-allowed",
     });
 
     expect(persistProviderPricingPreviewResult).not.toHaveBeenCalled();
@@ -346,6 +349,7 @@ describe("buildProviderPricingPreviews", () => {
           longitude: -77.3651,
         },
       ],
+      readMode: "live-allowed",
     });
 
     expect(persistProviderPricingPreviewResult).not.toHaveBeenCalled();
@@ -395,9 +399,95 @@ describe("buildProviderPricingPreviews", () => {
           longitude: -77.3651,
         },
       ],
+      readMode: "live-allowed",
     });
 
     expect(persistProviderPricingPreviewResult).not.toHaveBeenCalled();
     expect(result[0]).not.toHaveProperty("persistedSnapshotId");
+  });
+
+  it("does not call live provider pricing when cache-only and a fresh snapshot exists", async () => {
+    const searchPricingPreview = vi.fn();
+    getStoreDiscoveryProviders.mockReturnValue([
+      {
+        provider: "kroger",
+        label: "Kroger official store discovery",
+        configured: true,
+        searchPricingPreview,
+      },
+    ]);
+    getLatestProviderPricingPreviewSnapshot.mockResolvedValue({
+      provider: "kroger",
+      label: "Kroger official pricing preview",
+      status: "fallback",
+      provenance: "official-api",
+      retrievalMode: "cached",
+      configured: true,
+      fallbackUsed: true,
+      storeName: "Kroger Mechanicsville",
+      providerStoreId: "01100479",
+      items: [],
+      coverageStatus: "limited",
+      matchedIngredientCount: 2,
+      totalTrackedIngredients: 5,
+      message: "Using saved preview.",
+      fetchedAt: "2026-05-20T12:00:00.000Z",
+      persistedSnapshotId: 8,
+      snapshotCapturedAt: "2026-05-20T12:10:00.000Z",
+      snapshotAgeMinutes: 120,
+    });
+
+    const result = await buildProviderPricingPreviews({
+      providerStores: [
+        {
+          provider: "kroger",
+          providerStoreId: "01100479",
+          name: "Kroger Mechanicsville",
+          city: "Mechanicsville",
+          state: "VA",
+          latitude: 37.6652,
+          longitude: -77.3651,
+        },
+      ],
+    });
+
+    expect(searchPricingPreview).not.toHaveBeenCalled();
+    expect(result[0]?.retrievalMode).toBe("cached");
+  });
+
+  it("returns a cache-miss fallback without calling live pricing when cache-only", async () => {
+    const searchPricingPreview = vi.fn();
+    getStoreDiscoveryProviders.mockReturnValue([
+      {
+        provider: "kroger",
+        label: "Kroger official store discovery",
+        configured: true,
+        searchPricingPreview,
+      },
+    ]);
+    getLatestProviderPricingPreviewSnapshot.mockResolvedValue(undefined);
+
+    const result = await buildProviderPricingPreviews({
+      providerStores: [
+        {
+          provider: "kroger",
+          providerStoreId: "01100479",
+          name: "Kroger Mechanicsville",
+          city: "Mechanicsville",
+          state: "VA",
+          latitude: 37.6652,
+          longitude: -77.3651,
+        },
+      ],
+    });
+
+    expect(searchPricingPreview).not.toHaveBeenCalled();
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        status: "fallback",
+        retrievalMode: "none",
+        message: expect.stringContaining("24 hours"),
+      }),
+    );
   });
 });

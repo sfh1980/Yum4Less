@@ -29,7 +29,7 @@ Rules:
 3. Distinguish confirmed issues from likely risks or open questions.
 4. Scrutinize code that could overstate savings, overstate freshness, or hide weak ingredient matches.
 5. Review dependencies for unnecessary growth or risky supply-chain choices when manifests or lockfiles exist.
-6. For docs, call out missing or misleading statements about data sources, freshness, privacy, and setup.
+6. For docs, call out missing or misleading statements about data sources, freshness, privacy, and setup — cross-check **`README.md`**, **`PROJECT_CONTINUITY.md`**, and in-app trust copy for drift.
 
 Output:
 1. Lead with findings ordered by severity.

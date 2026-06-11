@@ -24,6 +24,8 @@ export type SaleDrivenThemealdbImportOptions = {
   maxPerRun?: number;
   fetchFn?: ThemealdbFetchFn;
   apiKey?: string;
+  /** When set (e.g. search path), only query TheMealDB for these sale ingredient ids. */
+  limitToIngredientIds?: string[];
 };
 
 type CandidateMeal = {
@@ -50,7 +52,13 @@ export async function runSaleDrivenThemealdbImport(
     newIngredientCount: 0,
   };
 
-  const saleIngredients = await getOnSaleCatalogIngredientIds();
+  let saleIngredients = await getOnSaleCatalogIngredientIds();
+  if (options.limitToIngredientIds?.length) {
+    const allowed = new Set(options.limitToIngredientIds);
+    saleIngredients = saleIngredients.filter((row) =>
+      allowed.has(row.ingredientId),
+    );
+  }
   report.saleIngredientCount = saleIngredients.length;
 
   if (saleIngredients.length === 0) {

@@ -42,7 +42,7 @@ try {
         '- AGENTS.md (repo root)'
         '- .cursor/rules/yum4less-agent-orchestration.mdc'
         ''
-        'MVP shoring-up phase is active: do not claim MVP-complete without ZIP 23111 core loop evidence, trust/fallback labels, npm test, and integration/e2e where the slice touches DB/CI.'
+        'Beta v1 shoring-up is active: do not claim beta v1 demo-complete without ZIP 23111 fixture+Postgres core loop, trust/fallback labels, npm test, and integration/e2e where the slice touches DB/CI. Do not claim deploy-ready — homelab migration is deferred. Product truth: PROJECT_CONTINUITY.md Resume.'
         ''
         'Session MCP preflight:'
         "- $postgresStatus"
@@ -53,6 +53,8 @@ try {
         'When the user asks an implementation/debug/verification question and did not @ a project agent, open your response with a short Routing section: suggested @ agent, optional rephrased prompt, likely tests/MCP.'
         ''
         'Invoke project agents with @verifier, @web-frontend-standards, @web-backend-standards, @database-codegen-standards, or @testing-cicd-standards when the orchestration trigger table applies.'
+        ''
+        'Continuity journal: after material slices, update PROJECT_CONTINUITY.md — changelog at top, refresh Resume, update Decision log / verification snapshot when applicable; no chat summaries (transcript index links only). See .cursor/rules/yum4less-continuity-journal.mdc'
         ''
         'Do not claim verified, CI green, or merge-ready without test/MCP evidence.'
     ) -join "`n"

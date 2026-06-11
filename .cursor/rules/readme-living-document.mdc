@@ -1,13 +1,32 @@
 ---
-description: Keep the Yum4Less README current and investor-ready
+description: Keep README aligned with onboarding and doc ownership
 globs: README*
 alwaysApply: false
 ---
 
-# README Living Document
+# README Onboarding (Yum4Less)
 
-- Keep the `README` professional, business-oriented, and suitable for collaborators, public readers, and potential investors.
-- Reflect the distinction between current implementation and planned roadmap clearly; do not present planned features as already built.
-- Update setup steps, commands, environment variables, architectural decisions, and supported data sources when the codebase changes.
-- Avoid `TODO` placeholders, duplicate explanations, and speculative implementation details that are not yet true in the repository.
-- Prefer a clean flow: product vision, current scope, technical direction, security posture, competitive position, roadmap, and then practical setup details.
+Follow **`.cursor/rules/yum4less-governance-and-doc-sync.mdc`** for doc owners.
+
+## README owns
+
+- What Yum4Less is and **honest beta v1 scope**
+- Quick start, prerequisites, commands, env pointers (detail in `.env.example`)
+- Trust/security defaults and troubleshooting
+- Links to **`PROJECT_CONTINUITY.md`** (history/snapshot) and **`AGENTS.md`** (agents/MCP)
+
+## README does not own
+
+- Changelog, roadmap, competitive analysis, or verification tables → **`PROJECT_CONTINUITY.md`**
+- Agent/MCP setup walkthrough detail → **`AGENTS.md`**
+- Personalized teaching → **`.private/learning-notes.md`**
+
+## When to update README
+
+- Setup steps, commands, or env vars change
+- Public beta scope or onboarding flow changes materially
+- Security/deploy defaults change
+
+After material slices, update **`PROJECT_CONTINUITY.md`** per **`yum4less-continuity-journal.mdc`** — do not mirror every slice in README.
+
+Keep README concise and truthful: no investor pitch sections, no file inventories, no duplicate status blocks from continuity.

@@ -1,4 +1,4 @@
-import type { MockRecipeRecord } from "@/lib/mock-market-data";
+import type { CatalogRecipeRecord } from "@/lib/market-catalog-types";
 import { getProviderChainLabel } from "@/lib/providers/provider-labels";
 import type {
   ProviderPricingPreviewResult,
@@ -43,7 +43,7 @@ export type RecipeProviderPreviewComparison = {
 };
 
 export function buildRecipeProviderPreviewComparisons(input: {
-  recipe: MockRecipeRecord;
+  recipe: CatalogRecipeRecord;
   seedEstimatedTotal: number;
   shoppingPlan: SeedShoppingPlanItem[];
   providerPricingPreviews: ProviderPricingPreviewResult[];
@@ -59,7 +59,7 @@ export function buildRecipeProviderPreviewComparisons(input: {
 }
 
 export function buildRecipeProviderPreviewComparison(input: {
-  recipe: MockRecipeRecord;
+  recipe: CatalogRecipeRecord;
   seedEstimatedTotal: number;
   shoppingPlan: SeedShoppingPlanItem[];
   providerPricingPreview: ProviderPricingPreviewResult;

@@ -31,6 +31,9 @@ blob-report/
 # Local Semgrep full-repo audit JSON (see README "Semgrep CI on GitHub Actions")
 semgrep-full.json
 
+# Accidental doc exports (not source of truth)
+README.pdf
+
 # Local ingest/API probe logs (not source of truth)
 live-probe-*.txt
 playwright-full-test-final.png

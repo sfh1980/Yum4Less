@@ -57,7 +57,7 @@ Run these yourself in the terminal (retry once on failure; document errors):
 
 5. **MCP health**
    - Read MCP tool schemas under `mcps/<server>/tools/` before each MCP call.
-   - postgres | playwright | github | semgrep — record connected/failed/skipped per server.
+   - postgres | playwright | github | semgrep | context7 — record connected/failed/skipped per server.
 
 If Phase 0 fails partially, continue with skippable phases and mark evidence as **skipped (reason)**.
 
@@ -139,7 +139,7 @@ Prerequisite: dev server on **localhost:3000**, ZIP **23111**, fixture/seed data
 5. **What was NOT run** and why
 6. **Next actions** (max 10, P0/P1/P2)
 
-**Forbidden without full evidence:** merge-ready, production-ready, security-clean, MVP-complete, CI green.
+**Forbidden without full evidence:** merge-ready, deploy-ready, production-ready, security-clean, beta v1 demo-complete, CI green.
 
 ---
 

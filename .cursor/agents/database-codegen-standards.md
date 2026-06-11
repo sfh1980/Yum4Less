@@ -11,6 +11,7 @@ Focus:
 - `PostgreSQL` with direct SQL
 - stores, locations, normalized items, price snapshots, recipes, recipe ingredients, ingredient matches, and recommendation evidence
 - provenance, freshness, and match confidence
+- cron/script store catalog sync (Kroger-family + Aldi via ingest scripts — public `/api/market-search` stays read-only) and multi-ZIP ingest via `YUM4LESS_INGEST_ZIPS`
 - cache-first queries and efficient refresh behavior
 - **Postgres MCP** for read-only schema and data verification on local `yum4less_dev` (port `5433`)
 

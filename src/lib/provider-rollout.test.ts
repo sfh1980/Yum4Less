@@ -15,22 +15,27 @@ describe("provider rollout", () => {
     expect(rollout.recommendationEnabled).toBe(false);
   });
 
-  it("keeps later-chain targets out of ranked recommendation pricing", () => {
+  it("labels Aldi as beta weekly-ad estimates before promotion passes", () => {
     const rollout = getProviderRolloutForStore("Aldi");
 
     expect(rollout.chain).toBe("aldi");
     expect(rollout.status).toBe("coming-soon");
     expect(rollout.recommendationEnabled).toBe(false);
     expect(rollout.note).toContain("BETA");
-    expect(rollout.note).toContain("coming later");
+    expect(rollout.note).toContain("weekly-ad");
   });
 
-  it("labels Food Lion as beta coming later on the map", () => {
+  it("maps Kroger-family banner names to the Kroger rollout", () => {
+    expect(getProviderRolloutForStore("Harris Teeter").chain).toBe("kroger");
+    expect(getProviderRolloutForStore("Ralphs").chain).toBe("kroger");
+  });
+
+  it("labels Food Lion as beta weekly-ad estimates before promotion passes", () => {
     const rollout = getProviderRolloutForStore("Food Lion");
 
     expect(rollout.chain).toBe("food-lion");
     expect(rollout.note).toContain("BETA");
-    expect(rollout.note).toContain("coming later");
+    expect(rollout.note).toContain("weekly-ad");
   });
 
   it("lists the approved rollout order for the MVP roadmap", () => {
@@ -87,29 +92,39 @@ describe("resolveProviderRolloutForStore", () => {
     expect(rollout.note).toContain("Live, current weekly-ad pricing from Walmart is not available");
   });
 
-  it("never enables Aldi ranked pricing even when weekly-ad promotion context is passed", () => {
+  it("enables Aldi weekly-ad-preview when promotion gates pass", () => {
     const rollout = resolveProviderRolloutForStore("Aldi", {
       matchedIngredientCount: 6,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: true,
     });
 
-    expect(rollout.status).toBe("coming-soon");
-    expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toContain("coming later");
-    expect(rollout.note).toContain("Rehearsal or fixture");
+    expect(rollout.status).toBe("weekly-ad-preview");
+    expect(rollout.recommendationEnabled).toBe(true);
+    expect(rollout.note).toContain("weekly ad");
   });
 
-  it("never enables Food Lion ranked pricing with limited weekly-ad context", () => {
+  it("enables Food Lion weekly-ad-preview when promotion gates pass", () => {
+    const rollout = resolveProviderRolloutForStore("Food Lion", {
+      matchedIngredientCount: 4,
+      usesWeeklyAdSource: true,
+      weeklyAdPromotionPassed: true,
+    });
+
+    expect(rollout.status).toBe("weekly-ad-preview");
+    expect(rollout.recommendationEnabled).toBe(true);
+    expect(rollout.note).toContain("weekly ad");
+  });
+
+  it("keeps Food Lion limited-coverage when weekly-ad promotion has not passed", () => {
     const rollout = resolveProviderRolloutForStore("Food Lion", {
       matchedIngredientCount: 4,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: false,
     });
 
-    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.status).toBe("limited-coverage");
     expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toContain("BETA");
   });
 
   it("lists resolved rollout entries for promoted chains", () => {

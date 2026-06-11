@@ -1,3 +1,6 @@
+-- Bootstrap-only store coordinates for empty DB startup.
+-- Daily live ingest (ingest:map-catalog / ingest:weekly-ads:scheduled) replaces
+-- lat/lng and source_name for ranked chains when Kroger/OSM discovery succeeds.
 insert into stores (
   id,
   name,

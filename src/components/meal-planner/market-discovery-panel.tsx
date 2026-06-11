@@ -6,10 +6,10 @@ import { NearbyStoresMap } from "@/components/nearby-stores-map";
 import { NearbyStoresList } from "@/components/nearby-stores-list";
 import type { NearbyStoresMapModel } from "@/lib/nearby-stores-map-model";
 import { HelpHint } from "@/components/help-hint";
-import { PricingTrustHeadsUpBanner } from "@/components/recommendation-demo/pricing-trust-heads-up";
+import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
 import { nearbyStoresMapHelp } from "@/lib/help-hint-content";
 import { buildMarketShopperBlockedStatus } from "@/lib/market-shopper-status";
-import type { MarketSearchState } from "@/components/recommendation-demo/types";
+import type { MarketSearchState } from "@/components/meal-planner/types";
 
 type MarketDiscoveryPanelProps = {
   marketSearchState: MarketSearchState;

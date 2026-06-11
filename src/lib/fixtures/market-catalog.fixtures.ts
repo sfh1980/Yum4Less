@@ -1,62 +1,11 @@
-export type StoreKind = "grocery" | "big-box" | "specialty" | "dollar-market";
+import type {
+  CatalogPriceObservation,
+  CatalogRecipeRecord,
+  CatalogStore,
+} from "@/lib/market-catalog-types";
 
-export type MockStore = {
-  id: string;
-  name: string;
-  kind: StoreKind;
-  city: string;
-  state: string;
-  latitude: number;
-  longitude: number;
-};
-
-import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
-import type { IngredientCategory } from "@/lib/ingredient-category";
-
-export type MockIngredient = {
-  id: string;
-  name: string;
-  category: IngredientCategory;
-};
-
-export const mockIngredients: MockIngredient[] = INTERNAL_CATALOG_INGREDIENTS;
-
-export type MockRecipeIngredient = {
-  ingredientId: string;
-  displayName: string;
-  quantityNote: string;
-};
-
-export type MockRecipeRecord = {
-  id: string;
-  title: string;
-  summary: string;
-  cookTimeMinutes: number;
-  difficulty: "easy" | "medium";
-  tags: string[];
-  dietaryTags: Array<"vegetarian" | "vegan" | "quick">;
-  ingredients: MockRecipeIngredient[];
-  steps: string[];
-  sourceName?: string;
-  sourceRecipeId?: string;
-  eligibleForRanking?: boolean;
-};
-
-export type MockPriceObservation = {
-  storeId: string;
-  ingredientId: string;
-  price: number;
-  saleLabel?: string;
-  freshnessDaysAgo: number;
-  freshnessHoursAgo?: number;
-  inStock: boolean;
-  priceSource?: string;
-  priceSourceKind?: "official-online" | "weekly-ad" | "sample" | "unknown";
-  priceSourceTier?: number;
-  matchConfidence?: number;
-};
-
-export const mockStores: MockStore[] = [
+/** Test/fixture store lineup aligned with db/init/002_seed.sql (not a runtime catalog). */
+export const fixtureStores: CatalogStore[] = [
   {
     id: "kroger-mechanicsville",
     name: "Kroger",
@@ -131,7 +80,7 @@ export const mockStores: MockStore[] = [
   },
 ];
 
-export const mockRecipes: MockRecipeRecord[] = [
+export const fixtureRecipes: CatalogRecipeRecord[] = [
   {
     id: "sheet-pan-lemon-chicken",
     title: "Sheet Pan Lemon Chicken and Vegetables",
@@ -273,7 +222,7 @@ export const mockRecipes: MockRecipeRecord[] = [
   },
 ];
 
-export const mockPriceObservations: MockPriceObservation[] = [
+export const fixturePriceObservations: CatalogPriceObservation[] = [
   { storeId: "kroger-mechanicsville", ingredientId: "chicken-thighs", price: 6.49, saleLabel: "Weekly deal", freshnessDaysAgo: 1, inStock: true },
   { storeId: "kroger-mechanicsville", ingredientId: "baby-potatoes", price: 2.79, freshnessDaysAgo: 1, inStock: true },
   { storeId: "kroger-mechanicsville", ingredientId: "broccoli", price: 2.39, freshnessDaysAgo: 2, inStock: true },

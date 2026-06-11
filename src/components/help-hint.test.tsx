@@ -16,7 +16,7 @@ describe("HelpHint", () => {
           id: "zip-help",
           key: "help",
           label: "ZIP code help",
-          tooltip: "Local MVP area only.",
+          tooltip: "Continental US ZIP codes.",
         }),
         createElement("button", { key: "next", type: "button" }, "Next"),
       ]),
@@ -27,7 +27,7 @@ describe("HelpHint", () => {
 
     await user.tab();
     expect(trigger).toHaveFocus();
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Local MVP area only.");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Continental US ZIP codes.");
 
     await user.tab();
     await waitFor(() => {

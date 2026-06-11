@@ -104,6 +104,105 @@ describe("POST /api/recommendations", () => {
     expect(resolveLocationInput).not.toHaveBeenCalled();
   });
 
+  it("accepts TheMealDB recipe source when recipeSourceOptIn is true", async () => {
+    resolveLocationInput.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: false,
+    });
+    getRecommendationExperience.mockResolvedValue({
+      market: {
+        searchedZipCode: "23111",
+        locationLabel: "Mechanicsville, VA",
+        searchLatitude: 37.6085,
+        searchLongitude: -77.3321,
+        radiusMiles: 5,
+        nearbyStores: [],
+        recommendationReadyStoreCount: 1,
+        providerRollout: [],
+        providerStoreSearches: [],
+        providerPricingPreviews: [],
+        providerCoverageRollup: {
+          overallCoverageStatus: "partial",
+          trustGate: "directional",
+          rankedPricingSource: "weekly-ad",
+          totalTrackedIngredients: 5,
+          matchedIngredientCount: 3,
+          unmatchedIngredientCount: 2,
+          averageMatchConfidence: 0.8,
+          usesCachedPreview: false,
+          ingredientSummaries: [],
+          message: "Weekly-ad prices",
+        },
+        providerPromotionReadiness: [],
+        providerPriceObservationSync: [],
+        weeklyAdIngestionStatus: [],
+        weeklyAdPromotionReadiness: [],
+        lookupSource: "seed",
+        lookupProviderConfigured: false,
+        dataSource: "database",
+        saleIngredientChoices: [],
+      },
+      recommendations: [
+        {
+          title: "Teriyaki Chicken Casserole",
+          recipeAttribution: "Recipe from TheMealDB",
+          recipeAttributionUrl: "https://www.themealdb.com/meal/52772",
+        },
+      ],
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/recommendations", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validPayload,
+          recipeSource: "themealdb",
+          recipeSourceOptIn: true,
+          planningMode: "ingredient-first",
+          selectedIngredientIds: ["chicken-thighs"],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(getRecommendationExperience).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipeSource: "themealdb",
+        recipeSourceOptIn: true,
+      }),
+      expect.any(Object),
+      false,
+    );
+  });
+
+  it("rejects TheMealDB recipe source without explicit opt-in", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/recommendations", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validPayload,
+          recipeSource: "themealdb",
+          recipeSourceOptIn: false,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Recommendation request payload is invalid.",
+    });
+    expect(resolveLocationInput).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["shoppingStyle", "triple-store"],
     ["dietaryFocus", "paleo"],
@@ -113,6 +212,33 @@ describe("POST /api/recommendations", () => {
       new Request("http://localhost/api/recommendations", {
         method: "POST",
         body: JSON.stringify({ ...validPayload, [field]: value }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Recommendation request payload is invalid.",
+    });
+    expect(resolveLocationInput).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["selectedIngredientIds", "not-an-array"],
+    ["selectedIngredientIds", Array.from({ length: 41 }, (_, index) => `id-${index}`)],
+    ["selectedIngredientIds", ["valid-id", 123]],
+    ["selectedIngredientIds", ["has spaces"]],
+    ["selectedIngredientIds", ["UPPERCASE"]],
+    ["selectedIngredientIds", [`${"a".repeat(81)}`]],
+  ])("rejects invalid selectedIngredientIds payload %s=%s", async (_field, value) => {
+    const response = await POST(
+      new Request("http://localhost/api/recommendations", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validPayload,
+          planningMode: "ingredient-first",
+          selectedIngredientIds: value,
+        }),
       }),
     );
 
@@ -234,6 +360,7 @@ describe("POST /api/recommendations", () => {
         lookupSource: "seed",
         lookupProviderConfigured: false,
         dataSource: "seed",
+        saleIngredientChoices: [],
         message: "Internal only.",
       },
       recommendations: [],
@@ -361,6 +488,7 @@ describe("POST /api/recommendations", () => {
         lookupSource: "browser",
         lookupProviderConfigured: true,
         dataSource: "database",
+        saleIngredientChoices: [],
         message: "Ready.",
       },
       recommendations: [],
@@ -450,6 +578,7 @@ describe("POST /api/recommendations", () => {
         lookupSource: "seed",
         lookupProviderConfigured: false,
         dataSource: "seed",
+        saleIngredientChoices: [],
         message: "Ready.",
       },
       recommendations: [],
@@ -465,7 +594,7 @@ describe("POST /api/recommendations", () => {
     expect(response.status).toBe(200);
     expect(resolveLocationInput).toHaveBeenCalledWith(validPayload);
     expect(getRecommendationExperience).toHaveBeenCalledWith(
-      validPayload,
+      { ...validPayload, planningMode: "standard" },
       expect.objectContaining({
         zipCode: "23111",
         city: "Mechanicsville",
@@ -517,6 +646,7 @@ describe("POST /api/recommendations", () => {
           lookupSource: "seed",
           lookupProviderConfigured: false,
           dataSource: "seed",
+          saleIngredientChoices: [],
         },
         recommendations: [],
       },

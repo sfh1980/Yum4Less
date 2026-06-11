@@ -1,8 +1,8 @@
 export const zipCodeHelp = {
-  tooltip: "Local MVP area only.",
+  tooltip: "Continental US ZIP codes.",
   popoverTitle: "ZIP code coverage",
   popoverContent:
-    "Yum4Less MVP starts around ZIP 23111 in the Mechanicsville, VA area. Other ZIP codes may return limited store coverage or fall outside the supported local market.",
+    "Yum4Less accepts continental US ZIP codes in beta. Ranked dinner estimates for production deploy focus on Kroger-family and Aldi when daily ingest and promotion gates pass. Other chains may appear on the map as context; ranked pricing for them is planned in upcoming releases. Tier C — map/context only — is normal where ranked data is not ready.",
 } as const;
 
 export const radiusHelp = {
@@ -30,7 +30,7 @@ export const freshnessLabelHelp = {
   tooltip: "How recent the price data is.",
   popoverTitle: "Freshness label",
   popoverContent:
-    "Freshness tells you how recently Yum4Less checked the underlying price information. Same-hour online prices are stronger signals, but electronic shelf labels and checkout systems can still change before you shop.",
+    "Freshness tells you how recently Yum4Less ingested or checked the underlying price information. Ranked reads use a 24-hour cache window refreshed by daily ingest — older rows are more directional. Electronic shelf labels and checkout systems can still change before you shop.",
 } as const;
 
 export const pricingTrustHeadsUpHelp = {
@@ -41,17 +41,17 @@ export const pricingTrustHeadsUpHelp = {
 } as const;
 
 export const recipeSourceHelp = {
-  tooltip: "Only the internal library ranks meals today.",
+  tooltip: "Internal library or sale-matched TheMealDB.",
   popoverTitle: "Recipe source",
   popoverContent:
-    "Ranked dinners use Yum4Less's curated internal recipe library. Other sources listed in the menu are research-only placeholders until licensing and matching quality are ready.",
+    "Rank dinners from Yum4Less's internal library or TheMealDB imports that overlap local weekly-ad sale ingredients. TheMealDB meals include attribution and still require verify-in-store pricing.",
 } as const;
 
 export const nearbyStoresMapHelp = {
-  tooltip: "Not every map pin drives meal pricing.",
+  tooltip: "Catalog pins — not live retailer GPS.",
   popoverTitle: "Nearby stores map",
   popoverContent:
-    "Pins show stores in your radius. Green \"Weekly ad prices\" locations use saved weekly-ad data for ranked dinner totals when rollout allows; gray \"Context only\" stores are nearby but not used for meal pricing yet. Walmart is always context only until current, actionable Walmart matching works. Totals are estimates—not live checkout.",
+    "Pins use beta catalog, rehearsal seed, or OpenStreetMap coordinates — not a live snapshot of every retailer address. Verify store locations before visiting. Chain-colored badges mark Kroger-family and Aldi stores that can feed ranked dinner totals when weekly-ad or online-cache rollout gates pass—totals stay estimated and directional. Other chains may appear for context; ranked pricing for them is planned in upcoming releases. Gray badges with a gold border are context only: nearby for planning, not ranked meal pricing. Walmart is always context only until trustworthy live matching exists.",
 } as const;
 
 export const mealPriceSourceHelp = {

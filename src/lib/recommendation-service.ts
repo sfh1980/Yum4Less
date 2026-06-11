@@ -1,11 +1,12 @@
 import type {
-  MockPriceObservation,
-  MockRecipeRecord,
-  MockStore,
-} from "@/lib/mock-market-data";
+  CatalogPriceObservation,
+  CatalogRecipeRecord,
+  CatalogStore,
+} from "@/lib/market-catalog-types";
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 import {
   getMarketDataSnapshot,
+  type MarketDataSnapshot,
   type MarketDataSource,
 } from "@/lib/market-repository";
 import { getSaleConfidence, type SaleConfidence } from "@/lib/sale-confidence";
@@ -30,11 +31,7 @@ import {
   type ProviderCoverageRollup,
 } from "@/lib/provider-coverage-rollup";
 import { buildProviderPricingPreviews } from "@/lib/provider-pricing-preview-service";
-import { isPublicApiDbWriteEnabled } from "@/lib/public-api-db-write-policy";
-import {
-  syncProviderPreviewsToPriceObservations,
-  type ProviderPriceObservationSyncSummary,
-} from "@/lib/provider-price-observation-sync";
+import type { ProviderPriceObservationSyncSummary } from "@/lib/provider-price-observation-sync";
 import {
   buildAllProviderPromotionReadiness,
   type ProviderPromotionReadiness,
@@ -63,12 +60,23 @@ import {
   buildInactiveRecipeSourceShopperNotice,
   isRecipeSourceActive,
 } from "@/lib/recipe-sources/recipe-source-registry";
+import { ensureThemealdbRecipesForSearch } from "@/lib/recipe-import/ensure-themealdb-recipes-for-search";
 import {
+  buildThemealdbAttribution,
   collectSaleIngredientIdsFromObservations,
   filterRecipesForRanking,
 } from "@/lib/recipe-import/recipe-ranking-eligibility";
+import { filterRecipesBySource } from "@/lib/recipe-filter-by-source";
+import {
+  buildNearbySaleIngredientChoices,
+  filterRecipesBySelectedIngredientIds,
+  type SaleIngredientChoice,
+} from "@/lib/sale-ingredient-offers";
+import { THEMEALDB_SOURCE_NAME } from "@/lib/recipe-import/themealdb-types";
 
 import type { RecipeSourceSelection } from "@/lib/recipe-sources/recipe-source-types";
+
+export type MealPlanningMode = "standard" | "ingredient-first";
 
 export type MealPreferenceForm = {
   zipCode: string;
@@ -79,6 +87,10 @@ export type MealPreferenceForm = {
   shoppingStyle: "single-store" | "multi-store";
   dietaryFocus: "anything" | "vegetarian" | "vegan" | "quick";
   recipeSource: RecipeSourceSelection;
+  planningMode?: MealPlanningMode;
+  selectedIngredientIds?: string[];
+  /** Must be true when recipeSource is not internal-library. */
+  recipeSourceOptIn?: boolean;
 };
 
 export type RecipeDifficulty = "easy" | "medium";
@@ -86,7 +98,7 @@ export type RecipeDifficulty = "easy" | "medium";
 export type NearbyStoreSummary = {
   id: string;
   name: string;
-  kind: MockStore["kind"];
+  kind: CatalogStore["kind"];
   latitude: number;
   longitude: number;
   distanceMiles: number;
@@ -95,6 +107,8 @@ export type NearbyStoreSummary = {
   rolloutStatus: ProviderRolloutStatus;
   recommendationEnabled: boolean;
   rolloutNote: string;
+  sourceName?: string;
+  lastVerifiedAt?: string;
 };
 
 export type MarketSummary = {
@@ -116,6 +130,8 @@ export type MarketSummary = {
   lookupSource: ResolvedSearchLocation["source"];
   lookupProviderConfigured: boolean;
   dataSource: MarketDataSource;
+  /** Sale/API/scrape ingredient rows near the search point for optional shopper selection. */
+  saleIngredientChoices: SaleIngredientChoice[];
   /**
    * Retired for shopper UI (TRUST-06). Structured fields above replace the old
    * concatenated blob. Omitted from public API responses.
@@ -176,6 +192,8 @@ export type MealRecommendation = {
   freshnessLabel: string;
   explanation: string;
   providerPreviewComparisons: RecipeProviderPreviewComparison[];
+  recipeAttribution?: string;
+  recipeAttributionUrl?: string;
 };
 
 export type RecommendationExperience = {
@@ -186,7 +204,7 @@ export type RecommendationExperience = {
 };
 
 type Candidate = {
-  recipe: MockRecipeRecord;
+  recipe: CatalogRecipeRecord;
   shoppingPlan: ShoppingPlanItem[];
   estimatedTotal: number;
   score: ScoreBreakdown;
@@ -199,11 +217,35 @@ export async function getRecommendationExperience(
   location: ResolvedSearchLocation,
   providerConfigured: boolean,
 ): Promise<RecommendationExperience> {
-  const { market, snapshot } = await getMarketSearchExperience(
+  let { market, snapshot } = await getMarketSearchExperience(
     preferences.radiusMiles,
     location,
     providerConfigured,
   );
+
+  let themealdbEnsureNotice: ShopperNotice | undefined;
+
+  if (
+    preferences.recipeSource === "themealdb" &&
+    preferences.recipeSourceOptIn === true &&
+    market.dataSource === "database"
+  ) {
+    const saleIngredientIds = collectSaleIngredientIdsFromObservations(
+      snapshot.priceObservations,
+    );
+    const ensureResult = await ensureThemealdbRecipesForSearch({
+      recipes: snapshot.recipes,
+      saleIngredientIds,
+      selectedIngredientIds: preferences.selectedIngredientIds,
+    });
+
+    if (ensureResult.status === "refreshed") {
+      const refreshed = await getMarketDataSnapshot();
+      snapshot = refreshed.snapshot;
+    }
+
+    themealdbEnsureNotice = ensureResult.degradedNotice;
+  }
 
   if (!isRecipeSourceActive(preferences.recipeSource)) {
     return {
@@ -212,6 +254,34 @@ export async function getRecommendationExperience(
       shopperNotice: buildInactiveRecipeSourceShopperNotice(
         preferences.recipeSource,
       ),
+    };
+  }
+
+  if (
+    preferences.recipeSource !== "internal-library" &&
+    preferences.recipeSourceOptIn !== true
+  ) {
+    return {
+      market,
+      recommendations: [],
+      shopperNotice: {
+        title: "Recipe source requires opt-in",
+        body: "Yum4Less ranks from the internal recipe library by default. Check the TheMealDB opt-in before ranking, or use Suggest recipes with your selected ingredients.",
+      },
+    };
+  }
+
+  if (
+    preferences.planningMode === "ingredient-first" &&
+    (!preferences.selectedIngredientIds || preferences.selectedIngredientIds.length === 0)
+  ) {
+    return {
+      market,
+      recommendations: [],
+      shopperNotice: {
+        title: "Select sale ingredients first",
+        body: "Turn on Browse sale ingredients, check the items you want to cook with, then ask for recipe ideas.",
+      },
     };
   }
 
@@ -229,12 +299,20 @@ export async function getRecommendationExperience(
   const saleIngredientIds = collectSaleIngredientIdsFromObservations(
     snapshot.priceObservations,
   );
+  const sourceFilteredRecipes = filterRecipesBySource(
+    snapshot.recipes,
+    preferences.recipeSource,
+  );
   const rankableRecipes = filterRecipesForRanking({
-    recipes: snapshot.recipes,
+    recipes: sourceFilteredRecipes,
     saleIngredientIds,
   });
+  const ingredientScopedRecipes = filterRecipesBySelectedIngredientIds(
+    rankableRecipes,
+    preferences.selectedIngredientIds,
+  );
 
-  const candidates = rankableRecipes
+  const candidates = ingredientScopedRecipes
     .filter((recipe) => byDietaryFocus(recipe, preferences.dietaryFocus))
     .map((recipe) =>
       buildCandidate(
@@ -253,8 +331,27 @@ export async function getRecommendationExperience(
     )
     .sort((left, right) => right.score.total - left.score.total);
 
+  if (candidates.length === 0) {
+    const emptyNotice =
+      preferences.recipeSource === "themealdb"
+        ? buildThemealdbEmptyShopperNotice(preferences)
+        : preferences.planningMode === "ingredient-first"
+          ? {
+              title: "No recipe ideas for those ingredients",
+              body: "Try selecting more sale items, widening your budget or ingredient limit, or switch recipe source.",
+            }
+          : undefined;
+
+    return {
+      market,
+      recommendations: [],
+      shopperNotice: emptyNotice ?? themealdbEnsureNotice,
+    };
+  }
+
   return {
     market,
+    ...(themealdbEnsureNotice ? { shopperNotice: themealdbEnsureNotice } : {}),
     recommendations: candidates
       .slice(0, preferences.dinnersWanted)
       .map((candidate) =>
@@ -262,6 +359,7 @@ export async function getRecommendationExperience(
           candidate,
           market.providerPricingPreviews,
           market.dataSource,
+          recommendationStores,
         ),
       ),
   };
@@ -271,8 +369,9 @@ function attachMealPresentation(
   candidate: Candidate,
   providerPricingPreviews: ProviderPricingPreviewResult[],
   dataSource: MarketDataSource,
+  nearbyStores: NearbyStoreSummary[],
 ): MealRecommendation {
-  const recommendation = toRecommendation(candidate, dataSource);
+  const recommendation = toRecommendation(candidate, dataSource, nearbyStores);
 
   return {
     ...recommendation,
@@ -293,6 +392,11 @@ export async function getMarketSearchExperience(
   market: MarketSummary;
   snapshot: Awaited<ReturnType<typeof getMarketDataSnapshot>>["snapshot"];
 }> {
+  const providerStoreSearches = await searchOfficialProviderStores({
+    location,
+    radiusMiles,
+  });
+
   let { snapshot, source } = await getMarketDataSnapshot();
   const recipeIngredientIds = collectRecipeIngredientIds(snapshot.recipes);
   let nearbyStores = getNearbyStores(
@@ -302,32 +406,9 @@ export async function getMarketSearchExperience(
     snapshot.priceObservations,
     recipeIngredientIds,
   );
-  const providerStoreSearches = await searchOfficialProviderStores({
-    location,
-    radiusMiles,
-  });
   const providerPricingPreviews = await buildProviderPricingPreviews({
     providerStores: providerStoreSearches.flatMap((search) => search.stores),
   });
-  const providerPriceObservationSync = isPublicApiDbWriteEnabled()
-    ? await syncProviderPreviewsToPriceObservations({
-        previews: providerPricingPreviews,
-        nearbyStores,
-      })
-    : [];
-
-  if (providerPriceObservationSync.some((summary) => summary.syncedCount > 0)) {
-    const refreshed = await getMarketDataSnapshot();
-    snapshot = refreshed.snapshot;
-    source = refreshed.source;
-    nearbyStores = getNearbyStores(
-      snapshot.stores,
-      location,
-      radiusMiles,
-      snapshot.priceObservations,
-      recipeIngredientIds,
-    );
-  }
 
   const recommendationReadyStores = nearbyStores.filter(
     (store) => store.recommendationEnabled,
@@ -374,18 +455,19 @@ export async function getMarketSearchExperience(
       providerPricingPreviews,
       providerCoverageRollup,
       providerPromotionReadiness,
-      providerPriceObservationSync,
+      [],
       weeklyAdIngestionStatus,
       weeklyAdPromotionReadiness,
       location,
       providerConfigured,
       source,
+      snapshot,
     ),
   };
 }
 
 function byDietaryFocus(
-  recipe: MockRecipeRecord,
+  recipe: CatalogRecipeRecord,
   dietaryFocus: MealPreferenceForm["dietaryFocus"],
 ) {
   if (dietaryFocus === "anything") {
@@ -396,10 +478,10 @@ function byDietaryFocus(
 }
 
 function getNearbyStores(
-  stores: MockStore[],
+  stores: CatalogStore[],
   location: ResolvedSearchLocation,
   radiusMiles: number,
-  priceObservations: MockPriceObservation[],
+  priceObservations: CatalogPriceObservation[],
   recipeIngredientIds: string[],
 ): NearbyStoreSummary[] {
   return stores
@@ -438,13 +520,15 @@ function getNearbyStores(
         rolloutStatus: rollout.status,
         recommendationEnabled: rollout.recommendationEnabled,
         rolloutNote: rollout.note,
+        sourceName: store.sourceName,
+        lastVerifiedAt: store.lastVerifiedAt,
       };
     })
     .filter((store) => store.distanceMiles <= radiusMiles)
     .sort((left, right) => left.distanceMiles - right.distanceMiles);
 }
 
-function collectRecipeIngredientIds(recipes: MockRecipeRecord[]): string[] {
+function collectRecipeIngredientIds(recipes: CatalogRecipeRecord[]): string[] {
   return [
     ...new Set(
       recipes.flatMap((recipe) =>
@@ -456,7 +540,7 @@ function collectRecipeIngredientIds(recipes: MockRecipeRecord[]): string[] {
 
 function buildWeeklyAdCoverageByStoreId(
   nearbyStores: NearbyStoreSummary[],
-  priceObservations: MockPriceObservation[],
+  priceObservations: CatalogPriceObservation[],
   recipeIngredientIds: string[],
 ) {
   const coverageByStoreId = new Map<
@@ -492,10 +576,16 @@ function buildMarketSummary(
   location: ResolvedSearchLocation,
   lookupProviderConfigured: boolean,
   dataSource: MarketDataSource,
+  snapshot: MarketDataSnapshot,
 ): MarketSummary {
   const recommendationReadyStoreCount = nearbyStores.filter(
     (store) => store.recommendationEnabled,
   ).length;
+  const saleIngredientChoices = buildNearbySaleIngredientChoices({
+    nearbyStores: nearbyStores.filter((store) => store.recommendationEnabled),
+    priceObservations: snapshot.priceObservations,
+    ingredients: snapshot.ingredients ?? [],
+  });
   const searchedZipCode = location.zipCode;
   const locationLabel =
     location.source === "browser"
@@ -544,14 +634,15 @@ function buildMarketSummary(
     lookupSource: location.source,
     lookupProviderConfigured,
     dataSource,
+    saleIngredientChoices,
   };
 }
 
 function buildCandidate(
-  recipe: MockRecipeRecord,
+  recipe: CatalogRecipeRecord,
   nearbyStores: NearbyStoreSummary[],
   preferences: MealPreferenceForm,
-  priceObservations: MockPriceObservation[],
+  priceObservations: CatalogPriceObservation[],
   dataSource: MarketDataSource,
 ): Candidate | null {
   const shoppingPlan =
@@ -583,9 +674,9 @@ function buildCandidate(
 }
 
 function buildSingleStorePlan(
-  recipe: MockRecipeRecord,
+  recipe: CatalogRecipeRecord,
   nearbyStores: NearbyStoreSummary[],
-  priceObservations: MockPriceObservation[],
+  priceObservations: CatalogPriceObservation[],
   dataSource: MarketDataSource,
 ): ShoppingPlanItem[] {
   const candidatePlans = nearbyStores
@@ -623,9 +714,9 @@ function buildSingleStorePlan(
 }
 
 function buildMultiStorePlan(
-  recipe: MockRecipeRecord,
+  recipe: CatalogRecipeRecord,
   nearbyStores: NearbyStoreSummary[],
-  priceObservations: MockPriceObservation[],
+  priceObservations: CatalogPriceObservation[],
   dataSource: MarketDataSource,
 ): ShoppingPlanItem[] {
   const plan: ShoppingPlanItem[] = [];
@@ -643,7 +734,7 @@ function buildMultiStorePlan(
       .filter(
         (
           candidate,
-        ): candidate is { store: NearbyStoreSummary; observation: MockPriceObservation } =>
+        ): candidate is { store: NearbyStoreSummary; observation: CatalogPriceObservation } =>
           candidate.observation !== undefined,
       )
       .sort((left, right) =>
@@ -669,7 +760,7 @@ function buildMultiStorePlan(
 }
 
 function getObservationForStore(
-  priceObservations: MockPriceObservation[],
+  priceObservations: CatalogPriceObservation[],
   storeId: string,
   ingredientId: string,
 ) {
@@ -684,7 +775,7 @@ function getObservationForStore(
 function toShoppingPlanItem(
   ingredient: string,
   quantityNote: string,
-  observation: MockPriceObservation,
+  observation: CatalogPriceObservation,
   storeName: string,
   dataSource: MarketDataSource,
 ): ShoppingPlanItem {
@@ -719,7 +810,7 @@ function scoreCandidate({
   preferences,
   estimatedTotal,
 }: {
-  recipe: MockRecipeRecord;
+  recipe: CatalogRecipeRecord;
   shoppingPlan: ShoppingPlanItem[];
   preferences: MealPreferenceForm;
   estimatedTotal: number;
@@ -784,6 +875,7 @@ function scoreCandidate({
 function toRecommendation(
   candidate: Candidate,
   dataSource: MarketDataSource,
+  nearbyStores: NearbyStoreSummary[],
 ): Omit<MealRecommendation, "providerPreviewComparisons"> {
   const storePlan = Array.from(
     candidate.shoppingPlan.reduce((map, item) => {
@@ -834,6 +926,42 @@ function toRecommendation(
     tags: candidate.recipe.tags,
     freshnessLabel: candidate.freshnessLabel,
     explanation: buildExplanation(candidate, storePlan.length),
+    ...buildThemealdbRecommendationAttribution(candidate.recipe, nearbyStores),
+  };
+}
+
+function buildThemealdbRecommendationAttribution(
+  recipe: CatalogRecipeRecord,
+  nearbyStores: NearbyStoreSummary[],
+): Pick<MealRecommendation, "recipeAttribution" | "recipeAttributionUrl"> {
+  const attribution = buildThemealdbAttribution({ recipe, nearbyStores });
+  if (!attribution) {
+    return {};
+  }
+
+  return {
+    recipeAttribution: attribution.text,
+    ...(attribution.url ? { recipeAttributionUrl: attribution.url } : {}),
+  };
+}
+
+function buildThemealdbEmptyShopperNotice(
+  preferences: MealPreferenceForm,
+): ShopperNotice {
+  if (
+    preferences.planningMode === "ingredient-first" &&
+    preferences.selectedIngredientIds &&
+    preferences.selectedIngredientIds.length > 0
+  ) {
+    return {
+      title: "No TheMealDB meals for those ingredients",
+      body: "Try selecting more sale items, widening your budget or ingredient limit, or uncheck TheMealDB to rank from the internal library. TheMealDB meals need at least three overlapping weekly-ad sale ingredients.",
+    };
+  }
+
+  return {
+    title: "No TheMealDB meals matched yet",
+    body: "Yum4Less refreshes TheMealDB imports from weekly-ad sale overlap on a daily schedule. Meals need at least three overlapping sale ingredients and a defensible shopping plan before they can rank.",
   };
 }
 
@@ -910,8 +1038,8 @@ function getPlanQuality(plan: ShoppingPlanItem[]) {
 }
 
 function compareObservationQuality(
-  left: MockPriceObservation,
-  right: MockPriceObservation,
+  left: CatalogPriceObservation,
+  right: CatalogPriceObservation,
 ) {
   const leftTier = left.priceSourceTier ?? getRankedPriceSourceTier(left.priceSource);
   const rightTier = right.priceSourceTier ?? getRankedPriceSourceTier(right.priceSource);

@@ -2,20 +2,20 @@
 
 import Link from "next/link";
 import { InternalDetailsModal } from "@/components/internal-details-modal";
-import { InternalDetailsDevTrigger } from "@/components/recommendation-demo/internal-details-dev-trigger";
-import { LocationSearchPanel } from "@/components/recommendation-demo/location-search-panel";
-import { MarketDiscoveryPanel } from "@/components/recommendation-demo/market-discovery-panel";
-import { MealResultsPanel } from "@/components/recommendation-demo/meal-results-panel";
-import { TrustExplainerModal } from "@/components/recommendation-demo/trust-explainer-modal";
-import { useRecommendationDemo } from "@/components/recommendation-demo/use-recommendation-demo";
+import { InternalDetailsDevTrigger } from "@/components/meal-planner/internal-details-dev-trigger";
+import { LocationSearchPanel } from "@/components/meal-planner/location-search-panel";
+import { MarketDiscoveryPanel } from "@/components/meal-planner/market-discovery-panel";
+import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
+import { TrustExplainerModal } from "@/components/meal-planner/trust-explainer-modal";
+import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
 import { isInternalDetailsUiEnabled } from "@/lib/show-internal-details-ui";
 
-export function RecommendationDemo() {
-  const demo = useRecommendationDemo();
+export function MealPlanner() {
+  const demo = useMealPlanner();
   const showInternalDetails = isInternalDetailsUiEnabled();
 
   return (
-    <section className="meal-planner-grid" aria-label="Local dinner recommendation flow">
+    <section className="meal-planner-grid" aria-label="Beta v1 dinner planning flow">
       <div className="meal-planner-grid-col meal-planner-grid-col--inputs">
         <LocationSearchPanel
           displayedErrors={demo.displayedErrors}
@@ -23,11 +23,16 @@ export function RecommendationDemo() {
           form={demo.form}
           isEditingLocation={demo.isEditingLocation}
           market={demo.market}
+          rankingPaused={demo.marketBlocked}
           onBrowserSearch={demo.handleBrowserLocationSearch}
           onEditLocation={() => demo.setIsEditingLocation(true)}
           onRankMeals={demo.handleRankMeals}
           onResetLocationState={demo.resetLocationDependentState}
           onZipSearch={demo.handleZipSearch}
+          selectedIngredientIds={demo.selectedIngredientIds}
+          onToggleIngredient={demo.handleToggleIngredient}
+          onSelectAllIngredients={demo.handleSelectAllIngredients}
+          onClearIngredientSelection={demo.handleClearIngredientSelection}
           setForm={demo.setForm}
         />
       </div>

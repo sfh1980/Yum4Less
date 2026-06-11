@@ -10,7 +10,12 @@ import type {
   ProviderDiscoveredStore,
   ProviderPricingPreviewResult,
   StoreDiscoveryProvider,
+  StoreDiscoveryProviderClient,
 } from "@/lib/providers/provider-types";
+import {
+  rankedPriceCacheMissMessage,
+  type ProviderDataReadMode,
+} from "@/lib/ranked-price-cache-policy";
 
 export function selectProviderDiscoveredStore(
   provider: StoreDiscoveryProvider,
@@ -41,7 +46,9 @@ export function selectProviderDiscoveredStore(
 
 export async function buildProviderPricingPreviews(input: {
   providerStores: ProviderDiscoveredStore[];
+  readMode?: ProviderDataReadMode;
 }): Promise<ProviderPricingPreviewResult[]> {
+  const readMode = input.readMode ?? "cache-only";
   const providers = getStoreDiscoveryProviders();
 
   return Promise.all(
@@ -52,24 +59,20 @@ export async function buildProviderPricingPreviews(input: {
       );
 
       if (!matchingStore) {
-        return {
+        return buildNoMatchedStorePreview(provider);
+      }
+
+      if (readMode === "cache-only") {
+        const cachedSnapshot = await getLatestProviderPricingPreviewSnapshot({
           provider: provider.provider,
-          label: getProviderPricingPreviewLabel(provider.provider),
-          status: "fallback",
-          provenance: "fallback-local",
-          retrievalMode: "none",
-          configured: provider.configured,
-          fallbackUsed: true,
-          storeName: "No matched provider store",
-          providerStoreId: "unavailable",
-          items: [],
-          coverageStatus: "none",
-          matchedIngredientCount: 0,
-          totalTrackedIngredients: PROVIDER_TRACKED_INGREDIENTS.length,
-          message:
-            "No official provider store was available for pricing preview in this search, so Yum4Less did not run provider-backed product matching.",
-          fetchedAt: new Date().toISOString(),
-        };
+          providerStoreId: matchingStore.providerStoreId,
+        });
+
+        if (cachedSnapshot) {
+          return cachedSnapshot;
+        }
+
+        return buildCacheMissPricingPreviewFallback(provider, matchingStore);
       }
 
       const result = await provider.searchPricingPreview({
@@ -104,4 +107,50 @@ export async function buildProviderPricingPreviews(input: {
       };
     }),
   );
+}
+
+function buildNoMatchedStorePreview(
+  provider: Pick<StoreDiscoveryProviderClient, "provider" | "configured">,
+): ProviderPricingPreviewResult {
+  return {
+    provider: provider.provider,
+    label: getProviderPricingPreviewLabel(provider.provider),
+    status: "fallback",
+    provenance: "fallback-local",
+    retrievalMode: "none",
+    configured: provider.configured,
+    fallbackUsed: true,
+    storeName: "No matched provider store",
+    providerStoreId: "unavailable",
+    items: [],
+    coverageStatus: "none",
+    matchedIngredientCount: 0,
+    totalTrackedIngredients: PROVIDER_TRACKED_INGREDIENTS.length,
+    message:
+      "No official provider store was available for pricing preview in this search, so Yum4Less did not run provider-backed product matching.",
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+function buildCacheMissPricingPreviewFallback(
+  provider: Pick<StoreDiscoveryProviderClient, "provider" | "configured">,
+  matchingStore: ProviderDiscoveredStore,
+): ProviderPricingPreviewResult {
+  return {
+    provider: provider.provider,
+    label: getProviderPricingPreviewLabel(provider.provider),
+    status: "fallback",
+    provenance: "fallback-local",
+    retrievalMode: "none",
+    configured: provider.configured,
+    fallbackUsed: true,
+    storeName: matchingStore.name,
+    providerStoreId: matchingStore.providerStoreId,
+    items: [],
+    coverageStatus: "none",
+    matchedIngredientCount: 0,
+    totalTrackedIngredients: PROVIDER_TRACKED_INGREDIENTS.length,
+    message: rankedPriceCacheMissMessage("provider pricing preview"),
+    fetchedAt: new Date().toISOString(),
+  };
 }

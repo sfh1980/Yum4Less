@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetDbPoolForTests } from "@/lib/db";
+import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
 import { deleteAllPriceObservations } from "@/lib/test-only/price-observation-writes";
 import { getProviderRolloutForStore } from "@/lib/provider-rollout";
@@ -102,6 +102,19 @@ describe("recommendation path through Postgres (CI-06)", () => {
     searchOfficialProviderStores.mockReset();
     searchOfficialProviderStores.mockResolvedValue([]);
 
+    const pool = getDbPool();
+    await pool.query(
+      `delete from stores where source_name = 'kroger-official-api' and id <> 'kroger-mechanicsville'`,
+    );
+    await pool.query(`
+      update stores
+      set
+        name = 'Kroger',
+        source_name = 'yum4less-internal-catalog',
+        source_store_id = 'kroger-mechanicsville'
+      where id = 'kroger-mechanicsville'
+    `);
+
     await deleteAllPriceObservations();
     const ingest = await ingestFixtureWeeklyAdsFromSeedCatalog();
     const syncedTotal = ingest.syncSummaries.reduce(
@@ -120,11 +133,11 @@ describe("recommendation path through Postgres (CI-06)", () => {
     await resetDbPoolForTests();
   });
 
-  it("loads eight seed stores and fixture price rows from Postgres", async () => {
+  it("loads seed stores (plus optional map-catalog rows) and fixture price rows from Postgres", async () => {
     const { snapshot, source } = await getMarketDataSnapshot();
 
     expect(source).toBe("database");
-    expect(snapshot.stores).toHaveLength(8);
+    expect(snapshot.stores.length).toBeGreaterThanOrEqual(8);
     expect(snapshot.recipes.length).toBeGreaterThan(0);
     expect(snapshot.priceObservations.length).toBeGreaterThan(0);
     expect(

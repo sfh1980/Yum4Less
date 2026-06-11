@@ -98,8 +98,12 @@ function seedMatchesCurrentMvp() {
       { encoding: "utf8", shell: true },
     ).trim();
 
+    const storeCount = Number(catalogStoreCount);
+    const hasExpectedSeedOrMapCatalog =
+      storeCount >= 8 && storeCount <= 64;
+
     return (
-      catalogStoreCount === "8" &&
+      hasExpectedSeedOrMapCatalog &&
       mockPriceCount === "0" &&
       Number(recipeCount) >= 3 &&
       dynamicPricingColumnCount === "3" &&

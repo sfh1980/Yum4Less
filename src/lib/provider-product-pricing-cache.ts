@@ -1,5 +1,6 @@
 import { getDbPool } from "@/lib/db";
 import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
+import { RANKED_PRICE_CACHE_TTL_MINUTES } from "@/lib/ranked-price-cache-policy";
 import type {
   ProviderPricingPreviewInput,
   ProviderPricingPreviewItem,
@@ -65,7 +66,7 @@ export async function getLatestProviderPricingPreviewSnapshot(input: {
 }): Promise<ProviderPricingPreviewResult | undefined> {
   try {
     const pool = getDbPool();
-    const maxAgeMinutes = input.maxAgeMinutes ?? 30;
+    const maxAgeMinutes = input.maxAgeMinutes ?? RANKED_PRICE_CACHE_TTL_MINUTES;
 
     const snapshot = await pool.query<PricingSnapshotRow>(
       `

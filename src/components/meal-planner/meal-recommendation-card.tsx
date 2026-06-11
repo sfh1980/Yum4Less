@@ -2,10 +2,13 @@
 
 import type { MealRecommendation, RecommendationExperience } from "@/lib/recommendation-service";
 import { HelpHint } from "@/components/help-hint";
-import { formatDifficulty } from "@/components/recommendation-demo/form-validation";
-import { MultiStoreRoutePanel } from "@/components/recommendation-demo/multi-store-route-panel";
-import type { ActiveLocationRequest, FormState } from "@/components/recommendation-demo/types";
+import { formatDifficulty } from "@/components/meal-planner/form-validation";
+import { MultiStoreRoutePanel } from "@/components/meal-planner/multi-store-route-panel";
+import type { ActiveLocationRequest, FormState } from "@/components/meal-planner/types";
 import { formatEstimatedCurrency } from "@/lib/format-estimated-currency";
+import {
+  formatMealPriceAgeFromShoppingPlan,
+} from "@/lib/sale-ingredient-offers";
 import {
   confidenceLabelHelp,
   freshnessLabelHelp,
@@ -28,6 +31,7 @@ export function MealRecommendationCard({
   market,
 }: MealRecommendationCardProps) {
   const priceSource = buildMealPriceSourceSummary({ meal, market });
+  const mealPriceAgeLabel = formatMealPriceAgeFromShoppingPlan(meal.shoppingPlan);
 
   return (
     <article className="card recommendation-card">
@@ -52,6 +56,21 @@ export function MealRecommendationCard({
 
       <p className="card-summary">{meal.summary}</p>
 
+      {meal.recipeAttribution ? (
+        <p className="field-hint recipe-attribution">
+          {meal.recipeAttribution}{" "}
+          {meal.recipeAttributionUrl ? (
+            <a
+              href={meal.recipeAttributionUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              View on TheMealDB
+            </a>
+          ) : null}
+        </p>
+      ) : null}
+
       <p className="meal-price-source">
         <span className="meal-price-source-with-hint">
           <span>{priceSource.summary}</span>
@@ -64,6 +83,10 @@ export function MealRecommendationCard({
           />
         </span>
       </p>
+
+      {mealPriceAgeLabel ? (
+        <p className="field-hint meal-card-price-age">{mealPriceAgeLabel}</p>
+      ) : null}
 
       <div className="pill-row">
         <span className="pill-with-hint">

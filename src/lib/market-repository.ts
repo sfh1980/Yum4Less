@@ -1,26 +1,30 @@
 import { getDbPool } from "@/lib/db";
 import { logServerError } from "@/lib/server-log";
 import type {
-  MockPriceObservation,
-  MockRecipeRecord,
-  MockStore,
-} from "@/lib/mock-market-data";
+  CatalogIngredient,
+  CatalogPriceObservation,
+  CatalogRecipeRecord,
+  CatalogStore,
+} from "@/lib/market-catalog-types";
 import {
   getRankedPriceSourceKind,
   RANKED_PRICE_SOURCE_SQL_FILTER,
   RANKED_PRICE_SOURCE_TIER_SQL,
 } from "@/lib/price-source-policy";
+import { RANKED_PRICE_CACHE_AGE_SQL_FILTER } from "@/lib/ranked-price-cache-policy";
 
 export type MarketDataSnapshot = {
-  stores: MockStore[];
-  recipes: MockRecipeRecord[];
-  priceObservations: MockPriceObservation[];
+  stores: CatalogStore[];
+  ingredients: CatalogIngredient[];
+  recipes: CatalogRecipeRecord[];
+  priceObservations: CatalogPriceObservation[];
 };
 
 export type MarketDataSource = "database" | "unavailable";
 
 const EMPTY_SNAPSHOT: MarketDataSnapshot = {
   stores: [],
+  ingredients: [],
   recipes: [],
   priceObservations: [],
 };
@@ -34,11 +38,16 @@ export async function getMarketDataSnapshot(): Promise<{
   try {
     const pool = getDbPool();
 
-    const [storesResult, recipesResult, recipeIngredientsResult, pricesResult] =
+    const [storesResult, ingredientsResult, recipesResult, recipeIngredientsResult, pricesResult] =
       await Promise.all([
         pool.query<StoreRow>(`
-          select id, name, kind, city, state, latitude, longitude
+          select id, name, kind, city, state, latitude, longitude, source_name, last_verified_at
           from stores
+          order by name
+        `),
+        pool.query<IngredientRow>(`
+          select id, name, category
+          from ingredients
           order by name
         `),
         pool.query<RecipeRow>(`
@@ -77,6 +86,7 @@ export async function getMarketDataSnapshot(): Promise<{
           from price_observations
           where (${RANKED_PRICE_SOURCE_SQL_FILTER})
             and ${CURRENT_PRICE_OBSERVATION_SQL_FILTER}
+            and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
           order by store_id, ingredient_id, source_tier asc, coalesce(last_verified_at, observed_at) desc, confidence_score desc nulls last, observed_at desc
         `),
       ]);
@@ -92,7 +102,7 @@ export async function getMarketDataSnapshot(): Promise<{
         map.set(row.recipe_id, current);
         return map;
       },
-      new Map<string, MockRecipeRecord["ingredients"]>(),
+      new Map<string, CatalogRecipeRecord["ingredients"]>(),
     );
 
     return {
@@ -106,6 +116,13 @@ export async function getMarketDataSnapshot(): Promise<{
           state: row.state,
           latitude: Number(row.latitude),
           longitude: Number(row.longitude),
+          sourceName: row.source_name ?? undefined,
+          lastVerifiedAt: row.last_verified_at?.toISOString(),
+        })),
+        ingredients: ingredientsResult.rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          category: row.category,
         })),
         recipes: recipesResult.rows.map((row) => ({
           id: row.id,
@@ -157,6 +174,7 @@ export async function countLivePriceObservationsForStore(storeId: string) {
       where store_id = $1
         and (${RANKED_PRICE_SOURCE_SQL_FILTER})
         and ${CURRENT_PRICE_OBSERVATION_SQL_FILTER}
+        and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
     `,
     [storeId],
   );
@@ -176,11 +194,19 @@ function normalizeDietaryTags(
 type StoreRow = {
   id: string;
   name: string;
-  kind: MockStore["kind"];
+  kind: CatalogStore["kind"];
   city: string;
   state: string;
   latitude: string;
   longitude: string;
+  source_name: string | null;
+  last_verified_at: Date | null;
+};
+
+type IngredientRow = {
+  id: string;
+  name: string;
+  category: CatalogIngredient["category"];
 };
 
 type RecipeRow = {
@@ -188,7 +214,7 @@ type RecipeRow = {
   title: string;
   summary: string;
   cook_time_minutes: number;
-  difficulty: MockRecipeRecord["difficulty"];
+  difficulty: CatalogRecipeRecord["difficulty"];
   tags: string[] | null;
   dietary_tags: string[] | null;
   steps: string[] | null;

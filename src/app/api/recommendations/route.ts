@@ -86,6 +86,7 @@ function validatePreferences(
 ): MealPreferenceForm | undefined {
   const shoppingStyle = body.shoppingStyle;
   const dietaryFocus = body.dietaryFocus;
+  const planningMode = body.planningMode;
   const validShoppingStyle =
     shoppingStyle === "single-store" || shoppingStyle === "multi-store";
   const validDietaryFocus =
@@ -93,6 +94,10 @@ function validatePreferences(
     body.dietaryFocus === "vegetarian" ||
     body.dietaryFocus === "vegan" ||
     body.dietaryFocus === "quick";
+  const validPlanningMode =
+    planningMode === undefined ||
+    planningMode === "standard" ||
+    planningMode === "ingredient-first";
 
   const radiusMiles = clampInteger(body.radiusMiles, API_LIMITS.radiusMiles);
   const budget = clampNumber(body.budget, API_LIMITS.budget);
@@ -108,6 +113,7 @@ function validatePreferences(
     dinnersWanted === undefined ||
     !validShoppingStyle ||
     !validDietaryFocus ||
+    !validPlanningMode ||
     (!hasCoordinates && !isValidZipCode(zipCode))
   ) {
     return undefined;
@@ -115,8 +121,14 @@ function validatePreferences(
 
   const resolvedDietaryFocus = dietaryFocus as MealPreferenceForm["dietaryFocus"];
   const recipeSource = resolveRecipeSource(body.recipeSource);
+  const selectedIngredientIds = parseSelectedIngredientIds(body.selectedIngredientIds);
+  const recipeSourceOptIn = body.recipeSourceOptIn === true;
 
-  if (!recipeSource) {
+  if (!recipeSource || selectedIngredientIds === undefined) {
+    return undefined;
+  }
+
+  if (recipeSource !== "internal-library" && !recipeSourceOptIn) {
     return undefined;
   }
 
@@ -129,7 +141,46 @@ function validatePreferences(
     shoppingStyle,
     dietaryFocus: resolvedDietaryFocus,
     recipeSource,
+    ...(recipeSourceOptIn ? { recipeSourceOptIn: true } : {}),
+    planningMode:
+      planningMode === "ingredient-first" ? "ingredient-first" : "standard",
+    ...(selectedIngredientIds.length > 0
+      ? { selectedIngredientIds }
+      : planningMode === "ingredient-first"
+        ? { selectedIngredientIds: [] }
+        : {}),
   };
+}
+
+function parseSelectedIngredientIds(value: unknown): string[] | undefined {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  if (value.length > 40) {
+    return undefined;
+  }
+
+  const ids: string[] = [];
+
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      return undefined;
+    }
+
+    const trimmed = entry.trim();
+    if (!trimmed || trimmed.length > 80 || !/^[a-z0-9-]+$/.test(trimmed)) {
+      return undefined;
+    }
+
+    ids.push(trimmed);
+  }
+
+  return ids;
 }
 
 function resolveRecipeSource(
@@ -154,4 +205,6 @@ function resolveRecipeSource(
 type RecommendationRequestPayload = MealPreferenceForm & {
   latitude?: number;
   longitude?: number;
+  selectedIngredientIds?: string[];
+  recipeSourceOptIn?: boolean;
 };

@@ -27,10 +27,11 @@ Rules:
 1. Remain readonly and use the smallest safe checks possible.
 2. Classify results clearly: `Verified`, `Partially verified`, `Unverified`, `Misconfigured`, or `Broken`.
 3. Distinguish facts from assumptions.
-4. Verify that hooks and agent prompts still align with the `README` and current project direction.
+4. Verify that hooks and agent prompts still align with the `README`, **`PROJECT_CONTINUITY.md` journal format**, and current project direction.
 5. Confirm that claims about savings, freshness, store support, and recommendation truthfulness are supported by code, config, or tests, not just docs.
 6. Treat `estimated`, `directional`, `limited coverage`, and fallback wording as evidence-sensitive claims too; if the UI is stronger or weaker than the evidence path, call it out.
 7. Check that unsupported chains are not presented as live and that weak-coverage chains are not priced as trustworthy recommendations.
+8. When governance or orchestration paths changed, confirm **`PROJECT_CONTINUITY.md`** was updated per **`.cursor/rules/yum4less-continuity-journal.mdc`**: changelog newest-first, Resume refreshed, no transcript dumps in the living doc.
 
 When invoked:
 1. Restate the expected workflow or claim.
