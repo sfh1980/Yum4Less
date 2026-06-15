@@ -4,6 +4,7 @@ import { resolveZipLocation } from "@/lib/geocoding";
 const originalGeocodioKey = process.env.GEOCODIO_API_KEY;
 const originalNodeEnv = process.env.NODE_ENV;
 const originalCi = process.env.CI;
+const originalGithubActions = process.env.GITHUB_ACTIONS;
 
 describe("resolveZipLocation", () => {
   afterEach(() => {
@@ -17,6 +18,11 @@ describe("resolveZipLocation", () => {
       delete process.env.CI;
     } else {
       process.env.CI = originalCi;
+    }
+    if (originalGithubActions === undefined) {
+      delete process.env.GITHUB_ACTIONS;
+    } else {
+      process.env.GITHUB_ACTIONS = originalGithubActions;
     }
   });
 
@@ -39,6 +45,7 @@ describe("resolveZipLocation", () => {
     delete process.env.GEOCODIO_API_KEY;
     process.env.NODE_ENV = "production";
     delete process.env.CI;
+    delete process.env.GITHUB_ACTIONS;
 
     const result = await resolveZipLocation("23111");
 
@@ -66,6 +73,7 @@ describe("resolveZipLocation", () => {
     process.env.GEOCODIO_API_KEY = "test-key";
     process.env.NODE_ENV = "production";
     delete process.env.CI;
+    delete process.env.GITHUB_ACTIONS;
 
     vi.stubGlobal(
       "fetch",
