@@ -1,5 +1,20 @@
 import { test, expect, type Page } from "@playwright/test";
 
+type PublicNearbyStore = {
+  id: string;
+  chain: string;
+  recommendationEnabled: boolean;
+  rolloutStatus: string;
+  sourceStoreId?: string;
+};
+
+type MarketSearchResponse = {
+  ok: boolean;
+  market: {
+    nearbyStores: PublicNearbyStore[];
+  };
+};
+
 /**
  * H3 E2E assertion rules (audit 2026-06-13):
  *
@@ -24,8 +39,37 @@ async function submitZipMarketSearch(page: Page, zipCode = "23111") {
   );
   await page.getByRole("button", { name: "Find nearby stores" }).click();
   const response = await marketSearchResponse;
-  const body = (await response.json()) as { ok?: boolean };
+  const body = (await response.json()) as MarketSearchResponse;
   expect(body.ok).toBe(true);
+  assertPublicNearbyStoresSanitized(body.market.nearbyStores);
+  assertProductionRankedRolloutGates(body.market.nearbyStores);
+  return body;
+}
+
+function assertPublicNearbyStoresSanitized(stores: PublicNearbyStore[]) {
+  for (const store of stores) {
+    expect(store, `store ${store.id} must omit sourceStoreId`).not.toHaveProperty(
+      "sourceStoreId",
+    );
+  }
+}
+
+function assertProductionRankedRolloutGates(stores: PublicNearbyStore[]) {
+  const kroger = stores.find((store) => store.id === "kroger-mechanicsville");
+  expect(kroger).toBeTruthy();
+  expect(kroger?.recommendationEnabled).toBe(true);
+
+  const aldiRanked = stores.find(
+    (store) => store.id === "aldi-mechanicsville" && store.recommendationEnabled,
+  );
+  expect(aldiRanked).toBeTruthy();
+
+  for (const store of stores) {
+    if (store.chain === "publix" || store.chain === "food-lion") {
+      expect(store.recommendationEnabled).toBe(false);
+      expect(store.rolloutStatus).toBe("coming-soon");
+    }
+  }
 }
 
 async function assertMarketSearchStoreResults(page: Page) {
@@ -39,6 +83,16 @@ async function assertMarketSearchStoreResults(page: Page) {
   await expect(
     krogerBootstrapStore.getByText(/Est\. (?:weekly-ad|Kroger API) prices/i),
   ).toBeVisible();
+
+  for (const storeId of ["publix-atlee", "food-lion-mechanicsville"] as const) {
+    const contextStore = storePanel.locator(`[data-store-id="${storeId}"]`);
+    if ((await contextStore.count()) > 0) {
+      await expect(
+        contextStore.getByText(/Context only|coming soon|upcoming release/i),
+      ).toBeVisible();
+      await expect(contextStore.getByText(/^Est\. weekly-ad prices$/i)).toHaveCount(0);
+    }
+  }
 }
 
 async function runCoreMvpFlow(page: Page) {
@@ -86,7 +140,20 @@ async function runCoreMvpFlow(page: Page) {
   await ingredientCheckboxes.first().check();
   await expect(suggestButton).not.toBeDisabled();
 
+  const recommendationsResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes("/api/recommendations") &&
+      res.request().method() === "POST" &&
+      res.status() === 200,
+  );
   await suggestButton.click();
+  const recommendationsBody = (await (await recommendationsResponse).json()) as {
+    ok: boolean;
+    experience: { market: { nearbyStores: PublicNearbyStore[] } };
+  };
+  expect(recommendationsBody.ok).toBe(true);
+  assertPublicNearbyStoresSanitized(recommendationsBody.experience.market.nearbyStores);
+  assertProductionRankedRolloutGates(recommendationsBody.experience.market.nearbyStores);
 
   await expect(
     page.getByRole("heading", { name: "How to read these results" }),
