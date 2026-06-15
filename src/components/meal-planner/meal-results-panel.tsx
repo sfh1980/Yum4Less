@@ -33,7 +33,7 @@ type MealResultsPanelProps = {
 };
 
 export function MealResultsPanel({
-  form,
+  form: _form,
   marketSearchState,
   recommendationState,
   market,
@@ -58,7 +58,8 @@ export function MealResultsPanel({
         <div>
           <h2>Dinner recommendations</h2>
           <p className="panel-copy">
-            Ranked meals, shopping plans, and recipe steps appear here.
+            Recipe suggestions, shopping plans, and steps appear here after you
+            pick sale ingredients.
           </p>
           {resultsPriceSourceLine ? (
             <p className="panel-copy meal-results-price-source">
@@ -76,15 +77,11 @@ export function MealResultsPanel({
           </button>
           <span className="badge">
             {recommendationState.status === "loading"
-              ? form.planningMode === "ingredient-first"
-                ? "Suggesting recipes..."
-                : "Ranking dinner options..."
+              ? "Suggesting recipes..."
               : recommendationState.status === "ready"
-                ? `${recommendations.length} options ranked`
+                ? `${recommendations.length} recipe(s) suggested`
                 : market && !marketBlocked
-                  ? form.planningMode === "ingredient-first"
-                    ? "Ready to suggest"
-                    : "Ready to rank"
+                  ? "Ready to suggest"
                   : "Waiting for store search"}
           </span>
         </div>
@@ -110,7 +107,7 @@ export function MealResultsPanel({
         {marketSearchState.status !== "ready" || !market ? (
           <StatusCard
             title="Meal results will appear here"
-            body="Find nearby stores first, set your meal preferences, then rank dinner options."
+            body="Find nearby stores first, set your spending limit and preferences, then select sale ingredients and suggest recipes."
           />
         ) : marketBlocked && mealPausedStatus ? (
           <StatusCard
@@ -119,12 +116,12 @@ export function MealResultsPanel({
           />
         ) : recommendationState.status === "loading" ? (
           <StatusCard
-            title="Ranking dinner options"
-            body="Yum4Less is combining your meal preferences with the current nearby store coverage to build shopping plans and rank dinner options."
+            title="Suggesting recipes"
+            body="Yum4Less is matching your selected sale ingredients to recipes using nearby Kroger-family and Aldi estimates where gates pass."
           />
         ) : recommendationState.status === "error" ? (
           <StatusCard
-            title="We could not rank meals yet"
+            title="We could not suggest recipes yet"
             body={
               recommendationState.error ??
               "Try searching for stores again or adjusting your filters."
@@ -133,31 +130,27 @@ export function MealResultsPanel({
         ) : recommendationState.status !== "ready" ? (
           <StatusCard
             title="Ready when you are"
-            body={
-              form.planningMode === "ingredient-first"
-                ? "Select sale ingredients in Step 3, then use Suggest recipes using my selected ingredients."
-                : "Use Step 2 on the left to set budget and preferences, then click Rank dinner options."
-            }
+            body="Select sale ingredients in Step 3, then use Suggest recipes using my selected ingredients."
           />
         ) : shopperNotice ? (
           <StatusCard title={shopperNotice.title} body={shopperNotice.body} />
         ) : recommendations.length === 0 ? (
           <StatusCard
-            title="No meals match the current filters"
-            body="That is useful feedback, not a failure. Your current budget, ingredient limit, or store preference may be too strict for the nearby store coverage."
+            title="No recipes match the current filters"
+            body="That is useful feedback, not a failure. Your spending limit or store preference may be too strict for the nearby sale coverage."
             extra={
               <p className="explanation">
-                Try raising the budget, allowing multiple stores, or increasing
-                the maximum ingredient count.
+                Try raising your spending limit, allowing multiple stores, or
+                selecting different sale ingredients.
               </p>
             }
           />
         ) : (
-          <RecommendationResultsCarousel ariaLabel="Ranked dinner recommendations">
+          <RecommendationResultsCarousel ariaLabel="Suggested dinner recipes">
             {recommendations.map((meal) => (
               <MealRecommendationCard
                 activeLocationRequest={activeLocationRequest}
-                form={form}
+                form={_form}
                 key={meal.title}
                 market={market}
                 meal={meal}

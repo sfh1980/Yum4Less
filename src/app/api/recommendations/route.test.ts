@@ -594,7 +594,11 @@ describe("POST /api/recommendations", () => {
     expect(response.status).toBe(200);
     expect(resolveLocationInput).toHaveBeenCalledWith(validPayload);
     expect(getRecommendationExperience).toHaveBeenCalledWith(
-      { ...validPayload, planningMode: "standard" },
+      {
+        ...validPayload,
+        planningMode: "ingredient-first",
+        selectedIngredientIds: [],
+      },
       expect.objectContaining({
         zipCode: "23111",
         city: "Mechanicsville",

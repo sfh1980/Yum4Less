@@ -19,6 +19,11 @@ import {
   getDefaultRecipeSource,
   listSelectableRecipeSources,
 } from "@/lib/recipe-sources/recipe-source-registry";
+import {
+  DEFAULT_DINNERS_WANTED,
+  DEFAULT_MAX_INGREDIENTS,
+  DEFAULT_PLANNING_MODE,
+} from "@/lib/meal-preference-defaults";
 import type { RecipeSourceSelection } from "@/lib/recipe-sources/recipe-source-types";
 
 export async function POST(request: Request) {
@@ -101,8 +106,14 @@ function validatePreferences(
 
   const radiusMiles = clampInteger(body.radiusMiles, API_LIMITS.radiusMiles);
   const budget = clampNumber(body.budget, API_LIMITS.budget);
-  const maxIngredients = clampInteger(body.maxIngredients, API_LIMITS.maxIngredients);
-  const dinnersWanted = clampInteger(body.dinnersWanted, API_LIMITS.dinnersWanted);
+  const maxIngredients =
+    body.maxIngredients === undefined || body.maxIngredients === null
+      ? DEFAULT_MAX_INGREDIENTS
+      : clampInteger(body.maxIngredients, API_LIMITS.maxIngredients);
+  const dinnersWanted =
+    body.dinnersWanted === undefined || body.dinnersWanted === null
+      ? DEFAULT_DINNERS_WANTED
+      : clampInteger(body.dinnersWanted, API_LIMITS.dinnersWanted);
   const hasCoordinates = isValidCoordinatePair(body);
   const zipCode = typeof body.zipCode === "string" ? body.zipCode.trim() : "";
 
@@ -132,6 +143,9 @@ function validatePreferences(
     return undefined;
   }
 
+  const resolvedPlanningMode =
+    planningMode === "standard" ? "standard" : DEFAULT_PLANNING_MODE;
+
   return {
     zipCode: hasCoordinates && !isValidZipCode(zipCode) ? "" : zipCode,
     radiusMiles,
@@ -142,11 +156,10 @@ function validatePreferences(
     dietaryFocus: resolvedDietaryFocus,
     recipeSource,
     ...(recipeSourceOptIn ? { recipeSourceOptIn: true } : {}),
-    planningMode:
-      planningMode === "ingredient-first" ? "ingredient-first" : "standard",
+    planningMode: resolvedPlanningMode,
     ...(selectedIngredientIds.length > 0
       ? { selectedIngredientIds }
-      : planningMode === "ingredient-first"
+      : resolvedPlanningMode === "ingredient-first"
         ? { selectedIngredientIds: [] }
         : {}),
   };

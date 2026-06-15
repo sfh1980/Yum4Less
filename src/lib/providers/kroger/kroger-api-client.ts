@@ -11,6 +11,23 @@ import {
   type KrogerProductsResponse,
 } from "@/lib/providers/kroger/kroger-api-types";
 
+const TOKEN_EXPIRY_BUFFER_MS = 60_000;
+const DEFAULT_TOKEN_TTL_MS = 30 * 60 * 1000;
+
+type CachedKrogerAccessToken = {
+  accessToken: string;
+  expiresAtMs: number;
+};
+
+const krogerAccessTokenCache = new Map<string, CachedKrogerAccessToken>();
+const krogerAccessTokenInFlight = new Map<string, Promise<string>>();
+
+/** Clears in-memory Kroger OAuth tokens between Vitest cases. */
+export function resetKrogerAccessTokenCacheForTests() {
+  krogerAccessTokenCache.clear();
+  krogerAccessTokenInFlight.clear();
+}
+
 export type KrogerApiCredentials = {
   clientId: string;
   clientSecret: string;
@@ -262,6 +279,15 @@ export function createKrogerApiClient(input?: Partial<KrogerApiCredentials>) {
         zipCode,
         radiusMiles,
       ),
+    warmProductsAccessToken: () => {
+      if (!clientId || !clientSecret) {
+        throw new Error("Kroger API credentials are missing.");
+      }
+      return getAccessToken(
+        { clientId, clientSecret },
+        KROGER_API_SPEC.scopes.products,
+      );
+    },
   };
 }
 
@@ -398,6 +424,36 @@ async function getAccessToken(
   credentials: KrogerApiCredentials,
   scope?: string,
 ) {
+  const cacheKey = buildKrogerTokenCacheKey(credentials, scope);
+  const cached = krogerAccessTokenCache.get(cacheKey);
+  if (cached && cached.expiresAtMs > Date.now()) {
+    return cached.accessToken;
+  }
+
+  const inFlight = krogerAccessTokenInFlight.get(cacheKey);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const request = requestKrogerAccessToken(credentials, scope, cacheKey);
+  krogerAccessTokenInFlight.set(cacheKey, request);
+
+  try {
+    return await request;
+  } finally {
+    krogerAccessTokenInFlight.delete(cacheKey);
+  }
+}
+
+function buildKrogerTokenCacheKey(credentials: KrogerApiCredentials, scope?: string) {
+  return `${credentials.clientId}:${scope ?? ""}`;
+}
+
+async function requestKrogerAccessToken(
+  credentials: KrogerApiCredentials,
+  scope: string | undefined,
+  cacheKey: string,
+) {
   const auth = Buffer.from(
     `${credentials.clientId}:${credentials.clientSecret}`,
   ).toString("base64");
@@ -420,10 +476,22 @@ async function getAccessToken(
     throw new Error(`Kroger token request failed with status ${response.status}`);
   }
 
-  const payload = (await response.json()) as { access_token?: string };
+  const payload = (await response.json()) as {
+    access_token?: string;
+    expires_in?: number;
+  };
   if (!payload.access_token) {
     throw new Error("Kroger token response did not include an access token");
   }
+
+  const ttlMs =
+    typeof payload.expires_in === "number" && payload.expires_in > 0
+      ? payload.expires_in * 1000
+      : DEFAULT_TOKEN_TTL_MS;
+  krogerAccessTokenCache.set(cacheKey, {
+    accessToken: payload.access_token,
+    expiresAtMs: Date.now() + ttlMs - TOKEN_EXPIRY_BUFFER_MS,
+  });
 
   return payload.access_token;
 }

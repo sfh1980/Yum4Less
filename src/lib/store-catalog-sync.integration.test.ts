@@ -6,6 +6,7 @@ import {
   isMapContextOnlyCatalogSource,
   refreshBootstrapRankedStoreCoordinates,
   syncUniversalMapCatalogForZip,
+  syncV1ChainStoresToCatalog,
 } from "@/lib/store-catalog-sync";
 import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.fixtures";
 
@@ -231,5 +232,243 @@ describe("store catalog sync (integration)", () => {
 
     expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.701, 2);
     expect(after.rows[0]?.source_name).toBe("kroger-official-api");
+  });
+
+  it("does not move Aldi to the ZIP search anchor during bootstrap refresh", async () => {
+    const pool = getDbPool();
+    await pool.query(`
+      update stores
+      set
+        latitude = 37.636200,
+        longitude = -77.360600,
+        source_name = 'yum4less-internal-catalog',
+        source_store_id = 'aldi-mechanicsville',
+        last_verified_at = now()
+      where id = 'aldi-mechanicsville'
+    `);
+
+    await refreshBootstrapRankedStoreCoordinates({
+      location: {
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.628179,
+        longitude: -77.281955,
+        source: "geocodio",
+        zipCode: "23111",
+      },
+      zipCode: "23111",
+      providerStoreSearches: [
+        {
+          provider: "kroger",
+          label: "Kroger",
+          configured: true,
+          status: "available",
+          provenance: "official-api",
+          retrievalMode: "live",
+          fallbackUsed: false,
+          message: "Fixture Kroger discovery.",
+          fetchedAt: new Date().toISOString(),
+          stores: [
+            {
+              provider: "kroger",
+              providerStoreId: "02900529",
+              name: "Kroger",
+              city: "Mechanicsville",
+              state: "VA",
+              latitude: 37.61546,
+              longitude: -77.32939,
+            },
+          ],
+        },
+      ],
+    });
+
+    const after = await pool.query<{ latitude: string; longitude: string }>(`
+      select latitude, longitude
+      from stores
+      where id = 'aldi-mechanicsville'
+    `);
+
+    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.6362, 3);
+    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.3606, 3);
+    expect(Number(after.rows[0]?.latitude)).not.toBeCloseTo(37.628179, 3);
+  });
+
+  it("merges API-discovered Kroger rows into nearby bootstrap seed stores and migrates price observations", async () => {
+    const pool = getDbPool();
+    await pool.query(`
+      update stores
+      set
+        latitude = 37.615460,
+        longitude = -77.329390,
+        source_name = 'yum4less-internal-catalog',
+        source_store_id = 'kroger-mechanicsville',
+        name = 'Kroger',
+        last_verified_at = now()
+      where id = 'kroger-mechanicsville'
+    `);
+    await pool.query(`
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values (
+        'kroger-02900529',
+        'Kroger',
+        'grocery',
+        'Mechanicsville',
+        'VA',
+        37.615500,
+        -77.329400,
+        'kroger-official-api',
+        '02900529',
+        now()
+      )
+      on conflict (id) do nothing
+    `);
+    await pool.query(`
+      insert into price_observations (
+        store_id,
+        ingredient_id,
+        price,
+        in_stock,
+        observed_at,
+        source_name,
+        confidence_score
+      )
+      values (
+        'kroger-02900529',
+        'chicken-thighs',
+        5.99,
+        true,
+        now(),
+        'kroger-official-api',
+        0.9
+      )
+    `);
+
+    const merged = await syncV1ChainStoresToCatalog({
+      location: {
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "geocodio",
+        zipCode: "23111",
+      },
+      zipCode: "23111",
+      providerStoreSearches: [
+        {
+          provider: "kroger",
+          label: "Kroger",
+          configured: true,
+          status: "available",
+          provenance: "official-api",
+          retrievalMode: "live",
+          fallbackUsed: false,
+          message: "Fixture Kroger discovery for bootstrap merge test.",
+          fetchedAt: new Date().toISOString(),
+          stores: [
+            {
+              provider: "kroger",
+              providerStoreId: "02900529",
+              name: "Kroger",
+              city: "Mechanicsville",
+              state: "VA",
+              latitude: 37.6155,
+              longitude: -77.3294,
+            },
+            {
+              provider: "kroger",
+              providerStoreId: "02900515",
+              name: "Kroger",
+              city: "Richmond",
+              state: "VA",
+              latitude: 37.701,
+              longitude: -77.401,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(merged).toBeGreaterThan(0);
+
+    const krogerRows = await pool.query<{
+      id: string;
+      source_store_id: string | null;
+      source_name: string | null;
+    }>(`
+      select id, source_store_id, source_name
+      from stores
+      where id in ('kroger-mechanicsville', 'kroger-02900529', 'kroger-02900515')
+      order by id
+    `);
+
+    expect(krogerRows.rows.some((row) => row.id === "kroger-02900529")).toBe(false);
+    expect(
+      krogerRows.rows.find((row) => row.id === "kroger-mechanicsville")?.source_store_id,
+    ).toBe("02900529");
+    expect(
+      krogerRows.rows.find((row) => row.id === "kroger-mechanicsville")?.source_name,
+    ).toBe("kroger-official-api");
+    expect(krogerRows.rows.some((row) => row.id === "kroger-02900515")).toBe(true);
+
+    const migratedObservation = await pool.query<{ store_id: string }>(
+      `
+        select store_id
+        from price_observations
+        where ingredient_id = 'chicken-thighs'
+          and source_name = 'kroger-official-api'
+        order by observed_at desc
+        limit 1
+      `,
+    );
+
+    expect(migratedObservation.rows[0]?.store_id).toBe("kroger-mechanicsville");
+  });
+
+  it("refreshes bootstrap Aldi coordinates from the nearest OSM Aldi store", async () => {
+    const pool = getDbPool();
+    await pool.query(`
+      update stores
+      set
+        latitude = 37.628179,
+        longitude = -77.281955,
+        source_name = 'yum4less-internal-catalog',
+        source_store_id = 'aldi-mechanicsville',
+        last_verified_at = now()
+      where id = 'aldi-mechanicsville'
+    `);
+
+    const updated = await refreshBootstrapRankedStoreCoordinates({
+      location: {
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "geocodio",
+        zipCode: "23111",
+      },
+      zipCode: "23111",
+      osmFoodRetailStores: fixtureOsmFoodRetailStores23111,
+      providerStoreSearches: [],
+    });
+
+    expect(updated).toBeGreaterThan(0);
+
+    const after = await pool.query<{
+      latitude: string;
+      longitude: string;
+      source_name: string | null;
+    }>(`
+      select latitude, longitude, source_name
+      from stores
+      where id = 'aldi-mechanicsville'
+    `);
+
+    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.6365, 3);
+    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.3608, 3);
+    expect(after.rows[0]?.source_name).toBe("yum4less-market-catalog");
+    expect(Number(after.rows[0]?.latitude)).not.toBeCloseTo(37.628179, 3);
   });
 });

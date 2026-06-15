@@ -3,7 +3,7 @@ import { fetchKrogerOffersFromOfficialApi } from "@/lib/weekly-ad-ingestion/krog
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { fetchKrogerWeeklyAdPage } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-fetcher";
-import { resolveKrogerStoreForZip } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-store";
+import { resolveKrogerStoreForWeeklyAd } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-store";
 import { buildKrogerWeeklyAdUrl } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-url";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
 import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
@@ -50,7 +50,10 @@ async function ingestKrogerWeeklyAd(
     });
   }
 
-  const storeContext = await resolveKrogerStoreForZip(input.zipCode);
+  const storeContext = await resolveKrogerStoreForWeeklyAd({
+    zipCode: input.zipCode,
+    storeId: input.storeId,
+  });
   const sourceUrl = buildKrogerWeeklyAdUrl({
     zipCode: input.zipCode,
     locationId: storeContext.locationId,

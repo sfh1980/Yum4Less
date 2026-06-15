@@ -102,6 +102,7 @@ function buildMarketSummary(overrides: Partial<MarketSummary> = {}): MarketSumma
         provider: "kroger",
         internalStoreId: "kroger-mechanicsville",
         syncedCount: 3,
+        unchangedCount: 0,
         skippedCount: 1,
         retrievalMode: "live",
         message:
@@ -167,6 +168,32 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
     expect(sanitized.weeklyAdPromotionReadiness[0]).not.toHaveProperty("storeId");
     expect(sanitized.providerPriceObservationSync[0]?.syncedCount).toBe(3);
     expect(sanitized).not.toHaveProperty("message");
+  });
+
+  it("strips numeric retailer sourceStoreId from nearby stores", () => {
+    const sanitized = sanitizeMarketSummaryForPublicApi(
+      buildMarketSummary({
+        nearbyStores: [
+          {
+            id: "kroger-mechanicsville",
+            name: "Kroger Mechanicsville",
+            kind: "grocery",
+            latitude: 37.6085,
+            longitude: -77.3321,
+            distanceMiles: 1.2,
+            chain: "kroger",
+            chainLabel: "Kroger",
+            rolloutStatus: "weekly-ad-preview",
+            recommendationEnabled: true,
+            rolloutNote: "Fixture coverage.",
+            sourceStoreId: "02900529",
+          },
+        ],
+      }),
+    );
+
+    expect(sanitized.nearbyStores[0]).not.toHaveProperty("sourceStoreId");
+    expect(sanitized.nearbyStores[0]?.id).toBe("kroger-mechanicsville");
   });
 
   it("preserves public catalog store ids for each nearby store", () => {

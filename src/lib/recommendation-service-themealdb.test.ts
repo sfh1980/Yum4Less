@@ -12,13 +12,18 @@ const { buildProviderPricingPreviews } = vi.hoisted(() => ({
   buildProviderPricingPreviews: vi.fn(),
 }));
 
-const { getMarketDataSnapshot } = vi.hoisted(() => ({
-  getMarketDataSnapshot: vi.fn(),
-}));
+const { getMarketDataSnapshot, getMarketPricingContext, getRecipeCatalog } =
+  vi.hoisted(() => ({
+    getMarketDataSnapshot: vi.fn(),
+    getMarketPricingContext: vi.fn(),
+    getRecipeCatalog: vi.fn(),
+  }));
 
-const { ensureThemealdbRecipesForSearch } = vi.hoisted(() => ({
-  ensureThemealdbRecipesForSearch: vi.fn(),
-}));
+const { getLatestThemealdbImportAt, shouldRefreshThemealdbRecipesOnSearch } =
+  vi.hoisted(() => ({
+    getLatestThemealdbImportAt: vi.fn(),
+    shouldRefreshThemealdbRecipesOnSearch: vi.fn(),
+  }));
 
 vi.mock("@/lib/provider-pricing-preview-service", () => ({
   buildProviderPricingPreviews,
@@ -26,11 +31,21 @@ vi.mock("@/lib/provider-pricing-preview-service", () => ({
 
 vi.mock("@/lib/market-repository", () => ({
   getMarketDataSnapshot,
+  getMarketPricingContext,
+  getRecipeCatalog,
 }));
 
-vi.mock("@/lib/recipe-import/ensure-themealdb-recipes-for-search", () => ({
-  ensureThemealdbRecipesForSearch,
-}));
+vi.mock("@/lib/recipe-import/ensure-themealdb-recipes-for-search", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/recipe-import/ensure-themealdb-recipes-for-search")
+  >("@/lib/recipe-import/ensure-themealdb-recipes-for-search");
+
+  return {
+    ...actual,
+    getLatestThemealdbImportAt,
+    shouldRefreshThemealdbRecipesOnSearch,
+  };
+});
 
 const themealdbRecipe = {
   id: "themealdb-52772-teriyaki",
@@ -77,29 +92,45 @@ function withThemealdbSaleLabels(
   };
 }
 
+function mockRankingReads(snapshot: ReturnType<typeof buildZip23111RankingSnapshot>) {
+  getMarketDataSnapshot.mockResolvedValue({
+    source: "database",
+    snapshot,
+  });
+  getMarketPricingContext.mockResolvedValue({
+    source: "database",
+    stores: snapshot.stores,
+    priceObservations: snapshot.priceObservations,
+  });
+  getRecipeCatalog.mockResolvedValue({
+    source: "database",
+    recipes: snapshot.recipes,
+  });
+}
+
 describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
   beforeEach(() => {
     buildProviderPricingPreviews.mockReset();
     buildProviderPricingPreviews.mockResolvedValue([]);
     getMarketDataSnapshot.mockReset();
-    ensureThemealdbRecipesForSearch.mockReset();
-    ensureThemealdbRecipesForSearch.mockResolvedValue({ status: "cache-hit" });
+    getMarketPricingContext.mockReset();
+    getRecipeCatalog.mockReset();
+    getLatestThemealdbImportAt.mockReset();
+    shouldRefreshThemealdbRecipesOnSearch.mockReset();
+    getLatestThemealdbImportAt.mockResolvedValue(new Date());
+    shouldRefreshThemealdbRecipesOnSearch.mockReturnValue(false);
   });
 
   afterEach(async () => {
     await resetDbPoolForTests();
   });
 
-  it("calls ensureThemealdbRecipesForSearch and surfaces attribution when opt-in ranks TheMealDB meals", async () => {
+  it("does not call search-time ensure and surfaces attribution when saved imports rank", async () => {
     const snapshot = withThemealdbSaleLabels(
       buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
     );
     snapshot.recipes = [...snapshot.recipes, themealdbRecipe];
-
-    getMarketDataSnapshot.mockResolvedValue({
-      source: "database",
-      snapshot,
-    });
+    mockRankingReads(snapshot);
 
     const experience = await getRecommendationExperience(
       {
@@ -113,7 +144,7 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
       false,
     );
 
-    expect(ensureThemealdbRecipesForSearch).toHaveBeenCalledOnce();
+    expect(shouldRefreshThemealdbRecipesOnSearch).toHaveBeenCalled();
     expect(experience.recommendations.length).toBeGreaterThan(0);
 
     const themealdbMeal = experience.recommendations.find((meal) =>
@@ -125,11 +156,8 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
     );
   });
 
-  it("does not call ensure when internal library is selected", async () => {
-    getMarketDataSnapshot.mockResolvedValue({
-      source: "database",
-      snapshot: buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
-    });
+  it("does not evaluate TheMealDB refresh when internal library is selected", async () => {
+    mockRankingReads(buildZip23111RankingSnapshot(["kroger-mechanicsville"]));
 
     await getRecommendationExperience(
       zip23111RankingPreferences,
@@ -137,21 +165,46 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
       false,
     );
 
-    expect(ensureThemealdbRecipesForSearch).not.toHaveBeenCalled();
+    expect(getLatestThemealdbImportAt).not.toHaveBeenCalled();
+    expect(shouldRefreshThemealdbRecipesOnSearch).not.toHaveBeenCalled();
   });
 
-  it("replaces npm-script empty copy with shopper-facing notice", async () => {
-    getMarketDataSnapshot.mockResolvedValue({
-      source: "database",
-      snapshot: buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
-    });
+  it("surfaces scheduled refresh notice when saved imports are stale or empty", async () => {
+    const snapshot = withThemealdbSaleLabels(
+      buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
+    );
+    mockRankingReads(snapshot);
+    shouldRefreshThemealdbRecipesOnSearch.mockReturnValue(true);
 
     const experience = await getRecommendationExperience(
       {
         ...zip23111RankingPreferences,
         recipeSource: "themealdb",
         recipeSourceOptIn: true,
+        planningMode: "ingredient-first",
+        selectedIngredientIds: ["chicken-thighs"],
+      },
+      zip23111MechanicsvilleLocation,
+      false,
+    );
+
+    expect(experience.shopperNotice?.title).toContain("schedule");
+    expect(experience.shopperNotice?.body).toContain("saved imports");
+    expect(experience.shopperNotice?.body).toContain("Verify totals in store");
+    expect(experience.shopperNotice?.body).not.toContain("npm run");
+  });
+
+  it("replaces npm-script empty copy with shopper-facing notice", async () => {
+    mockRankingReads(buildZip23111RankingSnapshot(["kroger-mechanicsville"]));
+
+    const experience = await getRecommendationExperience(
+      {
+        ...zip23111RankingPreferences,
+        planningMode: "ingredient-first",
+        recipeSource: "themealdb",
+        recipeSourceOptIn: true,
         budget: 1,
+        selectedIngredientIds: ["chicken-thighs"],
       },
       zip23111MechanicsvilleLocation,
       false,

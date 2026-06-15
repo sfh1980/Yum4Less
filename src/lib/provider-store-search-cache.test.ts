@@ -9,6 +9,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import {
+  buildProviderStoreSearchCacheKey,
   getLatestProviderStoreSearchSnapshot,
   persistProviderStoreSearchResult,
 } from "@/lib/provider-store-search-cache";
@@ -153,5 +154,39 @@ describe("persistProviderStoreSearchResult", () => {
       }),
     );
     expect(snapshot?.snapshotAgeMinutes).toBeGreaterThanOrEqual(0);
+  });
+
+  it("matches cached snapshots by ZIP even when search coordinates differ slightly", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [] });
+    getDbPool.mockReturnValue({ query });
+
+    await getLatestProviderStoreSearchSnapshot({
+      provider: "kroger",
+      search: {
+        location: {
+          zipCode: "23111",
+          city: "Mechanicsville",
+          state: "VA",
+          latitude: 37.62,
+          longitude: -77.35,
+          source: "geocodio",
+        },
+        radiusMiles: 5,
+      },
+    });
+
+    const sql = String(query.mock.calls[0]?.[0]);
+    expect(sql).toContain("search_zip_code is not distinct from $4");
+    expect(buildProviderStoreSearchCacheKey({
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.62,
+        longitude: -77.35,
+        source: "geocodio",
+      },
+      radiusMiles: 5,
+    }).zipCode).toBe("23111");
   });
 });

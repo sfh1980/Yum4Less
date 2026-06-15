@@ -54,6 +54,35 @@ describe("selectProviderDiscoveredStore", () => {
     expect(selected?.providerStoreId).toBe("near");
   });
 
+  it("prefers an explicit providerStoreId when multiple Kroger stores lack distance", () => {
+    const selected = selectProviderDiscoveredStore(
+      "kroger",
+      [
+        {
+          provider: "kroger",
+          providerStoreId: "02900529",
+          name: "Kroger",
+          city: "Mechanicsville",
+          state: "VA",
+          latitude: 37.615,
+          longitude: -77.329,
+        },
+        {
+          provider: "kroger",
+          providerStoreId: "01100479",
+          name: "Kroger Atlee",
+          city: "Mechanicsville",
+          state: "VA",
+          latitude: 37.665,
+          longitude: -77.44,
+        },
+      ],
+      "02900529",
+    );
+
+    expect(selected?.providerStoreId).toBe("02900529");
+  });
+
   it("returns undefined when multiple same-chain stores lack distance evidence", () => {
     expect(
       selectProviderDiscoveredStore("kroger", [

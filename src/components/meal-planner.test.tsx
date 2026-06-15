@@ -80,7 +80,7 @@ describe("MealPlanner", () => {
       screen.queryByRole("button", { name: "Project & data details (internal)" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Kroger-family and Aldi data where gates pass/i),
+      screen.getByText(/best available sale prices for Kroger-family and Aldi stores/i),
     ).toBeInTheDocument();
 
     const suggestButton = screen.getByRole("button", {
@@ -200,7 +200,7 @@ describe("MealPlanner", () => {
     expect(screen.queryByText(/cheapest|best price|live price/i)).not.toBeInTheDocument();
   });
 
-  it("switches to standard full-dinner path via Advanced options", async () => {
+  it("shows Step 2 budget label and ingredient-first CTA after store search", async () => {
     const user = userEvent.setup({ delay: null });
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(marketSearchPayload), {
@@ -214,25 +214,19 @@ describe("MealPlanner", () => {
 
     await user.click(screen.getByRole("button", { name: "Find nearby stores" }));
     await screen.findByRole("heading", { name: "Step 2: Set meal preferences" });
+
+    expect(
+      screen.getByRole("spinbutton", { name: "How much do you want to spend?" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Maximum ingredients")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Dinner options wanted")).not.toBeInTheDocument();
+    expect(screen.queryByText("Advanced options")).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Step 3: Browse nearby sale ingredients" }),
     ).toBeInTheDocument();
-
-    await user.click(screen.getByText("Advanced options"));
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Planning approach" }),
-      "standard",
-    );
-
     expect(
-      screen.getByRole("heading", { name: "Step 2: Set meal preferences" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "Step 3: Browse nearby sale ingredients" }),
-    ).not.toBeInTheDocument();
-
-    const rankButton = screen.getByRole("button", { name: "Rank dinner options" });
-    expect(rankButton).not.toBeDisabled();
+      screen.getByRole("button", { name: "Suggest recipes using my selected ingredients" }),
+    ).toBeDisabled();
   });
 
   it("shows internal diagnostics only when NEXT_PUBLIC_YUM4LESS_SHOW_INTERNAL_DETAILS=1", async () => {
@@ -340,7 +334,7 @@ const marketSearchPayload = {
           },
         ],
         message:
-          "Kroger official store discovery found 1 nearby store(s). These results support discovery only for now and do not yet drive ranked meal pricing.",
+          "Kroger Location API found 1 nearby store(s). Map pins prefer these API coordinates over OpenStreetMap when both are present; ranked meal estimates use ingested prices when production sync and promotion gates pass — verify totals in store.",
       },
       {
         provider: "publix",
@@ -613,7 +607,7 @@ const marketSearchPayload = {
       },
     ],
     message:
-      "Showing 1 nearby store(s) within 5 miles of Mechanicsville, VA using local PostgreSQL data. 1 currently feed ranked recommendations in this MVP. Kroger official store discovery found 1 nearby store(s). These results support discovery only for now and do not yet drive ranked meal pricing. Kroger official pricing preview matched 2 of 5 tracked ingredient(s). Coverage is still limited, so this preview remains informational and is not used for ranked meal pricing.",
+      "Showing 1 nearby store(s) within 5 miles of Mechanicsville, VA using local PostgreSQL data. 1 currently feed ranked recommendations in this MVP. Kroger Location API found 1 nearby store(s). Map pins prefer these API coordinates over OpenStreetMap when both are present; ranked meal estimates use ingested prices when production sync and promotion gates pass — verify totals in store. Kroger official pricing preview matched 2 of 5 tracked ingredient(s). Coverage is still limited, so this preview remains informational and is not used for ranked meal pricing.",
   },
 };
 

@@ -44,14 +44,14 @@ export const recipeSourceHelp = {
   tooltip: "Internal library or sale-matched TheMealDB.",
   popoverTitle: "Recipe source",
   popoverContent:
-    "Rank dinners from Yum4Less's internal library or TheMealDB imports that overlap local weekly-ad sale ingredients. TheMealDB meals include attribution and still require verify-in-store pricing.",
+    "Suggest recipes from Yum4Less's internal library or opt-in TheMealDB imports that overlap local weekly-ad sale ingredients. TheMealDB meals include attribution and still require verify-in-store pricing.",
 } as const;
 
 export const nearbyStoresMapHelp = {
   tooltip: "Catalog pins — not live retailer GPS.",
   popoverTitle: "Nearby stores map",
   popoverContent:
-    "Pins use beta catalog, rehearsal seed, or OpenStreetMap coordinates — not a live snapshot of every retailer address. Verify store locations before visiting. Chain-colored badges mark Kroger-family and Aldi stores that can feed ranked dinner totals when weekly-ad or online-cache rollout gates pass—totals stay estimated and directional. Other chains may appear for context; ranked pricing for them is planned in upcoming releases. Gray badges with a gold border are context only: nearby for planning, not ranked meal pricing. Walmart is always context only until trustworthy live matching exists.",
+    "Pins use beta catalog, provider discovery, rehearsal seed, or OpenStreetMap coordinates merged at search time — not a live snapshot of every retailer address. Verify store locations before visiting. Chain-colored badges mark Kroger-family and Aldi stores that can feed ranked dinner totals when weekly-ad or online-cache rollout gates pass—totals stay estimated and directional. Other chains may appear for context; ranked pricing for them is planned in upcoming releases. Gray badges with a gold border are context only: nearby for planning, not ranked meal pricing. Walmart is always context only until trustworthy live matching exists.",
 } as const;
 
 export const mealPriceSourceHelp = {

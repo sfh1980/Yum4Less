@@ -50,6 +50,33 @@ describe("provider rollout", () => {
 });
 
 describe("resolveProviderRolloutForStore", () => {
+  it("promotes Kroger to official-api-preview when fresh official API gates pass", () => {
+    const rollout = resolveProviderRolloutForStore("Kroger Mechanicsville", {
+      matchedIngredientCount: 1,
+      usesWeeklyAdSource: true,
+      weeklyAdPromotionPassed: false,
+      krogerOfficialApiPromotionPassed: true,
+      freshOfficialApiMatchedCount: 5,
+    });
+
+    expect(rollout.status).toBe("official-api-preview");
+    expect(rollout.recommendationEnabled).toBe(true);
+    expect(rollout.note).toContain("official Kroger API");
+  });
+
+  it("prefers weekly-ad promotion over official API when both gates pass", () => {
+    const rollout = resolveProviderRolloutForStore("Kroger Mechanicsville", {
+      matchedIngredientCount: 6,
+      usesWeeklyAdSource: true,
+      weeklyAdPromotionPassed: true,
+      krogerOfficialApiPromotionPassed: true,
+      freshOfficialApiMatchedCount: 5,
+    });
+
+    expect(rollout.status).toBe("weekly-ad-preview");
+    expect(rollout.note).toContain("weekly ad");
+  });
+
   it("promotes Kroger to weekly-ad-preview when promotion gates pass", () => {
     const rollout = resolveProviderRolloutForStore("Kroger Mechanicsville", {
       matchedIngredientCount: 6,
@@ -76,8 +103,9 @@ describe("resolveProviderRolloutForStore", () => {
       weeklyAdPromotionPassed: true,
     });
 
-    expect(rollout.status).toBe("weekly-ad-preview");
-    expect(rollout.recommendationEnabled).toBe(true);
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toContain("Rehearsal or fixture weekly-ad rows may exist");
   });
 
   it("keeps Walmart coming soon even when weekly-ad promotion would pass", () => {
@@ -104,26 +132,26 @@ describe("resolveProviderRolloutForStore", () => {
     expect(rollout.note).toContain("weekly ad");
   });
 
-  it("enables Food Lion weekly-ad-preview when promotion gates pass", () => {
+  it("keeps Food Lion context-only when weekly-ad promotion gates pass", () => {
     const rollout = resolveProviderRolloutForStore("Food Lion", {
       matchedIngredientCount: 4,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: true,
     });
 
-    expect(rollout.status).toBe("weekly-ad-preview");
-    expect(rollout.recommendationEnabled).toBe(true);
-    expect(rollout.note).toContain("weekly ad");
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toContain("Rehearsal or fixture weekly-ad rows may exist");
   });
 
-  it("keeps Food Lion limited-coverage when weekly-ad promotion has not passed", () => {
+  it("keeps Food Lion context-only when weekly-ad source exists but promotion has not passed", () => {
     const rollout = resolveProviderRolloutForStore("Food Lion", {
       matchedIngredientCount: 4,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: false,
     });
 
-    expect(rollout.status).toBe("limited-coverage");
+    expect(rollout.status).toBe("coming-soon");
     expect(rollout.recommendationEnabled).toBe(false);
   });
 

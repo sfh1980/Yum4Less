@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildNearbyStoresMapModel } from "@/lib/nearby-stores-map-model";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
+import { DEFAULT_DINNERS_WANTED, DEFAULT_MAX_INGREDIENTS } from "@/lib/meal-preference-defaults";
 import { getDefaultRecipeSource } from "@/lib/recipe-sources/recipe-source-registry";
 import {
   buildMealPreferencePayload,
@@ -26,23 +27,21 @@ const defaultForm: MealPreferenceForm = {
   zipCode: "23111",
   radiusMiles: 5,
   budget: 16,
-  maxIngredients: 8,
-  dinnersWanted: 3,
+  maxIngredients: DEFAULT_MAX_INGREDIENTS,
+  dinnersWanted: DEFAULT_DINNERS_WANTED,
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: getDefaultRecipeSource(),
+  planningMode: "ingredient-first",
 };
 
 const defaultFormState: FormState = {
   zipCode: defaultForm.zipCode,
   radiusMiles: String(defaultForm.radiusMiles),
   budget: String(defaultForm.budget),
-  maxIngredients: String(defaultForm.maxIngredients),
-  dinnersWanted: String(defaultForm.dinnersWanted),
   shoppingStyle: defaultForm.shoppingStyle,
   dietaryFocus: defaultForm.dietaryFocus,
   recipeSource: defaultForm.recipeSource,
-  planningMode: "ingredient-first",
   externalRecipeOptIn: false,
 };
 
@@ -264,9 +263,7 @@ export function useMealPlanner() {
       ...preferences,
       recipeSource,
       recipeSourceOptIn: form.externalRecipeOptIn,
-      ...(form.planningMode === "ingredient-first"
-        ? { selectedIngredientIds }
-        : {}),
+      selectedIngredientIds,
       ...(activeLocationRequest.mode === "zip"
         ? { zipCode: activeLocationRequest.zipCode }
         : {

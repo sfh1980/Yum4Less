@@ -522,6 +522,8 @@ function formatRolloutStatus(status: string) {
   switch (status) {
     case "weekly-ad-preview":
       return "Weekly-ad preview pricing";
+    case "official-api-preview":
+      return "Official API preview pricing";
     case "limited-coverage":
       return "Limited weekly-ad coverage";
     default:

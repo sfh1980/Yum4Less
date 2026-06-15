@@ -10,16 +10,26 @@ import type {
   ProviderPricingPreviewItem,
   ProviderPricingPreviewResult,
 } from "@/lib/providers/provider-types";
+import { isApiDerivedKrogerCatalogStoreId } from "@/lib/store-catalog-sync";
 
 const KROGER_OFFICIAL_PRICE_SOURCE = OFFICIAL_API_SOURCE;
 const MIN_SYNC_MATCH_CONFIDENCE = 0.45;
+
+export type ProviderPriceObservationSkipReason =
+  | "wrong-provider"
+  | "not-production"
+  | "no-preview-items"
+  | "store-mapping-failed"
+  | "low-confidence";
 
 export type ProviderPriceObservationSyncSummary = {
   provider: "kroger";
   internalStoreId?: string;
   syncedCount: number;
+  unchangedCount: number;
   skippedCount: number;
   retrievalMode: ProviderPricingPreviewResult["retrievalMode"];
+  skipReason?: ProviderPriceObservationSkipReason;
   message: string;
 };
 
@@ -30,6 +40,7 @@ export async function syncKrogerPreviewToPriceObservations(input: {
   const baseSummary = {
     provider: "kroger" as const,
     syncedCount: 0,
+    unchangedCount: 0,
     skippedCount: 0,
     retrievalMode: input.preview.retrievalMode,
   };
@@ -37,6 +48,7 @@ export async function syncKrogerPreviewToPriceObservations(input: {
   if (input.preview.provider !== "kroger") {
     return {
       ...baseSummary,
+      skipReason: "wrong-provider",
       message: "Only Kroger previews can be synced in this MVP slice.",
     };
   }
@@ -45,6 +57,7 @@ export async function syncKrogerPreviewToPriceObservations(input: {
     return {
       ...baseSummary,
       skippedCount: input.preview.items.length,
+      skipReason: "not-production",
       message:
         "Kroger official-online price sync requires KROGER_API_ENV=production. Certification returns catalog data only, so Yum4Less kept existing ingested cache observations.",
     };
@@ -54,6 +67,7 @@ export async function syncKrogerPreviewToPriceObservations(input: {
     return {
       ...baseSummary,
       skippedCount: input.preview.items.length,
+      skipReason: "no-preview-items",
       message:
         "No official Kroger preview items were available to sync into local price observations.",
     };
@@ -69,16 +83,18 @@ export async function syncKrogerPreviewToPriceObservations(input: {
     return {
       ...baseSummary,
       skippedCount: input.preview.items.length,
+      skipReason: "store-mapping-failed",
       message:
-        "Kroger preview prices could not be mapped to a trusted local store record, so Yum4Less kept the existing ingested cache observations.",
+        `Kroger preview for locationId ${input.preview.providerStoreId} could not be mapped to a trusted local store record (expected bootstrap id kroger-mechanicsville or source_store_id match). Yum4Less kept existing ingested cache observations.`,
     };
   }
 
   let syncedCount = 0;
+  let unchangedCount = 0;
   let skippedCount = 0;
 
   for (const item of input.preview.items) {
-    const synced = await persistPreviewItemAsPriceObservation({
+    const outcome = await persistPreviewItemAsPriceObservation({
       internalStoreId,
       providerStoreId: input.preview.providerStoreId,
       item,
@@ -86,8 +102,10 @@ export async function syncKrogerPreviewToPriceObservations(input: {
       retrievalMode: input.preview.retrievalMode,
     });
 
-    if (synced) {
+    if (outcome === "inserted") {
       syncedCount += 1;
+    } else if (outcome === "unchanged") {
+      unchangedCount += 1;
     } else {
       skippedCount += 1;
     }
@@ -98,27 +116,32 @@ export async function syncKrogerPreviewToPriceObservations(input: {
     providerStoreId: input.preview.providerStoreId,
   });
 
-  if (syncedCount === 0) {
-    return {
-      ...baseSummary,
-      internalStoreId,
-      skippedCount,
-      message:
-        "Kroger preview items were evaluated, but none met the minimum match-confidence threshold for local price observation sync.",
-    };
-  }
-
-  const freshnessNote =
-    input.preview.retrievalMode === "live"
-      ? "Recently checked Kroger online prices"
-      : "Saved Kroger preview snapshot prices";
-
-  return {
+  const resultSummary = {
     ...baseSummary,
     internalStoreId,
     syncedCount,
+    unchangedCount,
     skippedCount,
-    message: `${freshnessNote} synced ${syncedCount} ingredient price observation(s) into PostgreSQL for ${internalStoreId}. Ranked meal pricing can use these rows on the next read while the MVP promotion lock still applies to provider-preview promotion gates.`,
+  };
+
+  if (syncedCount === 0 && unchangedCount === 0) {
+    return {
+      ...resultSummary,
+      skipReason: "low-confidence",
+      message:
+        "Kroger preview items were evaluated, but none met the minimum match-confidence threshold or had a usable store price to sync.",
+    };
+  }
+
+  return {
+    ...resultSummary,
+    message: buildKrogerSyncSuccessMessage({
+      syncedCount,
+      unchangedCount,
+      internalStoreId,
+      providerStoreId: input.preview.providerStoreId,
+      retrievalMode: input.preview.retrievalMode,
+    }),
   };
 }
 
@@ -144,6 +167,14 @@ export async function syncProviderPreviewsToPriceObservations(input: {
   return summaries;
 }
 
+export function isKrogerProviderLocationId(value: string | null | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  return /^\d{6,10}$/.test(value.trim());
+}
+
 export function resolveInternalKrogerStoreId(input: {
   previewStoreName: string;
   providerStoreId: string;
@@ -152,6 +183,22 @@ export function resolveInternalKrogerStoreId(input: {
   const krogerStores = input.nearbyStores.filter((store) => store.chain === "kroger");
   if (krogerStores.length === 0) {
     return undefined;
+  }
+
+  const bySourceStoreId = krogerStores.filter(
+    (store) => store.sourceStoreId === input.providerStoreId,
+  );
+  if (bySourceStoreId.length > 0) {
+    const bootstrapMatch = bySourceStoreId.find(
+      (store) => !isApiDerivedKrogerCatalogStoreId(store.id),
+    );
+    if (bootstrapMatch) {
+      return bootstrapMatch.id;
+    }
+
+    if (bySourceStoreId.length === 1) {
+      return bySourceStoreId[0]!.id;
+    }
   }
 
   const canonicalId = `kroger-${input.providerStoreId}`;
@@ -165,7 +212,11 @@ export function resolveInternalKrogerStoreId(input: {
     normalizeStoreEvidence(store.id).includes(normalizedProviderStoreId),
   );
   if (byProviderStoreId.length === 1) {
-    return byProviderStoreId[0]?.id;
+    return byProviderStoreId[0]!.id;
+  }
+
+  if (krogerStores.length === 1) {
+    return krogerStores[0]!.id;
   }
 
   const normalizedPreviewName = normalizeStoreEvidence(input.previewStoreName);
@@ -192,14 +243,14 @@ async function persistPreviewItemAsPriceObservation(input: {
   item: ProviderPricingPreviewItem;
   observedAt: string;
   retrievalMode: ProviderPricingPreviewResult["retrievalMode"];
-}) {
+}): Promise<"inserted" | "unchanged" | "skipped"> {
   if (input.item.matchConfidence < MIN_SYNC_MATCH_CONFIDENCE) {
-    return false;
+    return "skipped";
   }
 
   const unitPrice = getPreviewUnitPrice(input.item);
   if (unitPrice === undefined) {
-    return false;
+    return "skipped";
   }
 
   const saleLabel = getPreviewSaleLabel(input.item);
@@ -220,10 +271,42 @@ async function persistPreviewItemAsPriceObservation(input: {
       notes: buildObservationNotes(input.item, input.retrievalMode),
     });
 
-    return outcome === "inserted";
+    if (outcome === "inserted") {
+      return "inserted";
+    }
+
+    if (outcome === "skipped-unchanged") {
+      return "unchanged";
+    }
+
+    return "skipped";
   } catch {
-    return false;
+    return "skipped";
   }
+}
+
+function buildKrogerSyncSuccessMessage(input: {
+  syncedCount: number;
+  unchangedCount: number;
+  internalStoreId: string;
+  providerStoreId: string;
+  retrievalMode: ProviderPricingPreviewResult["retrievalMode"];
+}) {
+  const freshnessNote =
+    input.retrievalMode === "live"
+      ? "Recently checked Kroger online prices"
+      : "Saved Kroger preview snapshot prices";
+  const locationNote = `for ${input.internalStoreId} (locationId ${input.providerStoreId}, source kroger-official-api)`;
+
+  if (input.syncedCount > 0 && input.unchangedCount === 0) {
+    return `${freshnessNote} synced ${input.syncedCount} new ingredient price observation(s) into PostgreSQL ${locationNote}. Ranked meal pricing can use these rows on the next read while promotion gates still apply.`;
+  }
+
+  if (input.syncedCount === 0 && input.unchangedCount > 0) {
+    return `${freshnessNote} verified ${input.unchangedCount} existing ingredient price observation(s) ${locationNote}; no new rows were inserted, but last_verified_at was refreshed. Ranked meal pricing can use these rows on the next read while promotion gates still apply.`;
+  }
+
+  return `${freshnessNote} synced ${input.syncedCount} new and verified ${input.unchangedCount} existing ingredient price observation(s) in PostgreSQL ${locationNote}. Ranked meal pricing can use these rows on the next read while promotion gates still apply.`;
 }
 
 async function touchStoreProviderLink(input: {

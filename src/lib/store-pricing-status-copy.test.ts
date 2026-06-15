@@ -5,6 +5,26 @@ import {
 } from "@/lib/store-pricing-status-copy";
 
 describe("store pricing status copy", () => {
+  it("labels official-api-preview Kroger stores with estimated API wording on the list pill", () => {
+    expect(
+      buildStoreListStatusPill({
+        recommendationEnabled: true,
+        rolloutStatus: "official-api-preview",
+        chain: "kroger",
+      }),
+    ).toBe("Est. Kroger API prices");
+  });
+
+  it("labels official-api-preview non-Kroger stores with estimated API wording on the list pill", () => {
+    expect(
+      buildStoreListStatusPill({
+        recommendationEnabled: true,
+        rolloutStatus: "official-api-preview",
+        chain: "aldi",
+      }),
+    ).toBe("Est. official API prices");
+  });
+
   it("labels ranked weekly-ad stores with estimated wording on the list pill", () => {
     expect(
       buildStoreListStatusPill({
@@ -51,6 +71,26 @@ describe("store pricing status copy", () => {
         chain: "publix",
       }),
     ).toBe("Est. weekly-ad prices — verify in store");
+  });
+
+  it("labels official-api-preview Kroger stores with estimated API map wording", () => {
+    expect(
+      buildStoreMapPricingLabel({
+        recommendationEnabled: true,
+        rolloutStatus: "official-api-preview",
+        chain: "kroger",
+      }),
+    ).toBe("Est. Kroger API prices — verify in store");
+  });
+
+  it("labels official-api-preview non-Kroger stores with estimated API map wording", () => {
+    expect(
+      buildStoreMapPricingLabel({
+        recommendationEnabled: true,
+        rolloutStatus: "official-api-preview",
+        chain: "aldi",
+      }),
+    ).toBe("Est. official API prices — verify in store");
   });
 
   it("labels unknown OSM pins as future release on the map", () => {

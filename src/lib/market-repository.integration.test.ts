@@ -1,8 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDbPoolForTests } from "@/lib/db";
-import { insertPriceObservation } from "@/lib/price-observation-writes";
+import { getDbPool } from "@/lib/db";
+import {
+  insertPriceObservation,
+  insertPriceObservationIfChanged,
+} from "@/lib/price-observation-writes";
 import { deleteAllPriceObservations } from "@/lib/test-only/price-observation-writes";
-import { getMarketDataSnapshot } from "@/lib/market-repository";
+import {
+  getMarketDataSnapshot,
+  getMarketPricingContext,
+  getRecipeCatalog,
+} from "@/lib/market-repository";
 import { KROGER_OFFICIAL_PRICE_SOURCE } from "@/lib/price-source-policy";
 
 describe("getMarketDataSnapshot (integration)", () => {
@@ -24,6 +32,47 @@ describe("getMarketDataSnapshot (integration)", () => {
     expect(result.snapshot.stores.some((store) => store.id === "kroger-mechanicsville")).toBe(
       true,
     );
+  });
+
+  it("replaces superseded weekly-ad rows when official API pricing is ingested", async () => {
+    await insertPriceObservation({
+      storeId: "kroger-mechanicsville",
+      ingredientId: "lemon",
+      price: 0.79,
+      saleLabel: "Old weekly-ad lemon",
+      observedAt: new Date(Date.now() - 2 * 3_600_000),
+      sourceName: "kroger-weekly-ad-scrape",
+      sourceRecordId: "kroger-weekly-ad-lemon-old",
+      confidenceScore: 0.8,
+      notes: "old weekly-ad row",
+    });
+
+    const outcome = await insertPriceObservationIfChanged({
+      storeId: "kroger-mechanicsville",
+      ingredientId: "lemon",
+      price: 2.49,
+      observedAt: new Date(),
+      sourceName: KROGER_OFFICIAL_PRICE_SOURCE,
+      sourceRecordId: "0085007650318",
+      confidenceScore: 0.9,
+      notes: "official api replace",
+    });
+
+    expect(outcome).toBe("inserted");
+
+    const pool = getDbPool();
+    const rows = await pool.query<{ source_name: string; price: string }>(
+      `
+        select source_name, price
+        from price_observations
+        where store_id = 'kroger-mechanicsville'
+          and ingredient_id = 'lemon'
+      `,
+    );
+
+    expect(rows.rows).toHaveLength(1);
+    expect(rows.rows[0]?.source_name).toBe(KROGER_OFFICIAL_PRICE_SOURCE);
+    expect(Number(rows.rows[0]?.price)).toBe(2.49);
   });
 
   it("prefers official online prices over newer weekly-ad rows for the same ingredient", async () => {
@@ -147,5 +196,45 @@ describe("getMarketDataSnapshot (integration)", () => {
 
     expect(staleRow).toBeUndefined();
     expect(freshRow?.price).toBe(0.89);
+  });
+});
+
+describe("split market reads (integration)", () => {
+  beforeEach(async () => {
+    await deleteAllPriceObservations();
+  });
+
+  afterEach(async () => {
+    await resetDbPoolForTests();
+  });
+
+  it("getMarketPricingContext loads stores and ranked prices without recipes", async () => {
+    const result = await getMarketPricingContext();
+
+    expect(result.source).toBe("database");
+    expect(result.stores.length).toBeGreaterThan(0);
+    expect(result.priceObservations).toHaveLength(0);
+  });
+
+  it("getRecipeCatalog loads recipes without store pricing rows", async () => {
+    const result = await getRecipeCatalog();
+
+    expect(result.source).toBe("database");
+    expect(result.recipes.length).toBeGreaterThan(0);
+  });
+
+  it("getMarketDataSnapshot composes split reads into the legacy snapshot shape", async () => {
+    const [snapshotResult, pricingResult, recipeResult] = await Promise.all([
+      getMarketDataSnapshot(),
+      getMarketPricingContext(),
+      getRecipeCatalog(),
+    ]);
+
+    expect(snapshotResult.snapshot.stores).toEqual(pricingResult.stores);
+    expect(snapshotResult.snapshot.priceObservations).toEqual(
+      pricingResult.priceObservations,
+    );
+    expect(snapshotResult.snapshot.recipes).toEqual(recipeResult.recipes);
+    expect(snapshotResult.snapshot.ingredients.length).toBeGreaterThan(0);
   });
 });

@@ -12,9 +12,12 @@ const { buildProviderPricingPreviews } = vi.hoisted(() => ({
   buildProviderPricingPreviews: vi.fn(),
 }));
 
-const { getMarketDataSnapshot } = vi.hoisted(() => ({
-  getMarketDataSnapshot: vi.fn(),
-}));
+const { getMarketDataSnapshot, getMarketPricingContext, getRecipeCatalog } =
+  vi.hoisted(() => ({
+    getMarketDataSnapshot: vi.fn(),
+    getMarketPricingContext: vi.fn(),
+    getRecipeCatalog: vi.fn(),
+  }));
 
 vi.mock("@/lib/provider-pricing-preview-service", () => ({
   buildProviderPricingPreviews,
@@ -22,7 +25,25 @@ vi.mock("@/lib/provider-pricing-preview-service", () => ({
 
 vi.mock("@/lib/market-repository", () => ({
   getMarketDataSnapshot,
+  getMarketPricingContext,
+  getRecipeCatalog,
 }));
+
+function mockRankingReads(snapshot: ReturnType<typeof buildZip23111RankingSnapshot>) {
+  getMarketDataSnapshot.mockResolvedValue({
+    source: "database",
+    snapshot,
+  });
+  getMarketPricingContext.mockResolvedValue({
+    source: "database",
+    stores: snapshot.stores,
+    priceObservations: snapshot.priceObservations,
+  });
+  getRecipeCatalog.mockResolvedValue({
+    source: "database",
+    recipes: snapshot.recipes,
+  });
+}
 
 /**
  * CI-02 merge-gating ranking guards for MVP ZIP 23111 (Mechanicsville).
@@ -32,10 +53,7 @@ describe("getRecommendationExperience ZIP 23111 ranking guards (CI-02)", () => {
   beforeEach(() => {
     buildProviderPricingPreviews.mockReset();
     buildProviderPricingPreviews.mockResolvedValue([]);
-    getMarketDataSnapshot.mockResolvedValue({
-      source: "database",
-      snapshot: buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
-    });
+    mockRankingReads(buildZip23111RankingSnapshot(["kroger-mechanicsville"]));
   });
 
   afterEach(async () => {
@@ -134,11 +152,8 @@ describe("getRecommendationExperience ZIP 23111 ranking guards (CI-02)", () => {
     expect(topMeal?.confidenceLabel).toBe("Single-store estimate");
   });
 
-  it("builds multi-store plans across promotion-ready chains when no one store stocks every ingredient", async () => {
-    getMarketDataSnapshot.mockResolvedValue({
-      source: "database",
-      snapshot: buildZip23111SplitStoreBlackBeanSnapshot(),
-    });
+  it("builds multi-store plans across Kroger and Aldi when no one store stocks every ingredient", async () => {
+    mockRankingReads(buildZip23111SplitStoreBlackBeanSnapshot());
 
     const singleStore = await getRecommendationExperience(
       {
@@ -170,21 +185,21 @@ describe("getRecommendationExperience ZIP 23111 ranking guards (CI-02)", () => {
       storeName: item.storeName,
       price: item.price,
     }))).toEqual([
-      { ingredient: "Black beans", storeName: "Kroger", price: 1.09 },
+      { ingredient: "Black beans", storeName: "Aldi", price: 0.89 },
       { ingredient: "Corn tortillas", storeName: "Kroger", price: 2.29 },
       { ingredient: "Cabbage", storeName: "Kroger", price: 2.19 },
-      { ingredient: "Lime", storeName: "Publix", price: 0.5 },
-      { ingredient: "Olive oil", storeName: "Publix", price: 2.68 },
+      { ingredient: "Lime", storeName: "Aldi", price: 0.45 },
+      { ingredient: "Olive oil", storeName: "Aldi", price: 2.49 },
       { ingredient: "Taco seasoning", storeName: "Kroger", price: 0.89 },
       { ingredient: "Ground cumin", storeName: "Kroger", price: 0.79 },
     ]);
     const planSubtotal = Math.round(
       shoppingPlan.reduce((sum, item) => sum + item.price, 0) * 100,
     ) / 100;
-    expect(planSubtotal).toBe(10.43);
+    expect(planSubtotal).toBe(9.99);
     expect(multiStore.recommendations[0]?.estimatedTotal).toBe(planSubtotal);
     expect(
       new Set(multiStore.recommendations[0]?.shoppingPlan.map((item) => item.storeName)),
-    ).toEqual(new Set(["Kroger", "Publix"]));
+    ).toEqual(new Set(["Kroger", "Aldi"]));
   });
 });

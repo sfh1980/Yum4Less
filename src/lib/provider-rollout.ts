@@ -12,6 +12,7 @@ export type StoreChain =
 
 export type ProviderRolloutStatus =
   | "weekly-ad-preview"
+  | "official-api-preview"
   | "limited-coverage"
   | "coming-soon";
 
@@ -28,10 +29,15 @@ export type WeeklyAdRolloutContext = {
   matchedIngredientCount: number;
   usesWeeklyAdSource: boolean;
   weeklyAdPromotionPassed: boolean;
+  krogerOfficialApiPromotionPassed?: boolean;
+  freshOfficialApiMatchedCount?: number;
 };
 
 /** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
-const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>([]);
+const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>([
+  "publix",
+  "food-lion",
+]);
 
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
@@ -150,6 +156,19 @@ export function resolveProviderRolloutForStore(
       status: "weekly-ad-preview",
       recommendationEnabled: true,
       note: `${base.label} meal prices use weekly ad deals (${weeklyAdContext.matchedIngredientCount} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`,
+    };
+  }
+
+  if (
+    base.chain === "kroger" &&
+    weeklyAdContext?.krogerOfficialApiPromotionPassed
+  ) {
+    const freshCount = weeklyAdContext.freshOfficialApiMatchedCount ?? 0;
+    return {
+      ...base,
+      status: "official-api-preview",
+      recommendationEnabled: true,
+      note: `${base.label} meal prices use recently checked official Kroger API data (${freshCount} fresh ingredient price(s) within 24 hours). Totals are estimated—verify price, package size, and tags in store before checkout.`,
     };
   }
 

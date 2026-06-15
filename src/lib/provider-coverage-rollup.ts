@@ -1,5 +1,6 @@
 import { PROVIDER_TRACKED_INGREDIENTS } from "@/lib/provider-tracked-ingredients";
 import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
+import type { ProviderPricingPreviewIngredient } from "@/lib/providers/provider-types";
 import type { RankedPricingSource } from "@/lib/price-source-policy";
 import type {
   ProviderPricingCoverageStatus,
@@ -40,18 +41,24 @@ export type ProviderCoverageRollup = {
 export function buildProviderCoverageRollup(
   previews: ProviderPricingPreviewResult[],
   rankedPricingSource: RankedPricingSource = "none",
+  trackedIngredients: ProviderPricingPreviewIngredient[] = PROVIDER_TRACKED_INGREDIENTS,
 ): ProviderCoverageRollup {
   return buildSingleProviderCoverageRollup(
     selectPrimaryPricingPreview(previews),
     rankedPricingSource,
+    trackedIngredients,
   );
 }
 
 export function buildSingleProviderCoverageRollup(
   preview: ProviderPricingPreviewResult | undefined,
   rankedPricingSource: RankedPricingSource = "none",
+  trackedIngredients: ProviderPricingPreviewIngredient[] = PROVIDER_TRACKED_INGREDIENTS,
 ): ProviderCoverageRollup {
-  const totalTrackedIngredients = PROVIDER_TRACKED_INGREDIENTS.length;
+  const totalTrackedIngredients = resolveTotalTrackedIngredients(
+    preview,
+    trackedIngredients,
+  );
 
   if (!preview || preview.status === "not-configured") {
     return {
@@ -63,7 +70,7 @@ export function buildSingleProviderCoverageRollup(
       unmatchedIngredientCount: totalTrackedIngredients,
       averageMatchConfidence: null,
       usesCachedPreview: false,
-      ingredientSummaries: buildUnmatchedSummaries(),
+      ingredientSummaries: buildUnmatchedSummaries(trackedIngredients),
       message: buildRankedPricingMessage(
         rankedPricingSource,
         "No official provider pricing preview was available for this search. Provider previews are informational only.",
@@ -71,7 +78,7 @@ export function buildSingleProviderCoverageRollup(
     };
   }
 
-  const ingredientSummaries = buildIngredientSummaries(preview);
+  const ingredientSummaries = buildIngredientSummaries(preview, trackedIngredients);
   const matchedIngredientCount = ingredientSummaries.filter(
     (summary) => summary.matched,
   ).length;
@@ -137,8 +144,9 @@ function previewPriorityScore(preview: ProviderPricingPreviewResult) {
 
 function buildIngredientSummaries(
   preview: ProviderPricingPreviewResult,
+  trackedIngredients: ProviderPricingPreviewIngredient[],
 ): ProviderIngredientCoverageSummary[] {
-  return PROVIDER_TRACKED_INGREDIENTS.map((tracked) => {
+  return trackedIngredients.map((tracked) => {
     const matchedItem = preview.items.find(
       (item) => item.ingredientId === tracked.ingredientId,
     );
@@ -164,8 +172,10 @@ function buildIngredientSummaries(
   });
 }
 
-function buildUnmatchedSummaries(): ProviderIngredientCoverageSummary[] {
-  return PROVIDER_TRACKED_INGREDIENTS.map((tracked) => ({
+function buildUnmatchedSummaries(
+  trackedIngredients: ProviderPricingPreviewIngredient[],
+): ProviderIngredientCoverageSummary[] {
+  return trackedIngredients.map((tracked) => ({
     ingredientId: tracked.ingredientId,
     ingredientName: tracked.ingredientName,
     matched: false,
@@ -247,4 +257,18 @@ function buildRankedPricingMessage(
     default:
       return `${prefix} No eligible ingested price observations are available yet for ranked meal pricing near this search.`;
   }
+}
+
+function resolveTotalTrackedIngredients(
+  preview: ProviderPricingPreviewResult | undefined,
+  trackedIngredients: ProviderPricingPreviewIngredient[],
+): number {
+  if (
+    typeof preview?.totalTrackedIngredients === "number" &&
+    preview.totalTrackedIngredients > trackedIngredients.length
+  ) {
+    return preview.totalTrackedIngredients;
+  }
+
+  return trackedIngredients.length;
 }

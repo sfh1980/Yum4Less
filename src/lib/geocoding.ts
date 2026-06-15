@@ -208,6 +208,96 @@ type GeocodioResponse = {
       city?: string;
       state?: string;
       county?: string;
+      zip?: string;
     };
+    formatted_address?: string;
   }>;
 };
+
+export type StreetAddressGeocodeResult =
+  | {
+      ok: true;
+      latitude: number;
+      longitude: number;
+      formattedAddress?: string;
+    }
+  | {
+      ok: false;
+      reason: string;
+    };
+
+/** Forward-geocode a retailer street address for ingest location witnesses. */
+export async function geocodeStreetAddress(input: {
+  addressLine1: string;
+  city: string;
+  state: string;
+  zipCode?: string;
+}): Promise<StreetAddressGeocodeResult> {
+  const geocodioKey = process.env.GEOCODIO_API_KEY;
+  const addressLine1 = input.addressLine1.trim();
+  const city = input.city.trim();
+  const state = input.state.trim();
+  const zipCode = input.zipCode?.trim();
+
+  if (!geocodioKey) {
+    return { ok: false, reason: "GEOCODIO_API_KEY is not configured." };
+  }
+
+  if (!addressLine1 || !city || !state) {
+    return { ok: false, reason: "Street address geocoding requires address, city, and state." };
+  }
+
+  const rateLimit = consumeRateLimit(
+    "geocodio:global",
+    RATE_LIMITS.geocodioUpstream,
+  );
+  if (!rateLimit.ok) {
+    return { ok: false, reason: "Geocodio rate limit reached." };
+  }
+
+  const query = [addressLine1, city, state, zipCode].filter(Boolean).join(", ");
+
+  try {
+    const response = await fetch(
+      `https://api.geocod.io/v1.7/geocode?q=${encodeURIComponent(query)}&api_key=${encodeURIComponent(geocodioKey)}`,
+      {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        reason: `Geocodio returned HTTP ${response.status} for store address lookup.`,
+      };
+    }
+
+    const payload = (await response.json()) as GeocodioResponse;
+    const firstResult = payload.results?.[0];
+    const latitude = firstResult?.location?.lat;
+    const longitude = firstResult?.location?.lng;
+
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+      return { ok: false, reason: "Geocodio did not return coordinates for that address." };
+    }
+
+    if (
+      !isWithinContinentalUsBounds({
+        latitude,
+        longitude,
+      })
+    ) {
+      return { ok: false, reason: "Geocodio returned coordinates outside continental US bounds." };
+    }
+
+    return {
+      ok: true,
+      latitude,
+      longitude,
+      formattedAddress: firstResult?.formatted_address,
+    };
+  } catch {
+    return { ok: false, reason: "Geocodio store address lookup failed unexpectedly." };
+  }
+}

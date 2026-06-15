@@ -11,6 +11,7 @@ export type CatalogStore = {
   latitude: number;
   longitude: number;
   sourceName?: string;
+  sourceStoreId?: string;
   lastVerifiedAt?: string;
 };
 

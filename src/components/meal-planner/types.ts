@@ -1,5 +1,4 @@
 import type {
-  MealPlanningMode,
   MealPreferenceForm,
   RecommendationExperience,
   ShopperNotice,
@@ -10,12 +9,9 @@ export type FormState = {
   zipCode: string;
   radiusMiles: string;
   budget: string;
-  maxIngredients: string;
-  dinnersWanted: string;
   shoppingStyle: MealPreferenceForm["shoppingStyle"];
   dietaryFocus: MealPreferenceForm["dietaryFocus"];
   recipeSource: RecipeSourceSelection;
-  planningMode: MealPlanningMode;
   /** Explicit shopper opt-in before TheMealDB (or other non-internal sources) affect ranking. */
   externalRecipeOptIn: boolean;
 };

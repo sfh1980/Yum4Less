@@ -65,6 +65,18 @@ if (!weeklyOnly) {
       "Check YUM4LESS_OSM_OVERPASS_URL or Overpass logs above. OSM context pins may be missing until the next run.",
     );
   }
+
+  const snapEnsure = spawnSync("node scripts/ensure-snap-context.mjs --quiet", {
+    stdio: "inherit",
+    shell: true,
+    env: process.env,
+  });
+
+  if (snapEnsure.status !== 0) {
+    console.warn(
+      `[${new Date().toISOString()}] SNAP auto-ensure failed (non-fatal when YUM4LESS_MAP_SNAP_CONTEXT=1).`,
+    );
+  }
 }
 
 if (!weeklyOnly && !useFixture) {

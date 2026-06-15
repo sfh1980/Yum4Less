@@ -81,9 +81,9 @@ export async function getLatestThemealdbImportAt(): Promise<Date | null> {
 }
 
 /**
- * Cache-first TheMealDB availability for opt-in ranking.
+ * Cache-first TheMealDB availability helpers for opt-in ranking.
  * Cron/script path: `runSaleDrivenThemealdbImport` via `npm run ingest:themealdb:from-sales`.
- * Search path: bounded refresh when imports are stale/empty (non-production by default).
+ * Recommendation requests must not call `ensureThemealdbRecipesForSearch` (cron/script-only refresh).
  */
 export async function ensureThemealdbRecipesForSearch(input: {
   recipes: CatalogRecipeRecord[];

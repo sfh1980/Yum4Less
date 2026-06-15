@@ -14,7 +14,7 @@ insert into stores (
   last_verified_at
 )
 values
-  ('kroger-mechanicsville', 'Kroger', 'grocery', 'Mechanicsville', 'VA', 37.615300, -77.349100, 'yum4less-internal-catalog', 'kroger-mechanicsville', now()),
+  ('kroger-mechanicsville', 'Kroger', 'grocery', 'Mechanicsville', 'VA', 37.615460, -77.329390, 'yum4less-internal-catalog', 'kroger-mechanicsville', now()),
   ('food-lion-mechanicsville', 'Food Lion', 'grocery', 'Mechanicsville', 'VA', 37.609500, -77.373600, 'yum4less-internal-catalog', 'food-lion-mechanicsville', now()),
   ('publix-atlee', 'Publix', 'grocery', 'Mechanicsville', 'VA', 37.645800, -77.398900, 'yum4less-internal-catalog', 'publix-atlee', now()),
   ('aldi-mechanicsville', 'Aldi', 'grocery', 'Mechanicsville', 'VA', 37.636200, -77.360600, 'yum4less-internal-catalog', 'aldi-mechanicsville', now()),

@@ -19,12 +19,25 @@ import type {
   StoreDiscoveryProviderClient,
 } from "@/lib/providers/provider-types";
 import {
+  filterKrogerFamilyDiscoveredStores,
+  resolveKrogerLocationSearchLimit,
+} from "@/lib/kroger-family-discovery";
+import {
   buildPricingCoverageMessage,
   getPricingCoverageStatus,
+  isProviderMatchDebugEnabled,
+  isKrogerProviderDebugEnabled,
   scoreProviderProductMatch,
 } from "@/lib/providers/provider-price-matching";
 
 const KROGER_LABEL = "Kroger official store discovery";
+const KROGER_INGREDIENT_SEARCH_BATCH_SIZE = 10;
+const KROGER_INGREDIENT_SEARCH_BATCH_DELAY_MS = 500;
+
+type KrogerIngredientSearchResult = {
+  rawItems: ProviderPricingPreviewItem[];
+  firstError?: { message: string; statusCode?: string };
+};
 
 export function createKrogerProviderClient(): StoreDiscoveryProviderClient {
   const credentials = readKrogerApiCredentialsFromEnv();
@@ -58,14 +71,15 @@ export function createKrogerProviderClient(): StoreDiscoveryProviderClient {
         const locations = await api.searchLocations({
           latLongNear: `${input.location.latitude},${input.location.longitude}`,
           radiusInMiles: input.radiusMiles,
-          limit: 10,
-          chain: "Kroger",
+          limit: resolveKrogerLocationSearchLimit(),
         });
-        const stores = locations
-          .map(toProviderDiscoveredStore)
-          .filter(
-            (store): store is ProviderDiscoveredStore => store !== undefined,
-          );
+        const stores = filterKrogerFamilyDiscoveredStores(
+          locations
+            .map(toProviderDiscoveredStore)
+            .filter(
+              (store): store is ProviderDiscoveredStore => store !== undefined,
+            ),
+        );
 
         return {
           provider: "kroger",
@@ -78,7 +92,7 @@ export function createKrogerProviderClient(): StoreDiscoveryProviderClient {
           stores,
           message:
             stores.length > 0
-              ? `Kroger official store discovery found ${stores.length} nearby store(s). These results support discovery only for now and do not yet drive ranked meal pricing.`
+              ? `Kroger Location API found ${stores.length} nearby Kroger-family store(s). Map pins prefer these API coordinates over OpenStreetMap when both are present; ranked meal estimates use ingested prices when production sync and promotion gates pass — verify totals in store.`
               : "Kroger official store discovery is configured, but no nearby Kroger stores were returned for this search.",
           fetchedAt: new Date().toISOString(),
         };
@@ -126,10 +140,18 @@ export function createKrogerProviderClient(): StoreDiscoveryProviderClient {
 
       try {
         const environment = getKrogerApiEnvironment();
-        const rawItems = await searchKrogerProductsForIngredients(api, input);
+        const { rawItems, firstError } = await searchKrogerProductsForIngredients(api, input);
         const items = isKrogerOfficialOnlinePricingEligible()
           ? rawItems.filter((item) => hasKrogerPreviewPrice(item))
           : [];
+        const previewProvenance = isKrogerOfficialOnlinePricingEligible()
+          ? "official-api"
+          : "official-api-no-pricing";
+        if (isKrogerProviderDebugEnabled()) {
+          console.log(
+            `[diag:searchPricingPreview] provenance=${previewProvenance} rawMatches=${rawItems.length} pricedItems=${items.length} firstError=${formatKrogerPreviewFirstError(firstError)}`,
+          );
+        }
         const coverageStatus = getPricingCoverageStatus({
           matchedIngredientCount: items.length,
           totalTrackedIngredients: input.ingredients.length,
@@ -201,6 +223,12 @@ export function createKrogerProviderClient(): StoreDiscoveryProviderClient {
           fetchedAt: new Date().toISOString(),
         };
       } catch (error: unknown) {
+        const parsed = parseKrogerApiError(error);
+        if (isKrogerProviderDebugEnabled()) {
+          console.log(
+            `[diag:searchPricingPreview] catch fired message=${parsed.message} status=${parsed.statusCode ?? "unknown"}`,
+          );
+        }
         return {
           provider: "kroger",
           label: "Kroger official pricing preview",
@@ -260,16 +288,69 @@ function toProviderDiscoveredStore(
 async function searchKrogerProductsForIngredients(
   api: ReturnType<typeof createKrogerApiClient>,
   input: ProviderPricingPreviewInput,
-): Promise<ProviderPricingPreviewItem[]> {
-  const results = await Promise.all(
-    input.ingredients.map((ingredient) =>
-      searchKrogerProduct(api, input.store.providerStoreId, ingredient),
-    ),
-  );
+): Promise<KrogerIngredientSearchResult> {
+  const ingredients = input.ingredients;
+  if (ingredients.length === 0) {
+    return { rawItems: [] };
+  }
 
-  return results.filter(
-    (item): item is ProviderPricingPreviewItem => item !== undefined,
-  );
+  try {
+    await api.warmProductsAccessToken();
+    if (isKrogerProviderDebugEnabled()) {
+      console.log(
+        "[sync:kroger] warmed products access token (cached for remaining ingredient searches in this sync run)",
+      );
+    }
+  } catch (error: unknown) {
+    const parsed = parseKrogerApiError(error);
+    if (isKrogerProviderDebugEnabled()) {
+      console.log(
+        `[diag:searchPricingPreview] token warm failed message=${parsed.message} status=${parsed.statusCode ?? "unknown"}`,
+      );
+    }
+    return { rawItems: [], firstError: parsed };
+  }
+
+  const totalBatches = Math.ceil(ingredients.length / KROGER_INGREDIENT_SEARCH_BATCH_SIZE);
+  const rawItems: ProviderPricingPreviewItem[] = [];
+  let firstError: KrogerIngredientSearchResult["firstError"];
+
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
+    const startIndex = batchIndex * KROGER_INGREDIENT_SEARCH_BATCH_SIZE;
+    const batch = ingredients.slice(startIndex, startIndex + KROGER_INGREDIENT_SEARCH_BATCH_SIZE);
+    const endIndex = startIndex + batch.length;
+
+    if (isKrogerProviderDebugEnabled()) {
+      console.log(
+        `[sync:kroger] querying batch ${batchIndex + 1}/${totalBatches} (ingredients ${startIndex + 1}-${endIndex})`,
+      );
+    }
+
+    const batchResults = await Promise.all(
+      batch.map(async (ingredient) => {
+        try {
+          return await searchKrogerProduct(api, input.store.providerStoreId, ingredient);
+        } catch (error: unknown) {
+          if (!firstError) {
+            firstError = parseKrogerApiError(error);
+          }
+          return undefined;
+        }
+      }),
+    );
+
+    for (const result of batchResults) {
+      if (result !== undefined) {
+        rawItems.push(result);
+      }
+    }
+
+    if (batchIndex < totalBatches - 1) {
+      await sleep(KROGER_INGREDIENT_SEARCH_BATCH_DELAY_MS);
+    }
+  }
+
+  return { rawItems, firstError };
 }
 
 async function searchKrogerProduct(
@@ -277,52 +358,205 @@ async function searchKrogerProduct(
   providerStoreId: string,
   ingredient: ProviderPricingPreviewInput["ingredients"][number],
 ): Promise<ProviderPricingPreviewItem | undefined> {
+  const MATCH_THRESHOLD = 0.45;
+  const MAX_SEARCH_TERMS_PER_INGREDIENT = 2;
+
+  const searchAttempts: Array<{ searchTerm: string; priority: number }> = [
+    { searchTerm: ingredient.searchTerm, priority: 1 },
+  ];
+
+  if (ingredient.fallbackSearchTerm) {
+    searchAttempts.push({
+      searchTerm: ingredient.fallbackSearchTerm,
+      priority: 2,
+    });
+  }
+
+  const boundedAttempts = searchAttempts.slice(0, MAX_SEARCH_TERMS_PER_INGREDIENT);
+
+  for (let attemptIndex = 0; attemptIndex < boundedAttempts.length; attemptIndex += 1) {
+    const attempt = boundedAttempts[attemptIndex]!;
+    const result = await searchKrogerProductWithTerm(
+      api,
+      providerStoreId,
+      ingredient,
+      attempt.searchTerm,
+      attempt.priority,
+      MATCH_THRESHOLD,
+    );
+
+    if (result) {
+      if (attempt.priority === 2 && isProviderMatchDebugEnabled()) {
+        console.log(
+          `[KrogerMatchDebug] falling back to priority-2 term "${attempt.searchTerm}" for ${ingredient.ingredientId}`,
+        );
+      }
+      return result;
+    }
+
+    if (
+      attempt.priority === 1 &&
+      boundedAttempts.length > 1 &&
+      isProviderMatchDebugEnabled()
+    ) {
+      console.log(
+        `[KrogerMatchDebug] priority-1 term "${attempt.searchTerm}" found no match >= ${MATCH_THRESHOLD} for ${ingredient.ingredientId}; trying priority-2...`,
+      );
+    }
+  }
+
+  if (boundedAttempts.length > 1 && isProviderMatchDebugEnabled()) {
+    console.log(
+      `[KrogerMatchDebug] no-match-after-fallback for ${ingredient.ingredientId}`,
+    );
+  }
+
+  return undefined;
+}
+
+async function searchKrogerProductWithTerm(
+  api: ReturnType<typeof createKrogerApiClient>,
+  providerStoreId: string,
+  ingredient: ProviderPricingPreviewInput["ingredients"][number],
+  searchTerm: string,
+  priority: number,
+  matchThreshold: number,
+): Promise<ProviderPricingPreviewItem | undefined> {
   const products = await api.searchProducts({
-    term: ingredient.searchTerm,
+    term: searchTerm,
     locationId: providerStoreId,
     fulfillment: "ais",
     limit: 3,
   });
 
-  const candidateMatches = products
-    .map((product): ProviderPricingPreviewItem | undefined => {
-      if (!product.productId || !product.description) {
-        return undefined;
-      }
-
-      const firstItem = product.items?.[0];
-      const { regularPrice, promoPrice } = readKrogerItemPrices(firstItem);
-      const inStock = isKrogerProductAvailableInStore(firstItem);
-      const matchMetadata = scoreProviderProductMatch({
-        ingredient,
-        description: product.description,
-        inStock,
-      });
-
+  const scoredCandidates = products.map((product, index) => {
+    if (!product.productId || !product.description) {
       return {
-        provider: "kroger" as const,
-        ingredientId: ingredient.ingredientId,
-        ingredientName: ingredient.ingredientName,
-        providerProductId: product.productId,
-        description: product.description,
-        brand: product.brand,
-        regularPrice,
-        promoPrice,
-        currencyCode: "USD",
-        inStock,
-        matchConfidence: matchMetadata.matchConfidence,
-        matchReason: matchMetadata.matchReason,
+        index,
+        dropped: true,
+        dropReason: "missing productId or description",
+        product,
+        item: undefined as ProviderPricingPreviewItem | undefined,
       };
-    })
+    }
+
+    const firstItem = product.items?.[0];
+    const { regularPrice, promoPrice } = readKrogerItemPrices(firstItem);
+    const inStock = isKrogerProductAvailableInStore(firstItem);
+    const matchMetadata = scoreProviderProductMatch({
+      ingredient: {
+        ...ingredient,
+        searchTerm,
+      },
+      description: product.description,
+      inStock,
+    });
+
+    const item: ProviderPricingPreviewItem = {
+      provider: "kroger" as const,
+      ingredientId: ingredient.ingredientId,
+      ingredientName: ingredient.ingredientName,
+      providerProductId: product.productId,
+      description: product.description,
+      brand: product.brand,
+      regularPrice,
+      promoPrice,
+      currencyCode: "USD",
+      inStock,
+      matchConfidence: matchMetadata.matchConfidence,
+      matchReason: matchMetadata.matchReason,
+    };
+
+    const belowThreshold = item.matchConfidence < matchThreshold;
+
+    return {
+      index,
+      dropped: belowThreshold,
+      dropReason: belowThreshold
+        ? `matchConfidence ${item.matchConfidence.toFixed(2)} < ${matchThreshold}`
+        : undefined,
+      product,
+      item,
+    };
+  });
+
+  if (isProviderMatchDebugEnabled()) {
+    console.log(
+      [
+        "[KrogerMatchDebug] searchKrogerProduct",
+        `  ingredientId: ${ingredient.ingredientId}`,
+        `  ingredientName: ${ingredient.ingredientName}`,
+        `  searchTerm: ${searchTerm}`,
+        `  priority: ${priority}`,
+        `  locationId: ${providerStoreId}`,
+        `  apiCandidatesReturned: ${products.length}`,
+      ].join("\n"),
+    );
+
+    for (const candidate of scoredCandidates) {
+      const status = candidate.dropped ? "DROPPED" : "KEPT";
+      const detail = candidate.item
+        ? `confidence=${candidate.item.matchConfidence.toFixed(2)} regular=${candidate.item.regularPrice ?? "n/a"} promo=${candidate.item.promoPrice ?? "n/a"} inStock=${candidate.item.inStock}`
+        : candidate.dropReason;
+      console.log(
+        [
+          `  candidate[${candidate.index}] ${status}: productId=${candidate.product.productId ?? "n/a"}`,
+          `    description: ${candidate.product.description ?? "n/a"}`,
+          `    brand: ${candidate.product.brand ?? "n/a"}`,
+          `    ${detail}`,
+        ].join("\n"),
+      );
+    }
+  }
+
+  const candidateMatches = scoredCandidates
+    .map((entry) => entry.item)
     .filter(
       (item): item is ProviderPricingPreviewItem =>
-        item !== undefined && item.matchConfidence >= 0.45,
+        item !== undefined && item.matchConfidence >= matchThreshold,
     )
     .sort((left, right) => right.matchConfidence - left.matchConfidence);
+
+  if (isProviderMatchDebugEnabled()) {
+    if (candidateMatches.length === 0) {
+      console.log(
+        `[KrogerMatchDebug] searchKrogerProduct result: NO candidate passed threshold ${matchThreshold} for ${ingredient.ingredientId} (priority ${priority}, term "${searchTerm}")`,
+      );
+    } else {
+      console.log(
+        `[KrogerMatchDebug] searchKrogerProduct result: selected productId=${candidateMatches[0]!.providerProductId} confidence=${candidateMatches[0]!.matchConfidence.toFixed(2)} (priority ${priority}, term "${searchTerm}")`,
+      );
+    }
+  }
 
   return candidateMatches[0];
 }
 
 function hasKrogerPreviewPrice(item: ProviderPricingPreviewItem) {
   return typeof item.promoPrice === "number" || typeof item.regularPrice === "number";
+}
+
+function parseKrogerApiError(error: unknown): { message: string; statusCode?: string } {
+  const message = error instanceof Error ? error.message : String(error);
+  const statusMatch = message.match(/status (\d+)/);
+  return {
+    message,
+    statusCode: statusMatch?.[1],
+  };
+}
+
+function formatKrogerPreviewFirstError(
+  firstError: KrogerIngredientSearchResult["firstError"],
+): string {
+  if (!firstError) {
+    return "none";
+  }
+  if (firstError.statusCode) {
+    return `${firstError.message} (status ${firstError.statusCode})`;
+  }
+  return firstError.message;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -91,7 +91,7 @@ Agent-driven browser checks when Vitest cannot prove visible trust copy. **Not**
 2. Assert hero eyebrow: **Yum4Less · Beta v1**.
 3. Assert footer link: `Send feedback or report a wrong price` → `/feedback`.
 4. ZIP **23111** → **Find nearby stores** → map shows nearby chains (Kroger-family / Aldi context expected with fixture data).
-5. **Suggest recipes** (ingredient-first) or **Rank dinner options** → dismiss trust explainer modal.
+5. **Suggest recipes** from sale ingredients → dismiss trust explainer modal.
 6. Assert **Est.** totals on meal cards.
 7. Assert directional trust copy (`directional`, `Treat totals as estimates`, weekly-ad labels where applicable).
 8. Assert results-panel warning: **Beta v1: totals are estimates**.

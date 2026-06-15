@@ -3,10 +3,14 @@ import {
   buildAldiCatalogStoreForMarket,
   buildKrogerCatalogStore,
   buildOsmCatalogStore,
+  BOOTSTRAP_STORE_MERGE_RADIUS_MILES,
   filterCatalogStoresNearLocation,
+  findCanonicalStoreIdForApiDiscoveredStore,
   findPrimaryStoreIdForChain,
   getCatalogStoreRole,
+  isApiDerivedKrogerCatalogStoreId,
   isBootstrapCoordinateRefreshEligible,
+  isBootstrapSeedStoreRow,
   isMapContextOnlyCatalogSource,
   parseIngestZipCodesFromEnv,
   resolveIngestRadiusMiles,
@@ -55,6 +59,24 @@ describe("store-catalog-sync", () => {
         zipCode: "30301",
       }).id,
     ).toBe("aldi-30301");
+  });
+
+  it("uses bootstrap store coordinates for Aldi in ZIP 23111, not the search anchor", () => {
+    const store = buildAldiCatalogStoreForMarket({
+      location: {
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.628179,
+        longitude: -77.281955,
+        source: "geocodio",
+        zipCode: "23111",
+      },
+      zipCode: "23111",
+    });
+
+    expect(store.latitude).toBeCloseTo(37.6362, 4);
+    expect(store.longitude).toBeCloseTo(-77.3606, 4);
+    expect(store.latitude).not.toBeCloseTo(37.628179, 4);
   });
 
   it("parses ingest ZIP codes from env-style comma lists", () => {
@@ -129,5 +151,109 @@ describe("store-catalog-sync", () => {
     expect(isBootstrapCoordinateRefreshEligible("openstreetmap-overpass")).toBe(
       false,
     );
+  });
+
+  it("identifies API-derived Kroger catalog ids separately from bootstrap slug ids", () => {
+    expect(isApiDerivedKrogerCatalogStoreId("kroger-02900529")).toBe(true);
+    expect(isApiDerivedKrogerCatalogStoreId("kroger-mechanicsville")).toBe(false);
+    expect(isBootstrapSeedStoreRow({ id: "kroger-mechanicsville", source_name: "kroger-official-api" })).toBe(
+      true,
+    );
+    expect(isBootstrapSeedStoreRow({ id: "kroger-02900529", source_name: "kroger-official-api" })).toBe(
+      false,
+    );
+  });
+
+  it("merges API-discovered Kroger stores into nearby bootstrap seed rows within 0.1 miles", () => {
+    const canonicalId = findCanonicalStoreIdForApiDiscoveredStore({
+      existingStores: [
+        {
+          id: "kroger-mechanicsville",
+          name: "Kroger",
+          source_name: "yum4less-internal-catalog",
+          source_store_id: "kroger-mechanicsville",
+          latitude: 37.61546,
+          longitude: -77.32939,
+          city: "Mechanicsville",
+          state: "VA",
+        },
+        {
+          id: "kroger-02900515",
+          name: "Kroger",
+          source_name: "kroger-official-api",
+          source_store_id: "02900515",
+          latitude: 37.701,
+          longitude: -77.401,
+          city: "Richmond",
+          state: "VA",
+        },
+      ],
+      chain: "kroger",
+      discovered: {
+        providerStoreId: "02900529",
+        latitude: 37.6155,
+        longitude: -77.3294,
+      },
+      catalogStoreId: "kroger-02900529",
+      getRolloutForStore: getProviderRolloutForStore,
+      mergeRadiusMiles: BOOTSTRAP_STORE_MERGE_RADIUS_MILES,
+    });
+
+    expect(canonicalId).toBe("kroger-mechanicsville");
+  });
+
+  it("does not merge API-discovered Kroger stores into distant bootstrap rows", () => {
+    const canonicalId = findCanonicalStoreIdForApiDiscoveredStore({
+      existingStores: [
+        {
+          id: "kroger-mechanicsville",
+          name: "Kroger",
+          source_name: "yum4less-internal-catalog",
+          source_store_id: "kroger-mechanicsville",
+          latitude: 37.61546,
+          longitude: -77.32939,
+          city: "Mechanicsville",
+          state: "VA",
+        },
+      ],
+      chain: "kroger",
+      discovered: {
+        providerStoreId: "02900515",
+        latitude: 37.701,
+        longitude: -77.401,
+      },
+      catalogStoreId: "kroger-02900515",
+      getRolloutForStore: getProviderRolloutForStore,
+      mergeRadiusMiles: BOOTSTRAP_STORE_MERGE_RADIUS_MILES,
+    });
+
+    expect(canonicalId).toBeUndefined();
+  });
+
+  it("reuses an already-linked bootstrap row by provider location id", () => {
+    const canonicalId = findCanonicalStoreIdForApiDiscoveredStore({
+      existingStores: [
+        {
+          id: "kroger-mechanicsville",
+          name: "Kroger",
+          source_name: "kroger-official-api",
+          source_store_id: "02900529",
+          latitude: 37.61546,
+          longitude: -77.32939,
+          city: "Mechanicsville",
+          state: "VA",
+        },
+      ],
+      chain: "kroger",
+      discovered: {
+        providerStoreId: "02900529",
+        latitude: 37.6155,
+        longitude: -77.3294,
+      },
+      catalogStoreId: "kroger-02900529",
+      getRolloutForStore: getProviderRolloutForStore,
+    });
+
+    expect(canonicalId).toBe("kroger-mechanicsville");
   });
 });

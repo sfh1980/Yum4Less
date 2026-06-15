@@ -3,7 +3,7 @@ import type {
   NearbyStoreSummary,
 } from "@/lib/recommendation-service";
 import type { StoreChain } from "@/lib/provider-rollout";
-import { buildStoreMapLocationNote } from "@/lib/store-map-location-copy";
+import type { StoreMapLocationProvenance } from "@/lib/store-map-location-copy";
 
 export type MapAnchorSource = "zip" | "browser" | "seed";
 
@@ -18,6 +18,8 @@ export type MapStoreMarker = {
   recommendationEnabled: boolean;
   rolloutStatus: NearbyStoreSummary["rolloutStatus"];
   rolloutNote: string;
+  locationProvenance: StoreMapLocationProvenance;
+  locationBadge: string;
   locationNote: string;
 };
 
@@ -43,6 +45,7 @@ export function buildNearbyStoresMapModel(
     | "locationLabel"
     | "lookupSource"
     | "radiusMiles"
+    | "usesEphemeralOsmDiscovery"
   >,
 ): NearbyStoresMapModel {
   const source = toMapAnchorSource(market.lookupSource);
@@ -66,15 +69,13 @@ export function buildNearbyStoresMapModel(
       recommendationEnabled: store.recommendationEnabled,
       rolloutStatus: store.rolloutStatus,
       rolloutNote: store.rolloutNote,
-      locationNote: buildStoreMapLocationNote({
-        storeId: store.id,
-        sourceName: store.sourceName,
-        lastVerifiedAt: store.lastVerifiedAt,
-      }),
+      locationProvenance: store.locationProvenance,
+      locationBadge: store.locationBadge,
+      locationNote: store.locationNote,
     })),
-    usesOsmCatalogData: market.nearbyStores.some((store) =>
-      store.id.startsWith("osm-"),
-    ),
+    usesOsmCatalogData:
+      market.usesEphemeralOsmDiscovery === true ||
+      market.nearbyStores.some((store) => store.id.startsWith("osm-")),
   };
 }
 

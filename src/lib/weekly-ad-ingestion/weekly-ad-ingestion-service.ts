@@ -16,6 +16,7 @@ import type {
   WeeklyAdOfferSyncSummary,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import { createResearchWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/weekly-ad-research-ingestion";
+import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
 import {
   getWeeklyAdIngestionStatusSummaries,
   syncWeeklyAdOffersToPriceObservations,
@@ -55,6 +56,10 @@ export async function runWeeklyAdIngestionForStores(input: {
   const zipCode = input.zipCode ?? DEFAULT_ZIP_CODE;
   const results: WeeklyAdIngestionResult[] = [];
   const syncSummaries: WeeklyAdOfferSyncSummary[] = [];
+
+  if (input.persistToDatabase) {
+    await purgeStaleRankedPriceObservations();
+  }
 
   for (const store of input.nearbyStores) {
     if (!isWeeklyAdChain(store.chain)) {

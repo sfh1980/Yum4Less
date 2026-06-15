@@ -216,13 +216,8 @@ function MealPreferencesPanel({
   onSelectAllIngredients,
   onClearIngredientSelection,
 }: MealPreferencesPanelProps) {
-  const ingredientFirst = form.planningMode === "ingredient-first";
-  const rankButtonLabel = ingredientFirst
-    ? "Suggest recipes using my selected ingredients"
-    : "Rank dinner options";
   const rankDisabled =
-    rankingPaused ||
-    (ingredientFirst && selectedIngredientIds.length === 0);
+    rankingPaused || selectedIngredientIds.length === 0;
 
   return (
     <div
@@ -232,13 +227,19 @@ function MealPreferencesPanel({
     >
       <h3>Step 2: Set meal preferences</h3>
       <p className="panel-copy">
-        {ingredientFirst
-          ? "Set your budget and shopping constraints first, then pick sale ingredients to cook with. Totals use ingested Kroger-family and Aldi data where gates pass—not live checkout."
-          : "Choose your budget, ingredient limit, and store preference before ranking dinner options. Estimates use Kroger official online or weekly-ad data and Aldi weekly-ad data where available—not live checkout totals."}
+        Tell us your spending limit and shopping preferences, then choose what&apos;s
+        on sale near you. We&apos;ll suggest recipes using our best available sale
+        prices for Kroger-family and Aldi stores — these are estimates, not live
+        checkout totals.
       </p>
 
       <div className="form-grid">
-        <FormField id="budget-cap" label="Budget cap" error={displayedErrors.budget}>
+        <FormField
+          id="budget-cap"
+          label="How much do you want to spend?"
+          error={displayedErrors.budget}
+          hint="Per-dinner spending limit. Totals are estimates — verify in store."
+        >
           <input
             id="budget-cap"
             aria-invalid={displayedErrors.budget ? true : undefined}
@@ -249,50 +250,6 @@ function MealPreferencesPanel({
             value={form.budget}
             onChange={(event) =>
               setForm((current) => ({ ...current, budget: event.target.value }))
-            }
-          />
-        </FormField>
-
-        <FormField
-          id="max-ingredients"
-          label="Maximum ingredients"
-          error={displayedErrors.maxIngredients}
-        >
-          <input
-            id="max-ingredients"
-            aria-invalid={displayedErrors.maxIngredients ? true : undefined}
-            min={3}
-            max={12}
-            step={1}
-            type="number"
-            value={form.maxIngredients}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                maxIngredients: event.target.value,
-              }))
-            }
-          />
-        </FormField>
-
-        <FormField
-          id="dinners-wanted"
-          label="Dinner options wanted"
-          error={displayedErrors.dinnersWanted}
-        >
-          <input
-            id="dinners-wanted"
-            aria-invalid={displayedErrors.dinnersWanted ? true : undefined}
-            min={1}
-            max={4}
-            step={1}
-            type="number"
-            value={form.dinnersWanted}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                dinnersWanted: event.target.value,
-              }))
             }
           />
         </FormField>
@@ -332,104 +289,42 @@ function MealPreferencesPanel({
             <option value="quick">Quick meals</option>
           </select>
         </FormField>
-
       </div>
 
-      <details className="meal-planner-advanced-options">
-        <summary>Advanced options</summary>
-        <div className="meal-planner-advanced-options-body">
-          <FormField
-            id="planning-mode"
-            label="Planning approach"
-            hint={
-              ingredientFirst
-                ? "Switch here to rank full dinners without picking sale ingredients."
-                : "Suggesting recipes from sale ingredients is the default beta path."
+      <div className="recipe-opt-in-panel">
+        <label className="recipe-opt-in-label" htmlFor="external-recipe-opt-in">
+          <input
+            checked={form.externalRecipeOptIn}
+            id="external-recipe-opt-in"
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                externalRecipeOptIn: event.target.checked,
+              }))
             }
-          >
-            <select
-              id="planning-mode"
-              value={form.planningMode}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  planningMode: event.target.value as FormState["planningMode"],
-                  externalRecipeOptIn:
-                    event.target.value === "ingredient-first"
-                      ? current.externalRecipeOptIn
-                      : false,
-                }))
-              }
-            >
-              <option value="ingredient-first">Suggest recipes from sale ingredients</option>
-              <option value="standard">Rank full dinner options (alternate)</option>
-            </select>
-          </FormField>
+            type="checkbox"
+          />
+          <span>
+            Also include TheMealDB recipes that match my sale ingredients
+            (attribution required — verify prices in store)
+          </span>
+        </label>
+        <p className="field-hint">
+          Leave unchecked to suggest recipes from Yum4Less&apos;s internal library
+          only. TheMealDB meals are opt-in, not automatic.
+        </p>
+      </div>
 
-          {!ingredientFirst ? (
-            <div className="recipe-opt-in-panel">
-              <label
-                className="recipe-opt-in-label"
-                htmlFor="external-recipe-opt-in-standard"
-              >
-                <input
-                  checked={form.externalRecipeOptIn}
-                  id="external-recipe-opt-in-standard"
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      externalRecipeOptIn: event.target.checked,
-                    }))
-                  }
-                  type="checkbox"
-                />
-                <span>
-                  Include TheMealDB recipes in ranking (opt-in — verify in store)
-                </span>
-              </label>
-            </div>
-          ) : null}
-        </div>
-      </details>
-
-      {ingredientFirst ? (
-        <>
-          <div className="recipe-opt-in-panel">
-            <label className="recipe-opt-in-label" htmlFor="external-recipe-opt-in">
-              <input
-                checked={form.externalRecipeOptIn}
-                id="external-recipe-opt-in"
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    externalRecipeOptIn: event.target.checked,
-                  }))
-                }
-                type="checkbox"
-              />
-              <span>
-                Also include TheMealDB recipes that match my sale ingredients
-                (attribution required — verify prices in store)
-              </span>
-            </label>
-            <p className="field-hint">
-              Leave unchecked to rank from Yum4Less&apos;s internal recipe library
-              only. TheMealDB meals are opt-in, not automatic.
-            </p>
-          </div>
-
-          <div className="sale-ingredient-picker-shell sale-ingredient-picker-shell--primary">
-            <h4>Step 3: Browse nearby sale ingredients</h4>
-            <SaleIngredientPicker
-              choices={market.saleIngredientChoices}
-              selectedIngredientIds={selectedIngredientIds}
-              onToggleIngredient={onToggleIngredient}
-              onSelectAll={onSelectAllIngredients}
-              onClearSelection={onClearIngredientSelection}
-            />
-          </div>
-        </>
-      ) : null}
+      <div className="sale-ingredient-picker-shell sale-ingredient-picker-shell--primary">
+        <h4>Step 3: Browse nearby sale ingredients</h4>
+        <SaleIngredientPicker
+          choices={market.saleIngredientChoices}
+          selectedIngredientIds={selectedIngredientIds}
+          onToggleIngredient={onToggleIngredient}
+          onSelectAll={onSelectAllIngredients}
+          onClearSelection={onClearIngredientSelection}
+        />
+      </div>
 
       {rankingPaused ? (
         <p className="field-hint" role="status">
@@ -446,10 +341,10 @@ function MealPreferencesPanel({
           disabled={rankDisabled}
           aria-disabled={rankDisabled || undefined}
         >
-          {rankButtonLabel}
+          Suggest recipes using my selected ingredients
         </button>
       </div>
-      {ingredientFirst && selectedIngredientIds.length === 0 && !rankingPaused ? (
+      {selectedIngredientIds.length === 0 && !rankingPaused ? (
         <p className="field-hint" role="status">
           Select at least one sale ingredient, then use Suggest recipes.
         </p>

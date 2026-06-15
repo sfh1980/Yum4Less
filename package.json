@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/ensure-snap-context.mjs --quiet --non-fatal && next dev",
+    "ensure:snap-context": "node scripts/ensure-snap-context.mjs",
     "dev:clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true})}catch(_){}\" && next dev",
     "build": "next build",
     "start": "next start",
@@ -26,6 +27,8 @@
     "sync:provider-prices": "tsx scripts/sync-provider-prices.ts",
     "ingest:map-catalog": "tsx scripts/ingest-map-catalog.ts",
     "ingest:map-catalog:fixture": "tsx scripts/ingest-map-catalog.ts --fixture",
+    "ingest:snap-retailers": "tsx scripts/ingest-snap-retailers.ts",
+    "ingest:snap-retailers:fixture": "tsx scripts/ingest-snap-retailers.ts --fixture",
     "ingest:weekly-ads:scheduled": "node scripts/run-scheduled-weekly-ad-ingest.mjs",
     "ingest:weekly-ads:scheduled:fixture": "node scripts/run-scheduled-weekly-ad-ingest.mjs --fixture",
     "ingest:weekly-ads:browser": "node scripts/run-weekly-ad-ingest.mjs --browser",

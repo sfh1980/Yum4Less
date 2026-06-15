@@ -81,7 +81,10 @@ export function NearbyStoresList({
                 </span>
                 <span className="nearby-stores-list-item-meta">
                   {store.chainLabel} · {formatStoreKind(store.kind)} ·{" "}
-                  {store.distanceMiles} mi
+                  {store.distanceMiles} mi · {store.locationBadge}
+                </span>
+                <span className="nearby-stores-list-item-note">
+                  {store.locationNote}
                 </span>
                 <span className="nearby-stores-list-item-note">{store.rolloutNote}</span>
               </button>

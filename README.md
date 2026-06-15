@@ -98,6 +98,7 @@ Copy `.env.example` → `.env.local`. Key variables:
 | `DATABASE_URL` | Postgres (`postgresql://postgres:postgres@localhost:5433/yum4less_dev`) |
 | `GEOCODIO_API_KEY` | Live ZIP geocoding (continental US); omit for seed ZIP fallback |
 | `KROGER_*` | Kroger OAuth + store/pricing API |
+| `YUM4LESS_KROGER_LOCATION_SEARCH_LIMIT` | Kroger Location API store search cap for map-catalog ingest (default 25, max 50) |
 | `YUM4LESS_INGEST_ZIPS` | Comma-separated ZIPs for scheduled ingest (`sync:provider-prices`, `ingest:map-catalog`) |
 | `YUM4LESS_ENABLE_API_DB_WRITES` | Local dev only — allow public API Postgres writes (**never in production**) |
 | `TRUST_PROXY_HEADERS` | `=1` only behind a trusted reverse proxy |
@@ -112,8 +113,9 @@ Full list and ingest flags → `.env.example`.
 
 | Command | Purpose |
 |---------|---------|
-| `npm run setup:local` | First-run: `.env.local`, `db:up`, live scheduled ingest when keys set |
-| `npm run dev` | Development server (default port **3000**; use `-p 3001` when 3000 is taken) |
+| `npm run setup:local` | First-run: `.env.local`, `db:up`, SNAP auto-ensure when enabled, live scheduled ingest when keys set |
+| `npm run dev` | Development server (auto-ensures SNAP context when `YUM4LESS_MAP_SNAP_CONTEXT=1` and table is empty) |
+| `npm run ensure:snap-context` | Idempotent SNAP load — skips when rows exist; use `--force` to re-ingest |
 | `npm run dev:clean` | Clear `.next` then dev (after build/webpack glitches) |
 | `npm run build` / `npm run start` | Production build / serve |
 | `npm run lint` | ESLint |
@@ -127,8 +129,8 @@ Full list and ingest flags → `.env.example`.
 | `npm run ingest:weekly-ads` | Live weekly-ad fetch (HTTP + browser fallback) |
 | `npm run ingest:weekly-ads:browser` | Force Playwright browser fetch |
 | `npm run sync:provider-prices` | Sync official provider prices into `price_observations` |
-| `npm run ingest:map-catalog` | **Cron only** — OSM Overpass + chain locators → `stores` map-context rows |
-| `npm run ingest:map-catalog:fixture` | Deterministic OSM-style map catalog for CI/rehearsal (ZIP 23111) |
+| `npm run ingest:map-catalog` | **Cron primary** — OSM Overpass + Kroger-family Location API + nearest OSM Aldi + Publix locator context → Postgres `stores` rows; complements search-time ephemeral OSM merge |
+| `npm run ingest:map-catalog:fixture` | Deterministic OSM-style map catalog for CI/rehearsal (ZIP 23111; skips live Kroger/Publix locators) |
 | `npm run ingest:weekly-ads:scheduled` | **Daily cron wrapper** — weekly-ad ingest + map catalog + provider sync + TheMealDB import |
 | `npm run ingest:weekly-ads:scheduled:fixture` | Rehearsal cron path (CI/tests — fixture weekly ads only) |
 | `npm run test:kroger-api` | Kroger OAuth + store pricing probe |
@@ -138,7 +140,7 @@ Live ingest chain-by-chain baseline → [`PROJECT_CONTINUITY.md` → Live weekly
 
 ### Daily pricing refresh (24-hour cache)
 
-Public `/api/market-search` and `/api/recommendations` reads are **cache-only**: ranked prices come from Postgres rows observed within the last **24 hours**. User searches do **not** call live retailer APIs or write new price rows.
+Public `/api/market-search` and `/api/recommendations` reads are **cache-only for ranked prices**: meal totals come from Postgres rows observed within the last **24 hours**. User searches do **not** call live Kroger pricing APIs or write new price rows. **Map pins** merge ingested Postgres stores, cached provider discovery, and (when pins within radius are sparse) ephemeral OpenStreetMap context via Overpass — merged in memory only unless you run ingest scripts.
 
 Schedule one daily ingest on your host (homelab cron, Task Scheduler, etc.):
 

@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetKrogerAccessTokenCacheForTests } from "@/lib/providers/kroger/kroger-api-client";
+import { KROGER_API_SPEC } from "@/lib/providers/kroger/kroger-api-types";
 import { createKrogerProviderClient } from "@/lib/providers/kroger-provider";
 
 const originalClientId = process.env.KROGER_CLIENT_ID;
@@ -25,6 +27,7 @@ describe("createKrogerProviderClient", () => {
       process.env.KROGER_API_ENV = originalApiEnv;
     }
 
+    resetKrogerAccessTokenCacheForTests();
     vi.unstubAllGlobals();
   });
 
@@ -255,5 +258,158 @@ describe("createKrogerProviderClient", () => {
       }),
     ]);
     expect(result.message).toContain("verify in store");
+  });
+
+  it("retries with priority-2 search term when priority-1 has no match at or above 0.45", async () => {
+    process.env.KROGER_CLIENT_ID = "client-id";
+    process.env.KROGER_CLIENT_SECRET = "client-secret";
+    process.env.KROGER_API_ENV = "production";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token-123" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                productId: "0001312000026",
+                description: "Ore-Ida Seasoned Crispy Mini Frozen Tater Tots",
+                brand: "Ore-Ida",
+                items: [{ price: { regular: 5.49 }, fulfillment: { instore: true } }],
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                productId: "0001111060338",
+                description: "Private Selection Yellow Petite Potatoes Bag",
+                brand: "Private Selection",
+                items: [{ price: { regular: 3.99 }, fulfillment: { instore: true } }],
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createKrogerProviderClient();
+    const result = await client.searchPricingPreview({
+      store: {
+        provider: "kroger",
+        providerStoreId: "01100479",
+        name: "Kroger Mechanicsville",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6652,
+        longitude: -77.3651,
+      },
+      ingredients: [
+        {
+          ingredientId: "baby-potatoes",
+          ingredientName: "Baby potatoes",
+          searchTerm: "baby gold potatoes",
+          fallbackSearchTerm: "petite potatoes",
+        },
+      ],
+    });
+
+    expect(result.matchedIngredientCount).toBe(1);
+    expect(result.items[0]?.providerProductId).toBe("0001111060338");
+    expect(result.items[0]?.matchConfidence).toBeGreaterThanOrEqual(0.45);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("warms and reuses one products token across parallel ingredient searches in a batch", async () => {
+    process.env.KROGER_CLIENT_ID = "client-id";
+    process.env.KROGER_CLIENT_SECRET = "client-secret";
+    process.env.KROGER_API_ENV = "production";
+
+    const productResponse = (productId: string, description: string) =>
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              productId,
+              description,
+              brand: "Kroger",
+              items: [
+                {
+                  price: { regular: 2.99, promo: 2.49 },
+                  fulfillment: { instore: true },
+                },
+              ],
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token-products", expires_in: 1800 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        productResponse("0001111000001", "Fresh Chicken Thighs Family Pack"),
+      )
+      .mockResolvedValueOnce(
+        productResponse("0001111000002", "Fresh Broccoli Crowns"),
+      )
+      .mockResolvedValueOnce(
+        productResponse("0001111000003", "Kroger Pure Olive Oil"),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createKrogerProviderClient();
+    const result = await client.searchPricingPreview({
+      store: {
+        provider: "kroger",
+        providerStoreId: "01100479",
+        name: "Kroger Mechanicsville",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6652,
+        longitude: -77.3651,
+      },
+      ingredients: [
+        {
+          ingredientId: "chicken-thighs",
+          ingredientName: "Chicken thighs",
+          searchTerm: "chicken thigh",
+        },
+        {
+          ingredientId: "broccoli",
+          ingredientName: "Broccoli",
+          searchTerm: "broccoli",
+        },
+        {
+          ingredientId: "olive-oil",
+          ingredientName: "Olive oil",
+          searchTerm: "olive oil",
+        },
+      ],
+    });
+
+    expect(result.matchedIngredientCount).toBe(3);
+    const tokenCalls = fetchMock.mock.calls.filter((call) =>
+      String(call[0]).includes(KROGER_API_SPEC.tokenPath),
+    );
+    expect(tokenCalls).toHaveLength(1);
   });
 });

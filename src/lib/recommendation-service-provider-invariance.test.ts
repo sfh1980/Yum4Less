@@ -11,9 +11,12 @@ const { buildProviderPricingPreviews } = vi.hoisted(() => ({
   buildProviderPricingPreviews: vi.fn(),
 }));
 
-const { getMarketDataSnapshot } = vi.hoisted(() => ({
-  getMarketDataSnapshot: vi.fn(),
-}));
+const { getMarketDataSnapshot, getMarketPricingContext, getRecipeCatalog } =
+  vi.hoisted(() => ({
+    getMarketDataSnapshot: vi.fn(),
+    getMarketPricingContext: vi.fn(),
+    getRecipeCatalog: vi.fn(),
+  }));
 
 vi.mock("@/lib/provider-pricing-preview-service", () => ({
   buildProviderPricingPreviews,
@@ -21,7 +24,32 @@ vi.mock("@/lib/provider-pricing-preview-service", () => ({
 
 vi.mock("@/lib/market-repository", () => ({
   getMarketDataSnapshot,
+  getMarketPricingContext,
+  getRecipeCatalog,
 }));
+
+function mockRankingReads(snapshot: {
+  stores: typeof fixtureStores;
+  recipes: typeof fixtureRecipes;
+  priceObservations: typeof liveCacheObservations;
+}) {
+  getMarketDataSnapshot.mockResolvedValue({
+    source: "database",
+    snapshot: {
+      ...snapshot,
+      ingredients: [],
+    },
+  });
+  getMarketPricingContext.mockResolvedValue({
+    source: "database",
+    stores: snapshot.stores,
+    priceObservations: snapshot.priceObservations,
+  });
+  getRecipeCatalog.mockResolvedValue({
+    source: "database",
+    recipes: snapshot.recipes,
+  });
+}
 
 const preferences: MealPreferenceForm = {
   zipCode: "23111",
@@ -32,6 +60,7 @@ const preferences: MealPreferenceForm = {
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: "internal-library",
+  planningMode: "standard",
 };
 
 const location = {
@@ -55,13 +84,10 @@ const liveCacheObservations = fixturePriceObservations
 describe("getRecommendationExperience provider preview invariance", () => {
   beforeEach(() => {
     buildProviderPricingPreviews.mockReset();
-    getMarketDataSnapshot.mockResolvedValue({
-      source: "database",
-      snapshot: {
-        stores: fixtureStores,
-        recipes: fixtureRecipes,
-        priceObservations: liveCacheObservations,
-      },
+    mockRankingReads({
+      stores: fixtureStores,
+      recipes: fixtureRecipes,
+      priceObservations: liveCacheObservations,
     });
   });
 

@@ -123,6 +123,7 @@ export function NearbyStoresMap({
         const safeName = escapeHtml(store.name);
         const safeChainLabel = escapeHtml(store.chainLabel);
         const safePricingLabel = escapeHtml(pricingLabel);
+        const safeLocationBadge = escapeHtml(store.locationBadge);
         const safeLocationNote = escapeHtml(store.locationNote);
         const icon = leaflet.divIcon({
           className: "store-map-marker-wrap",
@@ -138,7 +139,7 @@ export function NearbyStoresMap({
           })
           .addTo(map)
           .bindTooltip(
-            `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationNote}</span>`,
+            `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span>`,
             { direction: "top", opacity: 0.95, sticky: true },
           )
           .bindPopup(buildStorePopupHtml(store, pricingLabel));
@@ -236,9 +237,10 @@ function buildStorePopupHtml(
   const safeName = escapeHtml(store.name);
   const safeChainLabel = escapeHtml(store.chainLabel);
   const safePricingLabel = escapeHtml(pricingLabel);
+  const safeLocationBadge = escapeHtml(store.locationBadge);
   const safeLocationNote = escapeHtml(store.locationNote);
   const safeRolloutNote = escapeHtml(store.rolloutNote);
-  return `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationNote}</span><br/><span style="opacity:0.85">${safeRolloutNote}</span>`;
+  return `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span><br/><span style="opacity:0.85">${safeRolloutNote}</span>`;
 }
 
 function formatAnchorSource(source: NearbyStoresMapModel["anchor"]["source"]) {

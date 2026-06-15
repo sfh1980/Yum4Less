@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createKrogerApiClient, probeKrogerApiSetup } from "@/lib/providers/kroger/kroger-api-client";
+import {
+  createKrogerApiClient,
+  probeKrogerApiSetup,
+  resetKrogerAccessTokenCacheForTests,
+} from "@/lib/providers/kroger/kroger-api-client";
 import {
   KROGER_API_SPEC,
   getKrogerApiBaseUrl,
@@ -14,6 +18,7 @@ describe("createKrogerApiClient", () => {
     } else {
       process.env.KROGER_API_ENV = originalApiEnv;
     }
+    resetKrogerAccessTokenCacheForTests();
     vi.unstubAllGlobals();
   });
 
@@ -134,6 +139,54 @@ describe("createKrogerApiClient", () => {
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain("filter.fulfillment=ais");
   });
 
+  it("reuses one products-scope token across concurrent product searches", async () => {
+    let tokenRequestCount = 0;
+    const fetchMock = vi.fn().mockImplementation((url: string | URL) => {
+      const urlString = String(url);
+      if (urlString.includes(KROGER_API_SPEC.tokenPath)) {
+        tokenRequestCount += 1;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ access_token: "token-products-shared", expires_in: 1800 }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                productId: "0001111000001",
+                description: "Sample Product",
+                items: [{ price: { regular: 1.99 }, fulfillment: { instore: true } }],
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = createKrogerApiClient({
+      clientId: "client-id",
+      clientSecret: "client-secret",
+    });
+
+    await Promise.all([
+      api.searchProducts({ term: "broccoli", locationId: "01400376", fulfillment: "ais", limit: 1 }),
+      api.searchProducts({ term: "lemon", locationId: "01400376", fulfillment: "ais", limit: 1 }),
+      api.searchProducts({ term: "bacon", locationId: "01400376", fulfillment: "ais", limit: 1 }),
+    ]);
+
+    expect(tokenRequestCount).toBe(1);
+  });
+
   it("reports missing credentials from the setup probe", async () => {
     delete process.env.KROGER_CLIENT_ID;
     delete process.env.KROGER_CLIENT_SECRET;
@@ -183,12 +236,6 @@ describe("createKrogerApiClient", () => {
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ access_token: "token-products-detail" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
       )
       .mockResolvedValueOnce(
         new Response(
@@ -259,12 +306,6 @@ describe("createKrogerApiClient", () => {
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ access_token: "token-products-detail" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
       )
       .mockResolvedValueOnce(
         new Response(

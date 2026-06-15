@@ -49,6 +49,37 @@ describe("provider price matching", () => {
     expect(match.matchConfidence).toBeLessThan(0.45);
   });
 
+  it("awards partial-whole-term-match for multi-word Kroger potato SKUs", () => {
+    const match = scoreProviderProductMatch({
+      ingredient: {
+        ingredientId: "baby-potatoes",
+        ingredientName: "Baby potatoes",
+        searchTerm: "baby gold potatoes",
+      },
+      description: "Private Selection Petite Gold Gourmet Potatoes",
+      inStock: true,
+    });
+
+    expect(match.matchConfidence).toBeGreaterThanOrEqual(0.45);
+    expect(match.matchReason).toContain("partial-whole-term-match");
+    expect(match.matchConfidence).toBe(0.6);
+  });
+
+  it("does not apply partial-whole-term-match to single-word search terms", () => {
+    const match = scoreProviderProductMatch({
+      ingredient: {
+        ingredientId: "broccoli",
+        ingredientName: "Broccoli",
+        searchTerm: "broccoli",
+      },
+      description: "Organic Broccoli Crowns Tray",
+      inStock: true,
+    });
+
+    expect(match.matchReason).not.toContain("partial-whole-term-match");
+    expect(match.matchReason).toContain("description contains the full ingredient name");
+  });
+
   it("marks partial tracked-ingredient coverage as limited", () => {
     const coverageStatus = getPricingCoverageStatus({
       matchedIngredientCount: 2,

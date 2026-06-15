@@ -22,6 +22,10 @@ export function buildStoreListStatusPill(input: StorePricingStatusInput): string
     return "Est. weekly-ad prices";
   }
 
+  if (input.rolloutStatus === "official-api-preview") {
+    return input.chain === "kroger" ? "Est. Kroger API prices" : "Est. official API prices";
+  }
+
   if (input.rolloutStatus === "limited-coverage") {
     return "Limited coverage — directional";
   }
@@ -34,6 +38,11 @@ export function buildStoreMapPricingLabel(input: StorePricingStatusInput): strin
   if (input.recommendationEnabled) {
     if (input.rolloutStatus === "weekly-ad-preview") {
       return "Est. weekly-ad prices — verify in store";
+    }
+    if (input.rolloutStatus === "official-api-preview") {
+      return input.chain === "kroger"
+        ? "Est. Kroger API prices — verify in store"
+        : "Est. official API prices — verify in store";
     }
     return "Limited weekly-ad coverage — directional";
   }

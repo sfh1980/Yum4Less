@@ -6,6 +6,8 @@ import type {
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 import {
   getMarketDataSnapshot,
+  getMarketPricingContext,
+  getRecipeCatalog,
   type MarketDataSnapshot,
   type MarketDataSource,
 } from "@/lib/market-repository";
@@ -31,6 +33,7 @@ import {
   type ProviderCoverageRollup,
 } from "@/lib/provider-coverage-rollup";
 import { buildProviderPricingPreviews } from "@/lib/provider-pricing-preview-service";
+import { resolveKrogerCoverageTrackedIngredients } from "@/lib/provider-search-terms";
 import type { ProviderPriceObservationSyncSummary } from "@/lib/provider-price-observation-sync";
 import {
   buildAllProviderPromotionReadiness,
@@ -53,6 +56,10 @@ import {
   weeklyAdPromotionGatesPass,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-coverage";
 import {
+  buildKrogerOfficialApiStoreCoverage,
+  krogerOfficialApiPromotionGatesPass,
+} from "@/lib/kroger-official-api-coverage";
+import {
   buildWeeklyAdPromotionReadinessForStores,
   type WeeklyAdPromotionReadiness,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-promotion-readiness";
@@ -60,7 +67,10 @@ import {
   buildInactiveRecipeSourceShopperNotice,
   isRecipeSourceActive,
 } from "@/lib/recipe-sources/recipe-source-registry";
-import { ensureThemealdbRecipesForSearch } from "@/lib/recipe-import/ensure-themealdb-recipes-for-search";
+import {
+  getLatestThemealdbImportAt,
+  shouldRefreshThemealdbRecipesOnSearch,
+} from "@/lib/recipe-import/ensure-themealdb-recipes-for-search";
 import {
   buildThemealdbAttribution,
   collectSaleIngredientIdsFromObservations,
@@ -73,8 +83,41 @@ import {
   type SaleIngredientChoice,
 } from "@/lib/sale-ingredient-offers";
 import { THEMEALDB_SOURCE_NAME } from "@/lib/recipe-import/themealdb-types";
+import {
+  DEFAULT_DINNERS_WANTED,
+  DEFAULT_MAX_INGREDIENTS,
+  DEFAULT_PLANNING_MODE,
+} from "@/lib/meal-preference-defaults";
+import {
+  discoverMapContextStores,
+  mapContextCandidateToCatalogStore,
+} from "@/lib/map-context-discovery";
+import { resolveMapSparsePinThreshold } from "@/lib/map-search-osm-cache";
+import {
+  filterMapContextCatalogStoresConflictingWithIngestedRankedChains,
+  resolveMapOsmRankedChainPolicy,
+  shouldRunSearchTimeOsmDiscovery,
+} from "@/lib/map-osm-ranked-chain-policy";
+import {
+  buildCatalogStoresFromProviderSearches,
+  catalogStoreRecordToCatalogStore,
+  MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES,
+  mergeCatalogStoresForMap,
+} from "@/lib/market-store-catalog-merge";
+import {
+  buildStoreMapLocationBadge,
+  buildStoreMapLocationNote,
+  resolveStoreMapLocationProvenance,
+  type StoreMapLocationProvenance,
+} from "@/lib/store-map-location-copy";
 
 import type { RecipeSourceSelection } from "@/lib/recipe-sources/recipe-source-types";
+
+export {
+  DEFAULT_DINNERS_WANTED,
+  DEFAULT_MAX_INGREDIENTS,
+  DEFAULT_PLANNING_MODE,
+} from "@/lib/meal-preference-defaults";
 
 export type MealPlanningMode = "standard" | "ingredient-first";
 
@@ -108,7 +151,11 @@ export type NearbyStoreSummary = {
   recommendationEnabled: boolean;
   rolloutNote: string;
   sourceName?: string;
+  sourceStoreId?: string;
   lastVerifiedAt?: string;
+  locationProvenance: StoreMapLocationProvenance;
+  locationBadge: string;
+  locationNote: string;
 };
 
 export type MarketSummary = {
@@ -132,6 +179,10 @@ export type MarketSummary = {
   dataSource: MarketDataSource;
   /** Sale/API/scrape ingredient rows near the search point for optional shopper selection. */
   saleIngredientChoices: SaleIngredientChoice[];
+  /** Honest notice when search-time OSM discovery is degraded, sparse, or ephemeral. */
+  mapDiscoveryNotice?: string;
+  /** True when any visible pin came from ephemeral search-time OSM merge (not Postgres). */
+  usesEphemeralOsmDiscovery?: boolean;
   /**
    * Retired for shopper UI (TRUST-06). Structured fields above replace the old
    * concatenated blob. Omitted from public API responses.
@@ -217,11 +268,23 @@ export async function getRecommendationExperience(
   location: ResolvedSearchLocation,
   providerConfigured: boolean,
 ): Promise<RecommendationExperience> {
-  let { market, snapshot } = await getMarketSearchExperience(
+  const { market } = await getMarketSearchExperience(
     preferences.radiusMiles,
     location,
     providerConfigured,
   );
+
+  const [pricingContext, recipeCatalog] = await Promise.all([
+    getMarketPricingContext(),
+    getRecipeCatalog(),
+  ]);
+
+  const snapshot: MarketDataSnapshot = {
+    stores: pricingContext.stores,
+    ingredients: [],
+    recipes: recipeCatalog.recipes,
+    priceObservations: pricingContext.priceObservations,
+  };
 
   let themealdbEnsureNotice: ShopperNotice | undefined;
 
@@ -230,21 +293,21 @@ export async function getRecommendationExperience(
     preferences.recipeSourceOptIn === true &&
     market.dataSource === "database"
   ) {
+    // BOUNDARY: recipe catalog refresh is cron/script-only — never on recommendation request
     const saleIngredientIds = collectSaleIngredientIdsFromObservations(
       snapshot.priceObservations,
     );
-    const ensureResult = await ensureThemealdbRecipesForSearch({
+    const latestImportAt = await getLatestThemealdbImportAt();
+    const needsCatalogRefresh = shouldRefreshThemealdbRecipesOnSearch({
       recipes: snapshot.recipes,
       saleIngredientIds,
       selectedIngredientIds: preferences.selectedIngredientIds,
+      latestImportAt,
     });
 
-    if (ensureResult.status === "refreshed") {
-      const refreshed = await getMarketDataSnapshot();
-      snapshot = refreshed.snapshot;
+    if (needsCatalogRefresh) {
+      themealdbEnsureNotice = buildThemealdbScheduledRefreshNotice();
     }
-
-    themealdbEnsureNotice = ensureResult.degradedNotice;
   }
 
   if (!isRecipeSourceActive(preferences.recipeSource)) {
@@ -272,7 +335,7 @@ export async function getRecommendationExperience(
   }
 
   if (
-    preferences.planningMode === "ingredient-first" &&
+    (preferences.planningMode ?? DEFAULT_PLANNING_MODE) === "ingredient-first" &&
     (!preferences.selectedIngredientIds || preferences.selectedIngredientIds.length === 0)
   ) {
     return {
@@ -345,7 +408,7 @@ export async function getRecommendationExperience(
     return {
       market,
       recommendations: [],
-      shopperNotice: emptyNotice ?? themealdbEnsureNotice,
+      shopperNotice: themealdbEnsureNotice ?? emptyNotice,
     };
   }
 
@@ -399,15 +462,106 @@ export async function getMarketSearchExperience(
 
   let { snapshot, source } = await getMarketDataSnapshot();
   const recipeIngredientIds = collectRecipeIngredientIds(snapshot.recipes);
-  let nearbyStores = getNearbyStores(
+
+  const providerCatalogStores = buildCatalogStoresFromProviderSearches(
+    providerStoreSearches,
+  ).map(catalogStoreRecordToCatalogStore);
+
+  let mergedCatalogStores = mergeCatalogStoresForMap(
     snapshot.stores,
+    providerCatalogStores,
+  );
+
+  const dbPinCount = buildNearbyStoresForSearch(
+    mergedCatalogStores,
+    location,
+    radiusMiles,
+    snapshot.priceObservations,
+    recipeIngredientIds,
+  ).length;
+
+  let mapDiscoveryNotice: string | undefined;
+  let usesEphemeralOsmDiscovery = false;
+  const sparseThreshold = resolveMapSparsePinThreshold();
+  const osmRankedChainPolicy = resolveMapOsmRankedChainPolicy();
+
+  if (
+    source !== "unavailable" &&
+    shouldRunSearchTimeOsmDiscovery(osmRankedChainPolicy) &&
+    dbPinCount < sparseThreshold
+  ) {
+    const mapContextDiscovery = await discoverMapContextStores({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      radiusMiles,
+      zipCode: location.zipCode,
+    });
+
+    if (mapContextDiscovery.stores.length > 0) {
+      let contextCatalogStores = mapContextDiscovery.stores
+        .map(mapContextCandidateToCatalogStore)
+        .map(catalogStoreRecordToCatalogStore);
+
+      let suppressedRankedChainConflicts = 0;
+      if (osmRankedChainPolicy === "suppress-conflicts") {
+        const filtered = filterMapContextCatalogStoresConflictingWithIngestedRankedChains(
+          mergedCatalogStores,
+          contextCatalogStores,
+          MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES,
+        );
+        contextCatalogStores = filtered.kept;
+        suppressedRankedChainConflicts = filtered.suppressedCount;
+      }
+
+      if (contextCatalogStores.length > 0) {
+        mergedCatalogStores = mergeCatalogStoresForMap(
+          mergedCatalogStores,
+          contextCatalogStores,
+        );
+        usesEphemeralOsmDiscovery = true;
+      }
+
+      const osmSource = mapContextDiscovery.sources.find(
+        (entry) => entry.source === "openstreetmap-overpass" || entry.source === "fixture",
+      );
+      const snapSource = mapContextDiscovery.sources.find(
+        (entry) => entry.source === "usda-snap-retailer-locator",
+      );
+
+      if (contextCatalogStores.length === 0 && suppressedRankedChainConflicts > 0) {
+        mapDiscoveryNotice =
+          "Map-context discovery returned Kroger/Aldi pins, but ingested catalog coordinates already cover those chains — duplicates were suppressed. Ranked estimates remain Kroger-family and Aldi only when gates pass.";
+      } else if (contextCatalogStores.length > 0) {
+        const parts: string[] = [];
+        if (osmSource && osmSource.stores.length > 0) {
+          parts.push(
+            osmSource.cacheHit
+              ? "cached OpenStreetMap context pins"
+              : "OpenStreetMap context pins",
+          );
+        }
+        if (snapSource && snapSource.stores.length > 0) {
+          parts.push("USDA SNAP directory context pins (verify in store)");
+        }
+        mapDiscoveryNotice = `Map includes ${parts.join(" and ")} for gaps only — not live checkout data. Kroger-family and Aldi pins prefer Postgres and retailer API coordinates when present.`;
+      }
+    } else {
+      mapDiscoveryNotice =
+        "Some nearby stores may be missing from the map. Map-context discovery was unavailable or returned no results — pins show ingested catalog and provider data only. Verify locations in store.";
+    }
+  }
+
+  let nearbyStores = buildNearbyStoresForSearch(
+    mergedCatalogStores,
     location,
     radiusMiles,
     snapshot.priceObservations,
     recipeIngredientIds,
   );
+  const coverageTrackedIngredients = await resolveKrogerCoverageTrackedIngredients();
   const providerPricingPreviews = await buildProviderPricingPreviews({
     providerStores: providerStoreSearches.flatMap((search) => search.stores),
+    trackedIngredients: coverageTrackedIngredients,
   });
 
   const recommendationReadyStores = nearbyStores.filter(
@@ -426,6 +580,7 @@ export async function getMarketSearchExperience(
         .map((observation) => observation.priceSource),
       recommendationEnabledStoreCount: recommendationReadyStores.length,
     }),
+    coverageTrackedIngredients,
   );
   const providerPromotionReadiness = buildAllProviderPromotionReadiness({
     previews: providerPricingPreviews,
@@ -462,6 +617,10 @@ export async function getMarketSearchExperience(
       providerConfigured,
       source,
       snapshot,
+      {
+        mapDiscoveryNotice,
+        usesEphemeralOsmDiscovery,
+      },
     ),
   };
 }
@@ -477,7 +636,7 @@ function byDietaryFocus(
   return recipe.dietaryTags.includes(dietaryFocus);
 }
 
-function getNearbyStores(
+export function buildNearbyStoresForSearch(
   stores: CatalogStore[],
   location: ResolvedSearchLocation,
   radiusMiles: number,
@@ -493,6 +652,13 @@ function getNearbyStores(
         priceObservations,
         recipeIngredientIds,
       });
+      const officialApiCoverage =
+        baseRollout.chain === "kroger"
+          ? buildKrogerOfficialApiStoreCoverage({
+              storeId: store.id,
+              priceObservations,
+            })
+          : null;
       const rollout = resolveProviderRolloutForStore(store.name, {
         matchedIngredientCount: coverage.matchedIngredientCount,
         usesWeeklyAdSource: coverage.usesWeeklyAdSource,
@@ -500,6 +666,11 @@ function getNearbyStores(
           coverage,
           baseRollout.chain,
         ),
+        krogerOfficialApiPromotionPassed:
+          officialApiCoverage !== null &&
+          krogerOfficialApiPromotionGatesPass(officialApiCoverage),
+        freshOfficialApiMatchedCount:
+          officialApiCoverage?.freshMatchedIngredientCount ?? 0,
       });
       return {
         id: store.id,
@@ -521,14 +692,32 @@ function getNearbyStores(
         recommendationEnabled: rollout.recommendationEnabled,
         rolloutNote: rollout.note,
         sourceName: store.sourceName,
+        sourceStoreId: store.sourceStoreId,
         lastVerifiedAt: store.lastVerifiedAt,
+        locationProvenance: resolveStoreMapLocationProvenance({
+          storeId: store.id,
+          sourceName: store.sourceName,
+          lastVerifiedAt: store.lastVerifiedAt,
+        }),
+        locationBadge: buildStoreMapLocationBadge({
+          storeId: store.id,
+          sourceName: store.sourceName,
+          lastVerifiedAt: store.lastVerifiedAt,
+        }),
+        locationNote: buildStoreMapLocationNote({
+          storeId: store.id,
+          sourceName: store.sourceName,
+          lastVerifiedAt: store.lastVerifiedAt,
+        }),
       };
     })
     .filter((store) => store.distanceMiles <= radiusMiles)
     .sort((left, right) => left.distanceMiles - right.distanceMiles);
 }
 
-function collectRecipeIngredientIds(recipes: CatalogRecipeRecord[]): string[] {
+export function collectRecipeIngredientIdsForRollout(
+  recipes: CatalogRecipeRecord[],
+): string[] {
   return [
     ...new Set(
       recipes.flatMap((recipe) =>
@@ -536,6 +725,10 @@ function collectRecipeIngredientIds(recipes: CatalogRecipeRecord[]): string[] {
       ),
     ),
   ];
+}
+
+function collectRecipeIngredientIds(recipes: CatalogRecipeRecord[]): string[] {
+  return collectRecipeIngredientIdsForRollout(recipes);
 }
 
 function buildWeeklyAdCoverageByStoreId(
@@ -577,6 +770,10 @@ function buildMarketSummary(
   lookupProviderConfigured: boolean,
   dataSource: MarketDataSource,
   snapshot: MarketDataSnapshot,
+  mapDiscovery?: {
+    mapDiscoveryNotice?: string;
+    usesEphemeralOsmDiscovery?: boolean;
+  },
 ): MarketSummary {
   const recommendationReadyStoreCount = nearbyStores.filter(
     (store) => store.recommendationEnabled,
@@ -635,6 +832,12 @@ function buildMarketSummary(
     lookupProviderConfigured,
     dataSource,
     saleIngredientChoices,
+    ...(mapDiscovery?.mapDiscoveryNotice
+      ? { mapDiscoveryNotice: mapDiscovery.mapDiscoveryNotice }
+      : {}),
+    ...(mapDiscovery?.usesEphemeralOsmDiscovery
+      ? { usesEphemeralOsmDiscovery: true }
+      : {}),
   };
 }
 
@@ -942,6 +1145,13 @@ function buildThemealdbRecommendationAttribution(
   return {
     recipeAttribution: attribution.text,
     ...(attribution.url ? { recipeAttributionUrl: attribution.url } : {}),
+  };
+}
+
+function buildThemealdbScheduledRefreshNotice(): ShopperNotice {
+  return {
+    title: "TheMealDB imports refresh on a schedule",
+    body: "Opt-in TheMealDB meals use saved imports from the scheduled ingest job. Saved imports may still rank when they match your sale ingredients. Verify totals in store before checkout.",
   };
 }
 

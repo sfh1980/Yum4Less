@@ -106,6 +106,31 @@ describe("buildProviderCoverageRollup", () => {
     );
   });
 
+  it("uses DB-backed tracked ingredient breadth when provided", () => {
+    const trackedIngredients = Array.from({ length: 97 }, (_, index) => ({
+      ingredientId: `ingredient-${index}`,
+      ingredientName: `Ingredient ${index}`,
+      searchTerm: `Ingredient ${index}`,
+    }));
+
+    const rollup = buildProviderCoverageRollup(
+      [
+        buildPreview({
+          matchedIngredientCount: 10,
+          totalTrackedIngredients: 97,
+          coverageStatus: "weak",
+        }),
+      ],
+      "none",
+      trackedIngredients,
+    );
+
+    expect(rollup.totalTrackedIngredients).toBe(97);
+    expect(rollup.ingredientSummaries).toHaveLength(97);
+    expect(rollup.matchedIngredientCount).toBe(0);
+    expect(rollup.unmatchedIngredientCount).toBe(97);
+  });
+
   it("marks cached previews separately in the rollup message", () => {
     const rollup = buildProviderCoverageRollup([
       buildPreview({

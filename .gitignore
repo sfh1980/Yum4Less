@@ -37,3 +37,7 @@ README.pdf
 # Local ingest/API probe logs (not source of truth)
 live-probe-*.txt
 playwright-full-test-final.png
+
+# USDA SNAP retailer dumps and local Overpass probe artifacts (set YUM4LESS_SNAP_CSV_PATH locally)
+Historical SNAP Retailer Locator Data*.csv
+.tmp-overpass-*.json

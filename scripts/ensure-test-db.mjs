@@ -1,4 +1,6 @@
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const CONTAINER_NAME = "yum4less-postgres";
 const DEFAULT_DATABASE_URL =
@@ -63,6 +65,68 @@ async function waitForHealthyContainer() {
   }
 }
 
+function tableExists(tableName) {
+  try {
+    const count = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = '${tableName}';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
+    return count === "1";
+  } catch {
+    return false;
+  }
+}
+
+function columnExists(tableName, columnName) {
+  try {
+    const count = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.columns where table_schema = 'public' and table_name = '${tableName}' and column_name = '${columnName}';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
+    return count === "1";
+  } catch {
+    return false;
+  }
+}
+
+function applyInitSqlFile(fileName) {
+  const sqlPath = join(process.cwd(), "db", "init", fileName);
+  const sql = readFileSync(sqlPath, "utf8");
+  execSync(`docker exec -i ${CONTAINER_NAME} psql -U postgres -d yum4less_dev`, {
+    input: sql,
+    stdio: ["pipe", "inherit", "inherit"],
+    shell: true,
+  });
+}
+
+function applyPhaseCMigrationsIfMissing() {
+  if (!tableExists("snap_retailer_locations")) {
+    console.log("Applying db/init/010_snap_retailer_locations.sql to local Postgres...");
+    applyInitSqlFile("010_snap_retailer_locations.sql");
+  }
+
+  if (!tableExists("provider_search_terms")) {
+    console.log("Applying db/init/011_provider_search_terms.sql to local Postgres...");
+    applyInitSqlFile("011_provider_search_terms.sql");
+  }
+
+  if (!columnExists("provider_search_terms", "notes")) {
+    console.log("Applying db/init/012_provider_search_terms_notes.sql to local Postgres...");
+    applyInitSqlFile("012_provider_search_terms_notes.sql");
+  }
+
+  if (tableExists("provider_search_terms")) {
+    const krogerTermCount = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from provider_search_terms where provider = 'kroger';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
+    if (Number(krogerTermCount) < 101) {
+      console.log("Applying db/init/013_kroger_search_terms_full.sql to local Postgres...");
+      applyInitSqlFile("013_kroger_search_terms_full.sql");
+    }
+  }
+}
+
 function seedMatchesCurrentMvp() {
   try {
     const catalogStoreCount = execSync(
@@ -97,6 +161,14 @@ function seedMatchesCurrentMvp() {
       `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.columns where table_name = 'recipes' and column_name = 'eligible_for_ranking';"`,
       { encoding: "utf8", shell: true },
     ).trim();
+    const snapRetailerTableCount = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'snap_retailer_locations';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
+    const providerSearchTermsTableCount = execSync(
+      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_search_terms';"`,
+      { encoding: "utf8", shell: true },
+    ).trim();
 
     const storeCount = Number(catalogStoreCount);
     const hasExpectedSeedOrMapCatalog =
@@ -110,7 +182,9 @@ function seedMatchesCurrentMvp() {
       providerStoreSearchTableCount === "1" &&
       providerProductPricingTableCount === "1" &&
       ingredientAliasesTableCount === "1" &&
-      recipeEligibilityColumnCount === "1"
+      recipeEligibilityColumnCount === "1" &&
+      snapRetailerTableCount === "1" &&
+      providerSearchTermsTableCount === "1"
     );
   } catch {
     return false;
@@ -146,6 +220,8 @@ export async function ensureTestDatabase() {
     await waitForHealthyContainer();
   }
 
+  applyPhaseCMigrationsIfMissing();
+
   if (!seedMatchesCurrentMvp()) {
     if (!canResetDatabaseAutomatically()) {
       throw new Error(
@@ -157,6 +233,18 @@ export async function ensureTestDatabase() {
       "Local Postgres seed looks stale (missing expected MVP stores). Recreating volume...",
     );
     await resetDatabaseVolume();
+  }
+
+  const snapEnsure = spawnSync("node scripts/ensure-snap-context.mjs --quiet", {
+    stdio: "inherit",
+    shell: true,
+    env: process.env,
+  });
+
+  if (snapEnsure.status !== 0) {
+    console.warn(
+      "SNAP auto-ensure failed (non-fatal). Set YUM4LESS_SNAP_AUTO_ENSURE=0 to skip or run npm run ensure:snap-context manually.",
+    );
   }
 }
 

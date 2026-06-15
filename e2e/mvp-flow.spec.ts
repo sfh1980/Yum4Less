@@ -1,6 +1,47 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
-async function runCoreMvpFlow(page: import("@playwright/test").Page) {
+/**
+ * H3 E2E assertion rules (audit 2026-06-13):
+ *
+ * - STORES: Assert bootstrap `kroger-mechanicsville` inside .map-discovery-layout / .nearby-stores-list
+ *   (data-store-id + ranked "Est. weekly-ad prices" pill). Seed `stores.name` is short "Kroger" — not
+ *   page-wide chain regex and not Vitest's mocked "Kroger Mechanicsville" label.
+ *
+ * - CHAINS: Never use page-wide /Kroger|Publix|Food Lion/i — hero and Step 1 marketing copy
+ *   mention those chains before /api/market-search returns, causing false positives (latent green).
+ *
+ * - INGREDIENTS: Use structural/role checks (.sale-ingredient-list checkboxes, Step 3 heading,
+ *   disabled→enabled Suggest CTA). Do NOT assert "Chicken thighs" or other catalog names — the
+ *   priced-ingredient set comes from ingested observations and will change as sync breadth grows.
+ */
+async function submitZipMarketSearch(page: Page, zipCode = "23111") {
+  await page.getByRole("textbox", { name: "ZIP code" }).fill(zipCode);
+  const marketSearchResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes("/api/market-search") &&
+      res.request().method() === "POST" &&
+      res.status() === 200,
+  );
+  await page.getByRole("button", { name: "Find nearby stores" }).click();
+  const response = await marketSearchResponse;
+  const body = (await response.json()) as { ok?: boolean };
+  expect(body.ok).toBe(true);
+}
+
+async function assertMarketSearchStoreResults(page: Page) {
+  await expect(page.getByRole("heading", { name: "Location set" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Nearby stores map" })).toBeVisible();
+
+  const storePanel = page.locator(".map-discovery-layout, .nearby-stores-list");
+  // Fixture-stable bootstrap store id for ZIP 23111 — scoped list card, not hero regex:
+  const krogerBootstrapStore = storePanel.locator('[data-store-id="kroger-mechanicsville"]');
+  await expect(krogerBootstrapStore).toBeVisible();
+  await expect(
+    krogerBootstrapStore.getByText(/Est\. (?:weekly-ad|Kroger API) prices/i),
+  ).toBeVisible();
+}
+
+async function runCoreMvpFlow(page: Page) {
   await page.goto("/");
 
   await expect(
@@ -12,15 +53,9 @@ async function runCoreMvpFlow(page: import("@playwright/test").Page) {
     page.getByRole("heading", { name: "Step 1: Find nearby stores" }),
   ).toBeVisible();
 
-  await page.getByRole("textbox", { name: "ZIP code" }).fill("23111");
-  await page.getByRole("button", { name: "Find nearby stores" }).click();
+  await submitZipMarketSearch(page);
+  await assertMarketSearchStoreResults(page);
 
-  await expect(page.getByText(/Kroger|Publix|Food Lion/i).first()).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(
-    page.getByRole("heading", { name: "Nearby stores map" }),
-  ).toBeVisible();
   await expect(
     page
       .getByText(
@@ -39,12 +74,16 @@ async function runCoreMvpFlow(page: import("@playwright/test").Page) {
     name: "Suggest recipes using my selected ingredients",
   });
   await expect(suggestButton).toBeDisabled();
+  await expect(
+    page.getByText(/Select at least one sale ingredient, then use Suggest recipes/i),
+  ).toBeVisible();
 
-  const ingredientCheckbox = page
-    .locator(".sale-ingredient-list input[type=checkbox]")
-    .first();
-  await expect(ingredientCheckbox).toBeVisible({ timeout: 30_000 });
-  await ingredientCheckbox.check();
+  const ingredientList = page.locator(".sale-ingredient-list");
+  const ingredientCheckboxes = ingredientList.getByRole("checkbox");
+  await expect(ingredientCheckboxes.first()).toBeVisible({ timeout: 30_000 });
+  expect(await ingredientCheckboxes.count()).toBeGreaterThan(0);
+
+  await ingredientCheckboxes.first().check();
   await expect(suggestButton).not.toBeDisabled();
 
   await suggestButton.click();
@@ -59,12 +98,16 @@ async function runCoreMvpFlow(page: import("@playwright/test").Page) {
 
   await expect(page.getByText(/Est\. \$\d+\.\d{2}/).first()).toBeVisible();
   await expect(
-    page.getByText(/Ranked meal totals below use saved weekly-ad prices/i).first(),
+    page
+      .getByText(
+        /Ranked meal totals below use (?:saved weekly-ad prices|recently checked online (?:store )?prices plus saved weekly ads)/i,
+      )
+      .first(),
   ).toBeVisible();
   await expect(
     page
       .getByText(
-        /(?:Directional )?saved weekly-ad prices at .+ — not live checkout; confirm in store\./i,
+        /(?:Directional )?(?:saved weekly-ad prices|recently checked online prices and saved weekly ads) at .+ — not live checkout; confirm in store\./i,
       )
       .first(),
   ).toBeVisible();
@@ -134,8 +177,11 @@ test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
 
   test("opens the trust explainer from the results panel", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Find nearby stores" }).click();
-    await expect(page.getByText(/Kroger|Publix/i).first()).toBeVisible();
+    await submitZipMarketSearch(page);
+
+    await expect(page.getByRole("heading", { name: "Location set" })).toBeVisible();
+    const storePanel = page.locator(".map-discovery-layout, .nearby-stores-list");
+    await expect(storePanel.locator('[data-store-id="kroger-mechanicsville"]')).toBeVisible();
 
     await page.getByRole("button", { name: "How to read these labels" }).click();
     const trustDialog = page.getByRole("dialog");

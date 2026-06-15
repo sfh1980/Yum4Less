@@ -55,6 +55,8 @@ export type ProviderPricingPreviewIngredient = {
   ingredientId: string;
   ingredientName: string;
   searchTerm: string;
+  /** Priority-2 term from provider_search_terms; sync retries once when priority-1 fails. */
+  fallbackSearchTerm?: string;
 };
 
 export type ProviderPricingCoverageStatus =

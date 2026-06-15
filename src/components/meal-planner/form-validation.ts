@@ -1,4 +1,9 @@
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
+import {
+  DEFAULT_DINNERS_WANTED,
+  DEFAULT_MAX_INGREDIENTS,
+  DEFAULT_PLANNING_MODE,
+} from "@/lib/meal-preference-defaults";
 import type { FieldErrors, FormState } from "@/components/meal-planner/types";
 
 function parseNumberField(value: string) {
@@ -32,32 +37,12 @@ export function validateLocationFields(
 
 export function validateMealFields(
   form: FormState,
-): Pick<FieldErrors, "budget" | "maxIngredients" | "dinnersWanted"> {
+): Pick<FieldErrors, "budget"> {
   const errors: FieldErrors = {};
 
   const budget = parseNumberField(form.budget);
   if (budget === undefined || budget < 5 || budget > 40) {
-    errors.budget = "Enter a budget between $5 and $40.";
-  }
-
-  const maxIngredients = parseNumberField(form.maxIngredients);
-  if (
-    maxIngredients === undefined ||
-    !Number.isInteger(maxIngredients) ||
-    maxIngredients < 3 ||
-    maxIngredients > 12
-  ) {
-    errors.maxIngredients = "Choose between 3 and 12 ingredients.";
-  }
-
-  const dinnersWanted = parseNumberField(form.dinnersWanted);
-  if (
-    dinnersWanted === undefined ||
-    !Number.isInteger(dinnersWanted) ||
-    dinnersWanted < 1 ||
-    dinnersWanted > 4
-  ) {
-    errors.dinnersWanted = "Choose between 1 and 4 dinner options.";
+    errors.budget = "Enter a spending limit between $5 and $40.";
   }
 
   return errors;
@@ -68,15 +53,8 @@ export function buildMealPreferencePayload(
 ): MealPreferenceForm | undefined {
   const radiusMiles = parseNumberField(form.radiusMiles);
   const budget = parseNumberField(form.budget);
-  const maxIngredients = parseNumberField(form.maxIngredients);
-  const dinnersWanted = parseNumberField(form.dinnersWanted);
 
-  if (
-    radiusMiles === undefined ||
-    budget === undefined ||
-    maxIngredients === undefined ||
-    dinnersWanted === undefined
-  ) {
+  if (radiusMiles === undefined || budget === undefined) {
     return undefined;
   }
 
@@ -84,12 +62,12 @@ export function buildMealPreferencePayload(
     zipCode: form.zipCode.trim(),
     radiusMiles,
     budget,
-    maxIngredients,
-    dinnersWanted,
+    maxIngredients: DEFAULT_MAX_INGREDIENTS,
+    dinnersWanted: DEFAULT_DINNERS_WANTED,
     shoppingStyle: form.shoppingStyle,
     dietaryFocus: form.dietaryFocus,
     recipeSource: form.recipeSource,
-    planningMode: form.planningMode,
+    planningMode: DEFAULT_PLANNING_MODE,
   };
 }
 

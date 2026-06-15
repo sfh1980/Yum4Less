@@ -18,6 +18,7 @@ async function main() {
   const zipCodes = parseIngestZipCodesFromEnv();
   let totalOsmUpserted = 0;
   let totalRankedUpserted = 0;
+  let totalPublixUpserted = 0;
 
   for (const zipCode of zipCodes) {
     const result = await syncUniversalMapCatalogForZip({
@@ -27,15 +28,19 @@ async function main() {
 
     totalOsmUpserted += result.osmUpserted;
     totalRankedUpserted += result.rankedUpserted;
+    totalPublixUpserted += result.publixUpserted;
 
     console.log(
-      `[map-catalog:${zipCode}] osm=${result.osmUpserted}, ranked=${result.rankedUpserted}`,
+      `[map-catalog:${zipCode}] osm=${result.osmUpserted}, ranked=${result.rankedUpserted}, publix=${result.publixUpserted}`,
     );
     console.log(`  ${result.osmMessage}`);
+    if (result.publixMessage) {
+      console.log(`  ${result.publixMessage}`);
+    }
   }
 
   console.log(
-    `Map catalog ingest finished for ${zipCodes.length} ZIP(s); ${totalOsmUpserted} OSM map-context row(s), ${totalRankedUpserted} ranked chain row(s).`,
+    `Map catalog ingest finished for ${zipCodes.length} ZIP(s); ${totalOsmUpserted} OSM map-context row(s), ${totalRankedUpserted} ranked chain row(s), ${totalPublixUpserted} Publix locator context row(s).`,
   );
 
   if (useFixture) {

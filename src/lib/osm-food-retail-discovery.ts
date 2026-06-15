@@ -19,7 +19,7 @@ export type OsmFoodRetailDiscoveryResult = {
   message: string;
 };
 
-/** Overpass usage: one query per ZIP per daily ingest; do not call on user search. */
+/** Minimum spacing between Overpass requests (cron ingest and search-time discovery). */
 export const OSM_OVERPASS_MIN_INTERVAL_MS = 1_000;
 export const OSM_MAP_CATALOG_SOURCE = "openstreetmap-overpass";
 
@@ -38,20 +38,30 @@ function resolveOverpassEndpoints(): string[] {
   return [...new Set(endpoints.filter(Boolean))];
 }
 
-const FOOD_RETAIL_SHOP_TAGS = [
+/**
+ * OSM `shop=*` values Yum4Less treats as grocery-related map context.
+ * Excludes department_store, variety_store, general, kiosk, etc. (Marshalls, Kohl's, Five Below).
+ */
+export const GROCERY_OSM_SHOP_TAG_ALLOWLIST = [
   "supermarket",
-  "convenience",
-  "wholesale",
-  "department_store",
-  "variety_store",
-  "general",
   "greengrocer",
   "bakery",
   "butcher",
   "seafood",
   "deli",
-  "kiosk",
-].join("|");
+  "convenience",
+  "wholesale",
+] as const;
+
+export type GroceryOsmShopTag = (typeof GROCERY_OSM_SHOP_TAG_ALLOWLIST)[number];
+
+const GROCERY_OSM_SHOP_TAG_SET = new Set<string>(GROCERY_OSM_SHOP_TAG_ALLOWLIST);
+
+export function isAllowedGroceryOsmShopTag(shopTag: string): shopTag is GroceryOsmShopTag {
+  return GROCERY_OSM_SHOP_TAG_SET.has(shopTag.trim());
+}
+
+const FOOD_RETAIL_SHOP_TAGS = GROCERY_OSM_SHOP_TAG_ALLOWLIST.join("|");
 
 let lastOverpassRequestAt = 0;
 
@@ -126,6 +136,7 @@ function filterFixtureStoresByRadius(input: {
   if (input.zipCode === "23111" || !input.zipCode) {
     return fixtureOsmFoodRetailStores23111.filter(
       (store) =>
+        isAllowedGroceryOsmShopTag(store.shopTag) &&
         getDistanceMiles(
           input.latitude,
           input.longitude,
@@ -204,15 +215,91 @@ type OverpassElement = {
   tags?: Record<string, string>;
 };
 
-function parseOverpassElements(payload: OverpassResponse): OsmDiscoveredFoodRetailStore[] {
+/**
+ * Resolve a shopper-facing store label from OSM tags.
+ * Priority: brand → operator → name (Food Lion and similar chains often omit name).
+ */
+export function resolveOsmFoodRetailDisplayName(
+  tags: Record<string, string>,
+): string | undefined {
+  const brand = tags.brand?.trim();
+  if (brand) {
+    return brand;
+  }
+
+  const operator = tags.operator?.trim();
+  if (operator) {
+    return operator;
+  }
+
+  const name = tags.name?.trim();
+  return name || undefined;
+}
+
+function resolveOsmShopTag(tags: Record<string, string>): string | undefined {
+  const shopTag = tags.shop?.trim();
+  if (shopTag) {
+    return shopTag;
+  }
+
+  if (tags.amenity === "marketplace") {
+    return "supermarket";
+  }
+
+  return undefined;
+}
+
+/** OSM lifecycle / closure tags that should not appear as active grocery map context. */
+export function isDisusedOrClosedOsmFoodRetailElement(
+  tags: Record<string, string>,
+): boolean {
+  const normalized = (value: string | undefined) => value?.trim().toLowerCase();
+
+  if (["yes", "true", "1"].includes(normalized(tags.disused) ?? "")) {
+    return true;
+  }
+
+  if (["yes", "true", "1"].includes(normalized(tags.abandoned) ?? "")) {
+    return true;
+  }
+
+  if (["yes", "true", "1"].includes(normalized(tags.closed) ?? "")) {
+    return true;
+  }
+
+  const operationalStatus = normalized(tags.operational_status);
+  if (
+    operationalStatus &&
+    ["closed", "disused", "abandoned", "demolished"].includes(operationalStatus)
+  ) {
+    return true;
+  }
+
+  if (normalized(tags.building) === "abandoned") {
+    return true;
+  }
+
+  if (tags["disused:shop"] || tags["was:shop"]) {
+    return true;
+  }
+
+  return false;
+}
+
+export function parseOverpassElements(payload: OverpassResponse): OsmDiscoveredFoodRetailStore[] {
   const stores: OsmDiscoveredFoodRetailStore[] = [];
 
   for (const element of payload.elements ?? []) {
     const tags = element.tags ?? {};
-    const name = tags.name?.trim();
-    const shopTag = tags.shop?.trim();
 
-    if (!name || !shopTag) {
+    if (isDisusedOrClosedOsmFoodRetailElement(tags)) {
+      continue;
+    }
+
+    const name = resolveOsmFoodRetailDisplayName(tags);
+    const shopTag = resolveOsmShopTag(tags);
+
+    if (!name || !shopTag || !isAllowedGroceryOsmShopTag(shopTag)) {
       continue;
     }
 
@@ -245,12 +332,11 @@ function inferStoreKind(
 ): OsmDiscoveredFoodRetailStore["kind"] {
   const normalizedName = name.toLowerCase();
 
-  if (normalizedName.includes("dollar general") || shopTag === "variety_store") {
+  if (normalizedName.includes("dollar general")) {
     return "dollar-market";
   }
 
   if (
-    shopTag === "department_store" ||
     shopTag === "wholesale" ||
     normalizedName.includes("costco") ||
     normalizedName.includes("sam's club") ||
@@ -259,7 +345,7 @@ function inferStoreKind(
     return "big-box";
   }
 
-  if (shopTag === "convenience" || shopTag === "kiosk") {
+  if (shopTag === "convenience") {
     return "specialty";
   }
 

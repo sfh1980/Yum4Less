@@ -36,7 +36,7 @@ export function MarketDiscoveryPanel({
         <div>
           <h2>Nearby stores</h2>
           <p className="panel-copy">
-            Review store coverage on the map before ranking dinners.
+            Review store coverage on the map before selecting sale ingredients.
           </p>
         </div>
         <span className="badge">
@@ -49,6 +49,12 @@ export function MarketDiscoveryPanel({
       </div>
 
       <PricingTrustHeadsUpBanner instanceId="market" market={market} />
+
+      {market?.mapDiscoveryNotice ? (
+        <p className="field-hint map-discovery-notice" role="status">
+          {market.mapDiscoveryNotice}
+        </p>
+      ) : null}
 
       {nearbyStoresMapModel && market ? (
         <div className="main-map-panel">
@@ -102,7 +108,7 @@ export function MarketDiscoveryPanel({
         ) : !market ? (
           <StatusCard
             title="Choose a location to start"
-            body="Search by ZIP or use your current browser location first. Yum4Less will show nearby stores before it ranks meals."
+            body="Search by ZIP or use your current browser location first. Yum4Less will show nearby stores before you pick sale ingredients."
           />
         ) : marketBlocked && blockedStatus ? (
           <StatusCard

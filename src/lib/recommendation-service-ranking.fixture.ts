@@ -28,6 +28,7 @@ export const zip23111RankingPreferences: MealPreferenceForm = {
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: "internal-library",
+  planningMode: "standard",
 };
 
 const WEEKLY_AD_CHAINS = [
@@ -75,9 +76,9 @@ const blackBeanTacoRecipe = fixtureRecipes.find(
 )!;
 
 /**
- * Split-store fixture: neither Kroger nor Publix alone stocks every taco ingredient,
- * but multi-store shopping can still build the meal across both promotion-ready chains.
- * Walmart is excluded from ranked pricing even when rehearsal rows exist.
+ * Split-store fixture: neither Kroger nor Aldi alone stocks every taco ingredient,
+ * but multi-store shopping can still build the meal across both production-ranked chains.
+ * Publix rehearsal rows are excluded from ranked meal totals in beta v1.
  */
 export function buildZip23111SplitStoreBlackBeanSnapshot() {
   const weeklyAdBase = {
@@ -123,24 +124,24 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ...weeklyAdBase,
     },
     {
-      storeId: "publix-atlee",
+      storeId: "aldi-mechanicsville",
       ingredientId: "lime",
-      price: 0.5,
-      priceSource: "publix-weekly-ad-scrape",
+      price: 0.45,
+      priceSource: "aldi-weekly-ad-scrape",
       ...weeklyAdBase,
     },
     {
-      storeId: "publix-atlee",
+      storeId: "aldi-mechanicsville",
       ingredientId: "olive-oil",
-      price: 2.68,
-      priceSource: "publix-weekly-ad-scrape",
+      price: 2.49,
+      priceSource: "aldi-weekly-ad-scrape",
       ...weeklyAdBase,
     },
     {
-      storeId: "publix-atlee",
+      storeId: "aldi-mechanicsville",
       ingredientId: "black-beans",
-      price: 1.25,
-      priceSource: "publix-weekly-ad-scrape",
+      price: 0.89,
+      priceSource: "aldi-weekly-ad-scrape",
       ...weeklyAdBase,
     },
   ];

@@ -1,5 +1,12 @@
+import type { PoolClient } from "pg";
 import { getDbPool } from "@/lib/db";
-import { getRankedPriceSourceKind } from "@/lib/price-source-policy";
+import {
+  getRankedPriceSourceKind,
+  getRankedPriceSourceTier,
+  RANKED_PRICE_SOURCE_SQL_FILTER,
+  RANKED_PRICE_SOURCE_TIER_SQL,
+} from "@/lib/price-source-policy";
+import { RANKED_PRICE_CACHE_AGE_SQL_FILTER } from "@/lib/ranked-price-cache-policy";
 
 export type PriceObservationInsert = {
   storeId: string;
@@ -17,9 +24,17 @@ export type PriceObservationInsert = {
   validThrough?: Date;
 };
 
+type PriceObservationQueryable = Pick<PoolClient, "query">;
+
 export async function insertPriceObservation(input: PriceObservationInsert) {
-  const pool = getDbPool();
-  await pool.query(
+  await insertPriceObservationOnQueryable(getDbPool(), input);
+}
+
+async function insertPriceObservationOnQueryable(
+  queryable: PriceObservationQueryable,
+  input: PriceObservationInsert,
+) {
+  await queryable.query(
     `
       insert into price_observations (
         store_id,
@@ -107,13 +122,17 @@ export type LatestPriceObservation = {
   sourceRecordId: string;
 };
 
-export type PriceObservationSyncOutcome = "inserted" | "skipped-unchanged";
+export type PriceObservationSyncOutcome =
+  | "inserted"
+  | "skipped-unchanged"
+  | "skipped-superseded";
 
-export async function getLatestPriceObservation(input: {
+const CURRENT_PRICE_OBSERVATION_SQL_FILTER =
+  "(valid_through is null or valid_through >= now())";
+
+export async function getCurrentRankedPriceObservationForStoreIngredient(input: {
   storeId: string;
   ingredientId: string;
-  sourceName: string;
-  sourceRecordId: string;
 }): Promise<LatestPriceObservation | null> {
   const pool = getDbPool();
   const result = await pool.query<{
@@ -139,12 +158,16 @@ export async function getLatestPriceObservation(input: {
       from price_observations
       where store_id = $1
         and ingredient_id = $2
-        and source_name = $3
-        and source_record_id = $4
-      order by coalesce(last_verified_at, observed_at) desc, observed_at desc
+        and (${RANKED_PRICE_SOURCE_SQL_FILTER})
+        and ${CURRENT_PRICE_OBSERVATION_SQL_FILTER}
+        and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+      order by ${RANKED_PRICE_SOURCE_TIER_SQL} asc,
+        coalesce(last_verified_at, observed_at) desc,
+        confidence_score desc nulls last,
+        observed_at desc
       limit 1
     `,
-    [input.storeId, input.ingredientId, input.sourceName, input.sourceRecordId],
+    [input.storeId, input.ingredientId],
   );
 
   const row = result.rows[0];
@@ -152,6 +175,19 @@ export async function getLatestPriceObservation(input: {
     return null;
   }
 
+  return mapLatestPriceObservationRow(row);
+}
+
+function mapLatestPriceObservationRow(row: {
+  store_id: string;
+  ingredient_id: string;
+  id: number;
+  price: string;
+  sale_label: string | null;
+  in_stock: boolean;
+  source_name: string;
+  source_record_id: string;
+}): LatestPriceObservation {
   return {
     id: row.id,
     storeId: row.store_id,
@@ -188,24 +224,89 @@ export function priceObservationsMateriallyMatch(
 export async function insertPriceObservationIfChanged(
   input: PriceObservationInsert,
 ): Promise<PriceObservationSyncOutcome> {
-  const latest = await getLatestPriceObservation({
+  const incomingTier = getRankedPriceSourceTier(input.sourceName);
+  const current = await getCurrentRankedPriceObservationForStoreIngredient({
     storeId: input.storeId,
     ingredientId: input.ingredientId,
-    sourceName: input.sourceName,
-    sourceRecordId: input.sourceRecordId,
   });
 
-  if (latest && priceObservationsMateriallyMatch(latest, input)) {
-    await touchPriceObservationVerification({
-      id: latest.id,
-      verifiedAt: input.lastVerifiedAt ?? input.observedAt,
-      validThrough: input.validThrough,
-    });
-    return "skipped-unchanged";
+  if (current) {
+    const currentTier = getRankedPriceSourceTier(current.sourceName);
+    if (incomingTier > currentTier) {
+      return "skipped-superseded";
+    }
+
+    if (
+      current.sourceName === input.sourceName &&
+      current.sourceRecordId === input.sourceRecordId &&
+      priceObservationsMateriallyMatch(current, input)
+    ) {
+      await touchPriceObservationVerification({
+        id: current.id,
+        verifiedAt: input.lastVerifiedAt ?? input.observedAt,
+        validThrough: input.validThrough,
+      });
+      await deleteRankedPriceObservationsForStoreIngredient({
+        storeId: input.storeId,
+        ingredientId: input.ingredientId,
+        keepId: current.id,
+      });
+      return "skipped-unchanged";
+    }
   }
 
-  await insertPriceObservation(input);
+  await replaceRankedPriceObservationTransactionally(input);
   return "inserted";
+}
+
+async function replaceRankedPriceObservationTransactionally(
+  input: PriceObservationInsert,
+) {
+  const pool = getDbPool();
+  const client = await pool.connect();
+
+  try {
+    await client.query("begin");
+    await deleteRankedPriceObservationsForStoreIngredientOnQueryable(client, {
+      storeId: input.storeId,
+      ingredientId: input.ingredientId,
+    });
+    await insertPriceObservationOnQueryable(client, input);
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteRankedPriceObservationsForStoreIngredient(input: {
+  storeId: string;
+  ingredientId: string;
+  keepId?: number;
+}) {
+  await deleteRankedPriceObservationsForStoreIngredientOnQueryable(getDbPool(), input);
+}
+
+async function deleteRankedPriceObservationsForStoreIngredientOnQueryable(
+  queryable: PriceObservationQueryable,
+  input: {
+    storeId: string;
+    ingredientId: string;
+    keepId?: number;
+  },
+) {
+  await queryable.query(
+    `
+      delete from price_observations
+      where store_id = $1
+        and ingredient_id = $2
+        and (${RANKED_PRICE_SOURCE_SQL_FILTER})
+        and ($3::bigint is null or id <> $3)
+    `,
+    [input.storeId, input.ingredientId, input.keepId ?? null],
+  );
 }
 
 function normalizeSaleLabel(value: string | null | undefined) {
@@ -220,6 +321,23 @@ function roundCurrency(value: number) {
 export async function deletePriceObservationsForStore(storeId: string) {
   const pool = getDbPool();
   await pool.query(`delete from price_observations where store_id = $1`, [storeId]);
+}
+
+/** Remove ranked sale rows outside the cache window or past valid_through. */
+export async function purgeStaleRankedPriceObservations(): Promise<number> {
+  const pool = getDbPool();
+  const result = await pool.query(
+    `
+      delete from price_observations
+      where (${RANKED_PRICE_SOURCE_SQL_FILTER})
+        and (
+          not (${RANKED_PRICE_CACHE_AGE_SQL_FILTER})
+          or not (${CURRENT_PRICE_OBSERVATION_SQL_FILTER})
+        )
+    `,
+  );
+
+  return result.rowCount ?? 0;
 }
 
 async function touchPriceObservationVerification(input: {

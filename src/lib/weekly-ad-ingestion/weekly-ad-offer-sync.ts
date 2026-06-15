@@ -74,9 +74,8 @@ async function persistWeeklyAdOffer(
   offer: WeeklyAdOffer,
   result: WeeklyAdIngestionResult,
 ) {
-  // Append-only history: each ingest inserts new rows. Reads pick the latest
-  // observation per store + ingredient, so newer scrapes supersede older ones
-  // without deleting prior rows.
+  // Ranked writes keep one current row per store + ingredient; higher-trust
+  // official API prices supersede weekly-ad rows for the same ingredient.
   if (!offer.ingredientId) {
     return false;
   }
@@ -105,7 +104,7 @@ async function persistWeeklyAdOffer(
       validThrough: parseOptionalObservationTimestamp(offer.validThrough),
     });
 
-    if (outcome === "skipped-unchanged") {
+    if (outcome === "skipped-unchanged" || outcome === "skipped-superseded") {
       return false;
     }
 

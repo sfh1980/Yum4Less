@@ -8,6 +8,7 @@ import { getProviderPricingPreviewLabel } from "@/lib/providers/provider-labels"
 import { getStoreDiscoveryProviders } from "@/lib/providers/provider-registry";
 import type {
   ProviderDiscoveredStore,
+  ProviderPricingPreviewIngredient,
   ProviderPricingPreviewResult,
   StoreDiscoveryProvider,
   StoreDiscoveryProviderClient,
@@ -20,11 +21,22 @@ import {
 export function selectProviderDiscoveredStore(
   provider: StoreDiscoveryProvider,
   providerStores: ProviderDiscoveredStore[],
+  preferredProviderStoreId?: string,
 ): ProviderDiscoveredStore | undefined {
   const candidates = providerStores.filter((store) => store.provider === provider);
   if (candidates.length === 0) {
     return undefined;
   }
+
+  if (preferredProviderStoreId) {
+    const preferred = candidates.find(
+      (store) => store.providerStoreId === preferredProviderStoreId,
+    );
+    if (preferred) {
+      return preferred;
+    }
+  }
+
   if (candidates.length === 1) {
     return candidates[0];
   }
@@ -47,8 +59,14 @@ export function selectProviderDiscoveredStore(
 export async function buildProviderPricingPreviews(input: {
   providerStores: ProviderDiscoveredStore[];
   readMode?: ProviderDataReadMode;
+  preferredProviderStoreIds?: Partial<
+    Record<ProviderDiscoveredStore["provider"], string>
+  >;
+  /** TODO(provider-search-terms): Only the sync script passes DB-backed terms today. */
+  trackedIngredients?: ProviderPricingPreviewIngredient[];
 }): Promise<ProviderPricingPreviewResult[]> {
   const readMode = input.readMode ?? "cache-only";
+  const trackedIngredients = input.trackedIngredients ?? PROVIDER_TRACKED_INGREDIENTS;
   const providers = getStoreDiscoveryProviders();
 
   return Promise.all(
@@ -56,10 +74,11 @@ export async function buildProviderPricingPreviews(input: {
       const matchingStore = selectProviderDiscoveredStore(
         provider.provider,
         input.providerStores,
+        input.preferredProviderStoreIds?.[provider.provider],
       );
 
       if (!matchingStore) {
-        return buildNoMatchedStorePreview(provider);
+        return buildNoMatchedStorePreview(provider, trackedIngredients.length);
       }
 
       if (readMode === "cache-only") {
@@ -72,12 +91,16 @@ export async function buildProviderPricingPreviews(input: {
           return cachedSnapshot;
         }
 
-        return buildCacheMissPricingPreviewFallback(provider, matchingStore);
+        return buildCacheMissPricingPreviewFallback(
+          provider,
+          matchingStore,
+          trackedIngredients.length,
+        );
       }
 
       const result = await provider.searchPricingPreview({
         store: matchingStore,
-        ingredients: PROVIDER_TRACKED_INGREDIENTS,
+        ingredients: trackedIngredients,
       });
 
       if (result.status !== "available") {
@@ -95,7 +118,7 @@ export async function buildProviderPricingPreviews(input: {
         ? await persistProviderPricingPreviewResult(
             {
               store: matchingStore,
-              ingredients: PROVIDER_TRACKED_INGREDIENTS,
+              ingredients: trackedIngredients,
             },
             result,
           )
@@ -111,6 +134,7 @@ export async function buildProviderPricingPreviews(input: {
 
 function buildNoMatchedStorePreview(
   provider: Pick<StoreDiscoveryProviderClient, "provider" | "configured">,
+  trackedIngredientCount: number,
 ): ProviderPricingPreviewResult {
   return {
     provider: provider.provider,
@@ -125,7 +149,7 @@ function buildNoMatchedStorePreview(
     items: [],
     coverageStatus: "none",
     matchedIngredientCount: 0,
-    totalTrackedIngredients: PROVIDER_TRACKED_INGREDIENTS.length,
+    totalTrackedIngredients: trackedIngredientCount,
     message:
       "No official provider store was available for pricing preview in this search, so Yum4Less did not run provider-backed product matching.",
     fetchedAt: new Date().toISOString(),
@@ -135,6 +159,7 @@ function buildNoMatchedStorePreview(
 function buildCacheMissPricingPreviewFallback(
   provider: Pick<StoreDiscoveryProviderClient, "provider" | "configured">,
   matchingStore: ProviderDiscoveredStore,
+  trackedIngredientCount: number,
 ): ProviderPricingPreviewResult {
   return {
     provider: provider.provider,
@@ -149,7 +174,7 @@ function buildCacheMissPricingPreviewFallback(
     items: [],
     coverageStatus: "none",
     matchedIngredientCount: 0,
-    totalTrackedIngredients: PROVIDER_TRACKED_INGREDIENTS.length,
+    totalTrackedIngredients: trackedIngredientCount,
     message: rankedPriceCacheMissMessage("provider pricing preview"),
     fetchedAt: new Date().toISOString(),
   };
