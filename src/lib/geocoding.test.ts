@@ -2,14 +2,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveZipLocation } from "@/lib/geocoding";
 
 const originalGeocodioKey = process.env.GEOCODIO_API_KEY;
+const originalNodeEnv = process.env.NODE_ENV;
+const originalCi = process.env.CI;
 
 describe("resolveZipLocation", () => {
   afterEach(() => {
     process.env.GEOCODIO_API_KEY = originalGeocodioKey;
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+    if (originalCi === undefined) {
+      delete process.env.CI;
+    } else {
+      process.env.CI = originalCi;
+    }
   });
 
-  it("returns the seeded local ZIP when no API key is configured", async () => {
+  it("returns the seeded local ZIP when no API key is configured in development", async () => {
     delete process.env.GEOCODIO_API_KEY;
+    process.env.NODE_ENV = "development";
+    delete process.env.CI;
 
     const result = await resolveZipLocation("23111");
 
@@ -19,6 +33,56 @@ describe("resolveZipLocation", () => {
       expect(result.location.city).toBe("Mechanicsville");
       expect(result.providerConfigured).toBe(false);
     }
+  });
+
+  it("refuses seed ZIP fallback in production when GEOCODIO_API_KEY is missing", async () => {
+    delete process.env.GEOCODIO_API_KEY;
+    process.env.NODE_ENV = "production";
+    delete process.env.CI;
+
+    const result = await resolveZipLocation("23111");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain("GEOCODIO_API_KEY is required in production");
+      expect(result.providerConfigured).toBe(false);
+    }
+  });
+
+  it("allows seed ZIP fallback in production only under CI runners", async () => {
+    delete process.env.GEOCODIO_API_KEY;
+    process.env.NODE_ENV = "production";
+    process.env.CI = "true";
+
+    const result = await resolveZipLocation("23111");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.location.source).toBe("seed");
+    }
+  });
+
+  it("refuses seed fallback in production when Geocodio fails", async () => {
+    process.env.GEOCODIO_API_KEY = "test-key";
+    process.env.NODE_ENV = "production";
+    delete process.env.CI;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+      }),
+    );
+
+    const result = await resolveZipLocation("23111");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.providerConfigured).toBe(true);
+    }
+
+    vi.unstubAllGlobals();
   });
 
   it("returns a clear error for unsupported ZIPs without live geocoding", async () => {

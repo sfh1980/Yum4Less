@@ -6,7 +6,7 @@ export const CONTINENTAL_US_BOUNDS = {
   maxLongitude: -66,
 } as const;
 
-/** Local dev seed ZIPs when GEOCODIO_API_KEY is unset. */
+/** Local dev seed ZIPs for test/CI fallback when GEOCODIO_API_KEY is unset. */
 export const DEV_SEED_ZIP_CODES = new Set([
   "23111",
   "23116",

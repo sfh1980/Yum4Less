@@ -1,4 +1,5 @@
 import { loadEnvLocal } from "@/lib/load-env-local";
+import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import {
   parseIngestZipCodesFromEnv,
   syncUniversalMapCatalogForZip,
@@ -15,6 +16,11 @@ async function main() {
   const useFixture =
     process.argv.includes("--fixture") ||
     process.env.YUM4LESS_MAP_CATALOG_FIXTURE === "1";
+
+  if (useFixture) {
+    process.env.YUM4LESS_MAP_CATALOG_FIXTURE = "1";
+    enforceFixtureIngestDatabasePolicy();
+  }
   const zipCodes = parseIngestZipCodesFromEnv();
   let totalOsmUpserted = 0;
   let totalRankedUpserted = 0;

@@ -2,33 +2,46 @@ import { spawnSync } from "node:child_process";
 import { ensureTestDatabase } from "./ensure-test-db.mjs";
 
 async function main() {
+  const ciEnv = {
+    ...process.env,
+    CI: "1",
+    YUM4LESS_CI_BOOTSTRAP_STORES: "1",
+  };
+  process.env.CI = "1";
+  process.env.YUM4LESS_CI_BOOTSTRAP_STORES = "1";
   await ensureTestDatabase();
 
   const build = spawnSync("npm run build", {
     stdio: "inherit",
     shell: true,
-    env: process.env,
+    env: ciEnv,
   });
 
   if (build.status !== 0) {
     process.exit(build.status ?? 1);
   }
 
-  const fixtureIngest = spawnSync("npm run ingest:weekly-ads:fixture", {
-    stdio: "inherit",
-    shell: true,
-    env: process.env,
-  });
+  const fixtureIngest = spawnSync(
+    "node scripts/run-weekly-ad-ingest.mjs --fixture",
+    {
+      stdio: "inherit",
+      shell: true,
+      env: ciEnv,
+    },
+  );
 
   if (fixtureIngest.status !== 0) {
     process.exit(fixtureIngest.status ?? 1);
   }
 
-  const mapCatalogFixture = spawnSync("npm run ingest:map-catalog:fixture", {
-    stdio: "inherit",
-    shell: true,
-    env: process.env,
-  });
+  const mapCatalogFixture = spawnSync(
+    "npx tsx scripts/ingest-map-catalog.ts --fixture",
+    {
+      stdio: "inherit",
+      shell: true,
+      env: ciEnv,
+    },
+  );
 
   if (mapCatalogFixture.status !== 0) {
     process.exit(mapCatalogFixture.status ?? 1);
@@ -38,9 +51,8 @@ async function main() {
     stdio: "inherit",
     shell: true,
     env: {
-      ...process.env,
+      ...ciEnv,
       PLAYWRIGHT_FORCE_NEW_SERVER: "1",
-      CI: "1",
     },
   });
 

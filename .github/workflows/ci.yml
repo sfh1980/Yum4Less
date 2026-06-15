@@ -101,3 +101,4 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5433/yum4less_dev
           CI: "1"
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY }}

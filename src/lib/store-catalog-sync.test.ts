@@ -45,7 +45,8 @@ describe("store-catalog-sync", () => {
     });
   });
 
-  it("builds one Aldi catalog row per ZIP market", () => {
+  it("builds one Aldi catalog row per ZIP market when OSM Aldi is present", () => {
+    const aldiOsm = fixtureOsmFoodRetailStores23111.find((store) => store.name === "Aldi");
     expect(
       buildAldiCatalogStoreForMarket({
         location: {
@@ -57,26 +58,25 @@ describe("store-catalog-sync", () => {
           zipCode: "30301",
         },
         zipCode: "30301",
-      }).id,
+        osmAldiStore: aldiOsm,
+      })?.id,
     ).toBe("aldi-30301");
   });
 
-  it("uses bootstrap store coordinates for Aldi in ZIP 23111, not the search anchor", () => {
-    const store = buildAldiCatalogStoreForMarket({
-      location: {
-        city: "Mechanicsville",
-        state: "VA",
-        latitude: 37.628179,
-        longitude: -77.281955,
-        source: "geocodio",
+  it("returns null for Aldi catalog when OSM Aldi is absent", () => {
+    expect(
+      buildAldiCatalogStoreForMarket({
+        location: {
+          city: "Mechanicsville",
+          state: "VA",
+          latitude: 37.628179,
+          longitude: -77.281955,
+          source: "geocodio",
+          zipCode: "23111",
+        },
         zipCode: "23111",
-      },
-      zipCode: "23111",
-    });
-
-    expect(store.latitude).toBeCloseTo(37.6362, 4);
-    expect(store.longitude).toBeCloseTo(-77.3606, 4);
-    expect(store.latitude).not.toBeCloseTo(37.628179, 4);
+      }),
+    ).toBeNull();
   });
 
   it("parses ingest ZIP codes from env-style comma lists", () => {
@@ -113,7 +113,7 @@ describe("store-catalog-sync", () => {
   it("distinguishes map-context OSM rows from ranked-ready catalog sources", () => {
     expect(isMapContextOnlyCatalogSource(OSM_MAP_CATALOG_SOURCE)).toBe(true);
     expect(getCatalogStoreRole("kroger-official-api")).toBe("ranked-ready");
-    expect(getCatalogStoreRole("yum4less-internal-catalog")).toBe("ranked-ready");
+    expect(getCatalogStoreRole("yum4less-internal-catalog")).toBe("map-context");
   });
 
   it("builds stable OSM catalog ids and map-context source names", () => {
@@ -124,7 +124,7 @@ describe("store-catalog-sync", () => {
     expect(isMapContextOnlyCatalogSource(store.sourceName)).toBe(true);
   });
 
-  it("prefers bootstrap seed ids when multiple Kroger rows exist", () => {
+  it("prefers ingest-backed Kroger rows when multiple Kroger rows exist", () => {
     const storeId = findPrimaryStoreIdForChain(
       [
         { id: "kroger-02900529", name: "Kroger", source_name: "kroger-official-api" },
@@ -138,12 +138,12 @@ describe("store-catalog-sync", () => {
       getProviderRolloutForStore,
     );
 
-    expect(storeId).toBe("kroger-mechanicsville");
+    expect(storeId).toBe("kroger-02900529");
   });
 
-  it("allows bootstrap coordinate refresh after weekly-ad ingest source names", () => {
+  it("allows ingest coordinate refresh after weekly-ad ingest source names", () => {
     expect(isBootstrapCoordinateRefreshEligible("yum4less-internal-catalog")).toBe(
-      true,
+      false,
     );
     expect(isBootstrapCoordinateRefreshEligible("kroger-weekly-ad-scrape")).toBe(
       true,
@@ -164,7 +164,7 @@ describe("store-catalog-sync", () => {
     );
   });
 
-  it("merges API-discovered Kroger stores into nearby bootstrap seed rows within 0.1 miles", () => {
+  it("does not merge API-discovered Kroger stores by proximity alone", () => {
     const canonicalId = findCanonicalStoreIdForApiDiscoveredStore({
       existingStores: [
         {
@@ -175,16 +175,6 @@ describe("store-catalog-sync", () => {
           latitude: 37.61546,
           longitude: -77.32939,
           city: "Mechanicsville",
-          state: "VA",
-        },
-        {
-          id: "kroger-02900515",
-          name: "Kroger",
-          source_name: "kroger-official-api",
-          source_store_id: "02900515",
-          latitude: 37.701,
-          longitude: -77.401,
-          city: "Richmond",
           state: "VA",
         },
       ],
@@ -199,10 +189,10 @@ describe("store-catalog-sync", () => {
       mergeRadiusMiles: BOOTSTRAP_STORE_MERGE_RADIUS_MILES,
     });
 
-    expect(canonicalId).toBe("kroger-mechanicsville");
+    expect(canonicalId).toBeUndefined();
   });
 
-  it("does not merge API-discovered Kroger stores into distant bootstrap rows", () => {
+  it("does not merge API-discovered Kroger stores into distant rows", () => {
     const canonicalId = findCanonicalStoreIdForApiDiscoveredStore({
       existingStores: [
         {
@@ -230,7 +220,7 @@ describe("store-catalog-sync", () => {
     expect(canonicalId).toBeUndefined();
   });
 
-  it("reuses an already-linked bootstrap row by provider location id", () => {
+  it("reuses an already-linked row by provider location id", () => {
     const canonicalId = findCanonicalStoreIdForApiDiscoveredStore({
       existingStores: [
         {

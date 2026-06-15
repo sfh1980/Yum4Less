@@ -6,15 +6,17 @@
 
 ## Resume (as of 2026-06-15)
 
-**Phase:** M1–M5 + L1–L3 audit remediation landed; H1/H3 slices remain separate context.
+**Phase:** Phase 2 geocoding production gate + fixture DB isolation landed; Phase 3+ (E2E slug decoupling, UI/MVP copy) deferred.
 
 **Hosting:** Self-hosted homelab (target); owner pushing toward first production deploy with Kroger-family + Aldi ranked path.
 
 **Production-ranked focus:** **Kroger family + Aldi** when daily ingest and promotion gates pass. Publix, Food Lion, Walmart, and others: map/context or **upcoming releases** (fixture weekly-ad rows may exist in dev; not used for ranked meal totals).
 
-**Owner ingest path:** `npm run setup:local` runs **live** `ingest:weekly-ads:scheduled` when `GEOCODIO_API_KEY` + Kroger credentials set; fixture paths are **CI/rehearsal only**. `setup:local` now applies `010`–`013` migrations on existing Docker volumes via `ensureTestDatabase()`.
+**Owner ingest path:** `npm run setup:local` runs **live** `ingest:weekly-ads:scheduled` when `GEOCODIO_API_KEY` + Kroger credentials set. Fixture ingest requires `CI=true`, Vitest (`NODE_ENV=test`), or aligned `DATABASE_URL` + `DATABASE_URL_TEST` — cannot write rehearsal data to `yum4less_dev` by accident.
 
-**Verified (2026-06-15):** M/L audit slice — `npm test` 459/459; `npm run build` pass; `npm run test:integration` 24/24; `npm run test:e2e:ci` 4/4. Postgres: `provider_search_terms` kroger count **101**. Security Review + Bugbot on uncommitted diff (one e2e pill assertion gap fixed). Semgrep MCP/hooks not re-run this slice. Remote CI not re-run on uncommitted work. Not claiming homelab deploy-ready or beta v1 demo-complete.
+**Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
+
+**Verified (2026-06-15):** Phase 2 — `npm test` 470/470; `npm run test:integration` 24/24; `npm run test:e2e:ci` 4/4. CI e2e job passes `GEOCODIO_API_KEY` from `secrets.GEOCODIO_API_KEY`. Semgrep MCP/hooks not re-run. Not claiming homelab deploy-ready or beta v1 demo-complete.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -63,6 +65,33 @@
 ---
 
 ## Changelog (newest first)
+
+### 2026-06-15 — Phase 2: production geocoding gate + fixture DB isolation
+
+**Theme:** Production cannot silently use seed ZIP coordinates; fixture ingest cannot write rehearsal data to owner dev DB.
+
+**Shipped:**
+- **runtime-environment** — `allowsSeedZipGeocodingFallback()` true only outside production deploys, or under `CI` / `NODE_ENV=test`
+- **geocoding** — missing key, rate limits, and Geocodio failures return structured errors in production; seed ZIP table kept for dev/CI/test
+- **fixture-ingest-policy** — `YUM4LESS_WEEKLY_AD_FIXTURE` / `YUM4LESS_MAP_CATALOG_FIXTURE` writes allowed only when `CI=true`, `NODE_ENV=test`, or `DATABASE_URL === DATABASE_URL_TEST`
+- **Scripts** — guards on weekly-ad/map-catalog ingest, scheduled fixture path, `sync-provider-prices` fixture mode, `weekly-ad-ingestion-service` DB persist path; `run-e2e-tests.mjs` sets `CI=1` at start
+- **ensure-test-db** — resolves target DB from `DATABASE_URL`; can create/provision `yum4less_test` (or other non-default DB) with `db/init/*.sql`
+- **.env.example** — documents `DATABASE_URL_TEST` and production Geocodio requirement
+- **CI** — e2e job env includes `GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY }}`; `CI=1` accepted alongside `CI=true` for fixture/geocoding guards
+
+**Deferred:** E2E slug decoupling; `Bootstrap pin` / MVP copy cleanup.
+
+### 2026-06-15 — Phase 1: bootstrap store deprecation (stores + catalog merge)
+
+**Theme:** Runtime catalog is ingest-only on owner/prod paths; CI/integration bootstrap pins isolated; proximity merge into slug ids removed.
+
+**Shipped:**
+- **002_seed.sql** — removed 8 bootstrap `stores` inserts; recipes/ingredients unchanged
+- **db/ci/014_ci_bootstrap_stores.sql** — same 8 pins applied only when `YUM4LESS_CI_BOOTSTRAP_STORES=1` or `CI=true` via `ensure-test-db.mjs`
+- **store-catalog-sync** — `findCanonicalStoreIdForApiDiscoveredStore` merges only on matching `source_store_id` (no 0.1 mi slug merge); `yum4less-internal-catalog` removed from ranked sources; Aldi catalog requires OSM Aldi (no ZIP-centroid fallback); `refreshIngestedRankedStoreCoordinates` promotes rows linked by `source_store_id`; `syncUniversalMapCatalogForZip` no longer passes `bootstrapStoreId` for Publix
+- **Tests** — unit + integration updated for ingest-only merge/refresh behavior
+
+**Deferred (later phases):** geocoding seed ZIP fallback fail-loud; fixture ingest DB isolation; E2E slug decoupling; `Bootstrap pin` / `Local seed anchor` UI labels; MVP copy in internal-details-modal / meal-planner / recipe-source-registry.
 
 ### 2026-06-15 — Audit remediation M1–M5 + L1–L3 (medium/low)
 

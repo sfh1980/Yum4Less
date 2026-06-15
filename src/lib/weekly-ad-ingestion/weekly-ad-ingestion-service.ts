@@ -1,4 +1,5 @@
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
+import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import { createAldiWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
 import { createFoodLionWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/food-lion-weekly-ad-ingestion";
 import { createPublixWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-ingestion";
@@ -58,6 +59,7 @@ export async function runWeeklyAdIngestionForStores(input: {
   const syncSummaries: WeeklyAdOfferSyncSummary[] = [];
 
   if (input.persistToDatabase) {
+    enforceFixtureIngestDatabasePolicy();
     await purgeStaleRankedPriceObservations();
   }
 

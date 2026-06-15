@@ -1,4 +1,5 @@
 import { consumeRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { allowsSeedZipGeocodingFallback } from "@/lib/runtime-environment";
 import { isWithinContinentalUsBounds } from "@/lib/us-service-area";
 
 export type ResolvedZipLocation = {
@@ -67,6 +68,15 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
   const geocodioKey = process.env.GEOCODIO_API_KEY;
 
   if (!geocodioKey) {
+    if (!allowsSeedZipGeocodingFallback()) {
+      return {
+        ok: false,
+        error:
+          "GEOCODIO_API_KEY is required in production. Seed ZIP coordinates are disabled.",
+        providerConfigured: false,
+      };
+    }
+
     return getSeedFallback(
       normalizedZipCode,
       "Add GEOCODIO_API_KEY to enable live ZIP lookup outside the seeded local market.",
@@ -78,7 +88,7 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
     RATE_LIMITS.geocodioUpstream,
   );
   if (!rateLimit.ok) {
-    return getSeedFallback(
+    return failOrSeedFallback(
       normalizedZipCode,
       "Live ZIP lookup is temporarily rate limited. Using local fallback when available.",
       true,
@@ -97,7 +107,7 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
     );
 
     if (!response.ok) {
-      return getSeedFallback(
+      return failOrSeedFallback(
         normalizedZipCode,
         "Live ZIP lookup is temporarily unavailable, and this ZIP is not in the local fallback set.",
         true,
@@ -130,13 +140,13 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
       };
     }
 
-    return getSeedFallback(
+    return failOrSeedFallback(
       normalizedZipCode,
       "Geocodio did not return a usable location for that ZIP, and no local fallback exists for it yet.",
       true,
     );
   } catch {
-    return getSeedFallback(
+    return failOrSeedFallback(
       normalizedZipCode,
       "Live ZIP lookup failed, and this ZIP is not available in the local fallback set.",
       true,
@@ -144,11 +154,35 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
   }
 }
 
+function failOrSeedFallback(
+  zipCode: string,
+  message: string,
+  providerConfigured = false,
+): ZipLookupResult {
+  if (!allowsSeedZipGeocodingFallback()) {
+    return {
+      ok: false,
+      error: message,
+      providerConfigured,
+    };
+  }
+
+  return getSeedFallback(zipCode, message, providerConfigured);
+}
+
 function getSeedFallback(
   zipCode: string,
   missingSeedMessage: string,
   providerConfigured = false,
 ): ZipLookupResult {
+  if (!allowsSeedZipGeocodingFallback()) {
+    return {
+      ok: false,
+      error: missingSeedMessage,
+      providerConfigured,
+    };
+  }
+
   const seedLocation = seedZipLocations[zipCode];
 
   if (!seedLocation) {

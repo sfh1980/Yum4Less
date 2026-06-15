@@ -52,11 +52,12 @@ export function isApiDerivedKrogerCatalogStoreId(storeId: string) {
   return /^kroger-\d+$/.test(storeId);
 }
 
+/** @deprecated Slug ids are legacy CI bootstrap only; production catalog is ingest-backed. */
 export function isBootstrapSeedStoreRow(store: {
   id: string;
   source_name?: string | null;
 }) {
-  if (store.source_name === INTERNAL_BOOTSTRAP_SOURCE) {
+  if (store.source_name === INTERNAL_CATALOG_SOURCE) {
     return true;
   }
 
@@ -75,53 +76,22 @@ export function findCanonicalStoreIdForApiDiscoveredStore(input: {
   getRolloutForStore: (storeName: string) => { chain: StoreChain };
   mergeRadiusMiles?: number;
 }): string | undefined {
-  const mergeRadiusMiles = input.mergeRadiusMiles ?? BOOTSTRAP_STORE_MERGE_RADIUS_MILES;
-
-  const nearbySeedStores = input.existingStores.filter((store) => {
-    if (input.getRolloutForStore(store.name).chain !== input.chain) {
-      return false;
-    }
-
-    if (store.id === input.catalogStoreId) {
-      return false;
-    }
-
-    if (!isBootstrapSeedStoreRow(store)) {
-      return false;
-    }
-
-    return (
-      getDistanceMiles(
-        input.discovered.latitude,
-        input.discovered.longitude,
-        store.latitude,
-        store.longitude,
-      ) <= mergeRadiusMiles
-    );
-  });
-
-  if (nearbySeedStores.length > 0) {
-    return findPrimaryStoreIdForChain(
-      nearbySeedStores,
-      input.chain,
-      input.getRolloutForStore,
-    );
-  }
-
   const linkedStores = input.existingStores.filter(
     (store) =>
+      store.id !== input.catalogStoreId &&
       store.source_store_id === input.discovered.providerStoreId &&
       input.getRolloutForStore(store.name).chain === input.chain,
   );
-  if (linkedStores.length > 0) {
-    return findPrimaryStoreIdForChain(
-      linkedStores,
-      input.chain,
-      input.getRolloutForStore,
-    );
+
+  if (linkedStores.length === 0) {
+    return undefined;
   }
 
-  return undefined;
+  return findPrimaryStoreIdForChain(
+    linkedStores,
+    input.chain,
+    input.getRolloutForStore,
+  );
 }
 
 async function mergeApiDiscoveredStoreIntoCanonical(input: {
@@ -149,7 +119,7 @@ async function mergeApiDiscoveredStoreIntoCanonical(input: {
     await pool.query(`delete from stores where id = $1`, [input.duplicateStoreId]);
   }
 
-  return updateRankedBootstrapStoreCoordinates(
+  return updateIngestedRankedStoreCoordinates(
     input.canonicalStoreId,
     input.catalog,
     input.providerStore,
@@ -159,9 +129,8 @@ async function mergeApiDiscoveredStoreIntoCanonical(input: {
 const KROGER_CATALOG_SOURCE = "kroger-official-api";
 const ALDI_CATALOG_SOURCE = "yum4less-market-catalog";
 const INTERNAL_CATALOG_SOURCE = "yum4less-internal-catalog";
-const INTERNAL_BOOTSTRAP_SOURCE = INTERNAL_CATALOG_SOURCE;
 
-/** Max distance to treat an API-discovered store as the same physical location as a bootstrap seed row. */
+/** @deprecated Proximity merge into bootstrap slugs removed; kept for test imports. */
 export const BOOTSTRAP_STORE_MERGE_RADIUS_MILES = 0.1;
 
 export const MAP_CONTEXT_CATALOG_SOURCES = new Set<string>([
@@ -173,11 +142,10 @@ export const MAP_CONTEXT_CATALOG_SOURCES = new Set<string>([
 export const RANKED_CATALOG_SOURCES = new Set<string>([
   KROGER_CATALOG_SOURCE,
   ALDI_CATALOG_SOURCE,
-  INTERNAL_CATALOG_SOURCE,
 ]);
 
-/** Weekly-ad ingest sets bootstrap store source_name before map-catalog runs. */
-export function isBootstrapCoordinateRefreshEligible(
+/** Weekly-ad ingest may set source_name before map-catalog runs. */
+export function isIngestCoordinateRefreshEligible(
   sourceName: string | null | undefined,
 ): boolean {
   if (!sourceName) {
@@ -190,6 +158,9 @@ export function isBootstrapCoordinateRefreshEligible(
 
   return sourceName.endsWith("-weekly-ad-scrape");
 }
+
+/** @deprecated Renamed to {@link isIngestCoordinateRefreshEligible}. */
+export const isBootstrapCoordinateRefreshEligible = isIngestCoordinateRefreshEligible;
 
 export function getCatalogStoreRole(sourceName: string | null | undefined): CatalogStoreRole {
   if (sourceName && RANKED_CATALOG_SOURCES.has(sourceName)) {
@@ -219,58 +190,31 @@ export function buildKrogerCatalogStore(
   };
 }
 
-/**
- * Bootstrap Aldi store pins by ZIP — search anchor lat/lon is NOT a store address.
- * Align with db/init/002_seed.sql until an official Aldi locator is wired.
- */
-export const BOOTSTRAP_ALDI_COORDINATES_BY_ZIP: Record<
-  string,
-  { latitude: number; longitude: number; city: string; state: string }
-> = {
-  "23111": {
-    latitude: 37.6362,
-    longitude: -77.3606,
-    city: "Mechanicsville",
-    state: "VA",
-  },
-};
-
 export function buildAldiCatalogStoreForMarket(input: {
   location: ResolvedSearchLocation;
   zipCode?: string;
   osmAldiStore?: OsmDiscoveredFoodRetailStore;
-}): CatalogStoreRecord {
+}): CatalogStoreRecord | null {
+  if (!input.osmAldiStore) {
+    return null;
+  }
+
   const zipKey = (input.zipCode ?? input.location.zipCode ?? "market")
     .trim()
     .replace(/[^\d]/g, "")
     .slice(0, 5);
   const storeKey = zipKey.length === 5 ? zipKey : "market";
-  const bootstrapCoordinates = BOOTSTRAP_ALDI_COORDINATES_BY_ZIP[storeKey];
-
-  if (input.osmAldiStore) {
-    return {
-      id: `aldi-${storeKey}`,
-      name: input.osmAldiStore.name,
-      kind: "grocery",
-      city: input.osmAldiStore.city,
-      state: input.osmAldiStore.state,
-      latitude: input.osmAldiStore.latitude,
-      longitude: input.osmAldiStore.longitude,
-      sourceName: ALDI_CATALOG_SOURCE,
-      sourceStoreId: buildOsmCatalogStoreId(input.osmAldiStore),
-    };
-  }
 
   return {
     id: `aldi-${storeKey}`,
-    name: "Aldi",
+    name: input.osmAldiStore.name,
     kind: "grocery",
-    city: bootstrapCoordinates?.city ?? input.location.city,
-    state: bootstrapCoordinates?.state ?? input.location.state,
-    latitude: bootstrapCoordinates?.latitude ?? input.location.latitude,
-    longitude: bootstrapCoordinates?.longitude ?? input.location.longitude,
+    city: input.osmAldiStore.city,
+    state: input.osmAldiStore.state,
+    latitude: input.osmAldiStore.latitude,
+    longitude: input.osmAldiStore.longitude,
     sourceName: ALDI_CATALOG_SOURCE,
-    sourceStoreId: `aldi-${storeKey}`,
+    sourceStoreId: buildOsmCatalogStoreId(input.osmAldiStore),
   };
 }
 
@@ -455,34 +399,29 @@ export async function syncV1ChainStoresToCatalog(input: {
     }
   }
 
-  const aldiBootstrapId = findPrimaryStoreIdForChain(
-    existingResult.rows,
-    "aldi",
-    getProviderRolloutForStore,
-  );
   const osmAldiStore = input.osmFoodRetailStores
     ? findNearestOsmAldiStore(input.osmFoodRetailStores, input.location)
     : undefined;
 
-  if (!aldiBootstrapId) {
-    catalogStores.push(
-      buildAldiCatalogStoreForMarket({
-        location: input.location,
-        zipCode: input.zipCode ?? input.location.zipCode,
-        osmAldiStore,
-      }),
-    );
+  const aldiCatalog = buildAldiCatalogStoreForMarket({
+    location: input.location,
+    zipCode: input.zipCode ?? input.location.zipCode,
+    osmAldiStore,
+  });
+  if (aldiCatalog) {
+    catalogStores.push(aldiCatalog);
   }
 
   const uniqueById = new Map(catalogStores.map((store) => [store.id, store]));
   const providerUpserted = await upsertCatalogStores([...uniqueById.values()]);
-  const bootstrapRefreshed = await refreshBootstrapRankedStoreCoordinates({
+  const refreshed = await refreshIngestedRankedStoreCoordinates({
     ...input,
     osmFoodRetailStores: input.osmFoodRetailStores,
+    existingStores: existingResult.rows,
   });
-  const reconciledCount = await reconcileDuplicateApiDerivedStoresWithBootstrapSeeds();
+  const reconciledCount = await reconcileDuplicateApiDerivedKrogerStores();
 
-  return providerUpserted + mergedCount + bootstrapRefreshed + reconciledCount;
+  return providerUpserted + mergedCount + refreshed + reconciledCount;
 }
 
 function mapExistingCatalogStoreRows(
@@ -509,7 +448,7 @@ function mapExistingCatalogStoreRows(
   }));
 }
 
-async function reconcileDuplicateApiDerivedStoresWithBootstrapSeeds(): Promise<number> {
+async function reconcileDuplicateApiDerivedKrogerStores(): Promise<number> {
   const { getProviderRolloutForStore } = await import("@/lib/provider-rollout");
   const pool = getDbPool();
   const existingResult = await pool.query<{
@@ -622,12 +561,12 @@ function applyCanonicalStoreMergeToSnapshot(
   };
 }
 
-export async function refreshBootstrapRankedStoreCoordinates(input: {
+export async function refreshIngestedRankedStoreCoordinates(input: {
   location: ResolvedSearchLocation;
   zipCode?: string;
   providerStoreSearches: ProviderStoreSearchResult[];
   osmFoodRetailStores?: OsmDiscoveredFoodRetailStore[];
-  existingStores?: { id: string; name: string; source_name?: string | null }[];
+  existingStores?: { id: string; name: string; source_name?: string | null; source_store_id?: string | null }[];
 }): Promise<number> {
   const { getProviderRolloutForStore } = await import("@/lib/provider-rollout");
   const existing =
@@ -637,7 +576,8 @@ export async function refreshBootstrapRankedStoreCoordinates(input: {
         id: string;
         name: string;
         source_name: string | null;
-      }>(`select id, name, source_name from stores`)
+        source_store_id: string | null;
+      }>(`select id, name, source_name, source_store_id from stores`)
     ).rows;
 
   let updated = 0;
@@ -646,47 +586,50 @@ export async function refreshBootstrapRankedStoreCoordinates(input: {
     (search) => search.provider === "kroger" && search.stores.length > 0,
   );
   if (krogerSearch) {
-    const nearest = pickNearestProviderStore(krogerSearch.stores, input.location);
-    const bootstrapId = findPrimaryStoreIdForChain(
-      existing,
-      "kroger",
-      getProviderRolloutForStore,
-    );
-    if (bootstrapId && nearest) {
-      updated += await updateRankedBootstrapStoreCoordinates(
-        bootstrapId,
-        buildKrogerCatalogStore(nearest),
-        nearest,
+    for (const discovered of krogerSearch.stores) {
+      const catalog = buildKrogerCatalogStore(discovered);
+      const linkedStore = existing.find(
+        (store) =>
+          getProviderRolloutForStore(store.name).chain === "kroger" &&
+          store.source_store_id === discovered.providerStoreId,
+      );
+      const storeId = linkedStore?.id ?? catalog.id;
+      updated += await updateIngestedRankedStoreCoordinates(
+        storeId,
+        catalog,
+        discovered,
       );
     }
   }
 
-  // Aldi has no official store API in v1 — keep bootstrap/OSM coords; never ZIP-centroid refresh.
   const aldiZip = (input.zipCode ?? input.location.zipCode ?? "").trim();
-  const aldiBootstrapId = findPrimaryStoreIdForChain(
-    existing,
-    "aldi",
-    getProviderRolloutForStore,
-  );
   const osmAldiStore = input.osmFoodRetailStores
     ? findNearestOsmAldiStore(input.osmFoodRetailStores, input.location)
     : undefined;
+  const aldiCatalog =
+    aldiZip.length === 5
+      ? buildAldiCatalogStoreForMarket({
+          location: input.location,
+          zipCode: aldiZip,
+          osmAldiStore,
+        })
+      : null;
 
-  if (aldiBootstrapId && aldiZip.length === 5) {
-    const aldiCatalog = buildAldiCatalogStoreForMarket({
-      location: input.location,
-      zipCode: aldiZip,
-      osmAldiStore,
-    });
-    const hasAldiCoords =
-      osmAldiStore !== undefined || BOOTSTRAP_ALDI_COORDINATES_BY_ZIP[aldiZip] !== undefined;
-    if (hasAldiCoords) {
-      updated += await updateRankedBootstrapStoreCoordinates(aldiBootstrapId, aldiCatalog);
-    }
+  if (aldiCatalog) {
+    const linkedAldi = existing.find(
+      (store) =>
+        getProviderRolloutForStore(store.name).chain === "aldi" &&
+        store.id === aldiCatalog.id,
+    );
+    const aldiStoreId = linkedAldi?.id ?? aldiCatalog.id;
+    updated += await updateIngestedRankedStoreCoordinates(aldiStoreId, aldiCatalog);
   }
 
   return updated;
 }
+
+/** @deprecated Renamed to {@link refreshIngestedRankedStoreCoordinates}. */
+export const refreshBootstrapRankedStoreCoordinates = refreshIngestedRankedStoreCoordinates;
 
 export function findPrimaryStoreIdForChain(
   stores: { id: string; name: string; source_name?: string | null }[],
@@ -704,13 +647,16 @@ export function findPrimaryStoreIdForChain(
     return matches[0]!.id;
   }
 
-  const bootstrap = matches.find(
+  const rankedPreference = matches.filter(
     (store) =>
-      store.source_name === INTERNAL_BOOTSTRAP_SOURCE ||
+      store.source_name === KROGER_CATALOG_SOURCE ||
+      store.source_name === ALDI_CATALOG_SOURCE ||
       store.source_name?.endsWith("-weekly-ad-scrape"),
   );
-  if (bootstrap) {
-    return bootstrap.id;
+  if (rankedPreference.length > 0) {
+    return rankedPreference
+      .slice()
+      .sort((left, right) => left.id.length - right.id.length)[0]?.id;
   }
 
   return matches
@@ -752,7 +698,7 @@ export async function buildRankedStoreLocationWitnesses(
   return witnesses;
 }
 
-async function updateRankedBootstrapStoreCoordinates(
+async function updateIngestedRankedStoreCoordinates(
   storeId: string,
   catalog: CatalogStoreRecord,
   providerStore?: ProviderDiscoveredStore,
@@ -811,6 +757,11 @@ async function updateRankedBootstrapStoreCoordinates(
             source_name is null
             or source_name = any($9::text[])
             or strpos(source_name, '-weekly-ad-scrape') > 0
+            or (
+              source_store_id is not null
+              and source_store_id = $5
+              and length(trim($5)) > 0
+            )
           )
       `,
       [
@@ -828,7 +779,7 @@ async function updateRankedBootstrapStoreCoordinates(
 
     return result.rowCount ?? 0;
   } catch (error) {
-    logServerError("store-catalog-sync-bootstrap-refresh", error);
+    logServerError("store-catalog-sync-ingest-refresh", error);
     return 0;
   }
 }
@@ -977,7 +928,6 @@ export async function syncUniversalMapCatalogForZip(input: {
     const { syncPublixContextStoresForZip } = await import("@/lib/publix-catalog-sync");
     const publixResult = await syncPublixContextStoresForZip({
       zipCode: input.zipCode,
-      bootstrapStoreId: "publix-atlee",
     });
     publixUpserted = publixResult.upserted;
     publixMessage = publixResult.message;

@@ -8,6 +8,18 @@ if (process.argv.includes("--browser")) {
   process.env.YUM4LESS_WEEKLY_AD_BROWSER = "1";
 }
 
+if (process.env.YUM4LESS_WEEKLY_AD_FIXTURE === "1") {
+  const guard = spawnSync("npx tsx scripts/enforce-fixture-ingest-database-policy.ts", {
+    stdio: "inherit",
+    shell: true,
+    env: process.env,
+  });
+
+  if (guard.status !== 0) {
+    process.exit(guard.status ?? 1);
+  }
+}
+
 const ensure = spawnSync("node scripts/ensure-test-db.mjs", {
   stdio: "inherit",
   shell: true,

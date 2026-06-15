@@ -6,6 +6,20 @@ const useFixture = process.argv.includes("--fixture");
 const weeklyOnly = process.argv.includes("--weekly-only");
 const providerOnly = process.argv.includes("--provider-only");
 
+if (useFixture) {
+  process.env.YUM4LESS_WEEKLY_AD_FIXTURE = "1";
+  process.env.YUM4LESS_MAP_CATALOG_FIXTURE = "1";
+  const guard = spawnSync("npx tsx scripts/enforce-fixture-ingest-database-policy.ts", {
+    stdio: "inherit",
+    shell: true,
+    env: process.env,
+  });
+
+  if (guard.status !== 0) {
+    process.exit(guard.status ?? 1);
+  }
+}
+
 if (!useFixture && !weeklyOnly && !providerOnly) {
   const envCheck = spawnSync("npx tsx scripts/assert-live-ingest-env.ts", {
     stdio: "inherit",

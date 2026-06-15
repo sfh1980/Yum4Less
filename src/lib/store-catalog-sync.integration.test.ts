@@ -105,8 +105,19 @@ describe("store catalog sync (integration)", () => {
     expect(isMapContextOnlyCatalogSource(sample.sourceName)).toBe(true);
   });
 
-  it("overwrites bootstrap Kroger coordinates when live provider discovery is supplied", async () => {
+  it("overwrites linked Kroger coordinates when provider discovery matches source_store_id", async () => {
     const pool = getDbPool();
+    await pool.query(`
+      update stores
+      set
+        source_store_id = '02900529',
+        latitude = 37.615300,
+        longitude = -77.349100,
+        source_name = 'yum4less-internal-catalog',
+        name = 'Kroger',
+        last_verified_at = now()
+      where id = 'kroger-mechanicsville'
+    `);
     const before = await pool.query<{
       latitude: string;
       longitude: string;
@@ -171,13 +182,13 @@ describe("store catalog sync (integration)", () => {
     expect(Number(before.rows[0]?.latitude)).toBeCloseTo(37.6153, 3);
   });
 
-  it("refreshes bootstrap Kroger coordinates when weekly-ad ingest already set source_name", async () => {
+  it("refreshes Kroger coordinates when weekly-ad ingest already set source_name", async () => {
     const pool = getDbPool();
     await pool.query(`
       update stores
       set
         source_name = 'kroger-weekly-ad-scrape',
-        source_store_id = 'kroger-mechanicsville',
+        source_store_id = '02900529',
         last_verified_at = now()
       where id = 'kroger-mechanicsville'
     `);
@@ -234,20 +245,10 @@ describe("store catalog sync (integration)", () => {
     expect(after.rows[0]?.source_name).toBe("kroger-official-api");
   });
 
-  it("does not move Aldi to the ZIP search anchor during bootstrap refresh", async () => {
+  it("upserts Aldi from nearest OSM during ranked catalog sync without ZIP-centroid fallback", async () => {
     const pool = getDbPool();
-    await pool.query(`
-      update stores
-      set
-        latitude = 37.636200,
-        longitude = -77.360600,
-        source_name = 'yum4less-internal-catalog',
-        source_store_id = 'aldi-mechanicsville',
-        last_verified_at = now()
-      where id = 'aldi-mechanicsville'
-    `);
 
-    await refreshBootstrapRankedStoreCoordinates({
+    const merged = await syncV1ChainStoresToCatalog({
       location: {
         city: "Mechanicsville",
         state: "VA",
@@ -257,44 +258,30 @@ describe("store catalog sync (integration)", () => {
         zipCode: "23111",
       },
       zipCode: "23111",
-      providerStoreSearches: [
-        {
-          provider: "kroger",
-          label: "Kroger",
-          configured: true,
-          status: "available",
-          provenance: "official-api",
-          retrievalMode: "live",
-          fallbackUsed: false,
-          message: "Fixture Kroger discovery.",
-          fetchedAt: new Date().toISOString(),
-          stores: [
-            {
-              provider: "kroger",
-              providerStoreId: "02900529",
-              name: "Kroger",
-              city: "Mechanicsville",
-              state: "VA",
-              latitude: 37.61546,
-              longitude: -77.32939,
-            },
-          ],
-        },
-      ],
+      providerStoreSearches: [],
+      osmFoodRetailStores: fixtureOsmFoodRetailStores23111,
     });
 
-    const after = await pool.query<{ latitude: string; longitude: string }>(`
-      select latitude, longitude
+    expect(merged).toBeGreaterThan(0);
+
+    const after = await pool.query<{
+      latitude: string;
+      longitude: string;
+      source_name: string | null;
+    }>(`
+      select latitude, longitude, source_name
       from stores
-      where id = 'aldi-mechanicsville'
+      where id = 'aldi-23111'
     `);
 
-    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.6362, 3);
-    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.3606, 3);
+    expect(after.rows.length).toBe(1);
+    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.6365, 3);
+    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.3608, 3);
+    expect(after.rows[0]?.source_name).toBe("yum4less-market-catalog");
     expect(Number(after.rows[0]?.latitude)).not.toBeCloseTo(37.628179, 3);
   });
 
-  it("merges API-discovered Kroger rows into nearby bootstrap seed stores and migrates price observations", async () => {
+  it("keeps separate Kroger API rows when source_store_id does not match legacy slug rows", async () => {
     const pool = getDbPool();
     await pool.query(`
       update stores
@@ -404,13 +391,10 @@ describe("store catalog sync (integration)", () => {
       order by id
     `);
 
-    expect(krogerRows.rows.some((row) => row.id === "kroger-02900529")).toBe(false);
+    expect(krogerRows.rows.some((row) => row.id === "kroger-02900529")).toBe(true);
     expect(
       krogerRows.rows.find((row) => row.id === "kroger-mechanicsville")?.source_store_id,
-    ).toBe("02900529");
-    expect(
-      krogerRows.rows.find((row) => row.id === "kroger-mechanicsville")?.source_name,
-    ).toBe("kroger-official-api");
+    ).toBe("kroger-mechanicsville");
     expect(krogerRows.rows.some((row) => row.id === "kroger-02900515")).toBe(true);
 
     const migratedObservation = await pool.query<{ store_id: string }>(
@@ -424,20 +408,33 @@ describe("store catalog sync (integration)", () => {
       `,
     );
 
-    expect(migratedObservation.rows[0]?.store_id).toBe("kroger-mechanicsville");
+    expect(migratedObservation.rows[0]?.store_id).toBe("kroger-02900529");
   });
 
-  it("refreshes bootstrap Aldi coordinates from the nearest OSM Aldi store", async () => {
+  it("refreshes Aldi coordinates from the nearest OSM Aldi store", async () => {
     const pool = getDbPool();
     await pool.query(`
-      update stores
-      set
-        latitude = 37.628179,
-        longitude = -77.281955,
-        source_name = 'yum4less-internal-catalog',
-        source_store_id = 'aldi-mechanicsville',
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values (
+        'aldi-23111',
+        'Aldi',
+        'grocery',
+        'Mechanicsville',
+        'VA',
+        37.628179,
+        -77.281955,
+        'yum4less-market-catalog',
+        'osm-node-900007',
+        now()
+      )
+      on conflict (id) do update set
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        source_name = excluded.source_name,
+        source_store_id = excluded.source_store_id,
         last_verified_at = now()
-      where id = 'aldi-mechanicsville'
     `);
 
     const updated = await refreshBootstrapRankedStoreCoordinates({
@@ -463,7 +460,7 @@ describe("store catalog sync (integration)", () => {
     }>(`
       select latitude, longitude, source_name
       from stores
-      where id = 'aldi-mechanicsville'
+      where id = 'aldi-23111'
     `);
 
     expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.6365, 3);

@@ -12,6 +12,7 @@ import {
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import { loadEnvLocal } from "@/lib/load-env-local";
+import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 
 loadEnvLocal();
 
@@ -20,6 +21,8 @@ async function main() {
     process.env.DATABASE_URL =
       "postgresql://postgres:postgres@localhost:5433/yum4less_dev";
   }
+
+  enforceFixtureIngestDatabasePolicy();
 
   const zipCodes = parseIngestZipCodesFromEnv();
   const radiusMiles = resolveIngestRadiusMiles();

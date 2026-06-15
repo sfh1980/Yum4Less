@@ -4,6 +4,8 @@ if (process.argv.includes("--reset")) {
   process.env.YUM4LESS_TEST_DB_RESET = "1";
 }
 
+process.env.YUM4LESS_CI_BOOTSTRAP_STORES = "1";
+
 const result = spawnSync("npx vitest run --config vitest.integration.config.ts", {
   stdio: "inherit",
   shell: true,

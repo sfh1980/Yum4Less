@@ -1,4 +1,5 @@
 import { getDbPool } from "@/lib/db";
+import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { discoverFoodRetailStoresNearLocation } from "@/lib/osm-food-retail-discovery";
@@ -35,6 +36,11 @@ async function main() {
   if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL =
       "postgresql://postgres:postgres@localhost:5433/yum4less_dev";
+  }
+
+  if (USE_MAP_FIXTURE) {
+    process.env.YUM4LESS_MAP_CATALOG_FIXTURE = "1";
+    enforceFixtureIngestDatabasePolicy();
   }
 
   const zipCodes = parseIngestZipCodesFromEnv();
