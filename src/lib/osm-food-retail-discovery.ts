@@ -26,8 +26,12 @@ export const OSM_MAP_CATALOG_SOURCE = "openstreetmap-overpass";
 const DEFAULT_OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
 const FALLBACK_OVERPASS_ENDPOINT = "https://overpass.kumi.systems/api/interpreter";
 const OVERPASS_USER_AGENT = "Yum4Less/0.1 (beta map-catalog ingest; +https://github.com/)";
+const DEFAULT_FETCH_TIMEOUT_MS = 45_000;
+const DEFAULT_QUERY_TIMEOUT_S = 35;
+const DEFAULT_ENDPOINT_ATTEMPTS = 2;
+const DEFAULT_ENDPOINT_BACKOFF_MS = 2_000;
 
-function resolveOverpassEndpoints(): string[] {
+export function resolveOverpassEndpoints(): string[] {
   const configured = process.env.YUM4LESS_OSM_OVERPASS_URL?.trim();
   const endpoints = [
     configured || DEFAULT_OVERPASS_ENDPOINT,
@@ -36,6 +40,24 @@ function resolveOverpassEndpoints(): string[] {
   ];
 
   return [...new Set(endpoints.filter(Boolean))];
+}
+
+function readPositiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -154,35 +176,73 @@ async function fetchOverpassWithFallback(query: string): Promise<{
   endpoint: string;
 }> {
   const endpoints = resolveOverpassEndpoints();
+  const timeoutMs = readPositiveIntEnv(
+    "YUM4LESS_OSM_OVERPASS_TIMEOUT_MS",
+    DEFAULT_FETCH_TIMEOUT_MS,
+  );
+  const maxAttempts = readPositiveIntEnv(
+    "YUM4LESS_OSM_OVERPASS_MAX_ATTEMPTS",
+    DEFAULT_ENDPOINT_ATTEMPTS,
+  );
+  const backoffMs = readPositiveIntEnv(
+    "YUM4LESS_OSM_OVERPASS_ENDPOINT_BACKOFF_MS",
+    DEFAULT_ENDPOINT_BACKOFF_MS,
+  );
+
   let lastResponse: Response | undefined;
   let lastEndpoint = endpoints[0]!;
+  let lastError: unknown;
 
-  for (const endpoint of endpoints) {
+  for (let endpointIndex = 0; endpointIndex < endpoints.length; endpointIndex += 1) {
+    const endpoint = endpoints[endpointIndex]!;
     lastEndpoint = endpoint;
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json, text/plain, */*",
-        "User-Agent": OVERPASS_USER_AGENT,
-      },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: AbortSignal.timeout(30_000),
-    });
 
-    lastResponse = response;
-    if (response.ok) {
-      return { response, endpoint };
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      await respectOverpassRateLimit();
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json, text/plain, */*",
+            "User-Agent": OVERPASS_USER_AGENT,
+          },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+
+        lastResponse = response;
+        if (response.ok) {
+          return { response, endpoint };
+        }
+
+        if (response.status === 406 || response.status === 429 || response.status >= 500) {
+          break;
+        }
+
+        return { response, endpoint };
+      } catch (error) {
+        lastError = error;
+        if (attempt < maxAttempts) {
+          await sleep(backoffMs * attempt);
+          continue;
+        }
+      }
     }
 
-    if (response.status === 406 || response.status === 429 || response.status >= 500) {
-      continue;
+    if (endpointIndex < endpoints.length - 1) {
+      await sleep(backoffMs);
     }
-
-    return { response, endpoint };
   }
 
-  return { response: lastResponse!, endpoint: lastEndpoint };
+  if (lastResponse) {
+    return { response: lastResponse, endpoint: lastEndpoint };
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("OSM Overpass discovery failed after retries.");
 }
 
 function buildOverpassQuery(input: {
@@ -191,9 +251,13 @@ function buildOverpassQuery(input: {
   radiusMeters: number;
 }): string {
   const { latitude, longitude, radiusMeters } = input;
+  const queryTimeoutSeconds = readPositiveIntEnv(
+    "YUM4LESS_OSM_OVERPASS_QUERY_TIMEOUT_S",
+    DEFAULT_QUERY_TIMEOUT_S,
+  );
 
   return `
-    [out:json][timeout:25];
+    [out:json][timeout:${queryTimeoutSeconds}];
     (
       node["shop"~"${FOOD_RETAIL_SHOP_TAGS}"](around:${radiusMeters},${latitude},${longitude});
       way["shop"~"${FOOD_RETAIL_SHOP_TAGS}"](around:${radiusMeters},${latitude},${longitude});

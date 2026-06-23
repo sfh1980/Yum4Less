@@ -6,16 +6,27 @@ alwaysApply: false
 
 # Yum4Less Frontend Workflow
 
-Applies when editing UI, map, carousel, forms, or trust copy.
+Applies when editing UI, map, carousel, forms, or trust copy. **Commands and MCP triggers** → **`yum4less-agent-orchestration.mdc`** trigger table + **`yum4less-testing-and-release-gates.mdc`**.
 
-## Before marking done
-
-1. Run `npm test` (includes `meal-planner` UI smoke when present).
-2. If trust labels, fallback wording, map markers, or modal copy changed: start `npm run dev` and use **Playwright MCP** on `localhost:3000` with ZIP `23111` and fixture data; assert explicit wording (`estimated`, `directional`, `limited coverage`, coming soon, context only) — not just that elements render.
-3. Follow **`yum4less-agent-orchestration`** for `@web-frontend-standards` and `@verifier` when trust-sensitive.
-
-## UI trust
+## UI trust (path-specific)
 
 - Never imply all map pins or stores are priced equally.
 - Keep degraded/fallback mode visible near affected results.
 - Do not hide provenance entirely in internal-only panels without user-facing summary labels on cards.
+
+## Async correctness (Phase 1 audit — C2, H4, H11, H12)
+
+**Request races:** every async operation that can race with a newer user action (**market search**, **meal rank**, **geolocation callback**) **MUST** use a request-generation token or `AbortController`. Reference pattern: `src/components/meal-planner/multi-store-route-panel.tsx` (abort + cleanup on unmount).
+
+**Error surfaces:**
+
+- **MUST** provide a top-level error boundary at `src/app/error.tsx` (or equivalent) so uncaught render errors show recovery UI — not a blank screen (H11).
+- **MUST** wrap unguarded async mounts (e.g. Leaflet `mountMap`) in `try/catch` (or equivalent) and surface a visible fallback/error state — not an empty shell (H12).
+
+**Results panel:** when `shopperNotice` and non-empty `recommendations` are both present, render both — notice is not a branch that hides the carousel (C1).
+
+**Loading:** disable search/rank affordances while the matching request is in flight when practical, to reduce race triggers (pairs with request-generation guards).
+
+## Before marking done
+
+Follow orchestration for `npm test`, Playwright MCP (coordinate-first), `@web-frontend-standards`, and `@verifier` when trust-sensitive.

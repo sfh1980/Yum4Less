@@ -51,11 +51,11 @@ function parseKrogerProductCardOffers(html: string): WeeklyAdRawOffer[] {
 
   for (const cardHtml of cards) {
     const productName =
-      readHtmlAttribute(cardHtml, "aria-label") ??
-      readTaggedText(cardHtml, "data-testid", /product-title|ProductTitle/i) ??
-      readTaggedText(cardHtml, "class", /title/i);
+      readAriaLabel(cardHtml) ??
+      readKrogerTaggedText(cardHtml, "productTitle") ??
+      readKrogerTaggedText(cardHtml, "titleClass");
     const priceText =
-      readTaggedText(cardHtml, "data-testid", /price|Price/i) ??
+      readKrogerTaggedText(cardHtml, "price") ??
       cardHtml.match(/\$\s*[\d.]+\s*(?:\/\s*lb)?/i)?.[0];
 
     if (!productName || !priceText) {
@@ -79,17 +79,22 @@ function parseKrogerProductCardOffers(html: string): WeeklyAdRawOffer[] {
   return offers;
 }
 
-function readHtmlAttribute(html: string, attribute: string) {
-  const pattern = new RegExp(`${attribute}=["']([^"']+)["']`, "i");
-  return html.match(pattern)?.[1];
+function readAriaLabel(html: string) {
+  return html.match(/aria-label=["']([^"']+)["']/i)?.[1];
 }
 
-function readTaggedText(html: string, attribute: string, matcher: RegExp) {
-  const tagPattern = new RegExp(
-    `<[^>]*${attribute}=["'][^"']*${matcher.source}[^"']*["'][^>]*>([\\s\\S]*?)<\\/[^>]+>`,
-    "i",
-  );
-  const match = html.match(tagPattern);
+const KROGER_TAGGED_TEXT_PATTERNS = {
+  productTitle:
+    /<[^>]*data-testid=["'][^"']*(?:product-title|ProductTitle)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i,
+  titleClass: /<[^>]*class=["'][^"']*title[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i,
+  price: /<[^>]*data-testid=["'][^"']*(?:price|Price)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i,
+} as const;
+
+function readKrogerTaggedText(
+  html: string,
+  selector: keyof typeof KROGER_TAGGED_TEXT_PATTERNS,
+) {
+  const match = html.match(KROGER_TAGGED_TEXT_PATTERNS[selector]);
   return match?.[1] ? stripHtmlText(match[1]) : undefined;
 }
 

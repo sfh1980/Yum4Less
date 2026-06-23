@@ -6,16 +6,23 @@ alwaysApply: false
 
 # Yum4Less Database And Ingest Workflow
 
-Applies when editing schema, seed, market repository, or weekly-ad ingest.
-
-## Before marking done
-
-1. Run `npm test`.
-2. Run `npm run test:integration` when merge-gating DB behavior changed (`npm run db:up` first).
-3. Use **Postgres MCP** (read-only) after ingest or schema work when answering what is in `price_observations`, seed stores, or promotion state — run `npm run db:up` first.
-4. Follow **`yum4less-agent-orchestration`**; use `@database-codegen-standards` for schema/SQL changes.
+Applies when editing schema, seed, market repository, or weekly-ad ingest. **Commands and MCP triggers** → **`yum4less-agent-orchestration.mdc`** trigger table + **`yum4less-testing-and-release-gates.mdc`**.
 
 ## Data discipline
 
 - Schema changes belong in `db/init/`; do not use MCP SQL as a write path.
 - Ingest scripts are the primary write path; public API routes stay read-only by default.
+
+## Persist failure visibility (Phase 1 audit — H5, H6, H7)
+
+**MUST NOT** swallow ingest persist failures into anonymous skip counters.
+
+- On `insertPriceObservationIfChanged` / provider persist failure: **log** the specific row identifier (`storeId`, `ingredientId`, `sourceRecordId`, chain, product name) and rethrow or return a typed failure — not bare `catch { return false / "skipped" }` without logging.
+- Distinguish **skipped** (low confidence, unchanged, superseded) from **failed** (DB error, constraint violation) in sync summaries and console output.
+- **Chain-wide ingest failure** (every configured chain returns `status: "error"` or zero offers after error) **MUST** produce a **non-zero exit code** from the ingest script — console summary alone is insufficient.
+- Scheduled wrappers **MUST** propagate weekly-ad fatal exits; do not continue downstream sync on total weekly-ad failure unless explicitly documented as rehearsal/fixture mode.
+- When ingest cannot load pricing context, propagate `source: "unavailable"` (or exit non-zero) — do not report success-shaped zero upserts without an explicit skip reason.
+
+## Before marking done
+
+Follow orchestration for `npm test`, `npm run test:integration` when merge-gating Postgres behavior changed, Postgres MCP after `npm run db:up`, `@database-codegen-standards` for schema/SQL, and `@ingest-standards` for pipeline/scrape/ingest scripts.

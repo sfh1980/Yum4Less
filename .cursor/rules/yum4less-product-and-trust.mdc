@@ -1,0 +1,63 @@
+---
+description: Yum4Less beta v1 product direction, trust labeling, and documentation ownership
+alwaysApply: true
+---
+
+# Yum4Less Product And Trust
+
+Source of truth for locked decisions: **`.private/owner-decisions.md`** (distilled bullets) and **`PROJECT_CONTINUITY.md` → Decision log** (one-line summaries + engineering queue order).
+
+## Documentation owners (link; do not duplicate)
+
+| File | Owns |
+|---|---|
+| `README.md` | Public vision, beta scope, setup, commands, troubleshooting |
+| `PROJECT_CONTINUITY.md` | Newest-first **changelog**, **Resume**, **Decision log**, verification snapshot |
+| `AGENTS.md` | Agent/MCP/hook index and verification gates |
+| `.env.example` | Environment variable truth |
+| `.private/owner-decisions.md` | Distilled locked decisions + link to questionnaire; never duplicate into shared docs |
+
+## Beta v1 scope (active)
+
+- **Product:** location-aware **dinner** meal planning with budget, ingredient-count, dietary, and one-store vs multi-store preferences.
+- **Geography:** continental US; three-tier location model — browser/mobile **geolocation primary**, **ZIP fallback**, future **ZIP + landmark hybrid** (`us-service-area.ts`). Internal representation is always coordinates; server derives ZIP for ingest when required. CI/E2E anchor: coordinates **`37.6085`, `-77.3739`** primary; ZIP **`23111`** fallback-path tests only — not a hard geo fence.
+- **Default UX (Tier C):** map and nearby-store **context** everywhere; **ranked meal estimates** only where Kroger-family or Aldi ingested data and promotion gates pass. Tier C is normal, not failure.
+- **v1 ranked chains:** **Kroger family** (official API + weekly-ad fallback) and **Aldi** (weekly-ad / Flipp). **Production deploy focus** is Kroger-family + Aldi ranked estimates when gates pass.
+- **Other chains** (Publix, Food Lion, BJ's, Walmart, etc.): map/context or **upcoming releases** — not the current production-ranked scope unless direction changes.
+- **Auth:** no user accounts in v1.
+- **Hosting:** self-hosted homelab deploy is an **active queued phase** with defined precursors (see **`PROJECT_CONTINUITY.md` → Resume**); not indefinitely deferred.
+- **Labeling:** v1 = **beta** — keep `estimated`, `directional`, `limited coverage`, verify-in-store, and fixture/rehearsal honesty.
+
+## Core loop
+
+Determine location (geolocation primary, ZIP fallback) → choose radius → discover stores → apply meal preferences → rank dinners with trust labels and shopping plans.
+
+## Data and recipes
+
+- Curated **internal recipe library** only for rankings; external recipe APIs remain research-only.
+- **Fixture weekly-ad ingest** for local dev/CI — rehearsal data in real tables, never presented as live retailer feeds.
+- **Cache-first** store/pricing reads; ingest and provider sync scripts are the intended write path — public HTTP routes stay read-only by default.
+- Official store APIs first; careful scraping only where terms, reliability, and maintenance burden are acceptable.
+
+## Anti-goals (M133)
+
+Yum4Less is **not**: a coupon-clipper, checkout/payments integration, price-guarantee or comparison-shopping service, social network, or generic recipe blog.
+
+## Trust and fallbacks
+
+- Treat freshness, provenance, fallback state, and estimate quality as product features, not optional polish.
+- Explain source, freshness, fallback, and trust concepts in a dismissible explainer or modal before or alongside results.
+- Show strong trust signals on recommendation cards; deeper provenance may be expandable, but it must not be hidden entirely in a summary panel.
+- If data is stale, incomplete, fallback-backed, or directional, use explicit language like `estimated`, `directional`, or `limited coverage` instead of stronger claims.
+- Include stale or uncertain prices only with clear warnings and visibly lower confidence.
+- Never treat degraded mode as success-equivalent mode. If the app falls back from live/provider or DB-backed data, surface that clearly near the affected results.
+- Hide chains from recommendation pricing until their sale and price coverage is strong enough; unsupported chains should appear as coming soon or disabled with explanation.
+- Do not claim **`verified`**, **`production-ready`**, **`deploy-ready`**, **`CI green`**, **`beta v1 demo-complete`**, **`cheapest`**, **`best deal`**, **`guaranteed`**, **`save money`**, **`high confidence`**, **`fresh`**, **`live prices on search`**, **`stable`**, or **`reliable`** unless the code and evidence support those claims (M156).
+- **`affordable`** is allowed in mission/hero copy only; forbidden in per-meal savings or ranking claims (M161).
+
+## Engineering discipline
+
+- **Engineering queue (locked order):** five-file split (done) → contracts/Zod (done) → rules/agents/hooks refactor (done) → P1 items → homelab precursors — live detail in **`PROJECT_CONTINUITY.md` → Resume**; do not reorder without Decision log update.
+- Hide chains from ranked pricing until sale/coverage gates support trustworthy output; show unsupported chains as coming soon or context-only with explanation.
+- Prefer refining existing agents, rules, and hooks before adding new automation.
+- Do not claim deploy-ready, production-ready, or full-US ranked coverage without evidence.

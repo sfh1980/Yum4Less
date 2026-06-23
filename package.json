@@ -14,12 +14,12 @@
     "test:integration": "node scripts/run-integration-tests.mjs",
     "test:integration:reset": "node scripts/run-integration-tests.mjs --reset",
     "test:all": "npm test && npm run test:integration",
-    "test:kroger-api": "tsx scripts/test-kroger-api-live.mjs",
-    "test:publix-api": "tsx scripts/test-publix-api-live.mjs",
-    "test:kroger-live-scrape": "tsx scripts/test-kroger-live-scrape.mjs",
-    "test:publix-live-scrape": "tsx scripts/test-publix-live-scrape.mjs",
-    "test:walmart-live-scrape": "tsx scripts/test-walmart-live-scrape.mjs",
-    "test:publix-live-ingest": "node scripts/test-publix-live-ingest.mjs",
+    "probe:kroger-api": "tsx scripts/test-kroger-api-live.mjs",
+    "probe:publix-api": "tsx scripts/test-publix-api-live.mjs",
+    "probe:kroger-live-scrape": "tsx scripts/test-kroger-live-scrape.mjs",
+    "probe:publix-live-scrape": "tsx scripts/test-publix-live-scrape.mjs",
+    "probe:walmart-live-scrape": "tsx scripts/test-walmart-live-scrape.mjs",
+    "probe:publix-live-ingest": "node scripts/test-publix-live-ingest.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ci": "node scripts/run-e2e-tests.mjs",
     "ingest:weekly-ads": "node scripts/run-weekly-ad-ingest.mjs",
@@ -44,7 +44,8 @@
     "next": "^15.3.2",
     "pg": "^8.21.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",

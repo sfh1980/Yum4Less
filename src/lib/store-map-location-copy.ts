@@ -12,7 +12,7 @@ const STALE_VERIFICATION_HOURS = 48;
 
 export function formatIngestSourceLabel(sourceName?: string | null): string {
   if (!sourceName || sourceName === "yum4less-internal-catalog") {
-    return "bootstrap seed catalog";
+    return "seed catalog";
   }
 
   if (sourceName === "kroger-official-api") {
@@ -142,7 +142,7 @@ export function buildStoreMapLocationBadge(input: {
 
   switch (provenance) {
     case "bootstrap":
-      return "Bootstrap pin";
+      return "Seed catalog pin";
     case "api-verified":
       return isStaleVerification(input.lastVerifiedAt)
         ? "API pin · reverify"
@@ -176,7 +176,7 @@ export function buildStoreMapLocationNote(input: {
   }
 
   if (provenance === "bootstrap") {
-    return "Bootstrap seed coordinates — not retailer-verified. Run daily live ingest (`npm run ingest:map-catalog` / scheduled wrapper) to replace with API-backed pins.";
+    return "Seed catalog coordinates — not retailer-verified. Run daily live ingest (`npm run ingest:map-catalog` / scheduled wrapper) to replace with API-backed pins.";
   }
 
   if (input.sourceName === "kroger-official-api") {
@@ -202,4 +202,4 @@ export function buildStoreMapLocationNote(input: {
 }
 
 export const MAP_CATALOG_LOCATION_FOOTNOTE =
-  "Map pins reflect daily ingest (Kroger Location API, Aldi/market catalog, OpenStreetMap or USDA SNAP context, or bootstrap seed until live ingest runs). Badges show bootstrap vs API-verified vs context-only pins; hover a pin for source and last verified time — confirm locations before you shop.";
+  "Map pins reflect daily ingest (Kroger Location API, Aldi/market catalog, OpenStreetMap or USDA SNAP context, or seed catalog until live ingest runs). Badges show seed vs API-verified vs context-only pins; hover a pin for source and last verified time — confirm locations before you shop.";

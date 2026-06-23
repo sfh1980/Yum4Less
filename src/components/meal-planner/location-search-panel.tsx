@@ -15,6 +15,8 @@ type LocationSearchPanelProps = {
   displayedErrors: FieldErrors;
   market?: RecommendationExperience["market"];
   rankingPaused?: boolean;
+  marketSearchLoading?: boolean;
+  rankLoading?: boolean;
   isEditingLocation: boolean;
   focusMealPreferencesToken: number;
   onEditLocation: () => void;
@@ -34,6 +36,8 @@ export function LocationSearchPanel({
   displayedErrors,
   market,
   rankingPaused = false,
+  marketSearchLoading = false,
+  rankLoading = false,
   isEditingLocation,
   focusMealPreferencesToken,
   onEditLocation,
@@ -131,10 +135,22 @@ export function LocationSearchPanel({
           </div>
 
           <div className="action-row">
-            <button className="primary-button" type="button" onClick={onZipSearch}>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={onZipSearch}
+              disabled={marketSearchLoading}
+              aria-disabled={marketSearchLoading || undefined}
+            >
               Find nearby stores
             </button>
-            <button className="secondary-button" type="button" onClick={onBrowserSearch}>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={onBrowserSearch}
+              disabled={marketSearchLoading}
+              aria-disabled={marketSearchLoading || undefined}
+            >
               Use my location
             </button>
           </div>
@@ -149,6 +165,8 @@ export function LocationSearchPanel({
           market={market}
           onRankMeals={onRankMeals}
           rankingPaused={rankingPaused}
+          marketSearchLoading={marketSearchLoading}
+          rankLoading={rankLoading}
           panelRef={mealPreferencesRef}
           selectedIngredientIds={selectedIngredientIds}
           onToggleIngredient={onToggleIngredient}
@@ -196,6 +214,8 @@ type MealPreferencesPanelProps = {
   market: RecommendationExperience["market"];
   onRankMeals: () => void;
   rankingPaused: boolean;
+  marketSearchLoading: boolean;
+  rankLoading: boolean;
   panelRef: RefObject<HTMLDivElement | null>;
   selectedIngredientIds: string[];
   onToggleIngredient: (ingredientId: string, checked: boolean) => void;
@@ -210,6 +230,8 @@ function MealPreferencesPanel({
   market,
   onRankMeals,
   rankingPaused,
+  marketSearchLoading,
+  rankLoading,
   panelRef,
   selectedIngredientIds,
   onToggleIngredient,
@@ -217,7 +239,10 @@ function MealPreferencesPanel({
   onClearIngredientSelection,
 }: MealPreferencesPanelProps) {
   const rankDisabled =
-    rankingPaused || selectedIngredientIds.length === 0;
+    rankingPaused ||
+    selectedIngredientIds.length === 0 ||
+    marketSearchLoading ||
+    rankLoading;
 
   return (
     <div

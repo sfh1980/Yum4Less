@@ -42,7 +42,7 @@ try {
         '- AGENTS.md (repo root)'
         '- .cursor/rules/yum4less-agent-orchestration.mdc'
         ''
-        'Beta v1 shoring-up is active: do not claim beta v1 demo-complete without ZIP 23111 fixture+Postgres core loop, trust/fallback labels, npm test, and integration/e2e where the slice touches DB/CI. Do not claim deploy-ready — homelab migration is deferred. Product truth: PROJECT_CONTINUITY.md Resume.'
+        'Beta v1 shoring-up is active: do not claim beta v1 demo-complete without coordinate-first fixture+Postgres core loop (37.6085, -77.3739 primary; ZIP 23111 fallback-path only), trust/fallback labels, npm test, and integration/e2e where the slice touches DB/CI. Homelab deploy is an active queued phase; engineering queue order is five-file split (done) → contracts/Zod (done) → rules/agents/hooks refactor (done) → P1 items → homelab precursors — not indefinitely deferred. Product truth: PROJECT_CONTINUITY.md Resume; distilled decisions: .private/owner-decisions.md.'
         ''
         'Session MCP preflight:'
         "- $postgresStatus"
@@ -52,7 +52,7 @@ try {
         ''
         'When the user asks an implementation/debug/verification question and did not @ a project agent, open your response with a short Routing section: suggested @ agent, optional rephrased prompt, likely tests/MCP.'
         ''
-        'Invoke project agents with @verifier, @web-frontend-standards, @web-backend-standards, @database-codegen-standards, or @testing-cicd-standards when the orchestration trigger table applies.'
+        'Invoke project agents with @verifier, @web-frontend-standards, @web-backend-standards, @database-codegen-standards, @ingest-standards, @testing-cicd-standards, or @senior-auditor when the orchestration trigger table applies.'
         ''
         'Continuity journal: after material slices, update PROJECT_CONTINUITY.md — changelog at top, refresh Resume, update Decision log / verification snapshot when applicable; no chat summaries (transcript index links only). See .cursor/rules/yum4less-continuity-journal.mdc'
         ''

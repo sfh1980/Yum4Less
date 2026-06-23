@@ -6,7 +6,7 @@ alwaysApply: false
 
 # README Onboarding (Yum4Less)
 
-Follow **`.cursor/rules/yum4less-governance-and-doc-sync.mdc`** for doc owners.
+Follow **`.cursor/rules/yum4less-product-and-trust.mdc`** for doc owners.
 
 ## README owns
 
@@ -19,7 +19,7 @@ Follow **`.cursor/rules/yum4less-governance-and-doc-sync.mdc`** for doc owners.
 
 - Changelog, roadmap, competitive analysis, or verification tables → **`PROJECT_CONTINUITY.md`**
 - Agent/MCP setup walkthrough detail → **`AGENTS.md`**
-- Personalized teaching → **`.private/learning-notes.md`**
+- Distilled locked decisions → **`.private/owner-decisions.md`**
 
 ## When to update README
 

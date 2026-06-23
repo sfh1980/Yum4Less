@@ -1,4 +1,7 @@
-import type { MealPreferenceForm } from "@/lib/recommendation-service";
+import type { MealPreferenceForm } from "@/contracts/recommendations";
+import { radiusMilesSchema } from "@/contracts/shared/location";
+import { formBudgetSchema } from "@/contracts/shared/meal-preferences";
+import { isValidZipCode } from "@/lib/api-request";
 import {
   DEFAULT_DINNERS_WANTED,
   DEFAULT_MAX_INGREDIENTS,
@@ -6,9 +9,12 @@ import {
 } from "@/lib/meal-preference-defaults";
 import type { FieldErrors, FormState } from "@/components/meal-planner/types";
 
-function parseNumberField(value: string) {
+function parseIntegerField(value: string) {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+    return undefined;
+  }
+  return parsed;
 }
 
 export function validateLocationFields(
@@ -18,17 +24,12 @@ export function validateLocationFields(
   const errors: FieldErrors = {};
 
   const zipCode = form.zipCode.trim();
-  if (requireZipCode && !/^\d{5}$/.test(zipCode)) {
+  if (requireZipCode && !isValidZipCode(zipCode)) {
     errors.zipCode = "Enter a valid 5-digit ZIP code.";
   }
 
-  const radiusMiles = parseNumberField(form.radiusMiles);
-  if (
-    radiusMiles === undefined ||
-    !Number.isInteger(radiusMiles) ||
-    radiusMiles < 1 ||
-    radiusMiles > 25
-  ) {
+  const radiusMiles = parseIntegerField(form.radiusMiles);
+  if (radiusMiles === undefined || !radiusMilesSchema.safeParse(radiusMiles).success) {
     errors.radiusMiles = "Choose a radius between 1 and 25 miles.";
   }
 
@@ -40,8 +41,8 @@ export function validateMealFields(
 ): Pick<FieldErrors, "budget"> {
   const errors: FieldErrors = {};
 
-  const budget = parseNumberField(form.budget);
-  if (budget === undefined || budget < 5 || budget > 40) {
+  const budget = Number(form.budget);
+  if (!formBudgetSchema.safeParse(budget).success) {
     errors.budget = "Enter a spending limit between $5 and $40.";
   }
 
@@ -51,10 +52,14 @@ export function validateMealFields(
 export function buildMealPreferencePayload(
   form: FormState,
 ): MealPreferenceForm | undefined {
-  const radiusMiles = parseNumberField(form.radiusMiles);
-  const budget = parseNumberField(form.budget);
+  const radiusMiles = parseIntegerField(form.radiusMiles);
+  const budget = Number(form.budget);
 
-  if (radiusMiles === undefined || budget === undefined) {
+  if (
+    radiusMiles === undefined ||
+    !radiusMilesSchema.safeParse(radiusMiles).success ||
+    !formBudgetSchema.safeParse(budget).success
+  ) {
     return undefined;
   }
 

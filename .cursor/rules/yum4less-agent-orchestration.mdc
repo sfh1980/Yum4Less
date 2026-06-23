@@ -7,7 +7,7 @@ alwaysApply: true
 
 Use this rule on **every implementation slice**. Do not mark work verified, complete, or merge-ready until the checklist for the touched area passes.
 
-See also: `AGENTS.md` (repo root) and project agents in `.cursor/agents/`.
+See also: `AGENTS.md`, **`.cursor/rules/yum4less-testing-and-release-gates.mdc`** (test gates + MCP detail), **`.cursor/rules/yum4less-product-and-trust.mdc`** (scope + trust), and project agents in `.cursor/agents/`.
 
 ## User question routing (every conversation)
 
@@ -27,18 +27,20 @@ The `beforeSubmitPrompt` hook may inject routing hints; follow them unless clear
 
 Until beta v1 is complete to the repo owner's liking:
 
-- Do **not** claim **beta v1 demo-complete** without: ZIP `23111` fixture + Postgres core loop, visible trust/fallback labels, `npm test`, and integration/e2e where the slice touches DB/CI.
-- Do **not** claim **deploy-ready** or **production-ready** — homelab deploy is deferred; see **`PROJECT_CONTINUITY.md` → Resume**.
-- Acceptable ranked pricing path for demos/CI: **fixture ingest + Postgres**; live ingest gaps (Walmart matching, regional chains, homelab) must stay documented honestly.
+- Do **not** claim **beta v1 demo-complete** without: coordinate-first fixture (`37.6085`, `-77.3739` primary; ZIP `23111` fallback-path only) + Postgres core loop, visible trust/fallback labels, `npm test`, and integration/e2e where the slice touches DB/CI.
+- Do **not** claim **deploy-ready** or **production-ready** without homelab precursors met — see **`PROJECT_CONTINUITY.md` → Resume**.
+- Acceptable ranked pricing path for demos/CI: **fixture ingest + Postgres**; live ingest gaps must stay documented honestly.
 - **Tier C** (map/context without ranked estimates) is the normal outcome outside Kroger-family/Aldi gate coverage — not a bug.
 - For unfamiliar multi-file work, **MUST** use Task `explore` (or equivalent codebase search) before large edits.
 - For non-trivial slices, **MUST** invoke the matching `@` project agent or apply its checklist yourself — not optional.
 
+Full product scope, trust labeling, and forbidden claims → **`yum4less-product-and-trust.mdc`**.
+
 ## Before you respond "done"
 
 1. Identify which rows in the trigger table below apply to files you changed.
-2. Run the **required** commands and MCP checks for those rows.
-3. If trust-sensitive UI or pricing claims changed, invoke **`verifier`** (project agent) or apply its checklist yourself in readonly mode.
+2. Run the **required** commands and MCP checks for those rows (see **`yum4less-testing-and-release-gates.mdc`** for gate detail).
+3. If trust-sensitive UI or pricing claims changed, invoke **`verifier`** or apply its checklist yourself in readonly mode.
 4. On **material implementation slices**, update **`PROJECT_CONTINUITY.md`** per **`.cursor/rules/yum4less-continuity-journal.mdc`**: changelog at top, refresh Resume, update Decision log / verification snapshot when applicable; **no chat summaries** (transcript index links only).
 5. State what you ran and what you did **not** run (with reason).
 
@@ -48,30 +50,15 @@ Do **not** claim `verified`, `production-ready`, `CI green`, `deploy-ready`, or 
 
 | If you changed… | Required before done | MCP / agent |
 |---|---|---|
-| `src/components/**`, `src/app/globals.css`, map/UI, trust copy | `npm test`; Playwright MCP on `localhost:3000` after `npm run dev` when Vitest cannot prove visible UI/trust copy | `@web-frontend-standards`; `@verifier` for trust-label changes |
-| `src/app/api/**`, `src/lib/rate-limit*`, `src/lib/public-api-*`, recommendation/market routes | `npm test`; route tests for validation/sanitization bounds | `@web-backend-standards` |
-| `db/init/**`, `src/lib/market-repository*`, weekly-ad ingest, `price_observations` | `npm test`; `npm run test:integration` when DB merge behavior changed | Postgres MCP after `npm run db:up`; `@database-codegen-standards` |
+| `src/components/**`, `src/app/globals.css`, map/UI, trust copy | `npm test`; Playwright MCP on `localhost:3000` after `npm run dev` when Vitest cannot prove visible UI/trust copy | `@web-frontend-standards`; `@verifier` for trust-label changes; scoped: **`yum4less-frontend-workflow.mdc`** |
+| `src/app/api/**`, `src/lib/rate-limit*`, `src/lib/public-api-*`, recommendation/market routes | `npm test`; route tests for validation/sanitization bounds | `@web-backend-standards`; scoped: **`yum4less-backend-api-workflow.mdc`** |
+| `db/init/**`, `src/lib/market-repository*`, weekly-ad ingest, `price_observations` | `npm test`; `npm run test:integration` when DB merge behavior changed (`yum4less_test`; fixture ingest on `yum4less_test` only — not `yum4less_dev`) | Postgres MCP after `npm run db:up`; `@database-codegen-standards`; `@ingest-standards` for ingest/scrape; scoped: **`yum4less-database-ingest-workflow.mdc`** |
 | `.github/workflows/**`, release/CI claims | Inspect workflow result | GitHub MCP or `gh` (read-only for status) |
 | Security-sensitive code, dependency/config changes, auth/privacy/secrets surfaces | `npm test` where code changed; Semgrep Guardian scan when configured | `@senior-auditor`; Semgrep MCP/hooks |
 | Provider/pricing/trust rollout logic | `npm test` + fixture-based before/after when ranking changes | `@verifier`; Postgres MCP when DB rows matter |
 | Material slice (orchestration paths below) or `PROJECT_CONTINUITY.md` | Update continuity journal: changelog top, Resume, Decision log / verification as needed; no transcript dumps | `.cursor/rules/yum4less-continuity-journal.mdc` |
 
-## MCP usage (mandatory when triggered)
-
-Read each MCP tool schema under `mcps/<server>/tools/` before calling `CallMcpTool`.
-
-| MCP | MUST use when… | Prerequisites |
-|---|---|---|
-| **Postgres** | Answering schema/seed/`price_observations`/ingest state; verifying DB after ingest or integration work | `npm run db:up`; read-only only |
-| **Playwright** | UI/map/trust/fallback copy changed and Vitest alone is insufficient | `npm run dev`; ZIP `23111`; fixture/seed data |
-| **GitHub** | PR/workflow/CI status questions or release-readiness claims | `GITHUB_PERSONAL_ACCESS_TOKEN`; prefer `gh` for mutating GitHub actions |
-| **Semgrep** | Security/dependency/secrets review, agent-written code scan, PR/release security pass | Semgrep CLI on PATH; `semgrep login` for Semgrep Guardian products |
-
-Do **not** add MCP servers without explicit user approval (see governance rule).
-
 ## Project agents (invoke when triggered)
-
-Project agents live in `.cursor/agents/`. Invoke via **@ mention** (e.g. `@verifier`) or by following the agent file checklist yourself.
 
 | Agent | Invoke when… |
 |---|---|
@@ -79,20 +66,14 @@ Project agents live in `.cursor/agents/`. Invoke via **@ mention** (e.g. `@verif
 | `web-frontend-standards` | UI, map, carousel, forms, accessibility, trust modals |
 | `web-backend-standards` | API routes, validation, rate limits, provider services |
 | `database-codegen-standards` | Schema, seed, SQL, ingest persistence |
+| `ingest-standards` | Weekly-ad ingest, scheduled pipeline, scrape compliance guard, per-chain kill switches |
 | `testing-cicd-standards` | CI gates, test strategy, release readiness |
 | `senior-auditor` | Security/dependency audit requests |
 
-Prefer **native tools first** (grep, shell, Vitest). Use MCP and project agents when the trigger table says so — not instead of fast tests.
+Prefer **native tools first** (grep, shell, Vitest). Use MCP and project agents when the trigger table says so — not instead of fast tests. MCP server detail → **`yum4less-testing-and-release-gates.mdc`**.
 
 ## Hooks
 
 Project hooks in `.cursor/hooks.json` inject session context, prompt routing, after-edit nudges, Semgrep Guardian scans, MCP schema reminders, explore handoff, and a diff-aware stop-turn verification reminder. Follow them when present.
 
-## Default test gates (any code change)
-
-At minimum before done:
-
-- `npm test` for logic/UI unit changes
-- `npm run build` when imports, routes, or Next.js config changed
-- `npm run test:integration` when Postgres behavior changed
-- `npm run test:e2e:ci` only when explicitly validating the full beta v1 browser flow (heavy; not every slice)
+New hooks require owner approval — **`yum4less-governance-and-doc-sync.mdc`**.

@@ -1,8 +1,6 @@
-import { spawnSync } from "node:child_process";
+import { spawnNodeScript, spawnNpx } from "./lib/spawn-safe.mjs";
 
-const ensure = spawnSync("node scripts/ensure-test-db.mjs", {
-  stdio: "inherit",
-  shell: true,
+const ensure = spawnNodeScript("scripts/ensure-test-db.mjs", [], {
   env: process.env,
 });
 
@@ -10,9 +8,7 @@ if (ensure.status !== 0) {
   process.exit(ensure.status ?? 1);
 }
 
-const ingest = spawnSync("npx tsx scripts/ingest-themealdb-from-sales.ts", {
-  stdio: "inherit",
-  shell: true,
+const ingest = spawnNpx(["tsx", "scripts/ingest-themealdb-from-sales.ts"], {
   env: process.env,
 });
 

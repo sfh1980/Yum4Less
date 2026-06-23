@@ -25,7 +25,7 @@ describe("store map location copy", () => {
     ).toContain("last verified");
   });
 
-  it("labels bootstrap seed catalog pins honestly before live ingest", () => {
+  it("labels seed catalog pins honestly before live ingest", () => {
     expect(
       resolveStoreMapLocationProvenance({
         storeId: "kroger-mechanicsville",
@@ -37,13 +37,13 @@ describe("store map location copy", () => {
         storeId: "kroger-mechanicsville",
         sourceName: "yum4less-internal-catalog",
       }),
-    ).toBe("Bootstrap pin");
+    ).toBe("Seed catalog pin");
     expect(
       buildStoreMapLocationNote({
         storeId: "kroger-mechanicsville",
         sourceName: "yum4less-internal-catalog",
       }),
-    ).toContain("Bootstrap seed coordinates");
+    ).toContain("Seed catalog coordinates");
   });
 
   it("labels live Kroger API pins with ingest source and verification age", () => {

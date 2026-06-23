@@ -7,7 +7,7 @@ import type {
   WeeklyAdRawOffer,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
-export const MIN_WEEKLY_AD_MATCH_CONFIDENCE = 0.45;
+export const MIN_WEEKLY_AD_MATCH_CONFIDENCE = 0.55;
 
 export function matchWeeklyAdOffers(input: {
   chain: WeeklyAdOffer["chain"];

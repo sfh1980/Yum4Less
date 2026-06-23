@@ -12,6 +12,9 @@ Focus:
 - stores, locations, normalized items, price snapshots, recipes, recipe ingredients, ingredient matches, and recommendation evidence
 - provenance, freshness, and match confidence
 - cron/script store catalog sync (Kroger-family + Aldi via ingest scripts — public `/api/market-search` stays read-only) and multi-ZIP ingest via `YUM4LESS_INGEST_ZIPS`
+- both `yum4less_dev` and `yum4less_test` exist; fixture ingest must target `yum4less_test` only (Phase 2)
+- coordinates (`lat`/`lng`) are the canonical location representation; ZIP is derived/display only
+- append-only analytics events table schema (M150)
 - cache-first queries and efficient refresh behavior
 - **Postgres MCP** for read-only schema and data verification on local `yum4less_dev` (port `5433`)
 
@@ -26,6 +29,8 @@ Rules:
 1. Use parameterized SQL only; never build queries from untrusted strings.
 2. Separate provider identity, normalized identity, and user-facing display values.
 3. Preserve source provenance, freshness timestamps, and confidence or quality signals where they affect recommendation trust.
+3a. **Ingest persist failures (Phase 1 audit):** log the specific failing row/identifier on DB write failure; never collapse into a generic `skippedCount` without context. Chain-wide ingest failure must exit non-zero. Separate skip reasons (low confidence, unchanged) from fail reasons (DB error) in summaries.
+3b. **Per-ingredient writes:** when multiple offers match one ingredient, persist the best match by confidence (then price) — not last-write-wins iteration order (H9). Revisit match-confidence thresholds when false-positive tests document weak matches passing (H10).
 4. Model partial certainty explicitly. Not every price snapshot or ingredient match is equally reliable.
 5. Favor predictable access paths for nearest-store lookup, latest-price selection, ingredient matching, and recommendation explanation.
 6. Prefer additive schema changes, explicit constraints, and indexes that match real query patterns.

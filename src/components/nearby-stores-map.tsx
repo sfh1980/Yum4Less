@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NearbyStoresMapModel } from "@/lib/nearby-stores-map-model";
 import { getMapBounds } from "@/lib/nearby-stores-map-model";
 import { escapeHtml } from "@/lib/html-escape";
@@ -27,6 +27,7 @@ export function NearbyStoresMap({
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map());
   const onStoreSelectRef = useRef(onStoreSelect);
+  const [mapError, setMapError] = useState<string>();
 
   useEffect(() => {
     onStoreSelectRef.current = onStoreSelect;
@@ -36,13 +37,15 @@ export function NearbyStoresMap({
     let cancelled = false;
     let resizeObserver: ResizeObserver | undefined;
     const markers = markersRef.current;
+    setMapError(undefined);
 
     async function mountMap() {
       if (!containerRef.current || cancelled) {
         return;
       }
 
-      const leaflet = await import("leaflet");
+      try {
+        const leaflet = await import("leaflet");
 
       if (!containerRef.current || cancelled) {
         return;
@@ -173,6 +176,17 @@ export function NearbyStoresMap({
       }
 
       mapRef.current = map;
+      } catch (error: unknown) {
+        if (cancelled) {
+          return;
+        }
+
+        setMapError(
+          error instanceof Error
+            ? error.message
+            : "The nearby stores map could not load.",
+        );
+      }
     }
 
     void mountMap();
@@ -203,6 +217,20 @@ export function NearbyStoresMap({
     });
     marker.openTooltip();
   }, [selectedStoreId]);
+
+  if (mapError) {
+    return (
+      <div className="nearby-stores-map-shell">
+        <div className="card" role="alert">
+          <h3 className="card-title">Map unavailable</h3>
+          <p className="explanation">{mapError}</p>
+          <p className="field-hint">
+            Store list details are still available below the map area.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="nearby-stores-map-shell">
@@ -250,6 +278,6 @@ function formatAnchorSource(source: NearbyStoresMapModel["anchor"]["source"]) {
     case "zip":
       return "ZIP lookup anchor";
     default:
-      return "Local seed anchor";
+      return "Search anchor";
   }
 }

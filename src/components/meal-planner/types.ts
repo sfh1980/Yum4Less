@@ -22,6 +22,8 @@ export type MarketSearchState = {
   status: "idle" | "loading" | "ready" | "error";
   market?: RecommendationExperience["market"];
   error?: string;
+  errorTitle?: string;
+  errorHint?: string;
   providerConfigured?: boolean;
 };
 
@@ -30,6 +32,8 @@ export type RecommendationState = {
   recommendations?: RecommendationExperience["recommendations"];
   shopperNotice?: ShopperNotice;
   error?: string;
+  errorTitle?: string;
+  errorHint?: string;
 };
 
 export type ActiveLocationRequest =
@@ -77,4 +81,5 @@ export type RecommendationRequest = MealPreferenceForm & {
   longitude?: number;
   selectedIngredientIds?: string[];
   recipeSourceOptIn?: boolean;
+  market?: RecommendationExperience["market"];
 };

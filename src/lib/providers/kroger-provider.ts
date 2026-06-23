@@ -174,7 +174,7 @@ export function createKrogerProviderClient(): StoreDiscoveryProviderClient {
             items: [],
             message:
               environment === "certification"
-                ? "Kroger catalog lookup works in certification, but store-specific prices require production (api.kroger.com). Set KROGER_API_ENV=production after Kroger approves portal promotion, then re-run npm run test:kroger-api."
+                ? "Kroger catalog lookup works in certification, but store-specific prices require production (api.kroger.com). Set KROGER_API_ENV=production after Kroger approves portal promotion, then re-run npm run probe:kroger-api."
                 : "Kroger official-online pricing preview requires KROGER_API_ENV=production.",
             fetchedAt: new Date().toISOString(),
           };

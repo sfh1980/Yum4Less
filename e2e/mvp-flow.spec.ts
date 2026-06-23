@@ -16,18 +16,17 @@ type MarketSearchResponse = {
 };
 
 /**
- * H3 E2E assertion rules (audit 2026-06-13):
+ * H3 E2E assertion rules (audit 2026-06-13, updated Phase 3):
  *
- * - STORES: Assert bootstrap `kroger-mechanicsville` inside .map-discovery-layout / .nearby-stores-list
- *   (data-store-id + ranked "Est. weekly-ad prices" pill). Seed `stores.name` is short "Kroger" — not
- *   page-wide chain regex and not Vitest's mocked "Kroger Mechanicsville" label.
+ * - STORES: Assert ranked Kroger-family + Aldi by chain + recommendationEnabled
+ *   (not hard-coded bootstrap slugs). CI may use seed catalog ids; owner ingest uses API ids.
  *
  * - CHAINS: Never use page-wide /Kroger|Publix|Food Lion/i — hero and Step 1 marketing copy
- *   mention those chains before /api/market-search returns, causing false positives (latent green).
+ *   mention those chains before /api/market-search returns, causing false positives.
  *
  * - INGREDIENTS: Use structural/role checks (.sale-ingredient-list checkboxes, Step 3 heading,
- *   disabled→enabled Suggest CTA). Do NOT assert "Chicken thighs" or other catalog names — the
- *   priced-ingredient set comes from ingested observations and will change as sync breadth grows.
+ *   disabled→enabled Suggest CTA). Do NOT assert catalog ingredient names — the priced set
+ *   comes from ingested observations and will change as sync breadth grows.
  */
 async function submitZipMarketSearch(page: Page, zipCode = "23111") {
   await page.getByRole("textbox", { name: "ZIP code" }).fill(zipCode);
@@ -54,15 +53,18 @@ function assertPublicNearbyStoresSanitized(stores: PublicNearbyStore[]) {
   }
 }
 
-function assertProductionRankedRolloutGates(stores: PublicNearbyStore[]) {
-  const kroger = stores.find((store) => store.id === "kroger-mechanicsville");
-  expect(kroger).toBeTruthy();
-  expect(kroger?.recommendationEnabled).toBe(true);
-
-  const aldiRanked = stores.find(
-    (store) => store.id === "aldi-mechanicsville" && store.recommendationEnabled,
+function findRankedStoreByChain(stores: PublicNearbyStore[], chain: string) {
+  return stores.find(
+    (store) => store.chain === chain && store.recommendationEnabled,
   );
-  expect(aldiRanked).toBeTruthy();
+}
+
+function assertProductionRankedRolloutGates(stores: PublicNearbyStore[]) {
+  const krogerRanked = findRankedStoreByChain(stores, "kroger");
+  expect(krogerRanked, "expected a ranked Kroger-family store").toBeTruthy();
+
+  const aldiRanked = findRankedStoreByChain(stores, "aldi");
+  expect(aldiRanked, "expected a ranked Aldi store").toBeTruthy();
 
   for (const store of stores) {
     if (store.chain === "publix" || store.chain === "food-lion") {
@@ -72,20 +74,28 @@ function assertProductionRankedRolloutGates(stores: PublicNearbyStore[]) {
   }
 }
 
-async function assertMarketSearchStoreResults(page: Page) {
+async function assertMarketSearchStoreResults(page: Page, stores: PublicNearbyStore[]) {
   await expect(page.getByRole("heading", { name: "Location set" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Nearby stores map" })).toBeVisible();
 
   const storePanel = page.locator(".map-discovery-layout, .nearby-stores-list");
-  // Fixture-stable bootstrap store id for ZIP 23111 — scoped list card, not hero regex:
-  const krogerBootstrapStore = storePanel.locator('[data-store-id="kroger-mechanicsville"]');
-  await expect(krogerBootstrapStore).toBeVisible();
+  const krogerRanked = findRankedStoreByChain(stores, "kroger");
+  expect(krogerRanked).toBeTruthy();
+
+  const krogerStoreCard = storePanel.locator(
+    `[data-store-id="${krogerRanked!.id}"]`,
+  );
+  await expect(krogerStoreCard).toBeVisible();
   await expect(
-    krogerBootstrapStore.getByText(/Est\. (?:weekly-ad|Kroger API) prices/i),
+    krogerStoreCard.getByText(/Est\. (?:weekly-ad|Kroger API) prices/i),
   ).toBeVisible();
 
-  for (const storeId of ["publix-atlee", "food-lion-mechanicsville"] as const) {
-    const contextStore = storePanel.locator(`[data-store-id="${storeId}"]`);
+  for (const store of stores) {
+    if (store.chain !== "publix" && store.chain !== "food-lion") {
+      continue;
+    }
+
+    const contextStore = storePanel.locator(`[data-store-id="${store.id}"]`);
     if ((await contextStore.count()) > 0) {
       await expect(
         contextStore.getByText(/Context only|coming soon|upcoming release/i),
@@ -107,8 +117,8 @@ async function runCoreMvpFlow(page: Page) {
     page.getByRole("heading", { name: "Step 1: Find nearby stores" }),
   ).toBeVisible();
 
-  await submitZipMarketSearch(page);
-  await assertMarketSearchStoreResults(page);
+  const marketBody = await submitZipMarketSearch(page);
+  await assertMarketSearchStoreResults(page, marketBody.market.nearbyStores);
 
   await expect(
     page
@@ -244,11 +254,15 @@ test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
 
   test("opens the trust explainer from the results panel", async ({ page }) => {
     await page.goto("/");
-    await submitZipMarketSearch(page);
+    const marketBody = await submitZipMarketSearch(page);
 
     await expect(page.getByRole("heading", { name: "Location set" })).toBeVisible();
     const storePanel = page.locator(".map-discovery-layout, .nearby-stores-list");
-    await expect(storePanel.locator('[data-store-id="kroger-mechanicsville"]')).toBeVisible();
+    const krogerRanked = findRankedStoreByChain(marketBody.market.nearbyStores, "kroger");
+    expect(krogerRanked).toBeTruthy();
+    await expect(
+      storePanel.locator(`[data-store-id="${krogerRanked!.id}"]`),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "How to read these labels" }).click();
     const trustDialog = page.getByRole("dialog");

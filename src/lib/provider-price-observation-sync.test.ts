@@ -144,7 +144,7 @@ describe("resolveInternalKrogerStoreId", () => {
     ).toBe("kroger-mechanicsville");
   });
 
-  it("maps a single bootstrap Kroger row when provider preview uses locationId 02900529", () => {
+  it("does not map a lone Kroger row without sourceStoreId or canonical id match (H8)", () => {
     expect(
       resolveInternalKrogerStoreId({
         previewStoreName: "Kroger",
@@ -156,7 +156,7 @@ describe("resolveInternalKrogerStoreId", () => {
           }),
         ],
       }),
-    ).toBe("kroger-mechanicsville");
+    ).toBeUndefined();
   });
 
   it("does not guess when multiple nearby Kroger stores are plausible", () => {

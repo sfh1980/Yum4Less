@@ -132,7 +132,7 @@ async function main() {
         summary.provider === "kroger"
       ) {
         console.log(
-          "  Kroger official preview sync wrote 0 rows this run — weekly-ad prices may still rank when gates pass. Common causes: KROGER_API_ENV not production, store-mapping-failed (locationId vs nearest catalog row), weak product match, or no usable store price. Verify with npm run test:kroger-api and npm run sync:provider-prices.",
+          "  Kroger official preview sync wrote 0 rows this run — weekly-ad prices may still rank when gates pass. Common causes: KROGER_API_ENV not production, store-mapping-failed (locationId vs nearest catalog row), weak product match, or no usable store price. Verify with npm run probe:kroger-api and npm run sync:provider-prices.",
         );
       }
     }

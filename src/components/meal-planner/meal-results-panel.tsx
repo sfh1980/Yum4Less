@@ -51,6 +51,13 @@ export function MealResultsPanel({
     recommendations.length > 0
       ? buildResultsPanelPriceSourceLine(market)
       : null;
+  const badgeLabel = resolveMealResultsBadgeLabel({
+    marketSearchState,
+    recommendationState,
+    market,
+    recommendations,
+    marketBlocked,
+  });
 
   return (
     <div className="panel panel-padding meal-planner-panel meal-planner-panel--meals">
@@ -75,15 +82,7 @@ export function MealResultsPanel({
           >
             How to read these labels
           </button>
-          <span className="badge">
-            {recommendationState.status === "loading"
-              ? "Suggesting recipes..."
-              : recommendationState.status === "ready"
-                ? `${recommendations.length} recipe(s) suggested`
-                : market && !marketBlocked
-                  ? "Ready to suggest"
-                  : "Waiting for store search"}
-          </span>
+          <span className="badge">{badgeLabel}</span>
         </div>
       </div>
 
@@ -121,10 +120,15 @@ export function MealResultsPanel({
           />
         ) : recommendationState.status === "error" ? (
           <StatusCard
-            title="We could not suggest recipes yet"
+            title={recommendationState.errorTitle ?? "We could not suggest recipes yet"}
             body={
               recommendationState.error ??
               "Try searching for stores again or adjusting your filters."
+            }
+            extra={
+              recommendationState.errorHint ? (
+                <p className="explanation">{recommendationState.errorHint}</p>
+              ) : null
             }
           />
         ) : recommendationState.status !== "ready" ? (
@@ -132,35 +136,75 @@ export function MealResultsPanel({
             title="Ready when you are"
             body="Select sale ingredients in Step 3, then use Suggest recipes using my selected ingredients."
           />
-        ) : shopperNotice ? (
-          <StatusCard title={shopperNotice.title} body={shopperNotice.body} />
-        ) : recommendations.length === 0 ? (
-          <StatusCard
-            title="No recipes match the current filters"
-            body="That is useful feedback, not a failure. Your spending limit or store preference may be too strict for the nearby sale coverage."
-            extra={
-              <p className="explanation">
-                Try raising your spending limit, allowing multiple stores, or
-                selecting different sale ingredients.
-              </p>
-            }
-          />
         ) : (
-          <RecommendationResultsCarousel ariaLabel="Suggested dinner recipes">
-            {recommendations.map((meal) => (
-              <MealRecommendationCard
-                activeLocationRequest={activeLocationRequest}
-                form={_form}
-                key={meal.title}
-                market={market}
-                meal={meal}
-              />
-            ))}
-          </RecommendationResultsCarousel>
+          <>
+            {shopperNotice ? (
+              <StatusCard title={shopperNotice.title} body={shopperNotice.body} />
+            ) : null}
+            {recommendations.length === 0 ? (
+              shopperNotice ? null : (
+                <StatusCard
+                  title="No recipes match the current filters"
+                  body="That is useful feedback, not a failure. Your spending limit or store preference may be too strict for the nearby sale coverage."
+                  extra={
+                    <p className="explanation">
+                      Try raising your spending limit, allowing multiple stores, or
+                      selecting different sale ingredients.
+                    </p>
+                  }
+                />
+              )
+            ) : (
+              <RecommendationResultsCarousel ariaLabel="Suggested dinner recipes">
+                {recommendations.map((meal) => (
+                  <MealRecommendationCard
+                    activeLocationRequest={activeLocationRequest}
+                    form={_form}
+                    key={meal.title}
+                    market={market}
+                    meal={meal}
+                  />
+                ))}
+              </RecommendationResultsCarousel>
+            )}
+          </>
         )}
       </div>
     </div>
   );
+}
+
+function resolveMealResultsBadgeLabel(input: {
+  marketSearchState: MarketSearchState;
+  recommendationState: RecommendationState;
+  market?: RecommendationExperience["market"];
+  recommendations: MealRecommendation[];
+  marketBlocked: boolean;
+}): string {
+  const { marketSearchState, recommendationState, market, recommendations, marketBlocked } =
+    input;
+
+  if (recommendationState.status === "loading") {
+    return "Suggesting recipes...";
+  }
+
+  if (recommendationState.status === "ready") {
+    return `${recommendations.length} recipe(s) suggested`;
+  }
+
+  if (recommendationState.status === "error") {
+    return recommendationState.errorTitle ?? "Could not suggest recipes";
+  }
+
+  if (marketSearchState.status !== "ready" || !market) {
+    return "Waiting for store search";
+  }
+
+  if (marketBlocked) {
+    return "No ranked meals in this area";
+  }
+
+  return "Ready to suggest";
 }
 
 function StatusCard({

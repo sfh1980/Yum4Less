@@ -1,6 +1,27 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { getRecommendationExperience, type MealPreferenceForm } from "@/lib/recommendation-service";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  getRecommendationExperience,
+  RecommendationDependencyUnavailableError,
+  type MealPreferenceForm,
+} from "@/lib/recommendation-service";
 import { resetDbPoolForTests } from "@/lib/db";
+import { buildZip23111RankingSnapshot } from "@/lib/recommendation-service-ranking.fixture";
+
+const { buildProviderPricingPreviews } = vi.hoisted(() => ({
+  buildProviderPricingPreviews: vi.fn(),
+}));
+
+const { getMarketDataSnapshot } = vi.hoisted(() => ({
+  getMarketDataSnapshot: vi.fn(),
+}));
+
+vi.mock("@/lib/provider-pricing-preview-service", () => ({
+  buildProviderPricingPreviews,
+}));
+
+vi.mock("@/lib/market-repository", () => ({
+  getMarketDataSnapshot,
+}));
 
 const originalDatabaseUrl = process.env.DATABASE_URL;
 
@@ -15,8 +36,27 @@ const preferences: MealPreferenceForm = {
   recipeSource: "internal-library",
 };
 
+const location = {
+  zipCode: "23111",
+  city: "Mechanicsville",
+  state: "VA",
+  county: "Hanover County",
+  latitude: 37.6085,
+  longitude: -77.3321,
+  source: "seed" as const,
+};
+
 /** Merge-gating ranking happy-path guards live in recommendation-service-ranking.test.ts (CI-02). */
 describe("getRecommendationExperience", () => {
+  beforeEach(() => {
+    buildProviderPricingPreviews.mockReset();
+    buildProviderPricingPreviews.mockResolvedValue([]);
+    getMarketDataSnapshot.mockResolvedValue({
+      source: "database",
+      snapshot: buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
+    });
+  });
+
   afterEach(async () => {
     if (originalDatabaseUrl === undefined) {
       delete process.env.DATABASE_URL;
@@ -25,50 +65,25 @@ describe("getRecommendationExperience", () => {
     }
 
     await resetDbPoolForTests();
+    vi.clearAllMocks();
   });
 
-  it("returns no ranked recommendations when Postgres is unavailable", async () => {
+  it("throws when Postgres pricing dependencies are unavailable (M4)", async () => {
     delete process.env.DATABASE_URL;
+    getMarketDataSnapshot.mockResolvedValue({
+      source: "unavailable",
+      snapshot: buildZip23111RankingSnapshot([]),
+    });
 
-    const experience = await getRecommendationExperience(
-      preferences,
-      {
-        zipCode: "23111",
-        city: "Mechanicsville",
-        state: "VA",
-        county: "Hanover County",
-        latitude: 37.6085,
-        longitude: -77.3321,
-        source: "seed",
-      },
-      false,
-    );
-
-    expect(experience.market.dataSource).toBe("unavailable");
-    expect(experience.market.nearbyStores).toHaveLength(0);
-    expect(experience.market.recommendationReadyStoreCount).toBe(0);
-    expect(experience.recommendations).toHaveLength(0);
-    expect(experience.market.providerCoverageRollup.rankedPricingSource).toBe("none");
-    expect(experience.market.providerPromotionReadiness.every(
-      (readiness) => !readiness.recommendationPricingPromotionEnabled,
-    )).toBe(true);
-    expect(experience.market).not.toHaveProperty("message");
+    await expect(
+      getRecommendationExperience(preferences, location, false),
+    ).rejects.toBeInstanceOf(RecommendationDependencyUnavailableError);
   });
 
   it("blocks non-internal recipe sources unless recipeSourceOptIn is true", async () => {
-    delete process.env.DATABASE_URL;
-
     const experience = await getRecommendationExperience(
       { ...preferences, recipeSource: "themealdb" },
-      {
-        zipCode: "23111",
-        city: "Mechanicsville",
-        state: "VA",
-        county: "Hanover County",
-        latitude: 37.6085,
-        longitude: -77.3321,
-        source: "seed",
-      },
+      location,
       false,
     );
 
@@ -77,19 +92,9 @@ describe("getRecommendationExperience", () => {
   });
 
   it("returns a layman shopper notice instead of market.message for inactive recipe sources", async () => {
-    delete process.env.DATABASE_URL;
-
     const experience = await getRecommendationExperience(
       { ...preferences, recipeSource: "spoonacular" },
-      {
-        zipCode: "23111",
-        city: "Mechanicsville",
-        state: "VA",
-        county: "Hanover County",
-        latitude: 37.6085,
-        longitude: -77.3321,
-        source: "seed",
-      },
+      location,
       false,
     );
 

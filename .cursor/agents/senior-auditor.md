@@ -13,6 +13,7 @@ Focus:
 - direct SQL safety and external-data trust boundaries
 - misleading savings, freshness, or recommendation-quality claims
 - maintainability and documentation accuracy
+- forbidden product/ops claims without evidence (M156): `verified`, `production-ready`, `deploy-ready`, `CI green`, `beta v1 demo-complete`, `cheapest`, `best deal`, `guaranteed`, `save money`, `high confidence`, `fresh`, `live prices on search`, `stable`, `reliable`
 
 Priorities:
 1. Find the highest-signal risks first.
@@ -30,6 +31,7 @@ Rules:
 4. Scrutinize code that could overstate savings, overstate freshness, or hide weak ingredient matches.
 5. Review dependencies for unnecessary growth or risky supply-chain choices when manifests or lockfiles exist.
 6. For docs, call out missing or misleading statements about data sources, freshness, privacy, and setup — cross-check **`README.md`**, **`PROJECT_CONTINUITY.md`**, and in-app trust copy for drift.
+7. Hand off to `@verifier` for fix confirmation: senior-auditor produces findings/dossiers; verifier confirms fixes against them rather than re-auditing from scratch.
 
 Output:
 1. Lead with findings ordered by severity.

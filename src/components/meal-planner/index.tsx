@@ -9,8 +9,10 @@ import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
 import { TrustExplainerModal } from "@/components/meal-planner/trust-explainer-modal";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
 import { isInternalDetailsUiEnabled } from "@/lib/show-internal-details-ui";
+import { throwIfLocalhostVerificationRenderErrorRequested } from "@/lib/localhost-verification-triggers";
 
 export function MealPlanner() {
+  throwIfLocalhostVerificationRenderErrorRequested();
   const demo = useMealPlanner();
   const showInternalDetails = isInternalDetailsUiEnabled();
 
@@ -23,6 +25,8 @@ export function MealPlanner() {
           form={demo.form}
           isEditingLocation={demo.isEditingLocation}
           market={demo.market}
+          marketSearchLoading={demo.marketSearchLoading}
+          rankLoading={demo.rankLoading}
           rankingPaused={demo.marketBlocked}
           onBrowserSearch={demo.handleBrowserLocationSearch}
           onEditLocation={() => demo.setIsEditingLocation(true)}

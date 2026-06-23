@@ -9,11 +9,19 @@ vi.mock("@/lib/location-resolution", () => ({
   resolveLocationInput,
 }));
 
-vi.mock("@/lib/recommendation-service", () => ({
-  getRecommendationExperience,
-}));
+vi.mock("@/lib/recommendation-service", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/recommendation-service")>(
+    "@/lib/recommendation-service",
+  );
+
+  return {
+    ...actual,
+    getRecommendationExperience,
+  };
+});
 
 import { POST } from "@/app/api/recommendations/route";
+import { RecommendationDependencyUnavailableError } from "@/lib/recommendation-service";
 import { isPublicApiDbWriteEnabled } from "@/lib/public-api-db-write-policy";
 import { RATE_LIMITS, resetRateLimitsForTests } from "@/lib/rate-limit";
 import * as serverLog from "@/lib/server-log";
@@ -180,6 +188,7 @@ describe("POST /api/recommendations", () => {
       }),
       expect.any(Object),
       false,
+      undefined,
     );
   });
 
@@ -221,6 +230,38 @@ describe("POST /api/recommendations", () => {
       error: "Recommendation request payload is invalid.",
     });
     expect(resolveLocationInput).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when pricing dependencies are unavailable (M4)", async () => {
+    resolveLocationInput.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: false,
+    });
+    getRecommendationExperience.mockRejectedValue(
+      new RecommendationDependencyUnavailableError(),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/recommendations", {
+        method: "POST",
+        body: JSON.stringify(validPayload),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error:
+        "Store and meal prices are not loading right now. Try again shortly.",
+    });
   });
 
   it.each([
@@ -509,7 +550,11 @@ describe("POST /api/recommendations", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(resolveLocationInput).toHaveBeenCalledWith(browserPayload);
+    expect(resolveLocationInput).toHaveBeenCalledWith({
+      zipCode: "",
+      latitude: 37.6085,
+      longitude: -77.3321,
+    });
     expect(getRecommendationExperience).toHaveBeenCalledWith(
       expect.objectContaining({
         zipCode: "",
@@ -519,6 +564,7 @@ describe("POST /api/recommendations", () => {
         source: "browser",
       }),
       true,
+      undefined,
     );
   });
 
@@ -592,7 +638,9 @@ describe("POST /api/recommendations", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(resolveLocationInput).toHaveBeenCalledWith(validPayload);
+    expect(resolveLocationInput).toHaveBeenCalledWith({
+      zipCode: "23111",
+    });
     expect(getRecommendationExperience).toHaveBeenCalledWith(
       {
         ...validPayload,
@@ -604,6 +652,7 @@ describe("POST /api/recommendations", () => {
         city: "Mechanicsville",
       }),
       false,
+      undefined,
     );
     await expect(response.json()).resolves.toEqual({
       ok: true,

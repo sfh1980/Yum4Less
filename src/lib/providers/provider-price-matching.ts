@@ -3,6 +3,7 @@ import type {
   ProviderPricingPreviewIngredient,
   ProviderPricingPreviewItem,
 } from "@/lib/providers/provider-types";
+import { includesWholePhrase } from "@/lib/escape-regexp";
 
 export function getPricingCoverageStatus(input: {
   matchedIngredientCount: number;
@@ -371,6 +372,5 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function includesWholeTerm(description: string, term: string) {
-  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b${escaped}\\b`, "i").test(description);
+  return includesWholePhrase(description, term);
 }
