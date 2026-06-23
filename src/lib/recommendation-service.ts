@@ -8,6 +8,7 @@ import {
   type MarketDataSnapshot,
   type MarketDataSource,
 } from "@/lib/market-repository";
+import { rehydratePassedMarketNearbyStores } from "@/lib/market-pass-through-rehydrate";
 import {
   getMarketSearchExperience,
   buildNearbyStoresForSearch,
@@ -115,6 +116,7 @@ export async function getRecommendationExperience(
     const snapshotResult = await getMarketDataSnapshot();
     snapshot = snapshotResult.snapshot;
     snapshotSource = snapshotResult.source;
+    market = rehydratePassedMarketNearbyStores(market, snapshot, location);
   } else {
     const searchExperience = await getMarketSearchExperience(
       preferences.radiusMiles,

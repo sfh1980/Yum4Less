@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { trimMarketForRankingPassThrough } from "@/lib/market-pass-through";
 import { getRecommendationExperience } from "@/lib/recommendation-service";
 import { resetDbPoolForTests } from "@/lib/db";
 import {
@@ -114,6 +115,33 @@ describe("getRecommendationExperience market pass-through (H1–H3)", () => {
     expect(searchSpy).not.toHaveBeenCalled();
     expect(getMarketDataSnapshot).toHaveBeenCalledTimes(1);
     expect(experience.market.locationLabel).toBe("Mechanicsville, VA");
+    expect(experience.market.nearbyStores[0]?.chain).toBe("kroger");
+    expect(experience.market.nearbyStores[0]?.locationBadge).toBeTruthy();
+    expect(experience.recommendations.length).toBeGreaterThan(0);
+  });
+
+  it("rehydrates thin pass-through market stores before returning recommendations", async () => {
+    const snapshot = buildZip23111RankingSnapshot(["kroger-mechanicsville"]);
+    const thinMarket = trimMarketForRankingPassThrough(
+      passedMarketFromSnapshot(snapshot),
+    );
+
+    const experience = await getRecommendationExperience(
+      zip23111RankingPreferences,
+      zip23111MechanicsvilleLocation,
+      false,
+      { passedMarket: thinMarket },
+    );
+
+    expect(experience.market.nearbyStores[0]).toEqual(
+      expect.objectContaining({
+        id: "kroger-mechanicsville",
+        chain: "kroger",
+        recommendationEnabled: true,
+        rolloutStatus: "weekly-ad-preview",
+      }),
+    );
+    expect(experience.market.nearbyStores[0]?.latitude).toBeTypeOf("number");
     expect(experience.recommendations.length).toBeGreaterThan(0);
   });
 });

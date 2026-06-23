@@ -5,7 +5,12 @@ import {
   trimMarketForRankingPassThrough,
   validatePassedMarketForRanking,
 } from "@/lib/market-pass-through";
+import { rehydratePassedMarketNearbyStores } from "@/lib/market-pass-through-rehydrate";
 import type { MarketSummary } from "@/lib/recommendation-service";
+import {
+  buildZip23111RankingSnapshot,
+  zip23111MechanicsvilleLocation,
+} from "@/lib/recommendation-service-ranking.fixture";
 
 function minimalMarket(overrides: Partial<MarketSummary> = {}): MarketSummary {
   return {
@@ -194,9 +199,59 @@ describe("trimMarketForRankingPassThrough", () => {
     expect(trimmed.nearbyStores[0]).toEqual({
       id: "kroger-0",
       name: "Kroger Store 0",
+      chain: "kroger",
       recommendationEnabled: true,
+      rolloutStatus: "weekly-ad-preview",
+      rolloutNote: "Fixture note.",
     });
     expect(trimmed.saleIngredientChoices).toEqual([]);
     expect(trimmed.providerStoreSearches).toEqual([]);
+  });
+
+  it("rejects trimmed stores missing rollout fields", () => {
+    const trimmed = trimMarketForRankingPassThrough(minimalMarket());
+    const broken = {
+      ...trimmed,
+      nearbyStores: [
+        {
+          id: "kroger-1",
+          name: "Kroger",
+          recommendationEnabled: true,
+        },
+      ],
+    };
+
+    expect(parsePassedMarketSummary(broken)).toBeNull();
+  });
+});
+
+describe("rehydratePassedMarketNearbyStores", () => {
+  it("rebuilds full store rows for passed store ids from the catalog snapshot", () => {
+    const snapshot = buildZip23111RankingSnapshot(["kroger-mechanicsville"]);
+    const thinMarket = trimMarketForRankingPassThrough(
+      minimalMarket({
+        radiusMiles: 6,
+        nearbyStores: [
+          {
+            ...minimalMarket().nearbyStores[0]!,
+            id: "kroger-mechanicsville",
+            name: "Kroger",
+          },
+        ],
+      }),
+    );
+
+    const rehydrated = rehydratePassedMarketNearbyStores(
+      thinMarket,
+      snapshot,
+      zip23111MechanicsvilleLocation,
+    );
+
+    expect(rehydrated.nearbyStores).toHaveLength(1);
+    expect(rehydrated.nearbyStores[0]?.id).toBe("kroger-mechanicsville");
+    expect(rehydrated.nearbyStores[0]?.chain).toBe("kroger");
+    expect(rehydrated.nearbyStores[0]?.latitude).toBeTypeOf("number");
+    expect(rehydrated.nearbyStores[0]?.locationBadge).toBeTruthy();
+    expect(rehydrated.recommendationReadyStoreCount).toBe(1);
   });
 });

@@ -1,6 +1,17 @@
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
-import type { MealPreferenceForm, MarketSummary } from "@/lib/recommendation-service";
+import type {
+  MealPreferenceForm,
+  MarketSummary,
+} from "@/lib/recommendation-service";
 import type { PublicMarketSummary } from "@/lib/public-api-response-sanitizer";
+import type { ProviderRolloutStatus } from "@/lib/provider-rollout";
+
+const PASSED_STORE_ROLLOUT_STATUSES = new Set<ProviderRolloutStatus>([
+  "weekly-ad-preview",
+  "official-api-preview",
+  "limited-coverage",
+  "coming-soon",
+]);
 
 const LOCATION_EPSILON_DEGREES = 0.02;
 
@@ -45,7 +56,11 @@ export function parsePassedMarketSummary(value: unknown): MarketSummary | null {
       typeof store !== "object" ||
       typeof store.id !== "string" ||
       typeof store.name !== "string" ||
-      typeof store.recommendationEnabled !== "boolean"
+      typeof store.chain !== "string" ||
+      typeof store.recommendationEnabled !== "boolean" ||
+      typeof store.rolloutStatus !== "string" ||
+      !PASSED_STORE_ROLLOUT_STATUSES.has(store.rolloutStatus as ProviderRolloutStatus) ||
+      typeof store.rolloutNote !== "string"
     ) {
       return null;
     }
@@ -85,7 +100,10 @@ export function trimMarketForRankingPassThrough(market: MarketSummary): MarketSu
     nearbyStores: market.nearbyStores.map((store) => ({
       id: store.id,
       name: store.name,
+      chain: store.chain,
       recommendationEnabled: store.recommendationEnabled,
+      rolloutStatus: store.rolloutStatus,
+      rolloutNote: store.rolloutNote,
     })) as MarketSummary["nearbyStores"],
     providerRollout: [],
     providerStoreSearches: [],
