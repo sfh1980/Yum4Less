@@ -13,9 +13,9 @@ alwaysApply: false
 | Topic | Owner file |
 |---|---|
 | How to run, env setup, public scope | `README.md` |
-| Agents, MCP, hooks, verification gates | `AGENTS.md` + `.cursor/rules/yum4less-agent-orchestration.mdc` |
+| Agents, MCP, hooks, verification gates | `AGENTS.md` + `.cursor/rules/yum4less-agent-orchestration.mdc` + `.cursor/rules/yum4less-testing-and-release-gates.mdc` |
 | Linear history, decisions, verification snapshot | `PROJECT_CONTINUITY.md` |
-| Owner teaching / walkthroughs | `.private/learning-notes.md` (gitignored) |
+| Distilled locked decisions | `.private/owner-decisions.md` (gitignored) |
 
 ## After each material implementation slice
 
@@ -24,7 +24,7 @@ Before saying **done** on a slice that changed product behavior, architecture, t
 1. Add a **Changelog** entry at the **top** (newest first): date, theme, shipped, honest limits, evidence (tests/CI when run).
 2. Refresh **Resume**: bump as-of date; update working / not working / next (keep one screen).
 3. Update **Decision log** when direction locks or supersedes a prior row.
-4. Bump **Appendix → Verification snapshot** when test counts, CI status, or merge gates changed.
+4. Bump **Appendix → Verification snapshot** when test counts, CI status, or merge gates changed — **in the same slice** that added/changed tests (see **`AGENTS.md` → Verification floor**); do not defer count updates.
 
 Skip continuity updates for trivial typos, comment-only edits, or pure refactors with no behavior or direction change.
 

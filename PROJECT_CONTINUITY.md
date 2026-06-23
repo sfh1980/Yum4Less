@@ -4,30 +4,30 @@
 
 ---
 
-## Resume (as of 2026-06-15)
+## Resume (as of 2026-06-22)
 
-**Phase:** Phase 2 geocoding production gate + fixture DB isolation landed; Phase 3+ (E2E slug decoupling, UI/MVP copy) deferred.
+**Phase:** Rules/agents/hooks refactor **complete** (slice 3 closeout). Five-file split **done**. Contracts/Zod **done**. **Next:** P1 items / homelab precursors (queue in **`yum4less-product-and-trust.mdc`**).
 
 **Hosting:** Self-hosted homelab (target); owner pushing toward first production deploy with Kroger-family + Aldi ranked path.
 
 **Production-ranked focus:** **Kroger family + Aldi** when daily ingest and promotion gates pass. Publix, Food Lion, Walmart, and others: map/context or **upcoming releases** (fixture weekly-ad rows may exist in dev; not used for ranked meal totals).
 
-**Owner ingest path:** `npm run setup:local` runs **live** `ingest:weekly-ads:scheduled` when `GEOCODIO_API_KEY` + Kroger credentials set. Fixture ingest requires `CI=true`, Vitest (`NODE_ENV=test`), or aligned `DATABASE_URL` + `DATABASE_URL_TEST` — cannot write rehearsal data to `yum4less_dev` by accident.
+**Owner ingest path:** `npm run setup:local` / `ingest:weekly-ads:scheduled` runs **map-catalog → weekly-ad → provider sync → TheMealDB** when `GEOCODIO_API_KEY` + Kroger credentials set. Fixture ingest requires `CI=true`, Vitest (`NODE_ENV=test`), or aligned `DATABASE_URL` + `DATABASE_URL_TEST`.
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-06-15):** Phase 2 — `npm test` 470/470; `npm run test:integration` 24/24; `npm run test:e2e:ci` 4/4. CI e2e job passes `GEOCODIO_API_KEY` from `secrets.GEOCODIO_API_KEY`. Semgrep MCP/hooks not re-run. Not claiming homelab deploy-ready or beta v1 demo-complete.
+**Verified (2026-06-22):** `npm test` **528/528** (116 files); `npm run build` pass (rank-payload slice). Playwright MCP: ZIP `23111` store search confirmed post dev-server restart (`mcp-happy-path-01-location-set.png`); full rank→meal-cards MCP run interrupted by Playwright MCP disconnect — reconnect MCP and re-run rank step to close UI loop. Supplementary same-session CLI Playwright: trimmed rank payload ~11.5 KB, `POST /api/recommendations` 200, 2 meal cards (`happy-path-meal-cards.png`). `npm run test:integration` / `npm run test:e2e:ci` not re-run this slice. Not claiming homelab deploy-ready, CI green on remote, or beta v1 demo-complete.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
 
 - **Pipeline debug:** local-only `GET /api/debug/pipeline?zip=23111` or `?lat=&lng=` — stores, ranked observations, 24h freshness, missing tracked ingredients (404 in production)
-- **Phase B price/store alignment:** `resolveInternalKrogerStoreId` maps locationId `02900529` → `kroger-mechanicsville` (source_store_id + single-store fallback); ingest prefers catalog `source_store_id` for Kroger weekly-ad URLs; `sync:provider-prices` resolves nearest Kroger-family numeric `locationId` via `resolvePreferredKrogerLocationIdForZip` (Postgres + haversine; optional `KROGER_LOCATION_ID` escape hatch) and logs `skip_reason`
+- **Phase B price/store alignment:** `resolveInternalKrogerStoreId` maps locationId via `source_store_id` / canonical `kroger-{locationId}` / name heuristics — **no** single-store guess fallback (H8); ingest prefers catalog `source_store_id` for Kroger weekly-ad URLs; `sync:provider-prices` resolves nearest Kroger-family numeric `locationId` via `resolvePreferredKrogerLocationIdForZip` (Postgres + haversine; optional `KROGER_LOCATION_ID` escape hatch) and logs `skip_reason`
 - **Phase C location trust:** `store-location-reconciliation` — ranked coord updates need agreeing witnesses (Kroger API + Geocodio address; optional USDA SNAP corroboration); change-only when delta ≥ `YUM4LESS_LOCATION_CHANGE_THRESHOLD_METERS` (default 50); single provider witness still promotes bootstrap → API
 - **Phase C map context:** `discoverMapContextStores` unifies OSM + optional USDA SNAP (`YUM4LESS_MAP_SNAP_CONTEXT=1`); `snap_retailer_locations` reference table + `npm run ingest:snap-retailers`; SNAP pins labeled `SNAP context pin` — not ranked pricing
 - **Phase D ingest breadth:** Kroger Location API returns **Kroger-family** stores (limit `YUM4LESS_KROGER_LOCATION_SEARCH_LIMIT`, max 50) with multi-store catalog upsert; Aldi bootstrap refresh uses **nearest OSM Aldi** (never ZIP centroid); provider snapshot cache matches by **ZIP primary** with coord tolerance; Publix locator sync refreshes `publix-atlee` bootstrap + context rows (`publix-store-locator`); `sync:provider-prices` passes OSM discovery for Aldi parity
-- **Phase A map truth:** Postgres/provider ranked pins beat OSM/SNAP context on merge (`kroger-official-api` priority 5; ranked-chain dedupe ~1.5 mi); `YUM4LESS_MAP_OSM_RANKED_CHAIN_POLICY=suppress-conflicts` (default) drops context Kroger/Aldi when ingested catalog covers chain; map/list badges (`Bootstrap pin`, `API-verified pin`, `OSM context pin`, `SNAP context pin`, `Weekly-ad ingest pin`)
+- **Phase A map truth:** Postgres/provider ranked pins beat OSM/SNAP context on merge (`kroger-official-api` priority 5; ranked-chain dedupe ~1.5 mi); `YUM4LESS_MAP_OSM_RANKED_CHAIN_POLICY=suppress-conflicts` (default) drops context Kroger/Aldi when ingested catalog covers chain; map/list badges (`Seed catalog pin`, `API-verified pin`, `OSM context pin`, `SNAP context pin`, `Weekly-ad ingest pin`)
 - **Map search merge (Rec 1–2):** `/api/market-search` merges provider-discovered stores into map pins; ephemeral map-context discovery (OSM ± SNAP) when DB pins within radius &lt; `YUM4LESS_MAP_SPARSE_PIN_THRESHOLD` (default 3), 24h OSM cache, degraded copy on failure — **no Postgres writes** on public read path
 - **OSM lifecycle:** disused/abandoned/closed elements filtered from Overpass parse
 - **Daily map-catalog cron preserved:** `npm run ingest:map-catalog` / scheduled wrapper still warms Postgres catalog; search-time OSM complements cron for arbitrary ZIPs
@@ -38,15 +38,16 @@
 - **Cache-only public APIs:** `/api/recommendations` does not call live Kroger APIs or sync prices on user search; `/api/market-search` may call Overpass ephemerally (no Postgres writes) when map pins are sparse
 - **Universal map catalog (Slice 4A):** `npm run ingest:map-catalog` (+ fixture variant) discovers food retail via OSM Overpass + chain locators; upserts map-context `stores` rows on **cron only**; OSM attribution when OSM pins visible
 - **Publix + Food Lion gates (Slice 4B, rehearsal):** weekly-ad promotion gates exist in code/fixture paths; **production deploy focus remains Kroger + Aldi** — other chains in upcoming releases
-- **Daily ingest path:** `npm run ingest:weekly-ads:scheduled` (+ fixture rehearsal variant) now includes map catalog step
+- **Daily ingest path:** `npm run ingest:weekly-ads:scheduled` (+ fixture rehearsal variant) runs **map-catalog before weekly-ad**, then provider sync + TheMealDB
 - **Recipe opt-in:** internal library ranks by default; TheMealDB requires explicit checkbox + `recipeSourceOptIn` on API
 - **TheMealDB on search (Slice 3):** opt-in ranking reads Postgres imports cache-first; **search-time refresh removed** — cron/script only (`npm run ingest:themealdb:from-sales`); scheduled-refresh notice when imports stale/empty; attribution + meal link on cards when saved imports rank
 - **Ingredient row trust (D/E):** `Est.` / directional labels; `Prices from ~N hours ago` on ingredient rows **and meal cards** when metadata present; honest empty state (daily scheduled refresh, not live on search)
-- Location-first flow: ZIP or browser → market search → map → meal preferences → recommendations
+- Location-first flow: ZIP or browser → market search → map → meal preferences → recommendations (**rank pass-through payload trimmed 2026-06-22 — core recommendation flow unblocked**)
 - Continental US ZIP + browser geolocation; dev seed ZIPs when `GEOCODIO_API_KEY` unset
 - v1 ranked chains when gates pass: **Kroger family**, **Aldi** (production deploy focus); Publix/Food Lion code paths exist for upcoming releases
 - Trust UI: `Est.`, directional, limited coverage, verify-in-store; map pins use “Coming soon” / “Available in a future release” for context-only chains
 - Fixture weekly-ad ingest for **CI/rehearsal and automated tests only** (not owner daily workflow)
+- **`npm run setup:local`:** provisions `yum4less_dev` + `yum4less_test`, runs post-setup `npm test` smoke, fixture `DATABASE_URL_TEST` guidance, geolocation-or-ZIP next-step copy; SNAP ensure stays non-fatal inside `ensureTestDatabase()` only
 - Public APIs read-only by default in production; response sanitization; route validation + rate limits
 
 ### Not working / deferred
@@ -65,6 +66,170 @@
 ---
 
 ## Changelog (newest first)
+
+### 2026-06-22 — Rank payload trim + honest error copy + meal-results badges (Playwright-found blocker)
+
+**Theme:** Cross-cutting bug — full `market` object in `POST /api/recommendations` exceeded 64 KB; UI mapped body-too-large 400 to “Check your meal preferences.”
+
+**Shipped:**
+- **`trimMarketForRankingPassThrough(market)`** in `src/lib/market-pass-through.ts`; wired in `use-meal-planner.ts` before rank — keeps pass-through validation fields only (~11 KB vs ~105 KB for ZIP `23111`/5 mi).
+- **`mapRecommendationApiError`:** distinct branches for body-too-large and invalid/stale market snapshot; preference blame only for invalid preference payload.
+- **`meal-results-panel` badge:** error state no longer shows “Ready to suggest”; Tier C shows “No ranked meals in this area” instead of “Waiting for store search.”
+- Tests: `market-pass-through.test.ts` trim size/parse; `recommendation-error-copy.test.ts`; `meal-results-panel.test.tsx` error/Tier C/M5 empty-filter cases.
+
+**Honest limits:** Far-ZIP market-search scale (883 KB / 1,310 stores) and slow-search stuck-loading not addressed this slice.
+
+**Evidence:** `npm test` **528/528**; `npm run build` pass. Playwright walkthrough found blocker; post-fix CLI Playwright happy path: rank 200, 2 meal cards, payload under limit (`happy-path-meal-cards.png`). Playwright MCP post-fix: store search confirmed (`mcp-happy-path-01-location-set.png`); full rank MCP run blocked by MCP server disconnect after dev-server restart — reconnect Playwright MCP to complete UI verification loop.
+
+### 2026-06-19 — Rules/agents/hooks slice 3 closeout (K125, M153, K122)
+
+**Theme:** Final three refactor items — live probe rename, owner decisions distill, AGENTS.md shrink.
+
+**Shipped:**
+- **`probe:*` rename (K125):** `test:kroger-api` → `probe:kroger-api` (and five other live/network probes) in `package.json`; references updated in README, `.env.example`, `@ingest-standards`, Kroger provider copy, `sync-provider-prices.ts`. CI unchanged (never referenced old names).
+- **NEW** `.private/owner-decisions.md` (M153) — distilled bullets by topic + link to questionnaire.
+- **`AGENTS.md` shrink (K122):** agent index, Q56 verification floor, MCP table only; detail moved to agent files + orchestration/testing rules. Hook/continuity references updated.
+
+**Evidence:** `npm test` **522/522** after each step; `npm run build` pass.
+
+### 2026-06-19 — Contracts / Zod slice (Q157 + Q158)
+
+**Theme:** Shared Zod request contracts for public API routes and meal-planner form validation; types moved to `src/contracts/recommendations.ts` with thin shim.
+
+**Shipped:**
+- **`zod`** dependency added
+- **NEW** `src/contracts/shared/{limits,location,meal-preferences}.ts` — shared bounds/enums (form budget 5–40 vs API 5–250 intentional)
+- **NEW** `src/contracts/market-search.ts` — `parseMarketSearchRequest`
+- **NEW** `src/contracts/recommendations.ts` — domain types + `parseRecommendationRequest`; `market` field is `unknown` pass-through (validated in `market-pass-through.ts`, not a token)
+- **`recommendation-types.ts`** — thin re-export shim from contracts
+- Routes wired to contract parsers; `form-validation.ts` uses shared schemas
+- Unit tests: `src/contracts/*.test.ts`, extended `form-validation.test.ts`
+
+**Evidence:** `npm test` **522/522** (116 files); `npm run build` pass.
+
+### 2026-06-19 — Rules/agents/hooks refactor slice 3 phase 3e (`@ingest-standards`)
+
+**Theme:** Seventh agent for ingest pipeline ownership (M166); engineering queue full order in product-and-trust.
+
+**Shipped:**
+- **`yum4less-product-and-trust.mdc`** — engineering queue: split (done) → contracts/Zod (next) → rules/agents/hooks refactor (active) → P1 items → homelab precursors
+- **NEW** `.cursor/agents/ingest-standards.md` — Q50 pipeline, M128 scrape guard, Q32 fixture policy, map-catalog/OSM/SNAP, owner live probes, parser drift
+- Wired `@ingest-standards` in `route-user-prompt.ps1`, `inject-orchestration-session-context.ps1`, `AGENTS.md`
+
+**Still queued:** `probe:*` rename (K125); `.private/owner-decisions.md`; AGENTS.md shrink (K122).
+
+**Evidence:** `npm test` **498/498**.
+
+### 2026-06-19 — Rules/agents/hooks refactor slice 3 (phases 3b–3d complete)
+
+**Theme:** K117(c) approved merges executed; coordinates language + queue order from steps 1–2; awaiting phase 3e (`@ingest-standards`).
+
+**Shipped (steps 1–2, prior turn):**
+- Coordinates-first language on `AGENTS.md`, `nudge-after-file-edit.ps1`, `route-user-prompt.ps1`
+- Session hook queue order: split (done) → contracts → rules refactor (active)
+
+**Shipped (phase 3b — Merge A):**
+- **NEW** `yum4less-product-and-trust.mdc` — product scope + trust/fallbacks + doc owners
+- **DELETED** `yum4less-trust-and-fallbacks.mdc`, `yum4less-product-direction.mdc`
+- Updated `AGENTS.md`, `readme-living-document.mdc`
+
+**Shipped (phase 3c — Merge B):**
+- Expanded `yum4less-testing-and-release-gates.mdc` with full MCP adoption/verification sections
+- **DELETED** `mcp-adoption-strategy.mdc`
+
+**Shipped (phase 3d — Slim C + Merge D):**
+- Slim `yum4less-governance-and-doc-sync.mdc` — approval workflow only; doc owners → product-and-trust
+- Slim `yum4less-agent-orchestration.mdc` — trigger table authoritative; MCP/test detail → testing-and-release-gates
+- Slim scoped workflows — Phase 1 audit deltas only; pointers to orchestration
+- `yum4less-backend-api-workflow.mdc` globs include `meal-presentation.ts`
+
+**Rule file count:** 10 (was 12; learning-notes deleted earlier)
+
+**Not done (awaiting confirmation):** phase 3e `@ingest-standards`; `owner-decisions.md`; AGENTS.md shrink (K122); `probe:*` rename.
+
+**Evidence:** `npm test` **498/498** after each of phases 3b, 3c, 3d.
+
+### 2026-06-19 — Rules/agents/hooks refactor slice 3 (steps 1–2; merge map proposed)
+
+**Theme:** Coordinate-first language on remaining ZIP-primary surfaces; correct engineering queue order in session hook; K117(c) merge map for owner review (no merges executed).
+
+**Shipped (steps 1–2):**
+- **AGENTS.md** — Playwright MCP table + checklist: coordinates `37.6085`, `-77.3739` primary; ZIP `23111` fallback-path only
+- **Hooks** — `nudge-after-file-edit.ps1`, `route-user-prompt.ps1` aligned to same pattern; `inject-orchestration-session-context.ps1` queue order fixed to split (done) → contracts → rules refactor (active)
+- **K117(c) merge map** — proposed below in this changelog entry's companion report; **awaiting owner approval** before any rule deletes or `@ingest-standards`
+
+**Not done (awaiting approval):** rule file merges/deletions; `@ingest-standards` agent; `owner-decisions.md`; `probe:*` rename; AGENTS.md shrink (K122).
+
+**Evidence:** docs/hooks only; `npm test` not re-run this sub-slice.
+
+### 2026-06-19 — Five-file recommendation-service split
+
+**Theme:** Split monolithic `recommendation-service.ts` into focused modules while preserving the public import surface via re-exports.
+
+**Shipped:**
+- `recommendation-types.ts` (166 lines) — shared types + `RecommendationDependencyUnavailableError`
+- `recommendation-scoring.ts` (149 lines) — `scoreCandidate`, `comparePlanQuality`, `getPlanQuality`, `compareObservationQuality`, freshness/confidence labels
+- `shopping-plan-builder.ts` (138 lines) — single/multi-store plan construction; one-directional dependency on scoring
+- `market-search-service.ts` (455 lines) — `getMarketSearchExperience`, `buildNearbyStoresForSearch`, `collectRecipeIngredientIdsForRollout`
+- `meal-presentation.ts` (144 lines) — `toRecommendation`, explanation/ThemealDB notices, `attachMealPresentation`
+- `recommendation-service.ts` (297 lines, down from ~1334) — slim orchestrator + re-export shim; routes and ~40 consumer files unchanged
+
+**Evidence:** `npm test` **498/498** after each extraction step; final `npm run build` pass. Playwright MCP / Postgres MCP / Semgrep not re-run.
+
+### 2026-06-19 — Phase 1 correctness audit remediation (slices 0–8)
+
+**Theme:** Governance-first fixes for Phase 1 audit Critical/High findings (C1–H12); medium/low deferred.
+
+**Shipped:**
+- **Slice 0 — Governance:** empty-vs-unavailable, ingest persist logging/exit codes, frontend request races/error boundary, direct unit-test requirements in scoped rules + `AGENTS.md` + stop hook
+- **Slice 1 (C1):** `meal-results-panel` renders notice + carousel together; regression test
+- **Slice 2 (C2/H4/M6):** request-generation guards in `use-meal-planner`; loading disables; hook tests
+- **Slice 3 (H1–H3):** market pass-through on `/api/recommendations` (`market-pass-through.ts`); single `getMarketDataSnapshot` read per rank; client keeps map after rank
+- **Slice 4 (M4/M5):** `RecommendationDependencyUnavailableError` → HTTP 503; explicit zero-ready-store notice
+- **Slice 5 (H5–H7):** ingest `failedCount` + structured row logs; non-zero exit on persist failures / all-chain failure
+- **Slice 6 (H8):** removed single-Kroger-store mapping guess
+- **Slice 7 (H9/H10):** best offer per ingredient before persist; `MIN_WEEKLY_AD_MATCH_CONFIDENCE` 0.45 → 0.55
+- **Slice 8 (H11/H12):** `src/app/error.tsx`; Leaflet mount try/catch + visible fallback
+
+**Honest limits:** Medium/low audit items (M1–M3, M7–M15, L*) not in this batch. Playwright MCP, e2e CI, Semgrep, Postgres MCP not re-run. Slice 3 stayed under 800 LOC — no sub-split needed.
+
+**Evidence:** `npm test` **498/498**; `npm run build` pass; `npm run test:integration` **24/24** (slice 5).
+
+### 2026-06-18 — setup-local gap fixes (dev onboarding)
+
+**Theme:** Close five setup gaps: dual DB provisioning, non-fatal SNAP, post-setup smoke, fixture safety copy, geolocation-first messaging.
+
+**Shipped:**
+- **Gap 1** — After dev `ensureTestDatabase()`, provision `yum4less_test` via `DATABASE_URL_TEST` or derived URL; log both databases migrated
+- **Gap 2** — Removed fatal duplicate `runNpmScript("ensure:snap-context")`; SNAP remains non-fatal inside `ensureTestDatabase()` only (comment documents why)
+- **Gap 3** — Post-setup `npm test` smoke; warn and exit non-zero on failure (unit tests only — not integration/e2e)
+- **Gap 4** — No-live-keys branch documents `DATABASE_URL` must match `DATABASE_URL_TEST` before local fixture ingest; points to `.env.example`
+- **Gap 5** — Final next-step copy: browser location or ZIP 23111 (not ZIP-only)
+
+**Honest limits:** `setup:local` with live keys still runs full scheduled ingest (slow); does not run `test:integration` or `test:e2e:ci`.
+
+**Evidence:** `npm test` 486/486 after changes.
+
+### 2026-06-18 — Phase 3: ingest order, OSM reliability, copy cleanup, error UX
+
+**Theme:** Scheduled ingest warms catalog before weekly-ad; Overpass retries/timeouts; decouple E2E from bootstrap slugs; map API 400/404 to actionable meal-planner copy.
+
+**Shipped:**
+- **#2 Scheduled ingest** — `run-scheduled-weekly-ad-ingest.mjs` order: map-catalog → weekly-ad → SNAP (non-fatal) → provider sync → TheMealDB; `setup-local.mjs` + README aligned; `scheduled-ingest-pipeline` unit test guards spawn order
+- **#3 OSM Overpass** — configurable timeout/query timeout/attempts/backoff env vars; per-endpoint retries with backoff; `YUM4LESS_OSM_OVERPASS_URL` honored first; live ZIP 23111 ingest `osm=261` on owner dev
+- **#4 Bootstrap/MVP copy** — `Seed catalog pin` / seed-catalog footnote; beta v1 wording in internal-details + recipe-source summary; E2E asserts ranked Kroger/Aldi by `chain` + `recommendationEnabled` (not `kroger-mechanicsville` slug)
+- **#5 Error UX** — `recommendation-error-copy.ts` maps recommendation/market-search 400/404/500 to titled panels with hints; `recommendation-error-copy.test.ts` (5 cases)
+- **Unit tests (+16 vs prior git HEAD 470; working tree now 486)** — pipeline-hardening additions not all named in initial Phase 3 evidence line:
+  - `scheduled-ingest-pipeline.test.ts` (2) — canonical step order vs `run-scheduled-weekly-ad-ingest.mjs` (paired with #2 above)
+  - `recommendation-error-copy.test.ts` (5) — paired with #5 above
+  - `form-validation.test.ts` (3) — meal planner ZIP/budget validation bounds
+  - `escape-regexp.test.ts` (2) — `escape-regexp.ts` helper for map HTML safety
+  - `spawn-safe.test.ts` (2) — `assertSafeSqlIdentifier` in `scripts/lib/spawn-safe.mjs`
+  - `osm-food-retail-discovery.test.ts` (+2) — `YUM4LESS_OSM_OVERPASS_URL` first-endpoint priority; Overpass timeout retry before empty fallback (behavior in #3; cases added in same slice)
+
+**Honest limits:** Overpass can still timeout on overloaded public mirrors — tune via `.env` knobs; Tier C remains normal outside Kroger/Aldi gate coverage; remote CI not re-run on uncommitted work; Semgrep Guardian not re-run.
+
+**Evidence:** `npm test` 486/486 at working-tree snapshot (482 when Phase 3 slice first recorded); `npm run build`; `npm run test:integration` 24/24; `npm run test:e2e:ci` 4/4; Postgres MCP OSM Aldi rows; Playwright MCP ZIP 23111 trust copy.
 
 ### 2026-06-15 — Phase 2: production geocoding gate + fixture DB isolation
 
@@ -708,18 +873,18 @@
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` | 2026-06-15 | 459 tests, 101 files |
-| `npm run build` | 2026-06-15 | OK |
-| `npm run test:integration` | 2026-06-15 | 24 tests, 7 files |
-| `npm run test:e2e:ci` | 2026-06-15 | 4/4 |
+| `npm test` | 2026-06-22 | **528 tests**, 116 files |
+| `npm run build` | 2026-06-22 | OK (rank-payload trim slice) |
+| `npm run test:integration` | 2026-06-18 | 24 tests, 7 files (prior slices) |
+| `npm run test:e2e:ci` | 2026-06-18 | 4/4 (prior slices) |
 | Postgres (`provider_search_terms` kroger) | 2026-06-15 | 101 rows |
-| Playwright MCP (localhost) | 2026-06-15 | Not run (`test:e2e:ci` used instead) |
-| Semgrep MCP / hook | 2026-06-15 | Not re-run this slice |
-| Remote CI | 2026-06-11 | Green on master — M/L slice not yet pushed |
+| Playwright MCP (localhost) | 2026-06-22 | Store search OK (`mcp-happy-path-01-location-set.png`); full rank→meal-cards MCP incomplete — MCP disconnect; CLI happy path same slice (`happy-path-meal-cards.png`, 2 recipes) |
+| Semgrep MCP / hook | 2026-06-18 | Not re-run |
+| Remote CI | 2026-06-11 | Green on master — working tree not yet pushed |
 
 **Local demo:** `npm run db:up` → `ingest:weekly-ads:fixture` → `ingest:map-catalog:fixture` → `npm run build` → `npm run start` (ZIP `23111`).
 
-**Optional probes (not merge gates):** `npm run test:kroger-api`, `npm run test:publix-live-ingest`, live weekly-ad scripts.
+**Optional probes (not merge gates):** `npm run probe:kroger-api`, `npm run probe:publix-live-ingest`, live weekly-ad ingest scripts.
 
 ### Live weekly-ad baseline (last measured 2026-05, ZIP 23111)
 

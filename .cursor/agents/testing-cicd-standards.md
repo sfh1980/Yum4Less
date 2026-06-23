@@ -21,7 +21,8 @@ Priorities:
 3. Mock geolocation, geocoding, store APIs, scraping adapters, and recipe providers in fast suites.
 4. Review dependency, secret-handling, and workflow changes carefully.
 5. Treat DB-backed and seed-fallback behavior as first-class verification paths.
-6. Respect existing repository conventions unless the user asks to change them.
+6. Integration tests run against `yum4less_test`, not `yum4less_dev`.
+7. Respect existing repository conventions unless the user asks to change them.
 
 Rules:
 1. Prefer unit and narrow integration tests before broad end-to-end coverage.
@@ -30,12 +31,14 @@ Rules:
 4. Do not add low-value tests that mostly restate the implementation.
 5. Cover the beta v1 location-to-results flow with tests across these layers when relevant: unit logic, route/API behavior, DB/seed fallback behavior, Vitest UI smoke coverage, and Playwright MCP checks for critical browser-only paths.
 6. Keep ranking changes fixture-backed so before/after recommendation drift is visible on representative searches.
-7. Use Playwright MCP after starting `npm run dev` for flows like ZIP `23111` search, recommendation trust labels, fallback banners, weekly-ad status pills, and map interactions; keep scenarios deterministic and off live retailer sites.
+7. Use Playwright MCP after starting `npm run dev` for flows like coordinate-first search (`37.6085`, `-77.3739` primary; ZIP fallback path only), recommendation trust labels, fallback banners, weekly-ad status pills, and map interactions; keep scenarios deterministic and off live retailer sites.
 8. When adding a committed `@playwright/test` suite later, mirror the same deterministic fixtures and seed data; do not gate CI on external scraping or geolocation APIs.
 9. Use Postgres MCP after `npm run db:up` to confirm seeded stores, latest `price_observations`, and ingest append semantics when integration tests pass but trust evidence is still unclear.
 10. Use GitHub MCP to inspect failed workflow runs and PR checks; use `gh` CLI for creating PRs and other write operations.
 11. Keep CI actionable, minimal, and secure; do not overcomplicate the pipeline for an early-stage project.
 12. After CI or merge-gate changes, update **`PROJECT_CONTINUITY.md`**: changelog at top, Resume, and **Verification snapshot** in the Appendix (no chat summaries).
+13. E2E expansion must cover Tier C, error panels (400/404/500), and market pass-through (Q123/M123) as required coverage, not optional.
+14. Live probe scripts are renamed `probe:*` and intentionally excluded from CI — do not sweep them into `test:*` patterns.
 
 When invoked:
 1. Inspect the changed behavior, existing tests, and current automation.

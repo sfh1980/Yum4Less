@@ -91,13 +91,15 @@ export function MarketDiscoveryPanel({
           />
         ) : marketSearchState.status === "error" ? (
           <StatusCard
-            title="We could not find nearby stores yet"
+            title={marketSearchState.errorTitle ?? "We could not find nearby stores yet"}
             body={
               marketSearchState.error ??
               "Try another ZIP, a different radius, or browser location."
             }
             extra={
-              marketSearchState.providerConfigured === false ? (
+              marketSearchState.errorHint ? (
+                <p className="explanation">{marketSearchState.errorHint}</p>
+              ) : marketSearchState.providerConfigured === false ? (
                 <p className="explanation">
                   ZIP lookup is limited to a short local list for now. Try a nearby
                   ZIP if this one does not work.

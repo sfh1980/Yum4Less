@@ -1,10 +1,14 @@
 import { copyFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 import { ensureTestDatabase } from "./ensure-test-db.mjs";
+import { runNpmScript, spawnNpm } from "./lib/spawn-safe.mjs";
 
 const envLocalPath = join(process.cwd(), ".env.local");
 const envExamplePath = join(process.cwd(), ".env.example");
+const DEFAULT_DEV_DATABASE_URL =
+  "postgresql://postgres:postgres@localhost:5433/yum4less_dev";
+const DEFAULT_TEST_DATABASE_URL =
+  "postgresql://postgres:postgres@localhost:5433/yum4less_test";
 
 function loadEnvLocal() {
   if (!existsSync(envLocalPath)) {
@@ -34,6 +38,30 @@ function envValue(name) {
   return process.env[name]?.trim() ?? "";
 }
 
+function databaseNameFromUrl(databaseUrl) {
+  try {
+    return new URL(databaseUrl).pathname.replace(/^\//, "").trim();
+  } catch {
+    return databaseUrl;
+  }
+}
+
+function resolveTestDatabaseUrl() {
+  const configuredTestUrl = envValue("DATABASE_URL_TEST");
+  if (configuredTestUrl) {
+    return configuredTestUrl;
+  }
+
+  const devUrl = envValue("DATABASE_URL") || DEFAULT_DEV_DATABASE_URL;
+  try {
+    const parsed = new URL(devUrl);
+    parsed.pathname = "/yum4less_test";
+    return parsed.toString();
+  } catch {
+    return DEFAULT_TEST_DATABASE_URL;
+  }
+}
+
 function hasLiveIngestKeys() {
   loadEnvLocal();
   return Boolean(
@@ -43,14 +71,45 @@ function hasLiveIngestKeys() {
   );
 }
 
-function run(command) {
-  const result = spawnSync(command, {
+async function provisionIntegrationTestDatabase() {
+  const devDatabaseUrl =
+    process.env.DATABASE_URL?.trim() || DEFAULT_DEV_DATABASE_URL;
+  const testDatabaseUrl = resolveTestDatabaseUrl();
+  const testDatabaseName = databaseNameFromUrl(testDatabaseUrl);
+
+  console.log("");
+  console.log(
+    `Provisioning integration test database (${testDatabaseName})...`,
+  );
+
+  process.env.DATABASE_URL = testDatabaseUrl;
+  if (!process.env.DATABASE_URL_TEST) {
+    process.env.DATABASE_URL_TEST = testDatabaseUrl;
+  }
+
+  await ensureTestDatabase();
+
+  process.env.DATABASE_URL = devDatabaseUrl;
+
+  console.log(
+    `Provisioned yum4less_dev and ${testDatabaseName} (schema/migrations applied to both).`,
+  );
+}
+
+function runPostSetupUnitTests() {
+  console.log("");
+  console.log("Running npm test (post-setup smoke check)...");
+
+  const result = spawnNpm(["test"], {
     stdio: "inherit",
-    shell: true,
     env: process.env,
   });
 
   if (result.status !== 0) {
+    console.error("");
+    console.error(
+      "Setup completed but unit tests failed — check the output above before running dev",
+    );
     process.exit(result.status ?? 1);
   }
 }
@@ -72,23 +131,29 @@ if (!existsSync(envLocalPath)) {
 }
 
 async function main() {
-  run("npm run db:up");
+  runNpmScript("db:up");
   await ensureTestDatabase();
-  run("npm run ensure:snap-context");
+  await provisionIntegrationTestDatabase();
+  // SNAP auto-ensure already runs non-fatally inside ensureTestDatabase().
+  // Do not call runNpmScript("ensure:snap-context") here — that npm script exits
+  // on failure and would abort setup after DB provisioning succeeded.
 
   if (hasLiveIngestKeys()) {
     console.log("");
     console.log(
       "Live ingest keys detected — running daily scheduled ingest (network; may take several minutes)...",
     );
-    run("npm run ingest:weekly-ads:scheduled");
+    console.log(
+      "Order: map-catalog (Kroger API + OSM Aldi/context) → weekly-ad prices → provider sync → TheMealDB import.",
+    );
+    runNpmScript("ingest:weekly-ads:scheduled");
     console.log("");
     console.log("Local setup complete with live daily ingest.");
     console.log(
       "Ranked prices and map pins reflect the last ingest run (24h cache on reads).",
     );
     console.log(
-      "Map catalog step upserts Kroger-family API pins, nearest OSM Aldi coords, OSM context rows, and Publix locator context when reachable.",
+      "Map-catalog runs first so Kroger-family API pins, nearest OSM Aldi coords, and context rows exist before weekly-ad ingest selects store targets.",
     );
   } else {
     console.log("");
@@ -105,15 +170,29 @@ async function main() {
     console.log("  npm run ingest:map-catalog:fixture");
     console.log("");
     console.log(
-      "Without ingest, Postgres has bootstrap seed rows only — ranked pricing stays empty until ingest runs.",
+      "Before running fixture commands locally, set DATABASE_URL_TEST and point DATABASE_URL at the same test database.",
     );
     console.log(
-      "Map pins stay bootstrap/OSM-fixture until live map-catalog ingest (Kroger Location API, OSM Overpass, Publix locator).",
+      "Otherwise the fixture guard will refuse rehearsal writes to yum4less_dev.",
+    );
+    console.log(
+      "See .env.example for DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5433/yum4less_test",
+    );
+    console.log("");
+    console.log(
+      "Without ingest, Postgres has CI seed catalog rows only — ranked pricing stays empty until ingest runs.",
+    );
+    console.log(
+      "Scheduled ingest runs map-catalog before weekly-ad. Live path needs Kroger + Geocodio keys; fixture paths are CI/rehearsal only.",
     );
   }
 
+  runPostSetupUnitTests();
+
   console.log("");
-  console.log("Next: npm run dev → open http://localhost:3000 → search ZIP 23111");
+  console.log(
+    "Next: npm run dev → open http://localhost:3000 → use your location (Allow location access) or enter ZIP 23111 to search your local market.",
+  );
 }
 
 main().catch((error) => {

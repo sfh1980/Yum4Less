@@ -11,6 +11,7 @@ import type {
   ProviderPricingPreviewResult,
 } from "@/lib/providers/provider-types";
 import { isApiDerivedKrogerCatalogStoreId } from "@/lib/store-catalog-sync";
+import { logServerError } from "@/lib/server-log";
 
 const KROGER_OFFICIAL_PRICE_SOURCE = OFFICIAL_API_SOURCE;
 const MIN_SYNC_MATCH_CONFIDENCE = 0.45;
@@ -28,6 +29,7 @@ export type ProviderPriceObservationSyncSummary = {
   syncedCount: number;
   unchangedCount: number;
   skippedCount: number;
+  failedCount: number;
   retrievalMode: ProviderPricingPreviewResult["retrievalMode"];
   skipReason?: ProviderPriceObservationSkipReason;
   message: string;
@@ -42,6 +44,7 @@ export async function syncKrogerPreviewToPriceObservations(input: {
     syncedCount: 0,
     unchangedCount: 0,
     skippedCount: 0,
+    failedCount: 0,
     retrievalMode: input.preview.retrievalMode,
   };
 
@@ -92,6 +95,7 @@ export async function syncKrogerPreviewToPriceObservations(input: {
   let syncedCount = 0;
   let unchangedCount = 0;
   let skippedCount = 0;
+  let failedCount = 0;
 
   for (const item of input.preview.items) {
     const outcome = await persistPreviewItemAsPriceObservation({
@@ -106,6 +110,8 @@ export async function syncKrogerPreviewToPriceObservations(input: {
       syncedCount += 1;
     } else if (outcome === "unchanged") {
       unchangedCount += 1;
+    } else if (outcome === "failed") {
+      failedCount += 1;
     } else {
       skippedCount += 1;
     }
@@ -122,7 +128,15 @@ export async function syncKrogerPreviewToPriceObservations(input: {
     syncedCount,
     unchangedCount,
     skippedCount,
+    failedCount,
   };
+
+  if (failedCount > 0) {
+    return {
+      ...resultSummary,
+      message: `Kroger price sync reported ${failedCount} persist failure(s) for ${internalStoreId}. Check logs for ingredientId and providerProductId.`,
+    };
+  }
 
   if (syncedCount === 0 && unchangedCount === 0) {
     return {
@@ -215,10 +229,6 @@ export function resolveInternalKrogerStoreId(input: {
     return byProviderStoreId[0]!.id;
   }
 
-  if (krogerStores.length === 1) {
-    return krogerStores[0]!.id;
-  }
-
   const normalizedPreviewName = normalizeStoreEvidence(input.previewStoreName);
   const byStrongName = krogerStores.filter((store) => {
     const normalizedStoreName = normalizeStoreEvidence(store.name);
@@ -243,7 +253,7 @@ async function persistPreviewItemAsPriceObservation(input: {
   item: ProviderPricingPreviewItem;
   observedAt: string;
   retrievalMode: ProviderPricingPreviewResult["retrievalMode"];
-}): Promise<"inserted" | "unchanged" | "skipped"> {
+}): Promise<"inserted" | "unchanged" | "skipped" | "failed"> {
   if (input.item.matchConfidence < MIN_SYNC_MATCH_CONFIDENCE) {
     return "skipped";
   }
@@ -280,8 +290,15 @@ async function persistPreviewItemAsPriceObservation(input: {
     }
 
     return "skipped";
-  } catch {
-    return "skipped";
+  } catch (error) {
+    logServerError("provider-price-observation-sync.persistPreviewItem", error, {
+      internalStoreId: input.internalStoreId,
+      providerStoreId: input.providerStoreId,
+      ingredientId: input.item.ingredientId,
+      providerProductId: input.item.providerProductId,
+      description: input.item.description,
+    });
+    return "failed";
   }
 }
 

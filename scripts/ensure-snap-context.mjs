@@ -1,8 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { execSync, spawnSync } from "node:child_process";
+import {
+  containerHealthStatus,
+  psqlQueryScalar,
+  spawnNpm,
+  YUM4LESS_POSTGRES_CONTAINER,
+} from "./lib/spawn-safe.mjs";
 
-const CONTAINER_NAME = "yum4less-postgres";
 const envLocalPath = join(process.cwd(), ".env.local");
 
 const quiet = process.argv.includes("--quiet");
@@ -56,23 +60,12 @@ function isSnapAutoEnsureEnabled() {
   return true;
 }
 
-function containerHealthStatus() {
-  try {
-    return execSync(
-      `docker inspect --format="{{.State.Health.Status}}" ${CONTAINER_NAME}`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-  } catch {
-    return "missing";
-  }
-}
-
 function snapRowCount() {
   try {
-    const count = execSync(
-      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from snap_retailer_locations;"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
+    const count = psqlQueryScalar(
+      "yum4less_dev",
+      "select count(*) from snap_retailer_locations;",
+    );
     return Number(count) || 0;
   } catch {
     return 0;
@@ -81,10 +74,10 @@ function snapRowCount() {
 
 function snapTableExists() {
   try {
-    const count = execSync(
-      `docker exec ${CONTAINER_NAME} psql -U postgres -d yum4less_dev -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'snap_retailer_locations';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
+    const count = psqlQueryScalar(
+      "yum4less_dev",
+      "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'snap_retailer_locations';",
+    );
     return count === "1";
   } catch {
     return false;
@@ -100,10 +93,9 @@ function shouldUseFixtureMode() {
   );
 }
 
-function runIngest(command) {
-  const result = spawnSync(command, {
+function runIngest(npmScriptName) {
+  const result = spawnNpm(["run", npmScriptName], {
     stdio: "inherit",
-    shell: true,
     env: process.env,
   });
 
@@ -131,7 +123,7 @@ function main() {
     return;
   }
 
-  const health = containerHealthStatus();
+  const health = containerHealthStatus(YUM4LESS_POSTGRES_CONTAINER);
   if (health !== "healthy") {
     log(`Postgres not ready (${health}) — skipping SNAP auto-ensure. Run npm run db:up first.`);
     return;
@@ -166,11 +158,11 @@ function main() {
         "No YUM4LESS_SNAP_CSV_PATH set — loading ZIP 23111 SNAP fixture for local dev. Set YUM4LESS_SNAP_CSV_PATH for nationwide rows.",
       );
     }
-    runIngest("npm run ingest:snap-retailers:fixture");
+    runIngest("ingest:snap-retailers:fixture");
     return;
   }
 
-  runIngest("npm run ingest:snap-retailers");
+  runIngest("ingest:snap-retailers");
 }
 
 main();

@@ -2,7 +2,7 @@ import type { RecipeSourceEntry } from "@/lib/recipe-sources/recipe-source-types
 
 /**
  * Research-backed registry for external recipe providers.
- * Only `internal-library` is active in the MVP; others are documented gates.
+ * Only `internal-library` is active in beta v1; others are documented gates.
  */
 export const RECIPE_SOURCE_RESEARCH: RecipeSourceEntry[] = [
   {
@@ -91,7 +91,7 @@ export function buildRecipeSourceResearchSummary() {
     (entry) => entry.availability !== "active",
   );
 
-  return `MVP ranks from the internal library and sale-matched TheMealDB imports. ${blocked.length} external provider(s) remain blocked until licensing and matching gates are implemented.`;
+  return `Beta v1 ranks from the internal library and sale-matched TheMealDB imports. ${blocked.length} external provider(s) remain blocked until licensing and matching gates are implemented.`;
 }
 
 export type InactiveRecipeSourceShopperNotice = {

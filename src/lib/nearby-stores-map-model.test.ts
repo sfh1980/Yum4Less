@@ -57,7 +57,7 @@ describe("nearby stores map model", () => {
     expect(model.anchor.source).toBe("zip");
     expect(model.stores).toHaveLength(1);
     expect(model.stores[0]?.rolloutNote).toBe("Seed preview pricing");
-    expect(model.stores[0]?.locationNote).toContain("Bootstrap seed");
+    expect(model.stores[0]?.locationNote).toContain("Seed catalog coordinates");
     expect(model.usesOsmCatalogData).toBe(false);
   });
 

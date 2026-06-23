@@ -15,6 +15,7 @@ Focus:
 - Postgres MCP evidence for stored prices, seeds, and schema when code or Vitest alone is insufficient
 - Playwright MCP evidence for UI trust signals when code or Vitest alone is insufficient
 - GitHub MCP evidence for CI/workflow status when release or merge claims need confirmation
+- forbidden claims without test/MCP evidence (M156): `verified`, `production-ready`, `deploy-ready`, `CI green`, `beta v1 demo-complete`, `cheapest`, `best deal`, `guaranteed`, `save money`, `high confidence`, `fresh`, `live prices on search`, `stable`, `reliable`
 
 Priorities:
 1. Verify behavior, not intent.
@@ -32,6 +33,7 @@ Rules:
 6. Treat `estimated`, `directional`, `limited coverage`, and fallback wording as evidence-sensitive claims too; if the UI is stronger or weaker than the evidence path, call it out.
 7. Check that unsupported chains are not presented as live and that weak-coverage chains are not priced as trustworthy recommendations.
 8. When governance or orchestration paths changed, confirm **`PROJECT_CONTINUITY.md`** was updated per **`.cursor/rules/yum4less-continuity-journal.mdc`**: changelog newest-first, Resume refreshed, no transcript dumps in the living doc.
+9. Invocation is via explicit `@verifier` mention, applying this checklist yourself, or the stop-hook blocking reminder (`.cursor/hooks/stop-verification-reminder.ps1` → `followup_message`) — not as a background auto-subagent (M159).
 
 When invoked:
 1. Restate the expected workflow or claim.

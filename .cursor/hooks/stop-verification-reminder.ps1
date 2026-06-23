@@ -30,18 +30,23 @@ try {
     [void]$lines.Add('')
     [void]$lines.Add("Changed paths include: $($orchestrationPaths -join ', ')")
     [void]$lines.Add('')
-    [void]$lines.Add('Minimum for any code change: npm test.')
+    [void]$lines.Add('You are not done until npm test has been run and the pass count stated.')
+    [void]$lines.Add('')
+    [void]$lines.Add('Forbidden claims without test/MCP evidence: verified, production-ready, deploy-ready, CI green, beta v1 demo-complete, cheapest, best deal, guaranteed, save money, high confidence, fresh, live prices on search, stable, reliable.')
 
     if ($needsApi -or $needsCi) {
         [void]$lines.Add('API/CI touched: npm run build when routes/imports changed; route/security tests must pass; use @web-backend-standards for non-trivial API edits.')
+        [void]$lines.Add('Phase 1 correctness: distinguish empty (filters) vs unavailable (dependency failure) — never ok:true empty arrays on backend failure; single snapshot/market pass-through per rank request. See yum4less-backend-api-workflow.mdc.')
     }
 
     if ($needsDatabase) {
         [void]$lines.Add('DB/ingest touched: npm run test:integration when Postgres merge behavior changed; Postgres MCP after npm run db:up for row/ingest truth claims; @database-codegen-standards for schema/SQL.')
+        [void]$lines.Add('Phase 1 ingest: log specific row on persist failure; non-zero exit on chain-wide failure; separate skip vs fail counts. See yum4less-database-ingest-workflow.mdc.')
     }
 
     if ($needsFrontend) {
         [void]$lines.Add('UI/trust touched: Playwright MCP after npm run dev when Vitest alone is insufficient; @web-frontend-standards; @verifier when trust copy or rollout claims changed.')
+        [void]$lines.Add('Phase 1 frontend: request-generation/AbortController for search+rank+geolocation (see multi-store-route-panel.tsx); error.tsx boundary; map async try/catch; notice+results both render. See yum4less-frontend-workflow.mdc.')
     }
 
     if ($needsCi) {

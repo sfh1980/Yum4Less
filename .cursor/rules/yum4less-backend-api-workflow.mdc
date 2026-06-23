@@ -1,20 +1,31 @@
 ---
 description: Backend API and server-side workflow for Yum4Less
-globs: src/app/api/**,src/lib/recommendation-service.ts,src/lib/provider-*.ts,src/lib/providers/**,src/lib/rate-limit*.ts,src/lib/public-api-*.ts,src/lib/geocoding.ts,src/lib/location-resolution.ts,src/lib/multi-store-shopping-route.ts
+globs: src/app/api/**,src/lib/recommendation-service.ts,src/lib/recommendation-types.ts,src/lib/market-search-service.ts,src/lib/shopping-plan-builder.ts,src/lib/recommendation-scoring.ts,src/lib/meal-presentation.ts,src/lib/provider-*.ts,src/lib/providers/**,src/lib/rate-limit*.ts,src/lib/public-api-*.ts,src/lib/geocoding.ts,src/lib/location-resolution.ts,src/lib/multi-store-shopping-route.ts
 alwaysApply: false
 ---
 
 # Yum4Less Backend API Workflow
 
-Applies when editing route handlers, validation, rate limits, provider services, or recommendation/market logic.
+Applies when editing route handlers, validation, rate limits, provider services, or recommendation/market logic. **Commands and MCP triggers** → **`yum4less-agent-orchestration.mdc`** trigger table + **`yum4less-testing-and-release-gates.mdc`**. **Security/read-only API** → **`yum4less-security-and-dependencies.mdc`**.
+
+## Empty vs unavailable (Phase 1 audit — C1, M4, M5)
+
+**MUST NOT** collapse these into the same API or UI state:
+
+| Outcome | Meaning | Required signal |
+|---|---|---|
+| **Empty (filters)** | Valid backend read; no meals/stores match user filters or rollout gates | `ok: true` with empty arrays **and** explicit empty reason (`shopperNotice`, `emptyReason`, or structured field — not silence) |
+| **Unavailable (dependency failure)** | Upstream read failed (`source: "unavailable"`, thrown error, or missing pricing/recipe catalog for ranking) | Structured failure — **not** `ok: true` with empty arrays that look like “nothing matched” |
+
+Rules:
+
+- Any function that returns empty recommendations, empty stores, or zero ready stores **when** an upstream source has `source: "unavailable"` (or equivalent) **MUST** propagate that distinction — never return success-shaped empty data.
+- `/api/recommendations` and `/api/market-search` **MUST** surface dependency failure separately from filter-empty outcomes (HTTP status and/or `ok: false` + error/reason field).
+- When both `shopperNotice` and non-empty `recommendations` are valid, the client **MUST** render both — notices are additive, not a substitute for results (C1).
+- Market pass-through (Q27/Q28): client sends sanitized `market` (+ freshness metadata) on rank; server reuses one consistent snapshot for store-readiness and pricing within a single request — do not rebuild market via a second `getMarketSearchExperience` read that can diverge (H1–H3).
+
+Add or extend route/service tests for each distinction when touched.
 
 ## Before marking done
 
-1. Run `npm test` — route tests and service tests must pass.
-2. For public routes: confirm read-only default (`YUM4LESS_ENABLE_API_DB_WRITES` off), response sanitization, and input bounds unchanged or explicitly tested.
-3. Follow **`yum4less-agent-orchestration`**; use `@web-backend-standards` for non-trivial API changes.
-
-## Security reminders
-
-- Parameterized SQL only; no client-supplied resource IDs.
-- Honor **continental US** geographic bounds (`us-service-area.ts`) and shopping-route stop limits when touched.
+Run `npm test`; `npm run build` when routes/imports changed. Follow orchestration for `@web-backend-standards`.

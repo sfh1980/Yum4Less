@@ -79,12 +79,20 @@ function readListedSavingsCardTitle(cardHtml: string) {
   return altMatch?.[1] ? stripHtmlText(altMatch[1]) : undefined;
 }
 
-function readListedSavingsCardSection(cardHtml: string, className: string) {
-  const pattern = new RegExp(
-    `class=["'][^"']*\\b${className}\\b[^"']*["'][\\s\\S]*?>\\s*([\\s\\S]*?)\\s*<\\/span>`,
-    "i",
-  );
-  const match = cardHtml.match(pattern);
+const LISTED_SAVINGS_SECTION_PATTERNS = {
+  "p-savings-badge__text":
+    /class=["'][^"']*\bp-savings-badge__text\b[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>/i,
+  "additional-info":
+    /class=["'][^"']*\badditional-info\b[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>/i,
+  "valid-dates":
+    /class=["'][^"']*\bvalid-dates\b[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>/i,
+} as const;
+
+function readListedSavingsCardSection(
+  cardHtml: string,
+  section: keyof typeof LISTED_SAVINGS_SECTION_PATTERNS,
+) {
+  const match = cardHtml.match(LISTED_SAVINGS_SECTION_PATTERNS[section]);
   return match?.[1] ? stripHtmlText(match[1]) : undefined;
 }
 

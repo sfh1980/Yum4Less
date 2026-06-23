@@ -237,10 +237,10 @@ export function buildKrogerProductionPromotionStatus(input: {
 }) {
   const steps = [
     "Confirm the Kroger developer app has Locations + Products (`product.compact`) scopes in the Kroger developer portal.",
-    "Verify certification auth, location lookup, and catalog search succeed (`npm run test:kroger-api`).",
+    "Verify certification auth, location lookup, and catalog search succeed (`npm run probe:kroger-api`).",
     "Submit the app for production promotion in the Kroger developer portal and wait for approval.",
     "Set `KROGER_API_ENV=production` in `.env.local` after promotion is approved.",
-    "Re-run `npm run test:kroger-api` and confirm search/detail probes return `item.price.regular` or `item.price.promo`.",
+    "Re-run `npm run probe:kroger-api` and confirm search/detail probes return `item.price.regular` or `item.price.promo`.",
     "Keep weekly-ad / Flipp syndicated pricing labeled directional until production store prices are verified in store.",
   ];
 

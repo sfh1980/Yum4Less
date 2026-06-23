@@ -1,28 +1,81 @@
 ---
-description: Testing and release gates for Yum4Less beta v1
+description: Testing, release gates, and MCP verification for Yum4Less beta v1
 alwaysApply: true
 ---
 
 # Yum4Less Testing And Release Gates
 
-Follow **`.cursor/rules/yum4less-agent-orchestration.mdc`** and **`AGENTS.md`** for when to run MCP and project agents.
+Follow **`.cursor/rules/yum4less-agent-orchestration.mdc`** (trigger table) and **`AGENTS.md`** for when to run MCP and project agents.
+
+## Test gates
 
 - Beta v1 behavior changes **MUST** include automated coverage for recommendation logic, request validation, fallback behavior, and the core location-to-results flow when the slice touches those paths.
 - Favor deterministic tests that do not depend on live external APIs, real scraping runs, or unstable provider responses.
 - Keep provider, geolocation, geocoding, and recipe-source behavior mocked or fixture-backed in fast suites.
 - Treat DB-backed and seed-fallback behavior as first-class test paths, not edge cases.
 - **MUST** run `npm test` before calling any implementation slice verified or complete.
+- **MUST** run `npm run build` when imports, routes, or Next.js config changed.
 - **MUST** run `npm run test:integration` when Postgres merge-gating behavior changed (`npm run db:up` first).
-- **MUST** run or account for **Semgrep Guardian** before claiming security-sensitive, dependency, secrets, PR, or release-readiness work is clean; the Cursor hook is non-blocking/advisory, so if the CLI is missing or the hook reports an error, state that gap instead of implying a passed scan.
-- **MUST** use **Postgres MCP** (read-only, port `5433`) to verify schema, seeded stores, and latest `price_observations` after ingest or integration work when automated tests alone do not answer the question.
-- **MUST** use **GitHub MCP** or `gh` to inspect PR checks and workflow failures before claiming release readiness or CI green; prefer `gh` CLI for mutating GitHub operations.
+- **MUST** run `npm run test:e2e:ci` only when explicitly validating the full beta v1 browser flow (heavy; not every slice).
 - Ranking changes **MUST** include fixture-based before/after checks on representative searches so trust-sensitive regressions are visible.
 - Add the smallest high-value tests first: unit logic, route tests, DB/seed fallback checks, then UI smoke coverage.
-- **MUST** use **Playwright MCP** when Vitest cannot prove trust-sensitive UI (ZIP flow, map, carousel, trust/fallback labels, modals); run `npm run dev` first on `localhost:3000` with ZIP `23111` and fixture/seed data.
-- Keep Playwright checks deterministic; do not gate merge on live retailer pages or unstable external sites.
-- Prefer Vitest for merge-gating CI; `npm run test:e2e:ci` is an additional CI job — Playwright MCP remains for agent-driven checks beyond that suite.
 - Security-sensitive routes **MUST** keep deterministic tests for validation bounds, public API read-only behavior (`YUM4LESS_ENABLE_API_DB_WRITES`), response sanitization, and shopping-route stop limits.
-- When Playwright verifies trust-sensitive UI, **MUST** assert explicit wording (`estimated`, `directional`, `limited coverage`, coming soon, context only) rather than only that elements render.
 - CI should run the local beta v1 test gates automatically before changes are treated as verified.
 - **MUST NOT** call trust-sensitive behavior verified if only manual spot checks exist.
 - **MUST** invoke `@verifier` or apply its readonly checklist before merge-ready claims on trust-sensitive work.
+
+## Direct unit coverage (Phase 1 audit)
+
+Trust-sensitive logic **MUST** have dedicated unit tests — integration/smoke alone is insufficient. When touching these paths, add or extend direct tests:
+
+- `scoreCandidate`, `comparePlanQuality`, `compareObservationQuality` (recommendation scoring/plan selection)
+- `use-meal-planner.ts` state machine (request races, stale response discard, loading transitions, notice+results rendering contract)
+- API empty vs unavailable distinction on `/api/recommendations` and `/api/market-search`
+- Ingest persist failure vs skip distinction (logged failure, non-zero exit on chain-wide failure)
+- `meal-results-panel`: `shopperNotice` + non-empty `recommendations` both visible (C1 regression)
+
+## MCP adoption and verification
+
+Prefer Cursor native tools first for code search, shell, web research, and browser inspection. **Mandatory MCP triggers** live in **`.cursor/rules/yum4less-agent-orchestration.mdc`** — use MCP when that table says MUST, not only when convenient.
+
+**Installed in this repo (`.cursor/mcp.json`):** read-only Postgres, official GitHub (Docker), Playwright (headless), Semgrep Guardian when the local Semgrep CLI is installed, and Context7 for library documentation. Do not add MCP servers without explicit owner approval (see **`yum4less-governance-and-doc-sync.mdc`**). Keep the active set small (ideally 3–5 servers); prefer read-only or least-privilege configurations.
+
+Read each MCP tool schema under `mcps/<server>/tools/` before calling MCP tools.
+
+### Postgres MCP
+
+- Read-only connection to local `yum4less_dev` on port `5433`; run `npm run db:up` before use.
+- **MUST** use after ingest or integration work when automated tests alone do not answer schema/seed/`price_observations` questions.
+- Prefer Vitest integration tests for merge-gating DB behavior; Postgres MCP is for exploratory evidence, not a substitute for automated tests.
+- Do not treat MCP SQL as a write path; schema changes belong in `db/init/` migrations.
+
+### GitHub MCP
+
+- Official `ghcr.io/github/github-mcp-server` via Docker; requires `GITHUB_PERSONAL_ACCESS_TOKEN` (never commit it).
+- **MUST** use (or `gh`) to inspect PR checks and workflow failures before claiming release readiness or CI green.
+- Prefer `gh` CLI for mutating GitHub actions unless the user explicitly wants MCP.
+
+### Playwright MCP
+
+- **MUST** use when Vitest cannot prove trust-sensitive UI (geolocation/coordinate-first flow, map, carousel, trust/fallback labels, modals).
+- Run `npm run dev` first on `localhost:3000` with coordinates **`37.6085`, `-77.3739`** primary (ZIP **`23111`** fallback-path only) and fixture/seed data.
+- **MUST** assert explicit trust wording (`estimated`, `directional`, `limited coverage`, coming soon, context only) — not just that elements render.
+- Keep checks deterministic; do not gate merge on live retailer pages or unstable external sites.
+- Do not use Playwright MCP for production weekly-ad scraping or as a substitute for fast unit/integration tests.
+
+### Semgrep Guardian MCP
+
+- **MUST** run or account for before claiming security-sensitive, dependency, secrets, PR, or release-readiness work is clean.
+- Hooks run non-blocking local `semgrep scan` after file edits and at stop; if Semgrep is unavailable, state that gap instead of implying a passed scan.
+- Complements — does not replace — `npm test`, route validation, and trust/freshness review.
+
+### Context7 MCP
+
+- Fetches current library/framework documentation when API shapes or imports are uncertain.
+- Optional `CONTEXT7_API_KEY` improves rate limits; never commit keys into `.cursor/mcp.json`.
+
+### General MCP discipline
+
+- Never commit `GITHUB_PERSONAL_ACCESS_TOKEN`, `CONTEXT7_API_KEY`, or other secrets into `.cursor/mcp.json`.
+- Treat `Postman`, `Sentry`, and hosted browser MCPs as later-stage options driven by real workflow pain.
+- Avoid overlapping browser, filesystem, and shell MCPs unless native tools leave a clear gap.

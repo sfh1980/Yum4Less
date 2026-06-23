@@ -4,6 +4,7 @@ import {
   parseObservationTimestamp,
   touchStoreVerification,
 } from "@/lib/price-observation-writes";
+import { logServerError } from "@/lib/server-log";
 import {
   MIN_WEEKLY_AD_MATCH_CONFIDENCE,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
@@ -22,6 +23,7 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
     storeId: "",
     syncedCount: 0,
     skippedCount: 0,
+    failedCount: 0,
     retrievalMode: input.result.retrievalMode,
     message: input.result.message,
   };
@@ -40,16 +42,32 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
     return baseSummary;
   }
 
+  const offersToPersist = selectBestWeeklyAdOffersPerIngredient(input.result.offers);
+
   let syncedCount = 0;
   let skippedCount = 0;
+  let failedCount = 0;
 
-  for (const offer of input.result.offers) {
-    const synced = await persistWeeklyAdOffer(offer, input.result);
-    if (synced) {
+  for (const offer of offersToPersist) {
+    const outcome = await persistWeeklyAdOffer(offer, input.result);
+    if (outcome === "inserted") {
       syncedCount += 1;
+    } else if (outcome === "failed") {
+      failedCount += 1;
     } else {
       skippedCount += 1;
     }
+  }
+
+  if (failedCount > 0) {
+    return {
+      ...baseSummary,
+      storeId,
+      syncedCount,
+      skippedCount,
+      failedCount,
+      message: `${input.result.chain} weekly-ad sync reported ${failedCount} persist failure(s) for ${storeId}. Check logs for storeId, ingredientId, and sourceRecordId.`,
+    };
   }
 
   if (syncedCount === 0) {
@@ -57,6 +75,7 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
       ...baseSummary,
       storeId,
       skippedCount,
+      failedCount,
       message: `${input.result.chain} weekly-ad offers were parsed, but none met the minimum ingredient match threshold for PostgreSQL sync.`,
     };
   }
@@ -66,29 +85,33 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
     storeId,
     syncedCount,
     skippedCount,
+    failedCount,
     message: `Synced ${syncedCount} ${input.result.chain} weekly-ad price observation(s) into PostgreSQL for ${storeId}. Ranked meal pricing can read these rows on the next DB snapshot while chain rollout gates still apply.`,
   };
 }
 
+type PersistWeeklyAdOutcome = "inserted" | "skipped" | "failed";
+
 async function persistWeeklyAdOffer(
   offer: WeeklyAdOffer,
   result: WeeklyAdIngestionResult,
-) {
+): Promise<PersistWeeklyAdOutcome> {
   // Ranked writes keep one current row per store + ingredient; higher-trust
   // official API prices supersede weekly-ad rows for the same ingredient.
   if (!offer.ingredientId) {
-    return false;
+    return "skipped";
   }
 
   if (
     offer.matchConfidence !== undefined &&
     offer.matchConfidence < MIN_WEEKLY_AD_MATCH_CONFIDENCE
   ) {
-    return false;
+    return "skipped";
   }
 
   const sourceName = getWeeklyAdSourceName(result.chain);
   const observedAt = parseObservationTimestamp(offer.observedAt);
+  const sourceRecordId = `${offer.storeId}:${offer.ingredientId}:${offer.productName}`;
 
   try {
     const outcome = await insertPriceObservationIfChanged({
@@ -98,14 +121,14 @@ async function persistWeeklyAdOffer(
       saleLabel: offer.saleLabel ?? `${result.chain} weekly-ad special`,
       observedAt,
       sourceName,
-      sourceRecordId: `${offer.storeId}:${offer.ingredientId}:${offer.productName}`,
+      sourceRecordId,
       confidenceScore: offer.matchConfidence ?? offer.confidenceScore,
       notes: buildWeeklyAdObservationNotes(offer, result),
       validThrough: parseOptionalObservationTimestamp(offer.validThrough),
     });
 
     if (outcome === "skipped-unchanged" || outcome === "skipped-superseded") {
-      return false;
+      return "skipped";
     }
 
     await touchStoreVerification({
@@ -113,10 +136,44 @@ async function persistWeeklyAdOffer(
       sourceName,
     });
 
-    return true;
-  } catch {
-    return false;
+    return "inserted";
+  } catch (error) {
+    logServerError("weekly-ad-offer-sync.persistWeeklyAdOffer", error, {
+      chain: result.chain,
+      storeId: offer.storeId,
+      ingredientId: offer.ingredientId,
+      sourceRecordId,
+      productName: offer.productName,
+    });
+    return "failed";
   }
+}
+
+function selectBestWeeklyAdOffersPerIngredient(offers: WeeklyAdOffer[]): WeeklyAdOffer[] {
+  const bestByIngredient = new Map<string, WeeklyAdOffer>();
+
+  for (const offer of offers) {
+    if (!offer.ingredientId) {
+      continue;
+    }
+
+    const current = bestByIngredient.get(offer.ingredientId);
+    if (!current) {
+      bestByIngredient.set(offer.ingredientId, offer);
+      continue;
+    }
+
+    const currentConfidence = current.matchConfidence ?? current.confidenceScore;
+    const nextConfidence = offer.matchConfidence ?? offer.confidenceScore;
+    if (
+      nextConfidence > currentConfidence ||
+      (nextConfidence === currentConfidence && offer.price < current.price)
+    ) {
+      bestByIngredient.set(offer.ingredientId, offer);
+    }
+  }
+
+  return [...bestByIngredient.values()];
 }
 
 function parseOptionalObservationTimestamp(value: string | undefined) {

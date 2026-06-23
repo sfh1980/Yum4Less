@@ -1,8 +1,18 @@
-import { execSync, spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import {
+  assertSafeSqlIdentifier,
+  containerHealthStatus,
+  createDatabase,
+  dockerAvailable,
+  dropDatabaseIfExists,
+  psqlApplySqlContent,
+  psqlQueryScalar,
+  runNpmScript,
+  spawnNodeScript,
+  YUM4LESS_POSTGRES_CONTAINER,
+} from "./lib/spawn-safe.mjs";
 
-const CONTAINER_NAME = "yum4less-postgres";
 const DEFAULT_DATABASE_URL =
   "postgresql://postgres:postgres@localhost:5433/yum4less_dev";
 const MAX_HEALTH_ATTEMPTS = 30;
@@ -14,31 +24,14 @@ function resolveTargetDatabaseName(databaseUrl = process.env.DATABASE_URL) {
   try {
     const parsed = new URL(url);
     const name = parsed.pathname.replace(/^\//, "").trim();
-    return name || "yum4less_dev";
+    return assertSafeSqlIdentifier(name || "yum4less_dev", "database name");
   } catch {
     return "yum4less_dev";
   }
 }
 
-function psqlCommand(databaseName = activeDatabaseName) {
-  return `docker exec ${CONTAINER_NAME} psql -U postgres -d ${databaseName}`;
-}
-
-function run(command) {
-  execSync(command, { stdio: "inherit", shell: true });
-}
-
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function dockerAvailable() {
-  try {
-    execSync("docker info", { stdio: "ignore", shell: true });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function isCiEnvironment() {
@@ -54,17 +47,6 @@ function canResetDatabaseAutomatically() {
   );
 }
 
-function containerHealthStatus() {
-  try {
-    return execSync(
-      `docker inspect --format="{{.State.Health.Status}}" ${CONTAINER_NAME}`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-  } catch {
-    return "missing";
-  }
-}
-
 async function waitForHealthyContainer() {
   for (let attempt = 1; attempt <= MAX_HEALTH_ATTEMPTS; attempt += 1) {
     const status = containerHealthStatus();
@@ -74,7 +56,7 @@ async function waitForHealthyContainer() {
 
     if (attempt === MAX_HEALTH_ATTEMPTS) {
       throw new Error(
-        `Timed out waiting for ${CONTAINER_NAME} to become healthy (last status: ${status}).`,
+        `Timed out waiting for ${YUM4LESS_POSTGRES_CONTAINER} to become healthy (last status: ${status}).`,
       );
     }
 
@@ -83,11 +65,12 @@ async function waitForHealthyContainer() {
 }
 
 function tableExists(tableName, databaseName = activeDatabaseName) {
+  assertSafeSqlIdentifier(tableName, "table name");
   try {
-    const count = execSync(
-      `${psqlCommand(databaseName)} -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = '${tableName}';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
+    const count = psqlQueryScalar(
+      databaseName,
+      `select count(*) from information_schema.tables where table_schema = 'public' and table_name = '${tableName}';`,
+    );
     return count === "1";
   } catch {
     return false;
@@ -95,11 +78,13 @@ function tableExists(tableName, databaseName = activeDatabaseName) {
 }
 
 function columnExists(tableName, columnName, databaseName = activeDatabaseName) {
+  assertSafeSqlIdentifier(tableName, "table name");
+  assertSafeSqlIdentifier(columnName, "column name");
   try {
-    const count = execSync(
-      `${psqlCommand(databaseName)} -tAc "select count(*) from information_schema.columns where table_schema = 'public' and table_name = '${tableName}' and column_name = '${columnName}';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
+    const count = psqlQueryScalar(
+      databaseName,
+      `select count(*) from information_schema.columns where table_schema = 'public' and table_name = '${tableName}' and column_name = '${columnName}';`,
+    );
     return count === "1";
   } catch {
     return false;
@@ -109,19 +94,16 @@ function columnExists(tableName, columnName, databaseName = activeDatabaseName) 
 function applyInitSqlFile(fileName, databaseName = activeDatabaseName) {
   const sqlPath = join(process.cwd(), "db", "init", fileName);
   const sql = readFileSync(sqlPath, "utf8");
-  execSync(`docker exec -i ${CONTAINER_NAME} psql -U postgres -d ${databaseName}`, {
-    input: sql,
-    stdio: ["pipe", "inherit", "inherit"],
-    shell: true,
-  });
+  psqlApplySqlContent(databaseName, sql);
 }
 
 function databaseExists(databaseName) {
+  assertSafeSqlIdentifier(databaseName, "database name");
   try {
-    const count = execSync(
-      `docker exec ${CONTAINER_NAME} psql -U postgres -tAc "select count(*) from pg_database where datname = '${databaseName}';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
+    const count = psqlQueryScalar(
+      "postgres",
+      `select count(*) from pg_database where datname = '${databaseName}';`,
+    );
     return count === "1";
   } catch {
     return false;
@@ -152,10 +134,7 @@ function ensureTargetDatabaseExists() {
   }
 
   console.log(`Creating Postgres database ${activeDatabaseName}...`);
-  execSync(
-    `docker exec ${CONTAINER_NAME} psql -U postgres -c "CREATE DATABASE ${activeDatabaseName};"`,
-    { stdio: "inherit", shell: true },
-  );
+  createDatabase(activeDatabaseName);
   applyAllInitSqlFiles(activeDatabaseName);
 }
 
@@ -176,14 +155,28 @@ function applyPhaseCMigrationsIfMissing() {
   }
 
   if (tableExists("provider_search_terms")) {
-    const krogerTermCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from provider_search_terms where provider = 'kroger';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
+    const krogerTermCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from provider_search_terms where provider = 'kroger';",
+    );
     if (Number(krogerTermCount) < 101) {
       console.log("Applying db/init/013_kroger_search_terms_full.sql to local Postgres...");
       applyInitSqlFile("013_kroger_search_terms_full.sql");
     }
+  }
+}
+
+function ciBootstrapPinsPresent() {
+  try {
+    const count = Number(
+      psqlQueryScalar(
+        activeDatabaseName,
+        "select count(*) from stores where id = 'kroger-mechanicsville';",
+      ),
+    );
+    return count >= 1;
+  } catch {
+    return false;
   }
 }
 
@@ -196,14 +189,7 @@ function applyCiBootstrapStoresIfNeeded() {
   }
 
   try {
-    const storeCount = Number(
-      execSync(
-        `${psqlCommand()} -tAc "select count(*) from stores;"`,
-        { encoding: "utf8", shell: true },
-      ).trim(),
-    );
-
-    if (storeCount >= 8) {
+    if (ciBootstrapPinsPresent()) {
       return;
     }
 
@@ -212,11 +198,7 @@ function applyCiBootstrapStoresIfNeeded() {
     );
     const sqlPath = join(process.cwd(), "db", "ci", "014_ci_bootstrap_stores.sql");
     const sql = readFileSync(sqlPath, "utf8");
-    execSync(`docker exec -i ${CONTAINER_NAME} psql -U postgres -d ${activeDatabaseName}`, {
-      input: sql,
-      stdio: ["pipe", "inherit", "inherit"],
-      shell: true,
-    });
+    psqlApplySqlContent(activeDatabaseName, sql);
   } catch (error) {
     console.warn(
       "CI bootstrap store seed skipped or failed:",
@@ -227,46 +209,43 @@ function applyCiBootstrapStoresIfNeeded() {
 
 function seedMatchesCurrentMvp() {
   try {
-    const catalogStoreCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from stores;"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const mockPriceCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from price_observations where source_name = 'mock-market-data';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const recipeCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from recipes where source_name = 'yum4less-internal-catalog';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const dynamicPricingColumnCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from information_schema.columns where table_name = 'price_observations' and column_name in ('last_verified_at', 'source_kind', 'valid_through');"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const providerStoreSearchTableCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_store_search_snapshots';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const providerProductPricingTableCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_product_pricing_snapshots';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const ingredientAliasesTableCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'ingredient_aliases';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const recipeEligibilityColumnCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from information_schema.columns where table_name = 'recipes' and column_name = 'eligible_for_ranking';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const snapRetailerTableCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'snap_retailer_locations';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
-    const providerSearchTermsTableCount = execSync(
-      `${psqlCommand()} -tAc "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_search_terms';"`,
-      { encoding: "utf8", shell: true },
-    ).trim();
+    const catalogStoreCount = psqlQueryScalar(activeDatabaseName, "select count(*) from stores;");
+    const mockPriceCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from price_observations where source_name = 'mock-market-data';",
+    );
+    const recipeCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from recipes where source_name = 'yum4less-internal-catalog';",
+    );
+    const dynamicPricingColumnCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from information_schema.columns where table_name = 'price_observations' and column_name in ('last_verified_at', 'source_kind', 'valid_through');",
+    );
+    const providerStoreSearchTableCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_store_search_snapshots';",
+    );
+    const providerProductPricingTableCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_product_pricing_snapshots';",
+    );
+    const ingredientAliasesTableCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'ingredient_aliases';",
+    );
+    const recipeEligibilityColumnCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from information_schema.columns where table_name = 'recipes' and column_name = 'eligible_for_ranking';",
+    );
+    const snapRetailerTableCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'snap_retailer_locations';",
+    );
+    const providerSearchTermsTableCount = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'provider_search_terms';",
+    );
 
     const storeCount = Number(catalogStoreCount);
     const expectsCiBootstrapStores =
@@ -295,20 +274,14 @@ function seedMatchesCurrentMvp() {
 async function resetTargetDatabase() {
   if (activeDatabaseName === "yum4less_dev") {
     console.log("Resetting Yum4Less test database volume...");
-    run("npm run db:reset");
+    runNpmScript("db:reset");
     await waitForHealthyContainer();
     return;
   }
 
   console.log(`Recreating Postgres database ${activeDatabaseName}...`);
-  execSync(
-    `docker exec ${CONTAINER_NAME} psql -U postgres -c "DROP DATABASE IF EXISTS ${activeDatabaseName};"`,
-    { stdio: "inherit", shell: true },
-  );
-  execSync(
-    `docker exec ${CONTAINER_NAME} psql -U postgres -c "CREATE DATABASE ${activeDatabaseName};"`,
-    { stdio: "inherit", shell: true },
-  );
+  dropDatabaseIfExists(activeDatabaseName);
+  createDatabase(activeDatabaseName);
   applyAllInitSqlFiles(activeDatabaseName);
 }
 
@@ -331,13 +304,14 @@ export async function ensureTestDatabase() {
 
   if (process.env.YUM4LESS_TEST_DB_RESET === "1") {
     await resetDatabaseVolume();
+    applyCiBootstrapStoresIfNeeded();
     return;
   }
 
   const health = containerHealthStatus();
   if (health !== "healthy") {
     console.log(`Starting Yum4Less Postgres container (previous status: ${health})...`);
-    run("npm run db:up");
+    runNpmScript("db:up");
     await waitForHealthyContainer();
   }
 
@@ -359,9 +333,7 @@ export async function ensureTestDatabase() {
     await resetDatabaseVolume();
   }
 
-  const snapEnsure = spawnSync("node scripts/ensure-snap-context.mjs --quiet", {
-    stdio: "inherit",
-    shell: true,
+  const snapEnsure = spawnNodeScript("scripts/ensure-snap-context.mjs", ["--quiet"], {
     env: process.env,
   });
 

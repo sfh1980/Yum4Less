@@ -81,7 +81,7 @@ Ranked pricing trust order:
 
 Expired sale rows stay in `price_observations` as history; unchanged sales with extended end dates refresh `valid_through` instead of duplicating rows.
 
-**Kroger:** set `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`; verify with `npm run test:kroger-api`. Certification API omits store-specific prices.
+**Kroger:** set `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`; verify with `npm run probe:kroger-api`. Certification API omits store-specific prices.
 
 **Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md).
 
@@ -131,10 +131,14 @@ Full list and ingest flags → `.env.example`.
 | `npm run sync:provider-prices` | Sync official provider prices into `price_observations` |
 | `npm run ingest:map-catalog` | **Cron primary** — OSM Overpass + Kroger-family Location API + nearest OSM Aldi + Publix locator context → Postgres `stores` rows; complements search-time ephemeral OSM merge |
 | `npm run ingest:map-catalog:fixture` | Deterministic OSM-style map catalog for CI/rehearsal (ZIP 23111; skips live Kroger/Publix locators) |
-| `npm run ingest:weekly-ads:scheduled` | **Daily cron wrapper** — weekly-ad ingest + map catalog + provider sync + TheMealDB import |
+| `npm run ingest:weekly-ads:scheduled` | **Daily cron wrapper** — map catalog → weekly-ad ingest → provider sync → TheMealDB import |
 | `npm run ingest:weekly-ads:scheduled:fixture` | Rehearsal cron path (CI/tests — fixture weekly ads only) |
-| `npm run test:kroger-api` | Kroger OAuth + store pricing probe |
-| `npm run test:publix-api` | Publix store-locator probe |
+| `npm run probe:kroger-api` | Kroger OAuth + store pricing probe (owner-only, not CI) |
+| `npm run probe:publix-api` | Publix store-locator probe (owner-only, not CI) |
+| `npm run probe:kroger-live-scrape` | Kroger weekly-ad live scrape probe |
+| `npm run probe:publix-live-scrape` | Publix weekly-ad live scrape probe |
+| `npm run probe:walmart-live-scrape` | Walmart weekly-ad live scrape probe |
+| `npm run probe:publix-live-ingest` | Publix live ingest rehearsal probe |
 
 Live ingest chain-by-chain baseline → [`PROJECT_CONTINUITY.md` → Live weekly-ad baseline](PROJECT_CONTINUITY.md#live-weekly-ad-baseline-last-measured-2026-05-zip-23111).
 

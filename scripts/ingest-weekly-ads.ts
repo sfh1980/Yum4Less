@@ -102,9 +102,26 @@ async function main() {
 
   for (const summary of allSyncSummaries) {
     console.log(
-      `\n[sync:${summary.chain}] synced=${summary.syncedCount}, skipped=${summary.skippedCount}`,
+      `\n[sync:${summary.chain}] synced=${summary.syncedCount}, skipped=${summary.skippedCount}, failed=${summary.failedCount}`,
     );
     console.log(`  ${summary.message}`);
+  }
+
+  const persistFailures = allSyncSummaries.reduce(
+    (total, summary) => total + summary.failedCount,
+    0,
+  );
+  if (persistFailures > 0) {
+    console.error(
+      `\nWeekly-ad ingest finished with ${persistFailures} persist failure(s). See structured error logs above.`,
+    );
+    process.exit(1);
+  }
+
+  const chainErrors = allResults.filter((result) => result.status === "error");
+  if (allResults.length > 0 && chainErrors.length === allResults.length) {
+    console.error("\nAll weekly-ad chains failed during ingest.");
+    process.exit(1);
   }
 
   if (process.env.THEMEALDB_IMPORT_AFTER_WEEKLY_AD === "1") {

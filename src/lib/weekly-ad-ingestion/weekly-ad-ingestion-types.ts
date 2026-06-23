@@ -75,6 +75,7 @@ export type WeeklyAdOfferSyncSummary = {
   storeId: string;
   syncedCount: number;
   skippedCount: number;
+  failedCount: number;
   retrievalMode: WeeklyAdIngestionResult["retrievalMode"];
   message: string;
 };

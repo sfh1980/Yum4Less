@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buildNearbyStoresMapModel } from "@/lib/nearby-stores-map-model";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 import { DEFAULT_DINNERS_WANTED, DEFAULT_MAX_INGREDIENTS } from "@/lib/meal-preference-defaults";
@@ -10,7 +10,12 @@ import {
   validateLocationFields,
   validateMealFields,
 } from "@/components/meal-planner/form-validation";
+import {
+  mapMarketSearchApiError,
+  mapRecommendationApiError,
+} from "@/components/meal-planner/recommendation-error-copy";
 import { trackClientEvent } from "@/lib/analytics/track-client-event";
+import { trimMarketForRankingPassThrough } from "@/lib/market-pass-through";
 import type {
   ActiveLocationRequest,
   FieldErrors,
@@ -70,15 +75,28 @@ export function useMealPlanner() {
   const [focusMealPreferencesToken, setFocusMealPreferencesToken] = useState(0);
   const [selectedStoreId, setSelectedStoreId] = useState<string>();
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
+  const marketSearchRequestRef = useRef(0);
+  const rankRequestRef = useRef(0);
+  const geolocationRequestRef = useRef(0);
+
+  const marketSearchLoading = marketSearchState.status === "loading";
+  const rankLoading = recommendationState.status === "loading";
 
   const locationErrors = useMemo(
     () => validateLocationFields(form, locationValidationMode === "zip"),
     [form, locationValidationMode],
   );
   const mealErrors = useMemo(() => validateMealFields(form), [form]);
+  const rankLocationErrors = useMemo(
+    () =>
+      activeLocationRequest
+        ? validateLocationFields(form, activeLocationRequest.mode === "zip")
+        : {},
+    [form, activeLocationRequest],
+  );
   const displayedErrors: FieldErrors = {
     ...(hasAttemptedLocationSearch ? locationErrors : {}),
-    ...(hasAttemptedRanking ? mealErrors : {}),
+    ...(hasAttemptedRanking ? { ...mealErrors, ...rankLocationErrors } : {}),
   };
 
   useEffect(() => {
@@ -100,6 +118,9 @@ export function useMealPlanner() {
   );
 
   function resetLocationDependentState() {
+    marketSearchRequestRef.current += 1;
+    rankRequestRef.current += 1;
+    geolocationRequestRef.current += 1;
     setMarketSearchState(initialMarketSearchState);
     setRecommendationState(initialRecommendationState);
     setActiveLocationRequest(undefined);
@@ -113,6 +134,8 @@ export function useMealPlanner() {
     payload: MarketSearchRequest,
     request: ActiveLocationRequest,
   ) {
+    const requestId = ++marketSearchRequestRef.current;
+    rankRequestRef.current += 1;
     setMarketSearchState({ status: "loading" });
     setRecommendationState(initialRecommendationState);
     trackClientEvent("location_search_started", {
@@ -129,15 +152,33 @@ export function useMealPlanner() {
       });
       const result = (await response.json()) as MarketSearchResponse;
 
+      if (requestId !== marketSearchRequestRef.current) {
+        return;
+      }
+
       if (!result.ok) {
+        const mapped = mapMarketSearchApiError({
+          httpStatus: response.status,
+          error: result.error,
+          providerConfigured: result.providerConfigured,
+        });
         setMarketSearchState({
           status: "error",
           providerConfigured: result.providerConfigured,
-          error: result.error,
+          error: mapped.body,
+          errorTitle: mapped.title,
+          errorHint: mapped.hint,
         });
         trackClientEvent("location_search_failed", {
           mode: request.mode,
-          error_code: result.providerConfigured === false ? "provider_unconfigured" : "not_found",
+          error_code:
+            response.status === 400
+              ? "validation"
+              : result.providerConfigured === false
+                ? "provider_unconfigured"
+                : response.status === 404
+                  ? "not_found"
+                  : "server",
         });
         return;
       }
@@ -158,6 +199,10 @@ export function useMealPlanner() {
         ),
       });
     } catch (error: unknown) {
+      if (requestId !== marketSearchRequestRef.current) {
+        return;
+      }
+
       setMarketSearchState({
         status: "error",
         error:
@@ -175,6 +220,7 @@ export function useMealPlanner() {
   function handleZipSearch() {
     setLocationValidationMode("zip");
     setHasAttemptedLocationSearch(true);
+    geolocationRequestRef.current += 1;
 
     if (Object.keys(validateLocationFields(form, true)).length > 0) {
       return;
@@ -192,6 +238,7 @@ export function useMealPlanner() {
   function handleBrowserLocationSearch() {
     setLocationValidationMode("browser");
     setHasAttemptedLocationSearch(true);
+    geolocationRequestRef.current += 1;
 
     if (Object.keys(validateLocationFields(form, false)).length > 0) {
       return;
@@ -208,8 +255,14 @@ export function useMealPlanner() {
     setMarketSearchState({ status: "loading" });
     setRecommendationState(initialRecommendationState);
 
+    const geolocationRequestId = ++geolocationRequestRef.current;
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (geolocationRequestId !== geolocationRequestRef.current) {
+          return;
+        }
+
         void runMarketSearch(
           {
             zipCode: "",
@@ -225,6 +278,10 @@ export function useMealPlanner() {
         );
       },
       () => {
+        if (geolocationRequestId !== geolocationRequestRef.current) {
+          return;
+        }
+
         setMarketSearchState({
           status: "error",
           error:
@@ -238,6 +295,14 @@ export function useMealPlanner() {
     setHasAttemptedRanking(true);
 
     if (!market || !activeLocationRequest) {
+      return;
+    }
+
+    const locationFieldErrors = validateLocationFields(
+      form,
+      activeLocationRequest.mode === "zip",
+    );
+    if (Object.keys(locationFieldErrors).length > 0) {
       return;
     }
 
@@ -257,6 +322,8 @@ export function useMealPlanner() {
       recipe_source: preferences.recipeSource,
     });
 
+    const requestId = ++rankRequestRef.current;
+
     const recipeSource = form.externalRecipeOptIn ? "themealdb" : "internal-library";
 
     const payload: RecommendationRequest = {
@@ -264,6 +331,7 @@ export function useMealPlanner() {
       recipeSource,
       recipeSourceOptIn: form.externalRecipeOptIn,
       selectedIngredientIds,
+      market: trimMarketForRankingPassThrough(market),
       ...(activeLocationRequest.mode === "zip"
         ? { zipCode: activeLocationRequest.zipCode }
         : {
@@ -282,16 +350,35 @@ export function useMealPlanner() {
       });
       const result = (await response.json()) as RecommendationResponse;
 
-      if (!result.ok) {
-        setRecommendationState({ status: "error", error: result.error });
-        trackClientEvent("rank_meals_failed", { error_code: "not_found" });
+      if (requestId !== rankRequestRef.current) {
         return;
       }
 
-      setMarketSearchState({
-        status: "ready",
-        market: result.experience.market,
-      });
+      if (!result.ok) {
+        const mapped = mapRecommendationApiError({
+          httpStatus: response.status,
+          error: result.error,
+          providerConfigured: result.providerConfigured,
+        });
+        setRecommendationState({
+          status: "error",
+          error: mapped.body,
+          errorTitle: mapped.title,
+          errorHint: mapped.hint,
+        });
+        trackClientEvent("rank_meals_failed", {
+          error_code:
+            response.status === 400
+              ? "validation"
+              : response.status === 404
+                ? "not_found"
+                : response.status >= 500
+                  ? "server"
+                  : "not_found",
+        });
+        return;
+      }
+
       setRecommendationState({
         status: "ready",
         recommendations: result.experience.recommendations,
@@ -308,6 +395,10 @@ export function useMealPlanner() {
         ),
       });
     } catch (error: unknown) {
+      if (requestId !== rankRequestRef.current) {
+        return;
+      }
+
       setRecommendationState({
         status: "error",
         error:
@@ -363,6 +454,8 @@ export function useMealPlanner() {
     displayedErrors,
     marketSearchState,
     recommendationState,
+    marketSearchLoading,
+    rankLoading,
     activeLocationRequest,
     market,
     recommendations,

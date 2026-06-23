@@ -430,7 +430,7 @@ export function InternalDetailsModal({
             <h4>Environment &amp; architecture glossary</h4>
             <p>
               <strong>GEOCODIO_API_KEY</strong> enables live ZIP geocoding. Without it,
-              Yum4Less falls back to a local ZIP lookup table for the MVP area.
+              Yum4Less falls back to a local ZIP lookup table for beta v1 dev and CI.
             </p>
             <p>
               <strong>DATABASE_URL</strong> lets the app read the curated Postgres
@@ -450,12 +450,12 @@ export function InternalDetailsModal({
             <p>
               <strong>Official pricing preview</strong> is an early lookup for a small
               tracked ingredient set. It measures future coverage but does not drive
-              ranked meal pricing in this MVP.
+              ranked meal pricing in beta v1.
             </p>
             <p>
               <strong>Provider promotion readiness</strong> is a checklist of gates that
               would need to pass before provider preview pricing could influence ranked
-              meal totals. The MVP promotion lock stays on.
+              meal totals. Production rollout gates stay on for non-Kroger/Aldi chains.
             </p>
           </section>
         </div>
@@ -493,7 +493,7 @@ function formatDataSource(source: string) {
 function formatRecipeSourceAvailability(availability: string) {
   switch (availability) {
     case "active":
-      return "Active in MVP";
+      return "Active in beta v1";
     case "research-only":
       return "Research only";
     case "blocked-terms":
@@ -611,7 +611,7 @@ function formatRankedPricingSource(source: string) {
 function formatPromotionReadinessStatus(status: string) {
   switch (status) {
     case "ready-but-disabled":
-      return "Ready on paper, MVP lock still on";
+      return "Ready on paper, rollout gate still on";
     case "approaching":
       return "Approaching promotion readiness";
     case "not-ready":

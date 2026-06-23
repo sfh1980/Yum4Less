@@ -28,7 +28,7 @@ try {
     if (Test-FrontendOrchestrationPath -Path $normalized) {
         [void]$lines.Add("Frontend/trust file edited: $normalized")
         [void]$lines.Add('- Run npm test before done.')
-        [void]$lines.Add('- If trust labels, map, carousel, or modal copy changed: npm run dev, then Playwright MCP on localhost:3000 with ZIP 23111.')
+        [void]$lines.Add('- If trust labels, map, carousel, or modal copy changed: npm run dev, then Playwright MCP on localhost:3000 with coordinates 37.6085, -77.3739 primary (ZIP 23111 fallback-path only).')
         [void]$lines.Add('- Consider @web-frontend-standards; use @verifier when trust wording or rollout claims changed.')
     }
 

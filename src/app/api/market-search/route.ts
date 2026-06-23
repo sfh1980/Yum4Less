@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
-import {
-  API_LIMITS,
-  clampInteger,
-  isValidCoordinatePair,
-  isValidZipCode,
-  parseJsonBody,
-} from "@/lib/api-request";
+import { parseJsonBody } from "@/lib/api-request";
+import { parseMarketSearchRequest } from "@/contracts/market-search";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
 import { sanitizeMarketSummaryForPublicApi } from "@/lib/public-api-response-sanitizer";
 import { resolveLocationInput } from "@/lib/location-resolution";
@@ -23,8 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: parsedBody.error }, { status: 400 });
   }
 
-  const body = parsedBody.body as Partial<MarketSearchPayload>;
-  const payload = validateMarketSearchPayload(body);
+  const payload = parseMarketSearchRequest(parsedBody.body);
 
   if (!payload) {
     return NextResponse.json(
@@ -66,30 +60,4 @@ export async function POST(request: Request) {
       "Market search is temporarily unavailable.",
     );
   }
-}
-
-type MarketSearchPayload = {
-  zipCode: string;
-  radiusMiles: number;
-  latitude?: number;
-  longitude?: number;
-};
-
-function validateMarketSearchPayload(
-  body: Partial<MarketSearchPayload>,
-): MarketSearchPayload | undefined {
-  const radiusMiles = clampInteger(body.radiusMiles, API_LIMITS.radiusMiles);
-  const hasCoordinates = isValidCoordinatePair(body);
-  const zipCode = typeof body.zipCode === "string" ? body.zipCode.trim() : "";
-
-  if (radiusMiles === undefined || (!hasCoordinates && !isValidZipCode(zipCode))) {
-    return undefined;
-  }
-
-  return {
-    zipCode: hasCoordinates && !isValidZipCode(zipCode) ? "" : zipCode,
-    radiusMiles,
-    latitude: body.latitude,
-    longitude: body.longitude,
-  };
 }

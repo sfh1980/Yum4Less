@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildOsmCatalogStoreId,
   discoverFoodRetailStoresNearLocation,
@@ -6,6 +6,7 @@ import {
   isAllowedGroceryOsmShopTag,
   parseOverpassElements,
   resolveOsmFoodRetailDisplayName,
+  resolveOverpassEndpoints,
 } from "@/lib/osm-food-retail-discovery";
 import { getProviderRolloutForStore } from "@/lib/provider-rollout";
 
@@ -130,5 +131,72 @@ describe("osm food retail discovery", () => {
 
     expect(stores.map((store) => store.name)).toEqual(["Food Lion", "Wawa"]);
     expect(stores.every((store) => isAllowedGroceryOsmShopTag(store.shopTag))).toBe(true);
+  });
+
+  it("honors YUM4LESS_OSM_OVERPASS_URL as the first endpoint", () => {
+    const previous = process.env.YUM4LESS_OSM_OVERPASS_URL;
+    process.env.YUM4LESS_OSM_OVERPASS_URL = "https://overpass.kumi.systems/api/interpreter";
+
+    try {
+      expect(resolveOverpassEndpoints()[0]).toBe(
+        "https://overpass.kumi.systems/api/interpreter",
+      );
+    } finally {
+      if (previous === undefined) {
+        delete process.env.YUM4LESS_OSM_OVERPASS_URL;
+      } else {
+        process.env.YUM4LESS_OSM_OVERPASS_URL = previous;
+      }
+    }
+  });
+
+  it("retries Overpass fetch on timeout before returning empty stores", async () => {
+    const previousAttempts = process.env.YUM4LESS_OSM_OVERPASS_MAX_ATTEMPTS;
+    process.env.YUM4LESS_OSM_OVERPASS_MAX_ATTEMPTS = "2";
+
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("TimeoutError"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          elements: [
+            {
+              type: "node",
+              id: 900001,
+              lat: 37.61,
+              lon: -77.33,
+              tags: {
+                brand: "Aldi",
+                shop: "supermarket",
+                "addr:city": "Mechanicsville",
+                "addr:state": "VA",
+              },
+            },
+          ],
+        }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const result = await discoverFoodRetailStoresNearLocation({
+        latitude: 37.6085,
+        longitude: -77.3321,
+        radiusMiles: 5,
+        zipCode: "23112",
+        useFixture: false,
+      });
+
+      expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(result.stores.some((store) => store.name === "Aldi")).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+      if (previousAttempts === undefined) {
+        delete process.env.YUM4LESS_OSM_OVERPASS_MAX_ATTEMPTS;
+      } else {
+        process.env.YUM4LESS_OSM_OVERPASS_MAX_ATTEMPTS = previousAttempts;
+      }
+    }
   });
 });
