@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 import type { CatalogRecipeRecord } from "@/lib/market-catalog-types";
 import {
   countRankableThemealdbRecipes,
@@ -68,14 +69,27 @@ describe("shouldRefreshThemealdbRecipesOnSearch", () => {
     ).toBe(false);
   });
 
-  it("requests refresh when no rankable recipes exist", () => {
+  it("requests refresh when no rankable recipes exist and imports cache is stale", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-10T12:00:00Z"));
+
+    expect(
+      shouldRefreshThemealdbRecipesOnSearch({
+        recipes: [themealdbRecipe],
+        saleIngredientIds: new Set(["onion"]),
+        latestImportAt: new Date("2026-06-08T12:00:00Z"),
+      }),
+    ).toBe(true);
+  });
+
+  it("skips refresh when no rankable recipes exist but imports cache is fresh", () => {
     expect(
       shouldRefreshThemealdbRecipesOnSearch({
         recipes: [themealdbRecipe],
         saleIngredientIds: new Set(["onion"]),
         latestImportAt: new Date(),
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("requests refresh when cache is stale even if recipes exist", () => {
@@ -117,7 +131,7 @@ describe("ensureThemealdbRecipesForSearch", () => {
     vi.clearAllMocks();
     delete process.env.YUM4LESS_ENABLE_API_DB_WRITES;
     delete process.env.YUM4LESS_ENABLE_THEMEALDB_SEARCH_IMPORT;
-    process.env.NODE_ENV = "test";
+    stubTestNodeEnv("test");
   });
 
   it("skips Postgres writes when public API write flag is unset", async () => {
@@ -132,7 +146,7 @@ describe("ensureThemealdbRecipesForSearch", () => {
   });
 
   it("never imports from the search path in production", async () => {
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     process.env.YUM4LESS_ENABLE_THEMEALDB_SEARCH_IMPORT = "1";
     process.env.YUM4LESS_ENABLE_API_DB_WRITES = "1";
 

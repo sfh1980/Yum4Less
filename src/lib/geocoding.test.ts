@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 import { resolveZipLocation } from "@/lib/geocoding";
 
 const originalGeocodioKey = process.env.GEOCODIO_API_KEY;
@@ -12,7 +13,7 @@ describe("resolveZipLocation", () => {
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      stubTestNodeEnv(originalNodeEnv);
     }
     if (originalCi === undefined) {
       delete process.env.CI;
@@ -28,7 +29,7 @@ describe("resolveZipLocation", () => {
 
   it("returns the seeded local ZIP when no API key is configured in development", async () => {
     delete process.env.GEOCODIO_API_KEY;
-    process.env.NODE_ENV = "development";
+    stubTestNodeEnv("development");
     delete process.env.CI;
 
     const result = await resolveZipLocation("23111");
@@ -43,7 +44,7 @@ describe("resolveZipLocation", () => {
 
   it("refuses seed ZIP fallback in production when GEOCODIO_API_KEY is missing", async () => {
     delete process.env.GEOCODIO_API_KEY;
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     delete process.env.CI;
     delete process.env.GITHUB_ACTIONS;
 
@@ -58,7 +59,7 @@ describe("resolveZipLocation", () => {
 
   it("allows seed ZIP fallback in production only under CI runners", async () => {
     delete process.env.GEOCODIO_API_KEY;
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     process.env.CI = "true";
 
     const result = await resolveZipLocation("23111");
@@ -71,7 +72,7 @@ describe("resolveZipLocation", () => {
 
   it("refuses seed fallback in production when Geocodio fails", async () => {
     process.env.GEOCODIO_API_KEY = "test-key";
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     delete process.env.CI;
     delete process.env.GITHUB_ACTIONS;
 

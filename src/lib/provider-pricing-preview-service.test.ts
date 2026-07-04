@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 
 const { getStoreDiscoveryProviders } = vi.hoisted(() => ({
   getStoreDiscoveryProviders: vi.fn(),
@@ -128,7 +129,7 @@ describe("buildProviderPricingPreviews", () => {
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      stubTestNodeEnv(originalNodeEnv);
     }
   });
 
@@ -386,7 +387,7 @@ describe("buildProviderPricingPreviews", () => {
   });
 
   it("blocks snapshot persistence in production even when the flag is set", async () => {
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     process.env.YUM4LESS_ENABLE_API_DB_WRITES = "1";
 
     const searchPricingPreview = vi.fn().mockResolvedValue({

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 import {
   assertTestDbWipeAllowed,
   isTestDbWipeAllowed,
@@ -11,18 +12,18 @@ describe("test db wipe policy", () => {
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      stubTestNodeEnv(originalNodeEnv);
     }
   });
 
   it("allows wipes only when NODE_ENV is test", () => {
-    process.env.NODE_ENV = "test";
+    stubTestNodeEnv("test");
     expect(isTestDbWipeAllowed()).toBe(true);
     expect(() => assertTestDbWipeAllowed("deleteAllPriceObservations")).not.toThrow();
   });
 
   it("blocks wipes in development", () => {
-    process.env.NODE_ENV = "development";
+    stubTestNodeEnv("development");
     expect(isTestDbWipeAllowed()).toBe(false);
     expect(() => assertTestDbWipeAllowed("deleteAllPriceObservations")).toThrow(
       /restricted to test environments/i,
@@ -30,7 +31,7 @@ describe("test db wipe policy", () => {
   });
 
   it("blocks wipes in production", () => {
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     expect(isTestDbWipeAllowed()).toBe(false);
     expect(() => assertTestDbWipeAllowed("deleteAllPriceObservations")).toThrow(
       /restricted to test environments/i,

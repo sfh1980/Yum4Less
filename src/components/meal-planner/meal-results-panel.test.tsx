@@ -2,8 +2,10 @@
 
 import { createElement } from "react";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
+import { buildTestMarket } from "@/components/meal-planner/test-fixtures";
 import type { MealRecommendation } from "@/lib/recommendation-service";
 import type {
   FormState,
@@ -20,47 +22,14 @@ const form: FormState = {
   zipCode: "23111",
   radiusMiles: "5",
   budget: "25",
-  maxIngredients: "12",
-  dinnersWanted: "3",
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
-  planningMode: "ingredient-first",
-  externalRecipeOptIn: false,
+  recipeSource: "internal-library",
+  theme: "system" as const,
+  selectedStoreIds: ["kroger-mechanicsville"],
 };
 
-const market = {
-  searchedZipCode: "23111",
-  locationLabel: "Mechanicsville, VA",
-  searchLatitude: 37.6085,
-  searchLongitude: -77.3321,
-  radiusMiles: 5,
-  nearbyStores: [],
-  recommendationReadyStoreCount: 1,
-  providerRollout: [],
-  providerStoreSearches: [],
-  providerPricingPreviews: [],
-  providerCoverageRollup: {
-    overallCoverageStatus: "limited" as const,
-    trustGate: "monitoring" as const,
-    rankedPricingSource: "weekly-ad-cache" as const,
-    totalTrackedIngredients: 1,
-    matchedIngredientCount: 1,
-    unmatchedIngredientCount: 0,
-    averageMatchConfidence: 0.8,
-    usesCachedPreview: false,
-    ingredientSummaries: [],
-    message: "Fixture coverage.",
-  },
-  providerPromotionReadiness: [],
-  providerPriceObservationSync: [],
-  weeklyAdIngestionStatus: [],
-  weeklyAdPromotionReadiness: [],
-  lookupSource: "seed-zip" as const,
-  lookupProviderConfigured: false,
-  dataSource: "database" as const,
-  saleIngredientChoices: [],
-  message: "Fixture market.",
-};
+const market = buildTestMarket();
 
 const recommendation: MealRecommendation = {
   title: "Weeknight Lemon Chicken",
@@ -84,7 +53,7 @@ const recommendation: MealRecommendation = {
 };
 
 describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
-  it("renders both the notice and recipe cards when recommendations are non-empty", () => {
+  it("renders both the notice and recipe cards when recommendations are non-empty", async () => {
     const marketSearchState: MarketSearchState = { status: "ready", market };
     const recommendationState: RecommendationState = {
       status: "ready",
@@ -104,7 +73,6 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
         recommendations: [recommendation],
         shopperNotice: recommendationState.shopperNotice,
         marketBlocked: false,
-        onOpenTrustExplainer: () => undefined,
       }),
     );
 
@@ -114,6 +82,9 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText(/weekly ingest schedule/i)).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Weeknight Lemon Chicken" }),
+    );
     expect(screen.getByTestId("meal-card")).toHaveTextContent(
       "Weeknight Lemon Chicken",
     );
@@ -142,7 +113,6 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
         recommendations: [],
         shopperNotice: recommendationState.shopperNotice,
         marketBlocked: false,
-        onOpenTrustExplainer: () => undefined,
       }),
     );
 
@@ -168,7 +138,6 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
         market,
         recommendations: [],
         marketBlocked: false,
-        onOpenTrustExplainer: () => undefined,
       }),
     );
 
@@ -198,7 +167,6 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
         recommendations: [],
         shopperNotice: recommendationState.shopperNotice,
         marketBlocked: false,
-        onOpenTrustExplainer: () => undefined,
       }),
     );
 
@@ -210,29 +178,71 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
     expect(screen.queryByText("Too much store data to rank at once")).not.toBeInTheDocument();
   });
 
+  it("renders honest empty-meal copy and TheMealDB schedule info together when rank returns zero meals (C1)", () => {
+    const marketSearchState: MarketSearchState = { status: "ready", market };
+    const recommendationState: RecommendationState = {
+      status: "ready",
+      recommendations: [],
+      shopperNotice: {
+        title: "No recipe ideas for those ingredients",
+        body: "Try selecting more sale items, widening your budget or ingredient limit.",
+      },
+      supplementaryShopperNotices: [
+        {
+          title: "TheMealDB imports refresh on a schedule",
+          body: "Sale-matched TheMealDB meals use saved imports from the scheduled ingest job.",
+        },
+      ],
+    };
+
+    render(
+      createElement(MealResultsPanel, {
+        form,
+        marketSearchState,
+        recommendationState,
+        market,
+        recommendations: [],
+        shopperNotice: recommendationState.shopperNotice,
+        supplementaryShopperNotices: recommendationState.supplementaryShopperNotices,
+        marketBlocked: false,
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "No recipe ideas for those ingredients" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "TheMealDB imports refresh on a schedule" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "No recipes match the current filters" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows Tier C badge copy when ranked stores are unavailable", () => {
-    const blockedMarket = {
-      ...market,
+    const blockedMarket = buildTestMarket({
       recommendationReadyStoreCount: 0,
+      saleIngredientChoices: [],
       nearbyStores: [
         {
           id: "context-1",
           name: "Context Store",
-          kind: "grocery" as const,
+          kind: "grocery",
           latitude: 37.6,
           longitude: -77.3,
           distanceMiles: 1,
-          chain: "other" as const,
+          chain: "unknown",
           chainLabel: "Other",
-          rolloutStatus: "context-only" as const,
+          rolloutStatus: "limited-coverage",
           recommendationEnabled: false,
           rolloutNote: "Context only.",
-          locationProvenance: "osm-search" as const,
-          locationBadge: "OSM",
+          locationProvenance: "osm-context",
+          locationBadge: "Map context pin",
           locationNote: "Fixture.",
         },
       ],
-    };
+      message: "Map context only — ranked meal estimates are limited coverage here.",
+    });
     const marketSearchState: MarketSearchState = {
       status: "ready",
       market: blockedMarket,
@@ -247,7 +257,6 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
         market: blockedMarket,
         recommendations: [],
         marketBlocked: true,
-        onOpenTrustExplainer: () => undefined,
       }),
     );
 
@@ -258,5 +267,61 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
         name: "Meal estimates not available for this area yet",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("uses redesign flow copy in the idle ready-when-you-are state", () => {
+    const marketSearchState: MarketSearchState = {
+      status: "ready",
+      market,
+    };
+    const recommendationState: RecommendationState = { status: "idle" };
+
+    render(
+      createElement(MealResultsPanel, {
+        form,
+        marketSearchState,
+        recommendationState,
+        market,
+        recommendations: [],
+        marketBlocked: false,
+      }),
+    );
+
+    expect(
+      screen.getByText(/Suggest recipes for my store\(s\)/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Step 3/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Suggest recipes using my selected ingredients/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not render the removed trust explainer modal trigger", () => {
+    const marketSearchState: MarketSearchState = {
+      status: "ready",
+      market,
+    };
+    const recommendationState: RecommendationState = {
+      status: "ready",
+      recommendations: [recommendation],
+    };
+
+    render(
+      createElement(MealResultsPanel, {
+        form,
+        marketSearchState,
+        recommendationState,
+        market,
+        recommendations: [recommendation],
+        marketBlocked: false,
+      }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "How to read these labels" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "How to read these results" }),
+    ).not.toBeInTheDocument();
   });
 });

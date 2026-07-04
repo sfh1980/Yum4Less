@@ -1,24 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { buildPricingTrustHeadsUp } from "@/lib/pricing-trust-heads-up";
+import { buildTestMarketSummaryPick, buildTestProviderCoverageRollup } from "@/lib/test-fixtures/contract-fixtures";
 
-const baseMarket = {
-  providerStoreSearches: [],
-  providerPricingPreviews: [],
-  providerCoverageRollup: {
-    rankedPricingSource: "none" as const,
+const baseMarket = buildTestMarketSummaryPick(
+  [
+    "providerStoreSearches",
+    "providerPricingPreviews",
+    "providerCoverageRollup",
+    "lookupSource",
+    "dataSource",
+    "lookupProviderConfigured",
+    "recommendationReadyStoreCount",
+  ],
+  {
+    providerCoverageRollup: buildTestProviderCoverageRollup({ rankedPricingSource: "none" }),
+    lookupSource: "geocodio",
+    lookupProviderConfigured: true,
+    recommendationReadyStoreCount: 0,
   },
-  lookupSource: "geocodio" as const,
-  dataSource: "database" as const,
-  lookupProviderConfigured: true,
-  recommendationReadyStoreCount: 0,
-};
+);
 
 describe("buildPricingTrustHeadsUp", () => {
   it("returns null when no store context exists", () => {
     expect(buildPricingTrustHeadsUp(baseMarket)).toBeNull();
   });
 
-  it("returns beta baseline when store searches exist without fallback signals", () => {
+  it("returns trust baseline when store searches exist without fallback signals", () => {
     const headsUp = buildPricingTrustHeadsUp({
       ...baseMarket,
       providerStoreSearches: [
@@ -28,9 +35,9 @@ describe("buildPricingTrustHeadsUp", () => {
       ],
     });
 
-    expect(headsUp?.title).toBe("Beta — heads up about these prices");
-    expect(headsUp?.message).toContain("Yum4Less is in beta");
-    expect(headsUp?.message).toContain("production release focuses on Kroger-family and Aldi");
+    expect(headsUp?.title).toBe("Heads up about these prices");
+    expect(headsUp?.message).toContain("Meal prices are estimates");
+    expect(headsUp?.message).toContain("not live checkout");
     expect(headsUp?.message).toContain("estimates");
   });
 
@@ -44,10 +51,10 @@ describe("buildPricingTrustHeadsUp", () => {
       ],
     });
 
-    expect(headsUp?.title).toBe("Beta — heads up about these prices");
+    expect(headsUp?.title).toBe("Heads up about these prices");
     expect(headsUp?.message).toContain("backup data");
     expect(headsUp?.message).toContain("estimates");
-    expect(headsUp?.message).toContain("Yum4Less is in beta");
+    expect(headsUp?.message).toContain("Meal prices are estimates");
   });
 
   it("surfaces non-live ranked pricing when stores are recommendation-ready", () => {
@@ -55,11 +62,12 @@ describe("buildPricingTrustHeadsUp", () => {
       ...baseMarket,
       recommendationReadyStoreCount: 1,
       providerCoverageRollup: {
+        ...baseMarket.providerCoverageRollup,
         rankedPricingSource: "weekly-ad-cache",
       },
     });
 
-    expect(headsUp?.message).toContain("recently checked online store prices");
+    expect(headsUp?.message).toContain("saved store prices from ads and online checks");
   });
 
   it("surfaces limited ZIP lookup fallback", () => {

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 import {
   isThemealdbRecipeCacheFresh,
   isThemealdbSearchImportEnabled,
@@ -10,7 +11,7 @@ describe("themealdb-recipe-cache-policy", () => {
   const originalSearchImport = process.env.YUM4LESS_ENABLE_THEMEALDB_SEARCH_IMPORT;
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    stubTestNodeEnv(originalNodeEnv);
     if (originalSearchImport === undefined) {
       delete process.env.YUM4LESS_ENABLE_THEMEALDB_SEARCH_IMPORT;
     } else {
@@ -29,7 +30,7 @@ describe("themealdb-recipe-cache-policy", () => {
   });
 
   it("defaults search import on in non-production unless explicitly disabled", () => {
-    process.env.NODE_ENV = "test";
+    stubTestNodeEnv("test");
     delete process.env.YUM4LESS_ENABLE_THEMEALDB_SEARCH_IMPORT;
     expect(isThemealdbSearchImportEnabled()).toBe(true);
 
@@ -38,7 +39,7 @@ describe("themealdb-recipe-cache-policy", () => {
   });
 
   it("requires explicit opt-in for search import in production", () => {
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     delete process.env.YUM4LESS_ENABLE_THEMEALDB_SEARCH_IMPORT;
     expect(isThemealdbSearchImportEnabled()).toBe(false);
 

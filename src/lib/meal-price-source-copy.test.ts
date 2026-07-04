@@ -3,6 +3,7 @@ import {
   buildMealPriceSourceSummary,
   buildResultsPanelPriceSourceLine,
 } from "@/lib/meal-price-source-copy";
+import { buildTestProviderCoverageRollup } from "@/lib/test-fixtures/contract-fixtures";
 
 const baseMeal = {
   primaryStore: "Kroger Mechanicsville",
@@ -17,8 +18,8 @@ const baseMeal = {
       freshnessDaysAgo: 1,
       saleConfidence: {
         level: "advertised-recent" as const,
-        label: "Kroger weekly-ad price — directional",
-        note: "Weekly ad pull.",
+        label: "Sale price — estimate only",
+        note: "Saved store price.",
       },
     },
   ],
@@ -26,26 +27,24 @@ const baseMeal = {
 
 const baseMarket = {
   dataSource: "database" as const,
-  providerCoverageRollup: {
-    rankedPricingSource: "weekly-ad-cache" as const,
-  },
+  providerCoverageRollup: buildTestProviderCoverageRollup(),
 };
 
 describe("buildMealPriceSourceSummary", () => {
-  it("describes weekly-ad cache pricing in layman terms on the card", () => {
+  it("describes saved sale pricing in layman terms on the card", () => {
     const result = buildMealPriceSourceSummary({
       meal: baseMeal,
       market: baseMarket,
     });
 
     expect(result.summary).toBe(
-      "Directional saved weekly-ad prices at Kroger Mechanicsville — not live checkout; confirm in store.",
+      "Saved sale prices at Kroger Mechanicsville — not live checkout; confirm in store.",
     );
-    expect(result.detail).toContain("weekly-ad");
+    expect(result.detail).toContain("saved sale prices");
     expect(result.summary).not.toMatch(/postgres|provenance|api|seed/i);
   });
 
-  it("marks directional matches when sale confidence is weak", () => {
+  it("marks limited saved prices when sale confidence is weak", () => {
     const result = buildMealPriceSourceSummary({
       meal: {
         ...baseMeal,
@@ -54,7 +53,7 @@ describe("buildMealPriceSourceSummary", () => {
             ...baseMeal.shoppingPlan[0],
             saleConfidence: {
               level: "directional-provider-match",
-              label: "Estimated Kroger weekly ad match",
+              label: "Estimated sale match — verify in store",
               note: "Directional match.",
             },
           },
@@ -63,7 +62,7 @@ describe("buildMealPriceSourceSummary", () => {
       market: baseMarket,
     });
 
-    expect(result.summary).toMatch(/^Directional saved weekly-ad prices/);
+    expect(result.summary).toMatch(/^Limited saved sale prices/);
   });
 
   it("uses multi-store phrasing when the plan spans stores", () => {
@@ -103,9 +102,9 @@ describe("buildMealPriceSourceSummary", () => {
 });
 
 describe("buildResultsPanelPriceSourceLine", () => {
-  it("returns a panel header line for weekly-ad ranked pricing", () => {
+  it("returns a panel header line for saved sale pricing", () => {
     expect(buildResultsPanelPriceSourceLine(baseMarket)).toBe(
-      "Ranked meal totals below use saved weekly-ad prices — not live checkout.",
+      "Dinner totals below use saved sale prices — not live checkout.",
     );
   });
 
@@ -113,9 +112,7 @@ describe("buildResultsPanelPriceSourceLine", () => {
     expect(
       buildResultsPanelPriceSourceLine({
         dataSource: "unavailable",
-        providerCoverageRollup: {
-          rankedPricingSource: "weekly-ad-cache",
-        },
+        providerCoverageRollup: buildTestProviderCoverageRollup(),
       }),
     ).toBe(
       "Saved store prices are unavailable — meal totals below are estimates only.",

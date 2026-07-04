@@ -1,13 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 
 const { resolveLocationInput, getRecommendationExperience } = vi.hoisted(() => ({
   resolveLocationInput: vi.fn(),
   getRecommendationExperience: vi.fn(),
 }));
 
-vi.mock("@/lib/location-resolution", () => ({
-  resolveLocationInput,
-}));
+vi.mock("@/lib/location-resolution", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/location-resolution")>(
+    "@/lib/location-resolution",
+  );
+
+  return {
+    ...actual,
+    resolveLocationInput,
+  };
+});
 
 vi.mock("@/lib/recommendation-service", async () => {
   const actual = await vi.importActual<typeof import("@/lib/recommendation-service")>(
@@ -47,7 +55,7 @@ describe("POST /api/recommendations", () => {
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      stubTestNodeEnv(originalNodeEnv);
     }
   });
 
@@ -94,8 +102,6 @@ describe("POST /api/recommendations", () => {
     ["budget", 251],
     ["maxIngredients", 2],
     ["maxIngredients", 21],
-    ["dinnersWanted", 0],
-    ["dinnersWanted", 13],
   ])("rejects out-of-bounds %s=%s", async (field, value) => {
     const response = await POST(
       new Request("http://localhost/api/recommendations", {
@@ -112,94 +118,13 @@ describe("POST /api/recommendations", () => {
     expect(resolveLocationInput).not.toHaveBeenCalled();
   });
 
-  it("accepts TheMealDB recipe source when recipeSourceOptIn is true", async () => {
-    resolveLocationInput.mockResolvedValue({
-      ok: true,
-      location: {
-        zipCode: "23111",
-        city: "Mechanicsville",
-        state: "VA",
-        latitude: 37.6085,
-        longitude: -77.3321,
-        source: "seed",
-      },
-      providerConfigured: false,
-    });
-    getRecommendationExperience.mockResolvedValue({
-      market: {
-        searchedZipCode: "23111",
-        locationLabel: "Mechanicsville, VA",
-        searchLatitude: 37.6085,
-        searchLongitude: -77.3321,
-        radiusMiles: 5,
-        nearbyStores: [],
-        recommendationReadyStoreCount: 1,
-        providerRollout: [],
-        providerStoreSearches: [],
-        providerPricingPreviews: [],
-        providerCoverageRollup: {
-          overallCoverageStatus: "partial",
-          trustGate: "directional",
-          rankedPricingSource: "weekly-ad",
-          totalTrackedIngredients: 5,
-          matchedIngredientCount: 3,
-          unmatchedIngredientCount: 2,
-          averageMatchConfidence: 0.8,
-          usesCachedPreview: false,
-          ingredientSummaries: [],
-          message: "Weekly-ad prices",
-        },
-        providerPromotionReadiness: [],
-        providerPriceObservationSync: [],
-        weeklyAdIngestionStatus: [],
-        weeklyAdPromotionReadiness: [],
-        lookupSource: "seed",
-        lookupProviderConfigured: false,
-        dataSource: "database",
-        saleIngredientChoices: [],
-      },
-      recommendations: [
-        {
-          title: "Teriyaki Chicken Casserole",
-          recipeAttribution: "Recipe from TheMealDB",
-          recipeAttributionUrl: "https://www.themealdb.com/meal/52772",
-        },
-      ],
-    });
-
+  it("rejects non-internal recipe sources on the public API", async () => {
     const response = await POST(
       new Request("http://localhost/api/recommendations", {
         method: "POST",
         body: JSON.stringify({
           ...validPayload,
           recipeSource: "themealdb",
-          recipeSourceOptIn: true,
-          planningMode: "ingredient-first",
-          selectedIngredientIds: ["chicken-thighs"],
-        }),
-      }),
-    );
-
-    expect(response.status).toBe(200);
-    expect(getRecommendationExperience).toHaveBeenCalledWith(
-      expect.objectContaining({
-        recipeSource: "themealdb",
-        recipeSourceOptIn: true,
-      }),
-      expect.any(Object),
-      false,
-      undefined,
-    );
-  });
-
-  it("rejects TheMealDB recipe source without explicit opt-in", async () => {
-    const response = await POST(
-      new Request("http://localhost/api/recommendations", {
-        method: "POST",
-        body: JSON.stringify({
-          ...validPayload,
-          recipeSource: "themealdb",
-          recipeSourceOptIn: false,
         }),
       }),
     );
@@ -266,7 +191,6 @@ describe("POST /api/recommendations", () => {
 
   it.each([
     ["selectedIngredientIds", "not-an-array"],
-    ["selectedIngredientIds", Array.from({ length: 41 }, (_, index) => `id-${index}`)],
     ["selectedIngredientIds", ["valid-id", 123]],
     ["selectedIngredientIds", ["has spaces"]],
     ["selectedIngredientIds", ["UPPERCASE"]],
@@ -289,6 +213,84 @@ describe("POST /api/recommendations", () => {
       error: "Recommendation request payload is invalid.",
     });
     expect(resolveLocationInput).not.toHaveBeenCalled();
+  });
+
+  it("accepts multi-store ranking requests beyond the shopping-route stop cap", async () => {
+    const selectedStoreIds = Array.from(
+      { length: 9 },
+      (_, index) => `store-${index}`,
+    );
+
+    resolveLocationInput.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: false,
+    });
+    getRecommendationExperience.mockResolvedValue({
+      market: {
+        searchedZipCode: "23111",
+        locationLabel: "Mechanicsville, VA",
+        searchLatitude: 37.6085,
+        searchLongitude: -77.3321,
+        radiusMiles: 5,
+        nearbyStores: [],
+        recommendationReadyStoreCount: 0,
+        providerRollout: [],
+        providerStoreSearches: [],
+        providerPricingPreviews: [],
+        providerCoverageRollup: {
+          overallCoverageStatus: "none",
+          trustGate: "not-available",
+          rankedPricingSource: "seed-preview",
+          totalTrackedIngredients: 0,
+          matchedIngredientCount: 0,
+          unmatchedIngredientCount: 0,
+          averageMatchConfidence: null,
+          usesCachedPreview: false,
+          ingredientSummaries: [],
+          message: "No provider coverage.",
+        },
+        providerPromotionReadiness: [],
+        providerPriceObservationSync: [],
+        weeklyAdIngestionStatus: [],
+        weeklyAdPromotionReadiness: [],
+        lookupSource: "seed",
+        lookupProviderConfigured: false,
+        dataSource: "seed",
+        saleIngredientChoices: [],
+      },
+      recommendations: [],
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/recommendations", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validPayload,
+          shoppingStyle: "multi-store",
+          selectedStoreIds,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(resolveLocationInput).toHaveBeenCalled();
+    expect(getRecommendationExperience).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shoppingStyle: "multi-store",
+        selectedStoreIds,
+      }),
+      expect.anything(),
+      false,
+      undefined,
+    );
   });
 
   it("returns 429 with Retry-After when the recommendations rate limit is exceeded", async () => {
@@ -645,7 +647,6 @@ describe("POST /api/recommendations", () => {
       {
         ...validPayload,
         planningMode: "ingredient-first",
-        selectedIngredientIds: [],
       },
       expect.objectContaining({
         zipCode: "23111",
@@ -712,8 +713,8 @@ const validPayload = {
   radiusMiles: 5,
   budget: 16,
   maxIngredients: 8,
-  dinnersWanted: 3,
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: "internal-library",
+  selectedStoreIds: ["kroger-mechanicsville"],
 } as const;

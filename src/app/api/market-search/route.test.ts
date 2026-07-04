@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 
 const { resolveLocationInput, getMarketSearchExperience } = vi.hoisted(() => ({
   resolveLocationInput: vi.fn(),
@@ -9,9 +10,13 @@ vi.mock("@/lib/location-resolution", () => ({
   resolveLocationInput,
 }));
 
-vi.mock("@/lib/recommendation-service", () => ({
-  getMarketSearchExperience,
-}));
+vi.mock("@/lib/recommendation-service", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/recommendation-service")>();
+  return {
+    ...actual,
+    getMarketSearchExperience,
+  };
+});
 
 import { POST } from "@/app/api/market-search/route";
 import { isPublicApiDbWriteEnabled } from "@/lib/public-api-db-write-policy";
@@ -39,7 +44,7 @@ describe("POST /api/market-search", () => {
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      stubTestNodeEnv(originalNodeEnv);
     }
   });
 
@@ -177,6 +182,74 @@ describe("POST /api/market-search", () => {
       expect.objectContaining({ message: "service failure" }),
     );
     logSpy.mockRestore();
+  });
+
+  it("returns 503 when pricing dependencies are unavailable (M4)", async () => {
+    resolveLocationInput.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: false,
+    });
+    getMarketSearchExperience.mockResolvedValue({
+      market: {
+        searchedZipCode: "23111",
+        locationLabel: "Mechanicsville, VA",
+        searchLatitude: 37.6085,
+        searchLongitude: -77.3321,
+        radiusMiles: 5,
+        nearbyStores: [],
+        recommendationReadyStoreCount: 0,
+        providerRollout: [],
+        providerStoreSearches: [],
+        providerPricingPreviews: [],
+        providerCoverageRollup: {
+          overallCoverageStatus: "none",
+          trustGate: "not-available",
+          rankedPricingSource: "seed-preview",
+          totalTrackedIngredients: 0,
+          matchedIngredientCount: 0,
+          unmatchedIngredientCount: 0,
+          averageMatchConfidence: null,
+          usesCachedPreview: false,
+          ingredientSummaries: [],
+          message: "Unavailable.",
+        },
+        providerPromotionReadiness: [],
+        providerPriceObservationSync: [],
+        weeklyAdIngestionStatus: [],
+        weeklyAdPromotionReadiness: [],
+        lookupSource: "seed",
+        lookupProviderConfigured: false,
+        dataSource: "unavailable",
+        saleIngredientChoices: [],
+      },
+      snapshot: {
+        stores: [],
+        recipes: [],
+        priceObservations: [],
+      },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/market-search", {
+        method: "POST",
+        body: JSON.stringify({ zipCode: "23111", radiusMiles: 5 }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error:
+        "Store and meal prices are not loading right now. Try again shortly.",
+    });
   });
 
   it("returns a location resolution failure", async () => {

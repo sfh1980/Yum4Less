@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 
 const { resolveLocationInput, getPipelineDebugView } = vi.hoisted(() => ({
   resolveLocationInput: vi.fn(),
@@ -24,17 +25,13 @@ describe("GET /api/debug/pipeline", () => {
     resolveLocationInput.mockReset();
     getPipelineDebugView.mockReset();
     resetRateLimitsForTests();
-    process.env.NODE_ENV = "development";
+    stubTestNodeEnv("development");
     process.env.YUM4LESS_DEBUG_ROUTES_ENABLED = "1";
   });
 
   afterEach(() => {
     resetRateLimitsForTests();
-    if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
-    } else {
-      process.env.NODE_ENV = originalNodeEnv;
-    }
+    restoreTestNodeEnv(originalNodeEnv);
     if (originalDebugRoutesEnabled === undefined) {
       delete process.env.YUM4LESS_DEBUG_ROUTES_ENABLED;
     } else {
@@ -43,7 +40,7 @@ describe("GET /api/debug/pipeline", () => {
   });
 
   it("returns 404 in production", async () => {
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     process.env.YUM4LESS_DEBUG_ROUTES_ENABLED = "1";
 
     const response = await GET(

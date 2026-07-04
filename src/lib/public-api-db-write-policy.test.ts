@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 import { isPublicApiDbWriteEnabled } from "@/lib/public-api-db-write-policy";
 
 const originalValue = process.env.YUM4LESS_ENABLE_API_DB_WRITES;
@@ -15,7 +16,7 @@ describe("isPublicApiDbWriteEnabled", () => {
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      stubTestNodeEnv(originalNodeEnv);
     }
   });
 
@@ -35,7 +36,7 @@ describe("isPublicApiDbWriteEnabled", () => {
   });
 
   it("stays disabled in production even when the flag is set", () => {
-    process.env.NODE_ENV = "production";
+    stubTestNodeEnv("production");
     process.env.YUM4LESS_ENABLE_API_DB_WRITES = "1";
     expect(isPublicApiDbWriteEnabled()).toBe(false);
   });

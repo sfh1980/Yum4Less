@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 
 const { getDbPool } = vi.hoisted(() => ({
   getDbPool: vi.fn(),
@@ -15,14 +16,14 @@ const originalNodeEnv = process.env.NODE_ENV;
 describe("deleteAllPriceObservations (test-only)", () => {
   beforeEach(() => {
     getDbPool.mockReset();
-    process.env.NODE_ENV = "test";
+    stubTestNodeEnv("test");
   });
 
   afterEach(() => {
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      stubTestNodeEnv(originalNodeEnv);
     }
   });
 
@@ -36,7 +37,7 @@ describe("deleteAllPriceObservations (test-only)", () => {
   });
 
   it("refuses to delete when NODE_ENV is not test", async () => {
-    process.env.NODE_ENV = "development";
+    stubTestNodeEnv("development");
 
     await expect(deleteAllPriceObservations()).rejects.toThrow(
       /restricted to test environments/i,
