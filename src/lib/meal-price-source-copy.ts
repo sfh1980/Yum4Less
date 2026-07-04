@@ -67,16 +67,16 @@ export function buildResultsPanelPriceSourceLine(
 
   switch (market.providerCoverageRollup.rankedPricingSource) {
     case "weekly-ad-cache":
-      return "Ranked meal totals below use saved weekly-ad prices — not live checkout.";
+      return "Dinner totals below use saved sale prices — not live checkout.";
     case "official-api-cache":
     case "online-cache":
-      return "Ranked meal totals below use recently checked online store prices — not live checkout.";
+      return "Dinner totals below use recently checked online store prices — not live checkout.";
     case "mixed-online-weekly-ad-cache":
-      return "Ranked meal totals below use recently checked online prices plus saved weekly ads — not live checkout.";
+      return "Dinner totals below use recently checked online prices plus saved sale prices — not live checkout.";
     case "limited-coverage":
-      return "Ranked meal totals below use limited saved prices — treat them as directional estimates.";
+      return "Dinner totals below use limited saved prices — treat them as estimates only.";
     case "none":
-      return "Ranked meal totals below have limited price coverage — confirm everything in store.";
+      return "Dinner totals below have limited price coverage — confirm everything in store.";
     default:
       return null;
   }
@@ -89,28 +89,28 @@ function buildRankedSourceCopy(
   switch (rankedPricingSource) {
     case "weekly-ad-cache":
       return {
-        summary: `Saved weekly-ad prices ${storePhrase} — not live checkout; confirm in store.`,
+        summary: `Saved sale prices ${storePhrase} — not live checkout; confirm in store.`,
         detail:
-          "This total combines ingredient prices from saved weekly-ad pulls for nearby stores on the trusted rollout. Weekly ads change often and are not the same as live checkout — verify price, package size, and deals before you buy.",
+          "This total combines saved sale prices from nearby stores you selected. Sale prices change often and are not the same as live checkout — verify price, package size, and deals before you buy.",
       };
     case "official-api-cache":
     case "online-cache":
       return {
         summary: `Recently checked online store prices ${storePhrase} — not live checkout; confirm at the shelf.`,
         detail:
-          "This total uses recently checked online store prices from ingested observations. Electronic shelf labels and checkout systems can still change before you shop — verify the exact product and deal before you rely on this estimate.",
+          "This total uses recently checked online store prices. Shelf labels and checkout systems can still change before you shop — verify the exact product and deal before you rely on this estimate.",
       };
     case "mixed-online-weekly-ad-cache":
       return {
-        summary: `Recently checked online prices and saved weekly ads ${storePhrase} — not live checkout; confirm in store.`,
+        summary: `Recently checked online prices and saved sale prices ${storePhrase} — not live checkout; confirm in store.`,
         detail:
-          "This total mixes recently checked online prices with saved weekly-ad prices from nearby stores on the trusted rollout. Neither source is live checkout — confirm price, package size, and deals in store.",
+          "This total mixes recently checked online prices with saved sale prices from nearby stores you selected. Neither source is live checkout — confirm price, package size, and deals in store.",
       };
     case "limited-coverage":
       return {
-        summary: `Limited saved prices ${storePhrase} — directional estimate; confirm in store.`,
+        summary: `Limited saved prices ${storePhrase} — estimate only; confirm in store.`,
         detail:
-          "Only part of this meal could be priced from saved store data near your search. Treat the total as a directional estimate and confirm every line item in store.",
+          "Only part of this meal could be priced from saved store data near your search. Treat the total as an estimate and confirm every line item in store.",
       };
     case "none":
       return {
@@ -150,12 +150,13 @@ function formatStorePhrase(
 }
 
 function ensureDirectionalWording(summary: string) {
-  if (/directional/i.test(summary)) {
+  if (/estimate only|limited saved/i.test(summary)) {
     return summary;
   }
 
-  return summary.replace(
-    /^Saved /,
-    "Directional saved ",
-  );
+  if (/^Saved /i.test(summary)) {
+    return summary.replace(/^Saved /i, "Limited saved ");
+  }
+
+  return summary;
 }

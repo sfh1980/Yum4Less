@@ -39,6 +39,9 @@ export function toRecommendation(
   dataSource: MarketDataSource,
   nearbyStores: NearbyStoreSummary[],
 ): Omit<MealRecommendation, "providerPreviewComparisons"> {
+  // TODO: add storeId to ShoppingPlanItem and StorePlan so overlay join
+  // uses ID rather than name — avoids ambiguity when two same-chain
+  // branches are in radius. See 2026-06-30 store-map-overlay session.
   const storePlan = Array.from(
     candidate.shoppingPlan.reduce((map, item) => {
       const entry = map.get(item.storeName) ?? {
@@ -95,7 +98,7 @@ export function toRecommendation(
 export function buildThemealdbScheduledRefreshNotice(): ShopperNotice {
   return {
     title: "TheMealDB imports refresh on a schedule",
-    body: "Opt-in TheMealDB meals use saved imports from the scheduled ingest job. Saved imports may still rank when they match your sale ingredients. Verify totals in store before checkout.",
+    body: "Sale-matched TheMealDB meals use saved imports from the recipe catalog. Saved imports may still rank alongside internal recipes when they match your sale ingredients. Verify totals in store before checkout.",
   };
 }
 
@@ -109,13 +112,13 @@ export function buildThemealdbEmptyShopperNotice(
   ) {
     return {
       title: "No TheMealDB meals for those ingredients",
-      body: "Try selecting more sale items, widening your budget or ingredient limit, or uncheck TheMealDB to rank from the internal library. TheMealDB meals need at least three overlapping weekly-ad sale ingredients.",
+      body: "Try selecting more sale items, widening your budget or ingredient limit. TheMealDB meals need at least three overlapping sale ingredients.",
     };
   }
 
   return {
     title: "No TheMealDB meals matched yet",
-    body: "Yum4Less refreshes TheMealDB imports from weekly-ad sale overlap on a daily schedule. Meals need at least three overlapping sale ingredients and a defensible shopping plan before they can rank.",
+    body: "Yum4Less refreshes TheMealDB imports from sale overlap on a daily schedule. Meals need at least three overlapping sale ingredients and a defensible shopping plan before they can rank.",
   };
 }
 

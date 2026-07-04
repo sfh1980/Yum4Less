@@ -10,24 +10,24 @@ export type StorePricingStatusInput = {
 export function buildStoreListStatusPill(input: StorePricingStatusInput): string {
   if (!input.recommendationEnabled) {
     if (input.rolloutStatus === "limited-coverage") {
-      return "Limited coverage — directional";
+      return "Limited coverage — estimate only";
     }
     if (input.chain === "walmart") {
-      return "Context only — no Walmart pricing";
+      return "Context only — no pricing yet";
     }
     return "Context only";
   }
 
   if (input.rolloutStatus === "weekly-ad-preview") {
-    return "Est. weekly-ad prices";
+    return "Est. sale prices";
   }
 
   if (input.rolloutStatus === "official-api-preview") {
-    return input.chain === "kroger" ? "Est. Kroger API prices" : "Est. official API prices";
+    return "Est. store prices";
   }
 
   if (input.rolloutStatus === "limited-coverage") {
-    return "Limited coverage — directional";
+    return "Limited coverage — estimate only";
   }
 
   return "Context only";
@@ -37,22 +37,20 @@ export function buildStoreListStatusPill(input: StorePricingStatusInput): string
 export function buildStoreMapPricingLabel(input: StorePricingStatusInput): string {
   if (input.recommendationEnabled) {
     if (input.rolloutStatus === "weekly-ad-preview") {
-      return "Est. weekly-ad prices — verify in store";
+      return "Est. sale prices — verify in store";
     }
     if (input.rolloutStatus === "official-api-preview") {
-      return input.chain === "kroger"
-        ? "Est. Kroger API prices — verify in store"
-        : "Est. official API prices — verify in store";
+      return "Est. store prices — verify in store";
     }
-    return "Limited weekly-ad coverage — directional";
+    return "Limited sale coverage — estimate only";
   }
 
   if (input.chain === "walmart") {
-    return "No live Walmart pricing yet";
+    return "No dinner estimates yet";
   }
 
   if (input.rolloutStatus === "limited-coverage") {
-    return "Limited weekly-ad coverage";
+    return "Limited sale coverage";
   }
 
   if (input.chain === "unknown") {

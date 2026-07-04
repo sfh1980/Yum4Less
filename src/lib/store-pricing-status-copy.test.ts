@@ -5,54 +5,54 @@ import {
 } from "@/lib/store-pricing-status-copy";
 
 describe("store pricing status copy", () => {
-  it("labels official-api-preview Kroger stores with estimated API wording on the list pill", () => {
+  it("labels official-api-preview stores with estimated store wording on the list pill", () => {
     expect(
       buildStoreListStatusPill({
         recommendationEnabled: true,
         rolloutStatus: "official-api-preview",
         chain: "kroger",
       }),
-    ).toBe("Est. Kroger API prices");
+    ).toBe("Est. store prices");
   });
 
-  it("labels official-api-preview non-Kroger stores with estimated API wording on the list pill", () => {
+  it("labels official-api-preview stores consistently across chains on the list pill", () => {
     expect(
       buildStoreListStatusPill({
         recommendationEnabled: true,
         rolloutStatus: "official-api-preview",
         chain: "aldi",
       }),
-    ).toBe("Est. official API prices");
+    ).toBe("Est. store prices");
   });
 
-  it("labels ranked weekly-ad stores with estimated wording on the list pill", () => {
+  it("labels ranked sale stores with estimated wording on the list pill", () => {
     expect(
       buildStoreListStatusPill({
         recommendationEnabled: true,
         rolloutStatus: "weekly-ad-preview",
         chain: "kroger",
       }),
-    ).toBe("Est. weekly-ad prices");
+    ).toBe("Est. sale prices");
   });
 
-  it("labels limited-coverage stores as directional on the list pill", () => {
+  it("labels limited-coverage stores as estimate-only on the list pill", () => {
     expect(
       buildStoreListStatusPill({
         recommendationEnabled: false,
         rolloutStatus: "limited-coverage",
         chain: "food-lion",
       }),
-    ).toBe("Limited coverage — directional");
+    ).toBe("Limited coverage — estimate only");
   });
 
-  it("keeps Walmart context-only on list and map labels", () => {
+  it("keeps context-only stores neutral on list and map labels", () => {
     expect(
       buildStoreListStatusPill({
         recommendationEnabled: false,
         rolloutStatus: "coming-soon",
         chain: "walmart",
       }),
-    ).toBe("Context only — no Walmart pricing");
+    ).toBe("Context only — no pricing yet");
 
     expect(
       buildStoreMapPricingLabel({
@@ -60,7 +60,7 @@ describe("store pricing status copy", () => {
         rolloutStatus: "coming-soon",
         chain: "walmart",
       }),
-    ).toBe("No live Walmart pricing yet");
+    ).toBe("No dinner estimates yet");
   });
 
   it("uses chain-colored ranked map label with verify-in-store wording", () => {
@@ -70,27 +70,27 @@ describe("store pricing status copy", () => {
         rolloutStatus: "weekly-ad-preview",
         chain: "publix",
       }),
-    ).toBe("Est. weekly-ad prices — verify in store");
+    ).toBe("Est. sale prices — verify in store");
   });
 
-  it("labels official-api-preview Kroger stores with estimated API map wording", () => {
+  it("labels official-api-preview stores with estimated map wording", () => {
     expect(
       buildStoreMapPricingLabel({
         recommendationEnabled: true,
         rolloutStatus: "official-api-preview",
         chain: "kroger",
       }),
-    ).toBe("Est. Kroger API prices — verify in store");
+    ).toBe("Est. store prices — verify in store");
   });
 
-  it("labels official-api-preview non-Kroger stores with estimated API map wording", () => {
+  it("labels official-api-preview stores consistently across chains on the map", () => {
     expect(
       buildStoreMapPricingLabel({
         recommendationEnabled: true,
         rolloutStatus: "official-api-preview",
         chain: "aldi",
       }),
-    ).toBe("Est. official API prices — verify in store");
+    ).toBe("Est. store prices — verify in store");
   });
 
   it("labels unknown OSM pins as future release on the map", () => {

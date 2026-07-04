@@ -6,10 +6,10 @@ export type PricingTrustHeadsUp = {
   message: string;
 };
 
-export const PRICING_TRUST_HEADS_UP_TITLE = "Beta — heads up about these prices";
+export const PRICING_TRUST_HEADS_UP_TITLE = "Heads up about these prices";
 
-const BETA_BASELINE =
-  "Yum4Less is in beta: ranked prices are estimates (not live checkout), refreshed on a daily schedule, and the production release focuses on Kroger-family and Aldi when gates pass.";
+const TRUST_BASELINE =
+  "Meal prices are estimates (not live checkout), refreshed on a daily schedule.";
 
 const NON_LIVE_RANKED_SOURCES: RankedPricingSource[] = [
   "weekly-ad-cache",
@@ -68,7 +68,7 @@ export function buildPricingTrustHeadsUp(
 
   if (usesNonLivePricing) {
     reasons.push(
-      "Meal prices come from saved weekly ads and recently checked online store prices, not live checkout totals.",
+      "Meal prices come from saved store prices from ads and online checks, not live checkout totals.",
     );
   } else if (
     market.recommendationReadyStoreCount > 0 &&
@@ -88,12 +88,12 @@ export function buildPricingTrustHeadsUp(
 
     return {
       title: PRICING_TRUST_HEADS_UP_TITLE,
-      message: `${BETA_BASELINE} Treat totals as estimates and confirm price, package size, and deals in the store before you buy.`,
+      message: `${TRUST_BASELINE} Treat totals as estimates and confirm price, package size, and deals in the store before you buy.`,
     };
   }
 
   return {
     title: PRICING_TRUST_HEADS_UP_TITLE,
-    message: `${BETA_BASELINE} ${reasons.join(" ")} Treat totals as estimates and confirm price, package size, and deals in the store before you buy.`,
+    message: `${TRUST_BASELINE} ${reasons.join(" ")} Treat totals as estimates and confirm price, package size, and deals in the store before you buy.`,
   };
 }
