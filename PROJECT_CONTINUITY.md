@@ -4,19 +4,25 @@
 
 ---
 
-## Resume (as of 2026-06-22)
+## Resume (as of 2026-07-03)
 
-**Phase:** Rules/agents/hooks refactor **complete** (slice 3 closeout). Five-file split **done**. Contracts/Zod **done**. **Next:** P1 items / homelab precursors (queue in **`yum4less-product-and-trust.mdc`**).
+> **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Hosting:** Self-hosted homelab (target); owner pushing toward first production deploy with Kroger-family + Aldi ranked path.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 rule wording corrected to match manual-pause-only ingest reality. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene locally; runtime gates green this session — see [Changelog → 2026-07-04](#2026-07-04--six-batch-remediation-close-out-full-system-audit-follow-ups). **Active queue:** push local commits + Sprint E workflows when ready; Saved persistence + cuisine chips (R11) deferred.
 
-**Production-ranked focus:** **Kroger family + Aldi** when daily ingest and promotion gates pass. Publix, Food Lion, Walmart, and others: map/context or **upcoming releases** (fixture weekly-ad rows may exist in dev; not used for ranked meal totals).
+**Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
+
+**Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md).
+
+**Hosting:** Self-hosted homelab (target); owner preparing dedicated Linux box — ingest cron wiring documented, not live on hardware yet.
+
+**Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
 **Owner ingest path:** `npm run setup:local` / `ingest:weekly-ads:scheduled` runs **map-catalog → weekly-ad → provider sync → TheMealDB** when `GEOCODIO_API_KEY` + Kroger credentials set. Fixture ingest requires `CI=true`, Vitest (`NODE_ENV=test`), or aligned `DATABASE_URL` + `DATABASE_URL_TEST`.
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-06-22):** `npm test` **528/528** (116 files); `npm run build` pass (rank-payload slice). Playwright MCP: ZIP `23111` store search confirmed post dev-server restart (`mcp-happy-path-01-location-set.png`); full rank→meal-cards MCP run interrupted by Playwright MCP disconnect — reconnect MCP and re-run rank step to close UI loop. Supplementary same-session CLI Playwright: trimmed rank payload ~11.5 KB, `POST /api/recommendations` 200, 2 meal cards (`happy-path-meal-cards.png`). `npm run test:integration` / `npm run test:e2e:ci` not re-run this slice. Not claiming homelab deploy-ready, CI green on remote, or beta v1 demo-complete.
+**Verified (2026-07-04):** Gate results → [Appendix → Verification snapshot](#verification-snapshot). **Six-batch remediation** (local commits `a26b098`…`1b141e9` + continuity update): P1-2/P1-3/P1-4 debug/feedback/proxy hardening; P1-6/P1-7 cron exit codes; P1-9 rank invalidation on store change; Food Lion coordinate exceptions + approximate-location copy; tsc mock drift reduction (141→64); e2e overlay flake fix; P2 README/CI/bootstrap/e2e-doc/hygiene. **This session:** `npm run lint` clean; `npx tsc --noEmit` **64 errors** (unchanged baseline — weekly-ad test mocks); `npm test` **808/808**; `npm run build` OK; `npm run test:integration` **24/24**; isolated `npm run test:e2e:ci` **22 passed / 1 skipped / 0 failed**; CI bootstrap upsert reapplies (`INSERT 0 8`); `COORDINATE_SANITY_EXCEPTIONS` holds both withheld Food Lion ids. Not claiming remote CI green, homelab deploy-ready, or beta v1 demo-complete until pushed + owner sign-off.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -25,10 +31,14 @@
 - **Pipeline debug:** local-only `GET /api/debug/pipeline?zip=23111` or `?lat=&lng=` — stores, ranked observations, 24h freshness, missing tracked ingredients (404 in production)
 - **Phase B price/store alignment:** `resolveInternalKrogerStoreId` maps locationId via `source_store_id` / canonical `kroger-{locationId}` / name heuristics — **no** single-store guess fallback (H8); ingest prefers catalog `source_store_id` for Kroger weekly-ad URLs; `sync:provider-prices` resolves nearest Kroger-family numeric `locationId` via `resolvePreferredKrogerLocationIdForZip` (Postgres + haversine; optional `KROGER_LOCATION_ID` escape hatch) and logs `skip_reason`
 - **Phase C location trust:** `store-location-reconciliation` — ranked coord updates need agreeing witnesses (Kroger API + Geocodio address; optional USDA SNAP corroboration); change-only when delta ≥ `YUM4LESS_LOCATION_CHANGE_THRESHOLD_METERS` (default 50); single provider witness still promotes bootstrap → API
+- **Coordinate sanity audit path:** `coordinate-sanity-check.ts` now reports `flagReasons[]` (including dual-flag rows like `unknown_city_state` + `coordinate_delta`), `scripts/audit-food-lion-coordinates.mjs` buckets correction-candidate vs metadata-only vs manual-review rows and supports `--ids=...`, rollout policy keeps Food Lion/Lidl as coordinate-audit-required, and the verified `food-lion-mechanicsville` pin is corrected in dev + CI/fixture bootstrap data
+- **Coordinate sanity exceptions:** the two 2026-07-03 withheld Food Lion rows (`osm-node-3103220732`, `osm-node-6527816794`) now live in `COORDINATE_SANITY_EXCEPTIONS`, so storefront-vs-road-geometry decisions persist across future audit reruns
 - **Phase C map context:** `discoverMapContextStores` unifies OSM + optional USDA SNAP (`YUM4LESS_MAP_SNAP_CONTEXT=1`); `snap_retailer_locations` reference table + `npm run ingest:snap-retailers`; SNAP pins labeled `SNAP context pin` — not ranked pricing
 - **Phase D ingest breadth:** Kroger Location API returns **Kroger-family** stores (limit `YUM4LESS_KROGER_LOCATION_SEARCH_LIMIT`, max 50) with multi-store catalog upsert; Aldi bootstrap refresh uses **nearest OSM Aldi** (never ZIP centroid); provider snapshot cache matches by **ZIP primary** with coord tolerance; Publix locator sync refreshes `publix-atlee` bootstrap + context rows (`publix-store-locator`); `sync:provider-prices` passes OSM discovery for Aldi parity
 - **Phase A map truth:** Postgres/provider ranked pins beat OSM/SNAP context on merge (`kroger-official-api` priority 5; ranked-chain dedupe ~1.5 mi); `YUM4LESS_MAP_OSM_RANKED_CHAIN_POLICY=suppress-conflicts` (default) drops context Kroger/Aldi when ingested catalog covers chain; map/list badges (`Seed catalog pin`, `API-verified pin`, `OSM context pin`, `SNAP context pin`, `Weekly-ad ingest pin`)
-- **Map search merge (Rec 1–2):** `/api/market-search` merges provider-discovered stores into map pins; ephemeral map-context discovery (OSM ± SNAP) when DB pins within radius &lt; `YUM4LESS_MAP_SPARSE_PIN_THRESHOLD` (default 3), 24h OSM cache, degraded copy on failure — **no Postgres writes** on public read path
+- **Map search merge (Rec 1–2):** `/api/market-search` merges provider-discovered stores into map pins; ephemeral map-context discovery (OSM ± SNAP) when **per-chain Postgres gaps** exist (ranked v1 chain &lt; **2** pins, or context-only catalog chain / Costco / Sam's at **0** pins within radius), 24h OSM cache, degraded copy on failure — **no Postgres writes** on public read path
+- **Unknown location metadata treatment:** store labels now render **`Approximate location`** when city/state metadata is the literal `Unknown`, instead of surfacing raw sentinel text or pretending the locality is verified
+- **Search-time OSM performance:** `/api/market-search` returns saved catalog stores first; search-time OSM gap-fill now waits at most **3s** on the critical path, logs deferrals, and lets the in-memory cache finish warming in the background for later requests; committed CI coverage in `e2e/coordinate-first-cold.spec.ts` keeps a true cold geolocation path in the suite
 - **OSM lifecycle:** disused/abandoned/closed elements filtered from Overpass parse
 - **Daily map-catalog cron preserved:** `npm run ingest:map-catalog` / scheduled wrapper still warms Postgres catalog; search-time OSM complements cron for arbitrary ZIPs
 - **OSM parser:** `brand` → `operator` → `name` priority; Food Lion–like elements without `name` tag map to `food-lion` chain context
@@ -37,15 +47,19 @@
 - **24-hour ranked-read cache:** `price_observations` older than 24h excluded from rankings; provider snapshots default to same TTL
 - **Cache-only public APIs:** `/api/recommendations` does not call live Kroger APIs or sync prices on user search; `/api/market-search` may call Overpass ephemerally (no Postgres writes) when map pins are sparse
 - **Universal map catalog (Slice 4A):** `npm run ingest:map-catalog` (+ fixture variant) discovers food retail via OSM Overpass + chain locators; upserts map-context `stores` rows on **cron only**; OSM attribution when OSM pins visible
-- **Publix + Food Lion gates (Slice 4B, rehearsal):** weekly-ad promotion gates exist in code/fixture paths; **production deploy focus remains Kroger + Aldi** — other chains in upcoming releases
+- **Publix + Food Lion gates (Slice 4B):** weekly-ad promotion gates for all four v1 chains; **production-ranked when ingest and promotion gates pass** (same path as Kroger-family and Aldi weekly-ad rollout)
 - **Daily ingest path:** `npm run ingest:weekly-ads:scheduled` (+ fixture rehearsal variant) runs **map-catalog before weekly-ad**, then provider sync + TheMealDB
-- **Recipe opt-in:** internal library ranks by default; TheMealDB requires explicit checkbox + `recipeSourceOptIn` on API
-- **TheMealDB on search (Slice 3):** opt-in ranking reads Postgres imports cache-first; **search-time refresh removed** — cron/script only (`npm run ingest:themealdb:from-sales`); scheduled-refresh notice when imports stale/empty; attribution + meal link on cards when saved imports rank
+- **Weekly-ad chain status:** Aldi and Food Lion remain Flipp-first; Publix scrape stays primary with Flipp supplemental ingredient backfill; Lidl is now wired Flipp-first for ingest rehearsal but remains **coming soon / context only** for shopper meal pricing until a live coverage re-measure clears promotion review
+- **Store scope:** shopping style + store picker (single/multi); unselected stores hidden from map, ingredients, and rank; prefs persisted in localStorage (`setupComplete` marker — slice 5 routes on this)
+- **Recipe ranking:** internal library + sale-matched TheMealDB imports in **one merged list** (default path); shopper opt-in UI **deleted (slice 5)**
+- **TheMealDB on search:** merged ranking reads Postgres imports cache-first; **search-time refresh removed** — cron/script only (`npm run ingest:themealdb:from-sales`); scheduled-refresh notice when imports stale/empty; attribution + meal link on cards when saved imports rank
 - **Ingredient row trust (D/E):** `Est.` / directional labels; `Prices from ~N hours ago` on ingredient rows **and meal cards** when metadata present; honest empty state (daily scheduled refresh, not live on search)
-- Location-first flow: ZIP or browser → market search → map → meal preferences → recommendations (**rank pass-through payload trimmed 2026-06-22 — core recommendation flow unblocked**)
+- **Redesign UX (slices 1–5 + D1–D7):** Settings-first gate (localStorage `setupComplete`); **5-tab shell** (Home, Deals, Cook, Saved, Settings); welcome budget/dietary → ingredients → tap rank → **stacked accordion** results; **merged** internal + TheMealDB ranking (no shopper opt-in); no `dinnersWanted` cap; store scope from Settings dropdown; ingredient gate (all vs manual) + category chips; map **link + overlay** on ingredients step; session **pantry** prompt on results; light/dark/**system** theme with **mockup Theme C/D tokens** (warm pantry light default on first visit)
+- **Settings store dropdown:** `settings-store-selection.ts` — Kroger, Aldi, Publix, and Food Lion always listed for selection (not gated on `recommendationEnabled`); prefers non-`osm-` catalog rows; **co-located Kroger slug + API rows deduped** (API-derived wins); auto market search on Settings when setup incomplete
+- **SSR tab hydration:** `SSR_DEFAULT_APP_TAB` + post-mount `resolveAppTabFromPreferences()` — fixes React hydration mismatch when saved Settings route to Home
 - Continental US ZIP + browser geolocation; dev seed ZIPs when `GEOCODIO_API_KEY` unset
-- v1 ranked chains when gates pass: **Kroger family**, **Aldi** (production deploy focus); Publix/Food Lion code paths exist for upcoming releases
-- Trust UI: `Est.`, directional, limited coverage, verify-in-store; map pins use “Coming soon” / “Available in a future release” for context-only chains
+- v1 ranked chains when gates pass: **Kroger family**, **Aldi**, **Publix**, and **Food Lion**; Walmart and other unsupported chains remain map/context only
+- Trust UI: `Est.`, directional, limited coverage, verify-in-store — **inline on results/deals/cards** (`PricingTrustHeadsUpBanner` with expandable detail from removed modal copy, help hints, hero copy); map pins use “Coming soon” / context-only for unsupported chains; **no trust explainer modal** (removed 2026-06-26 audit)
 - Fixture weekly-ad ingest for **CI/rehearsal and automated tests only** (not owner daily workflow)
 - **`npm run setup:local`:** provisions `yum4less_dev` + `yum4less_test`, runs post-setup `npm test` smoke, fixture `DATABASE_URL_TEST` guidance, geolocation-or-ZIP next-step copy; SNAP ensure stays non-fatal inside `ensureTestDatabase()` only
 - Public APIs read-only by default in production; response sanitization; route validation + rate limits
@@ -55,17 +69,762 @@
 - **Tier B ranked estimates** in most US ZIPs until daily ingest runs for that market (Tier C is normal)
 - **Walmart** ranked pricing deferred
 - **Homelab deploy**, DNS/TLS, user accounts — deferred
+- **M128/M151 scrape automation** (robots.txt checks, auto-pause on block signals, automated per-chain kill switches) — homelab slice; manual owner-pause only today
 - **Semgrep CI** — runs when GitHub repo secret `SEMGREP_APP_TOKEN` is set (not a `.env.local` var); local hooks use optional `semgrep` CLI
 
-### Next (when reprioritized)
+### Next (redesign — ordered)
 
-1. **Homelab deploy** — deferred until migration-ready
-2. **Optional:** owner SNAP CSV ingest (`YUM4LESS_SNAP_CSV_PATH`) for nationwide context beyond fixture ZIPs
-3. **Walmart ranked path** — deferred
+1. ~~**Slice 1** — Remove `dinnersWanted` entirely~~ **done (2026-06-25)**
+2. ~~**Slice 2** — TheMealDB **merged** ranking + hide opt-in checkbox~~ **done (2026-06-25)**
+3. ~~**Slice 3** — Settings store scope + remove **40-ingredient POST cap** + prefs persistence~~ **done (2026-06-25)**
+4. ~~**Slice 4** — **Stacked** accordion meal cards (title-only collapsed; **one expanded at a time**); delete carousel component/CSS/tests~~ **done (2026-06-25)**
+5. ~~**Slice 5** — Welcome **budget + dietary** → straight to **ingredients**; **Settings-first gate**; tap steps; full-screen rank loading; **delete hidden TheMealDB opt-in dead code**~~ **done (2026-06-25)**
+6. ~~**Deferred D1–D6** — 5-tab shell, theme tokens, ingredient gate/chips, map-as-link overlay, session pantry UI~~ **done (2026-06-25)** — Saved persistence + cuisine chips (R11) still deferred
+7. ~~**D7 — Color/tokens port** — Theme C (dark) + Theme D (light) from `.private/tokens.css`; flat page bg; system font; light default first visit; recolor buttons/panels/nav/map~~ **done (2026-06-26)** — owner browser verify pending
+
+**Later (when reprioritized):** homelab deploy, Saved tab persistence, cuisine chips (R11), optional SNAP CSV ingest, Walmart ranked path.
+
+---
+
+## Redesign — locked plan (2026-06-25)
+
+**Handoff digest:** [`docs/redesign/redesign-analysis-handoff.md`](docs/redesign/redesign-analysis-handoff.md) (slices + doc-update summary). This section remains canonical.
+
+**Authority:** This section + [Decision log](#decision-log) below. **Not** `.private/` (archive/mockups only). Trust copy → `.cursor/rules/yum4less-product-and-trust.mdc`.
+
+**Scope:** Frontend/UX redesign is primary; backend/API changes are allowed when named per slice (not silently bundled).
+
+### Shipped workflow (target)
+
+**Entry order:** if saved **Settings preferences do not exist yet** (first visit) **or** the shopper performs a **factory reset** of preference data → **Settings first** (block welcome, ingredients, and rank until required Settings are saved). Otherwise → welcome (budget + dietary) → ingredients → rank → results.
+
+| Step | What the shopper does | What is stored |
+|------|------------------------|----------------|
+| **Settings** (first-run / factory-reset gate) | ZIP **or** browser location, search radius, **shopping style** + **store dropdown** (see below), theme | Saved preferences (e.g. localStorage) + **initial setup complete** marker |
+| **Welcome** | Choose **budget** and **dietary** | Per visit / session (not buried in Settings) |
+| **Ingredients** | See **all** sale ingredients for **selected store(s)** only; optional manual narrow later | Session |
+| **Rank** | **Tap** to proceed; **full-screen** loading with honest TheMealDB copy | — |
+| **Results** | **Stacked** cards; **title only** collapsed; expand **one at a time** (opening another collapses the previous) | Session until flow reset |
+
+**After welcome:** go **straight to ingredients** (no separate store-search step on the main path). Store discovery runs from saved Settings.
+
+### Settings — first-run, factory reset, and required fields
+
+- **Detect missing Settings:** no persisted preference blob **or** required fields incomplete (location, radius, at least one selected store per shopping style, theme if treated as required on first setup).
+- **Gate behavior:** route to Settings **before** welcome or any shopping flow. Do **not** re-show this gate on every visit once valid Settings exist.
+- **Re-trigger gate only when:** shopper uses **factory reset** (explicit control that clears saved Settings / marks setup incomplete) — same experience as first visit.
+- **Not a gate trigger:** changing budget/dietary on welcome, session-only ingredient scope, or rank/results navigation.
+- **Implementation slice:** persistence + completeness detection in **slice 3**; entry routing and factory-reset UX in **slice 5**.
+
+### Settings — shopping style and stores
+
+Under **Shopping style**:
+
+- **Single store** — dropdown: pick **exactly one** store.
+- **Multiple stores** — dropdown: pick **one or more** stores.
+
+**Unselected stores:** do **not** appear anywhere in the UI (no map pin, no list row, no sale ingredients, no pricing/recipe scope). For the shopper, unchecked stores do not exist.
+
+**Settings owns:** location method, ZIP/coordinates, radius, shopping style + store selection, theme.
+
+**Settings does not own:** budget, dietary (welcome screen — faster to change).
+
+### Meal results count
+
+- **No fixed card cap** — remove `dinnersWanted` completely from the project; result count = recipes that qualify after filters (location, selected stores, budget, dietary, shopping style, ingredient scope, `maxIngredients`, eligibility).
+- **`maxIngredients`** (shopping-plan line count): **unchanged** — hidden default/behavior.
+
+### Recipes / TheMealDB
+
+- **Merge** internal library + TheMealDB imports into **one ranked list** (single sort). No separate quota per source.
+- **UI:** merged ranking only; **delete** hidden opt-in UI + shopper `recipeSourceOptIn` path in **slice 5** (keep merged default + zero-import tests).
+- **Zero TheMealDB meals in results:** tests must prove empty is from workflow/settings/eligibility, not a bug.
+- **Stale/empty imports:** internal meals still rank; show scheduled-refresh `shopperNotice` when catalog refresh is due (cron/script path — no search-time import in production).
+- **Attribution** on cards when TheMealDB meals rank. Loading copy: list is **not exhaustive**; honest TheMealDB sourcing.
+
+### Ingredient scope and API
+
+- **Remove** the **40-ID** `selectedIngredientIds` cap; rely on existing **64 KB body limit**, **rate limits**, and **per-ID validation**.
+- **Default rank path:** all sale ingredients at selected store(s) — server resolves from market snapshot/observations when possible (avoid posting every ID).
+- **Optional** manual ingredient narrow later (no product-facing max count).
+
+### Rank and empty state
+
+- Ranking on **explicit tap** (not automatic when ingredient list appears).
+- **Nothing found:** stay in flow with clear next steps (wider budget, different stores, different ZIP) — not a dead end.
+
+### Information architecture (shipped D1)
+
+- Mobile-first; functional on desktop without a separate layout.
+- **5-tab bottom nav:** Home, Deals, Cook (enabled when session has ranked results), Saved (placeholder), Settings.
+- Home tab: welcome → ingredients → rank → results. Settings tab: location, radius, stores, theme.
+- Deals: browse-only sale ingredients when market loaded. Cook: shortcut to results panel when enabled.
+
+### Flow and session (shipped)
+
+- **Flow reset** = return to welcome and/or wipe **session** data (ingredient scope, results) without clearing saved Settings.
+- **Factory reset (Settings)** = clear saved Settings preference data → **Settings-first gate** runs again (same as first visit).
+- **Session:** derived state (`cookEnabled`, pantry items), not a DB row.
+
+### Map (shipped D5)
+
+- Optional **link bar** above bottom nav on Home ingredients step → full-screen `store-map-overlay` (not a flow step or tab).
+
+### Theme (D2 + D7 shipped)
+
+- **Shipped:** Settings theme select (`light` / `dark` / `system`); `ThemeSync` on `<html>`; mockup Theme C + D palette in `theme-tokens.css` (action/trust/urgency/price/danger/tag roles); **light default on first visit** (overrides D2 OS-first paint); flat page background; system font stack; trust/urgency/price applied to existing labels (copy unchanged).
+
+### Results cards
+
+- **Stacked**, not carousel — delete `RecommendationResultsCarousel` and related CSS/tests.
+- Collapsed: **title only**. Expanded: full detail. **One expanded card at a time.**
+
+### Ingredient taxonomy (shipped D3)
+
+- Category chips: fixed taxonomy; only categories with matching ingredients in the result set.
+- Cuisine/ethnic facet: **separate** from type chips; **hide cuisine row until DB tags exist (R11)**.
+- Category chips on **manual pick** screen only.
+
+### Trust copy
+
+- **No “High confidence” badge** — use established trust rules (`estimated`, `directional`, etc.).
+
+### Feedback
+
+- `/feedback` link: Home footer **and** Settings tab (shipped D1).
+
+### Tier C
+
+- **No “Notify me”** — explain limited coverage, try different ZIP, check back later.
+
+### Pantry (shipped D6 — session only)
+
+- Session-only add/remove on results via `pantry-prompt-card.tsx`; **not persisted**; does **not** affect ranking yet.
+
+### Deferred after D7
+
+Saved tab **persistence**, cuisine DB/tags (**R11**), pantry affecting rank, and mockup layout polish (top-bar toggle, Cook FAB styling) remain deferred.
+
+---
+
+## Redesign — implementation slices (ordered)
+
+| # | Slice | Touch areas | Gates |
+|---|--------|-------------|--------|
+| **1** | Remove `dinnersWanted` | `api-request`, contracts, `recommendation-service`, client payload, tests | `npm test` |
+| **2** | TheMealDB merge + hide checkbox | `recommendation-service`, contracts, UI hide opt-in, merge tests, zero-import tests | `npm test`; `@verifier` |
+| **3** | Store scope + drop 40-ID cap + **Settings prefs persistence** (completeness / factory-reset clears setup) | Settings prefs model, market/rank filtering, `parseSelectedIngredientIds`, pass-through | `npm test`; integration if rank contract changes |
+| **4** | ~~Stacked accordion cards~~ | ~~Replace carousel, `meal-results-panel`, CSS, e2e~~ | ~~`npm test`; Playwright MCP~~ **done** |
+| **5** | ~~Welcome + Settings gate + tap steps + full-screen loading + delete TheMealDB opt-in~~ | ~~`page.tsx`, meal-planner flow, contracts, Settings reset~~ | ~~`npm test`; Playwright MCP~~ **done** |
+| **D1–D6** | ~~5-tab shell, interim theme, ingredient gate/chips, map overlay, session pantry~~ | ~~`bottom-nav`, `theme-tokens`, `ingredient-gate-panel`, `store-map-overlay`, `pantry-prompt-card`~~ | ~~`npm test`; `npm run build`~~ **done** |
+| **D7** | ~~Mockup color/tokens port (colors only)~~ | ~~`theme-tokens.css`, `globals.css`, component CSS, `resolve-theme` default~~ | ~~`npm test`; owner browser verify; Playwright MCP for trust labels~~ **done** — owner browser verify pending |
+
+**Discipline:** One slice per PR/session when possible. After each slice: changelog + decision log updates in this file.
+
+**TheMealDB opt-in cleanup:** **done (slice 5)** — removed hidden UI, `externalRecipeOptIn`, and shopper `recipeSourceOptIn` API path; public API accepts `internal-library` only; merged ranking default unchanged.
 
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-04 — Six-batch remediation close-out (full-system audit follow-ups)
+
+**Theme:** Close P1 security/cron/UI-state findings and P2 doc/CI hygiene from [`docs/audits/full-system-run-report.md`](docs/audits/full-system-run-report.md) in six local commits; re-verify runtime gates without inline tsc fixes.
+
+**Shipped (Batches 0–5, local commits not pushed):**
+- **Batch 0:** Audit report correction — 5 e2e failures were port contention, not regressions
+- **Batch 1 (P1-2/3/4):** Debug pipeline env gate + rate limit; proxy-header startup warning; feedback GET admin key
+- **Batch 2 (P1-6/7/9):** Cron scripts exit 1 on partial failure; rank state clears when selected stores change post-rank
+- **Batch 3:** Food Lion coordinate exceptions + approximate-location badge + Nominatim `Market Place` normalization
+- **Batch 4:** tsc mock/contract drift fixes (141→64 errors); e2e overlay flake fix (`single-store-map-overlay.spec.ts`)
+- **Batch 5 (P2):** README D7 sync; merged-ranking help copy; e2e job `needs: [verify, integration]`; bootstrap upsert name/city/state; `e2e/README.md`; root audit PNG + `tsconfig.tsbuildinfo` gitignore
+
+**Audit finding status (2026-07-04 verification pass):**
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P0-1 Settings hides market-search failures | **CLOSED** | `settings-panel.tsx` receives `marketSearchState`; errors render on Settings |
+| P0-2 Multi-store uncheck-all shows all stores | **CLOSED** | `filterNearbyStoresBySelection` returns `[]` when selection empty |
+| P1-1 E2e CI regression | **CLOSED** | Port contention; isolated rerun 22/1/0 |
+| P1-2 Debug pipeline exposure | **CLOSED** | Batch 1 env gate + rate limit |
+| P1-3 Rate limiting production-safe | **CLOSED** (partial) | Startup warning shipped; Redis/multi-instance still deferred |
+| P1-4 Unauthenticated feedback GET | **CLOSED** | Batch 1 admin key |
+| P1-5 M128/M151 doc drift | **CLOSED** (prior) | Rules document manual-pause-only reality |
+| P1-6 Provider-sync exit 0 on failure | **CLOSED** | Batch 2 |
+| P1-7 Partial weekly-ad exit 0 | **CLOSED** | Batch 2 |
+| P1-8 Cook tab vs marketBlocked | **DEFERRED** | Not in remediation scope; needs dedicated UI slice |
+| P1-9 Store selection invalidates rank | **CLOSED** | Batch 2 |
+| P1-10 No DB migration ledger | **DEFERRED** | Structural backlog |
+| tsc `--noEmit` (64 errors) | **STILL OPEN** | Test mock drift bucket; unchanged vs Batch 4 baseline |
+| M128/M151 automation | **DEFERRED** | Homelab slice |
+| Saved persistence / R11 cuisine chips | **DEFERRED** | Product backlog |
+
+**Evidence (Batch 6, this session):**
+- `npm run lint` — clean
+- `npx tsc --noEmit` — **64 errors** (baseline unchanged)
+- `npm test` — **808/808**, 152 files
+- `npm run build` — OK (Next.js **15.5.19**)
+- `npm run test:integration` — **24/24**, 7 files; bootstrap SQL `INSERT 0 8`
+- `npm run test:e2e:ci` (isolated, `PLAYWRIGHT_FORCE_NEW_SERVER=1`) — **22 passed / 1 skipped / 0 failed**
+
+**Honest limits:** tsc not clean; remote CI not re-run; local commits not pushed. Not claiming verified/CI green/deploy-ready.
+
+---
+
+### 2026-07-03 — Food Lion coordinate sanity audit, `flagReasons[]`, and verified pin correction
+
+**Theme:** Harden the Food Lion coordinate sanity workflow from first real audit data: expose dual-flag rows honestly, separate real correction candidates from metadata-only noise, and only write the storefront correction that survives map-viewer verification.
+
+**Shipped:**
+- **Shared checker:** `src/lib/geo/coordinate-sanity-check.ts` now returns `flagReasons[]` instead of a single short-circuit reason, so `unknown_city_state` can coexist with `coordinate_delta`; geocode context stays separate from stored metadata so the checker can report metadata gaps honestly without poisoning the address query
+- **Food Lion audit script:** `scripts/audit-food-lion-coordinates.mjs` now renders `flag_reasons`, buckets rows into correction candidates / metadata-only / manual review, and supports `--ids=...` reruns for targeted follow-up checks
+- **Rollout policy metadata:** `chain-rollout-policy.ts` now owns shared store-name chain inference and coordinate-audit requirements; Food Lion + Lidl require audit review, while Kroger/Aldi/Publix stay non-blocking until address-backed audit evidence exists
+- **Server-safe gate implementation:** `chain-rollout-coordinate-sanity.ts` hosts the SNAP/catalog lookup path and blocking failure list so rollout audits can run without bundling Postgres dependencies into client code
+- **Verified coordinate correction:** `food-lion-mechanicsville` moved from the Bell Creek Middle School field to the storefront coordinate (`37.610174`, `-77.341778`) in `yum4less_dev`, `db/ci/014_ci_bootstrap_stores.sql`, and `src/lib/fixtures/market-catalog.fixtures.ts`
+- **Withheld writes:** `osm-node-3103220732` and `osm-node-6527816794` remain unchanged because Google satellite + SNAP corroboration showed the current stored pins already land on the storefront while the Nominatim result lands on road geometry / an interchange
+- **Config/test updates:** `.env.example` documents `YUM4LESS_NOMINATIM_USER_AGENT`; focused tests cover the checker, shared chain inference, and rollout requirement policy
+
+**Evidence (this session):**
+- `npm test` **780/780** (147 files)
+- `npm run build` pass (Next.js **15.5.19**)
+- `npx tsx scripts/audit-food-lion-coordinates.mjs` → **14 checked / 10 flagged** with the two dual-flag rows correctly moved into the correction-candidate bucket
+- `npx tsx scripts/audit-food-lion-coordinates.mjs --ids=food-lion-mechanicsville` → **1 checked / 0 flagged**
+- Playwright MCP Google satellite check: old `food-lion-mechanicsville` coord landed on Bell Creek Middle School field; corrected coord landed on the `7095 Mechanicsville Tpke` Food Lion storefront; local app Settings "Use my location" + store-map overlay now places the selected pin on the store side rather than the school
+
+**Honest limits:**
+- `npm run test:integration` and `npm run test:e2e:ci` were **not rerun** in this slice because the work did not change DB merge semantics or shopper UI flow wiring
+- The two remaining correction-candidate rows in the Food Lion dossier are now classified honestly, but they still need a deeper multi-source/manual resolution because Nominatim contradicted SNAP + map-viewer storefront checks
+
+---
+
+### 2026-07-03 — Coordinate sanity exceptions persisted in code
+
+**Theme:** Move the two manually withheld Food Lion coordinate-audit decisions out of chat-only memory and into the canonical exception source so reruns stay stable.
+
+**Shipped:**
+- `chain-rollout-policy.ts` now records `osm-node-3103220732` and `osm-node-6527816794` in `COORDINATE_SANITY_EXCEPTIONS`
+- `chain-rollout-policy.test.ts` asserts both reviewed ids remain in the exception map with storefront-correct rationale text
+
+**Evidence (this session):**
+- `npm test` **785/785** (148 files)
+
+**Honest limits:**
+- `npm run build` and `npm run test:e2e:ci` were **not rerun** in this slice because the change is limited to the audit exception map plus unit coverage
+
+---
+
+### 2026-07-03 — Approximate location fallback for unknown city/state
+
+**Theme:** Replace raw `Unknown` locality strings with an honest approximate-location treatment across store surfaces without silently backfilling city/state metadata.
+
+**Shipped:**
+- `store-display-labels.ts` now collapses literal `Unknown` city/state metadata to **`Approximate location`**
+- shared store-name formatting now carries that fallback through the nearby-stores list, Settings store picker, single-store overlay title, and internal details provider-store list
+- focused unit coverage added in `store-display-labels.test.ts`
+
+**Evidence (this session):**
+- `npm test` **784/784** (148 files)
+- `npm run build` pass (Next.js **15.5.19**)
+
+**Honest limits:**
+- `npm run test:e2e:ci` was **not rerun** in this slice because the change is isolated to shared display formatting, not flow wiring
+- the formatter normalizes the exact sentinel `Unknown`; new placeholder variants would still need an explicit follow-up if upstream data starts using them
+
+---
+
+### 2026-07-03 — Coordinate-first cold-start regression coverage
+
+**Theme:** Close the last verification gap on the old coordinate-first cold-start stall by proving the bounded OSM deferral path on a genuinely cold geolocation, then keeping that path in committed CI coverage.
+
+**Shipped:**
+- **Original problem recorded:** first cold coordinate-based searches could block on synchronous OSM gap-fill for roughly **88s**, holding the critical path instead of returning saved stores promptly
+- **Fix confirmed:** `/api/market-search` now defers OSM discovery off the critical path, caps synchronous wait at **3s**, and logs deferrals while the background cache warm continues
+- **Permanent regression coverage:** added `e2e/coordinate-first-cold.spec.ts`, which asserts the chosen coordinate still has **zero** `openstreetmap-overpass` rows in `yum4less_test` after fixture prep, then checks bounded response time and visible `mapDiscoveryNotice`
+
+**Evidence (this session):**
+- `npm test` **780/780** (147 files)
+- `npm run test:e2e:ci` **21 passed / 1 skipped / 1 flaky** (exit 0)
+- True cold verification on `37.675, -77.280` against fresh `next start` + `yum4less_test`: **3227ms** market-search response, **3486ms** full geolocation-to-map-pricing flow; server log confirmed `deferred map context discovery after 3000ms`
+
+**Honest limits:**
+- The cold coordinate is protected against future fixture drift by the test's preflight DB assertion, but if fixtures expand into that radius later the spec will fail loudly and require picking a new cold anchor
+- Full Playwright remains green-exit but not perfectly clean: `e2e/single-store-map-overlay.spec.ts` is still flaky on an unrelated mobile meal-card path
+
+---
+
+### 2026-07-03 — Lidl Flipp ingest, Publix supplemental tier, bounded OSM gap-fill, repository split
+
+**Theme:** Weekly-ad chain expansion and cold-path search hardening without changing shopper-facing ranked-chain claims.
+
+**Shipped:**
+- **Lidl ingest wiring:** new Flipp-first weekly-ad client, fixture coverage, rollout/display wiring, and compound-name guard coverage; Lidl observations can land in `price_observations`, but shopper meal pricing stays **coming soon** until a live gate review promotes it honestly
+- **Publix supplemental tier:** browser scrape remains primary; Flipp runs second and only fills uncovered ingredient matches, with explicit per-ingredient dedupe so scrape wins overlap
+- **Cold-path market-search fix:** `/api/market-search` now bounds synchronous OSM gap-fill to **3s**, returns saved catalog stores first, and lets background discovery continue warming the cache for later requests
+- **Repository split:** `market-catalog-repository.ts` and `market-pricing-repository.ts` now own the SQL/mappers; `market-repository.ts` remains the backward-compatible facade for callers
+- **Freshness parity:** sale-driven recipe-import queries now reuse the same 24-hour freshness gate as ranked snapshot reads, so stale weekly-ad rows no longer leak into sale eligibility
+- **Deferred backlog additions:** near-miss confidence analysis, gated ingredient-catalog expansion, shared `assertMarketDataAvailable()`, store geography audit, and bootstrap provenance audit added under [Deferred backlog](#deferred-backlog-not-v1)
+
+**Evidence (this session):**
+- `npm test` **766/766** (146 files)
+- `npm run build` pass (Next.js **15.5.19**)
+- `npx playwright test e2e/coordinate-first.spec.ts` **1/1 passed** against a freshly restarted dev server (cold first-run check)
+- `npm run test:e2e:ci` **21 passed / 1 skipped / 0 failed** (exit 0)
+
+**Notes:**
+- `npm run test:integration` was **not rerun** in this slice because the work did not change DB merge-gating behavior or migration semantics
+- Full Playwright CI initially failed in this shell because `PLAYWRIGHT_SKIP_WEBSERVER=1` was left over from earlier diagnostics; after clearing that env override, the suite passed cleanly
+
+---
+
+### 2026-07-01 — Geolocation persistence, trust hardening, DB 503 parity, Est. prefix fix
+
+**Theme:** Beta v1 trust and resilience hardening — location persistence, server-side trust recompute, DB outage semantics, UI formatting, map model separation, scale-awareness governance.
+
+**Shipped:**
+- **Geolocation persistence:** `locationMode`, `lat`, `lng` persisted to settings; reload re-attempts geolocation when previously set; explicit denial message before ZIP fallback
+- **Trust pass-through hardened:** `recomputePassedMarketTrustFields()` overwrites client-supplied trust fields server-side after store rehydration on rank — `lookupSource`, `dataSource`, `providerCoverageRollup`, and related fields no longer spoofable by the client
+- **DB outage 503:** `/api/market-search` returns 503 on DB unavailability (consistent with `/api/recommendations`); UI shows honest failure copy instead of empty-store guidance
+- **Double "Est." prefix fixed:** `formatEstimatedCurrency` is the single source of truth; `deals-panel.tsx` no longer adds a second prefix
+- **Map model separation:** `buildDiscoveryMapModel` and `buildSingleStoreMapModel` are distinct builders; single-store overlay has one pin, no radius circle, backdrop dismiss works
+- **Scale-awareness governance:** `.cursor/rules/yum4less-scale-awareness.mdc` (`alwaysApply: true`) — every fix response must include a `Scale check:` block answering small- and large-scale impact
+
+**Evidence (this session):**
+- `npm test` **746/746** (142 files)
+- `npm run build` pass (Next.js **15.5.19**)
+- `npm run test:e2e:ci` **19 passed / 1 skipped / 0 failed** (exit 0) — skipped: H12 Leaflet quirk (intentional); 2 flaky retries (`coordinate-first`, `api-errors` rank-500) passed on retry
+
+**Deferred scale risks:** client-trust audit across all public API routes (Scale risk A); empty-vs-unavailable semantics on remaining read routes (Scale risk B) — see [Deferred backlog](#deferred-backlog-not-v1).
+
+---
+
+### 2026-07-01 — Single-store map model separation + scale-awareness rule
+
+**Theme:** Fix single-store overlay backdrop dismiss by separating discovery vs single-store map builders; add governance rule for symptom vs root-cause fixes.
+
+**Shipped:**
+- `buildDiscoveryMapModel` / `buildSingleStoreMapModel` in `nearby-stores-map-model.ts` — discovery keeps radius circle + anchor; single-store is one pin only
+- `NearbyStoresMap` branches on `StoresMapModel.kind`; `SingleStoreMapOverlay` uses minimal builder
+- CSS `overflow: hidden` on single-store panel/map shell
+- `e2e/single-store-map-overlay.spec.ts` — backdrop click at dimmed corner (not viewport center under panel)
+- `.cursor/rules/yum4less-scale-awareness.mdc` + `AGENTS.md` + orchestration cross-ref + `beforeSubmitPrompt` hook reminder
+
+**Evidence (this session):**
+- `npm test` **743/743** (142 files)
+- `npm run build` pass
+- `npm run test:e2e:ci` **20 passed / 1 skipped / 0 failed** (2 flaky: `api-errors`, `coordinate-first` — passed on retry)
+
+---
+
+### 2026-07-01 — Walmart rollout copy test fix + live ingest isolation + full gate
+
+**Theme:** Confirm live scheduled ingest isolated to `yum4less_dev`; fix stale Walmart `rolloutNote` expectation in integration test; full verification gate run.
+
+**Shipped:**
+- `recommendation-service.integration.test.ts` — Walmart assertion updated to plain-language copy from `provider-rollout.ts` (`dinner price estimates are not available`; was deprecated weekly-ad pricing string)
+
+**Evidence (this session):**
+- **DB isolation:** `ingest:weekly-ads:scheduled` reads `.env.local` `DATABASE_URL` → `yum4less_dev`. `run-integration-tests.mjs` / `run-e2e-tests.mjs` redirect `yum4less_dev` → `yum4less_test`. `yum4less_test`: **39** `price_observations` (`*-weekly-ad-scrape` only; no `*live*` sources); `kroger-mechanicsville` present. `yum4less_dev`: **337** rows incl. `kroger-official-api` — live ingest did not leak into test DB.
+- `npm run test:integration` **24/24** (7 files)
+- `npm test` **741/741** (142 files)
+- `npm run build` pass (Next.js **15.5.19**)
+- `npm run test:e2e:ci` **20 passed / 1 skipped (H12) / 1 failed** — `single-store-map-overlay.spec.ts`: Leaflet radius `path.leaflet-interactive` intercepts `Close store map` backdrop click (90s timeout)
+
+**Honest limits:** `single-store-map-overlay` dismiss via backdrop still failing in full CI harness — use Escape (mobile test path) or fix z-index/pointer-events next slice. `coordinate-first` **passed** this run; geolocation persistence P1 not re-validated manually.
+
+---
+
+### 2026-06-30 — Shopper copy simplification (Slice 2)
+
+**Theme:** Remove pipeline/BETA/chain-list jargon from normal flow copy; keep trust disclosure in expandable banner `<details>` unchanged.
+
+**Shipped:** Chain-neutral hero, settings, rank, results, map legend/footnotes, store pills/badges, sale-confidence labels, trust banner summary (no “Beta” title), `sale-ingredient-picker` “Sale price — estimate only”. Updated committed e2e helpers/specs for changed strings.
+
+**Evidence:** `npm test` **733/733** (140 files); `npm run build` pass. `npm run test:e2e:ci` **not re-run** this slice (specs updated only).
+
+**Held unchanged:** `pricing-trust-heads-up-expanded.ts` (opt-in `<details>`), `internal-details-modal.tsx`, `recommendation-error-copy.ts` (error hints), dev-only provider messages.
+
+### 2026-06-30 — Per-chain OSM gap-fill trigger
+
+**Theme:** Replace total-pin sparse threshold with per-chain Postgres gap detection so seed-heavy markets still discover missing ranked branches.
+
+**Shipped:**
+- **`needsSearchTimeOsmGapFill()`** — ranked v1 chains need ≥ **2** Postgres pins in radius; context-only catalog chains (Walmart, BJ's) and Costco/Sam's name fragments need ≥ **1**; chains sourced from `chain-rollout-policy.ts`.
+- **Removed** `YUM4LESS_MAP_SPARSE_PIN_THRESHOLD` / `DEFAULT_MAP_SPARSE_PIN_THRESHOLD` (no remaining readers).
+- **`.env.example`** — sparse-pin env comment removed; inline comment documents old total-pin trap.
+
+**Evidence:** `npm test` **733/733** (140 files); `npm run build` pass. Postgres MCP read-only spot-check: ZIP **23111**, **5 mi** — old rule skipped gap-fill; new rule triggers for Publix, Food Lion, Costco.
+
+**Honest limits:** `npm run test:e2e:ci` / `npm run test:integration` not re-run this slice. Slice 2 shopper copy simplification **reported only** — pending owner review.
+
+### 2026-06-29 — Chain rollout policy consolidation (Option A) + Kroger note parity + e2e bootstrap
+
+**Theme:** One canonical rollout module; derived chain lists; four-chain Settings e2e green after CI bootstrap coord fix.
+
+**Shipped:**
+- **`chain-rollout-policy.ts`** — canonical `SHOPPER_RANKED_V1_CHAINS`; `SETTINGS_SELECTABLE_CHAINS`, `WEEKLY_AD_RANKED_PRICING_CHAINS`, and provider-rollout catalog display list derive from it (no independent hardcoded arrays).
+- **Kroger base rollout note** — same `buildDirectionalRolloutNote()` template as Aldi, Publix, and Food Lion; no chain-specific trust-tier wording in the four v1 base notes.
+- **Walmart** (weekly-ad-eligible, gate-blocked) and **BJ's** (catalog-display-only, not selectable) — confirmed intentional; documented inline in `chain-rollout-policy.ts`.
+- **CI bootstrap** — `db/ci/014_ci_bootstrap_stores.sql` Publix/Food Lion coords within default 5 mi test radius; `ON CONFLICT DO UPDATE` (weekly-ad ingest rewrites `source_name`, so prior upsert no-op'd); `ensure-test-db.mjs` always reapplies bootstrap; fixture catalog coords aligned; `e2e/settings-stores.spec.ts` multi-store map scoping fix.
+
+**Evidence:** `npm test` **731/731** (140 files); `npm run build` pass (Next.js **15.5.19**); `npm run test:e2e:ci` **19 passed / 1 skipped (H12 Leaflet quirk) / 0 failed** — confirmed clean uninterrupted run (not the prior session's partial **13/21**).
+
+**Honest limits:** `npm run test:integration` not re-run this slice. Remote CI / homelab unchanged.
+
+### 2026-06-29 — Four-chain copy/doc parity (Slice 1)
+
+**Theme:** Remove stale Kroger/Aldi-primary hierarchy from shopper copy, tests, rules, and continuity; fix `listProviderRollout()` omitting Food Lion.
+
+**Shipped:** Rank step + loading overlay; merged trust expander section (`Ranked v1 chains`); internal-details glossary; `listProviderRollout()` includes `food-lion`; `PROJECT_CONTINUITY.md` Working today + decision log ~1348 superseded; README, product rule, web-backend agent, redesign handoff; superseded banner on 2026-06-27 chain audit.
+
+**Honest limits:** Kroger base rollout note BETA framing still pending owner decision (unchanged). Slice 2 rollout-toggle consolidation not started. `npm run test:e2e:ci` not re-run this slice.
+
+### 2026-06-29 — Expand committed Playwright E2E suite
+
+- **`e2e/`:** Shared `helpers.ts` + `fixtures/api-mocks.ts`; specs for coordinate-first geo, multi-store Settings, Tier C (mocked), API 400/500 panels, market pass-through, nav/theme, H11/H12 (promoted from CI-skipped `verify-h11-h12`), mobile smoke (`Pixel 5` project).
+- **`playwright.config.ts`:** 90s timeout, failure video in CI, desktop + mobile projects.
+- **Docs/rules:** `e2e/README.md`, `AGENTS.md`, `README.md`, testing + orchestration rules — committed Playwright is primary browser gate; MCP exploratory only.
+- **Honest limits:** Local `npm run test:e2e:ci` — **13/21 passed** after expansion (H12 skipped — bundled Leaflet); full green re-run pending. Playwright MCP not re-run.
+
+### 2026-06-29 — Promote Publix + Food Lion to shopper-ranked v1 (parity with Kroger/Aldi)
+
+**Theme:** Remove `MEAL_PRICING_COMING_LATER_CHAINS` lock; add Publix and Food Lion to Settings store selection and OSM ranked-chain map policy.
+
+**Shipped:** `provider-rollout.ts` — empty coming-later set; `settings-store-selection.ts` + `map-osm-ranked-chain-policy.ts` — four-chain ranked scope; trust copy (hero, heads-up, settings, help hints, shopper notices); `provider-rollout.test.ts`, `settings-store-selection.test.ts`, `e2e/mvp-flow.spec.ts` updated.
+
+**Honest limits:** Publix/Food Lion have no Kroger-style official API path — weekly-ad ranked only. Walmart still context-only. Playwright MCP not re-run this slice.
+
+### 2026-06-29 — Homelab scheduled-ingest runbook (prep only)
+
+**Theme:** Document mechanical cron wiring for a future 24/7 Linux box — no hardware deploy, no ingest logic changes.
+
+**Shipped:** [`docs/homelab-deploy.md`](docs/homelab-deploy.md) — prerequisites, `.env.local` (incl. real `YUM4LESS_INGEST_ZIPS`), cron wrapper + logrotate, Postgres freshness SQL, silent-failure playbook, stale-vs-thin product gap note. README daily-ingest section corrected (pipeline order map-catalog → weekly-ad; link to runbook).
+
+**Honest limits:** Box not live; pre-go-live script gaps flagged in runbook (Docker-only `ensure-test-db`, schema-stale throw, partial chain success exit 0). No ingest-health UI slice. Food Lion promotion unchanged.
+
+### 2026-06-28 — Kroger canonical store-id merge + weekly-ad fan-out (P0 live-session follow-up)
+
+**Theme:** Close duplicate Kroger pins and thin per-store weekly-ad coverage after live browser diagnosis — slug ↔ numeric `locationId` merge, one Flipp ingest fan-out to all Kroger store ids in batch, OSM fixture pin suppression when official API catalog exists.
+
+**Shipped:** `kroger-catalog-canonical.ts` — proximity dedupe (API-derived wins over bootstrap slug), OSM Kroger tombstone when `kroger-official-api` row in radius, weekly-ad primary-store picker. `store-catalog-sync.ts` — same-building proximity reconcile (0.15 mi). `weekly-ad-ingestion-service.ts` — single Kroger Flipp ingest + fan-out sync per store id. `market-search-service.ts` + `settings-store-selection.ts` — dedupe/filter before map/list and Settings dropdown. `provider-price-observation-sync.ts` — prefer API-derived Kroger id when `source_store_id` matches. Prior slice: honest empty-meals notice (TheMealDB schedule no longer masks zero recommendations).
+
+**Owner context:** No scheduled ingest on owner machine — stale Aldi + empty API Kroger ids still require manual `npm run ingest:weekly-ads:scheduled` (or homelab cron) for fresh ranked reads; this slice fixes duplicate-id and fan-out gaps, not missing cron.
+
+**Evidence:** `npm test` **727/727** (139 files); `npm run build` pass. Playwright MCP / integration / Postgres MCP not re-run this slice.
+
+### 2026-06-28 — Publix weekly-ad matching close-out (compound-title guard batch)
+
+**Theme:** Close Publix matching investigation after Stage 1 diagnosis — chain-agnostic guard batch for compound product titles; no threshold change.
+
+**Shipped:** Extended `weekly-ad-match-guards.ts` — `butter` (butterbread/butterhead), `honey` (+turkey/ham/gouda/mango), `plain-yogurt` (yogurt bars/frozen greek), `garlic` (dip), `olive-oil` (focaccia), `lime` (beer), `yellow-onion` (onion cheese), `shrimp` (ravioli), `bacon` (sandwich), `cream-cheese` (pie/s'mores), `vanilla-extract` (cupcakes). Unit tests for 14 Publix false positives + 11 legitimate matches.
+
+**Live re-measure post-guards (ZIP 23111, one pass):** **619 parsed → 71 matched (11.5%) → 32 unique ingredients** — **−15** false positives removed (86→71); unique **35→32**. Capture: `captures/weekly-ad-baseline/publix/2026-06-28T23-45-10.677Z/`. vs May **655/21 synced** — current week still richer (32 unique) but trust-cleaner; May typicality unconfirmed.
+
+**Kroger/Food Lion cross-check:** No Kroger 13-match or Food Lion 15-match regressions from new guards (Land O Lakes Butter, Kerrygold, Chobani, Hormel Bacon unaffected).
+
+**Decision:** Publix matching **actionable fixes applied** for compound-title class; remaining near-misses still wrong to promote. Not claiming at-ceiling — large feed supports more staples when on sale — but **no further fixes without wrong-target promotions**. Hunt's Tomatoes → canned-tomatoes (0.54) remains borderline, not shipped.
+
+**Evidence:** `npm test` **718/718** (138 files).
+
+### 2026-06-28 — Publix weekly-ad matching Stage 1 diagnosis (read-only)
+
+**Theme:** Same funnel diagnosis as Aldi/Kroger/Food Lion — live browser scrape at ZIP 23111; bucket offers; classify near-misses; no matching logic changes this pass.
+
+**Live capture (one pass):** **619 parsed → 86 matched (13.9%) → 35 unique ingredients** via Publix browser scrape + HTML/network parser. Capture: `captures/weekly-ad-baseline/publix/2026-06-28T23-28-25.850Z/`. vs May baseline **655/21 synced** — much larger raw feed than Flipp chains; **~15 clear false-positive matches** identified (butterbread→butter, yogurt bars→plain-yogurt, honey deli meat→honey, etc.); clean unique ~23–28 estimated. May **21 synced** plausible after dedupe + week variance.
+
+**Findings:** Compound-title token collision is the dominant fixable class (same as Aldi). Near-misses mostly wrong to promote (baked beans, whiting/salmon, Ore-Ida, turkey breast→chicken). Hunt's Tomatoes → canned-tomatoes at 0.54 borderline. **Stage 2 guard batch proposal pending owner approval** — not at-ceiling until false-positive rate cleaned.
+
+**Infrastructure:** `analyze-kroger-flipp-match-funnel.ts` extended with `--chain publix` (scrape path reuses baseline capture + funnel analysis).
+
+**Evidence:** Live scrape only; Playwright Chromium install required this session; `npm test` not re-run.
+
+### 2026-06-28 — Food Lion Flipp matching close-out (flour-tortilla alias + butter guard)
+
+**Theme:** Close Food Lion weekly-ad matching investigation after Stage 1 diagnosis — one chain-agnostic alias + one butter false-positive guard; no threshold change.
+
+**Shipped:** `"flour tortilla"` alias on `flour-tortillas`; `butter` rejects `/can't believe/i`, `/not butter/i`, `/brumel/i`. Unit tests for margarine rejection, Kerrygold pass-through, La Banderita match.
+
+**Live re-measure post-fix (ZIP 23111, one pass):** **133 parsed → 15 matched (11.3%) → 13 unique ingredients** — **+1** `flour-tortillas` (La Banderita), **−1** false `butter` (margarine spread); matched **offer count unchanged** at 15 with cleaner ingredient mix. Capture: `captures/weekly-ad-baseline/food-lion/2026-06-28T23-24-57.298Z/`. vs May **137/20 synced** — May likely stronger week (12→13 unique now vs ~20 implied May).
+
+**Kroger cross-check:** Land O Lakes Butter + Butter Croissants **not** caught by new butter guards — Kroger 13 matched unchanged.
+
+**Decision:** Food Lion Flipp **not at hard ceiling** (broader grocery SKU coverage than Aldi/Kroger same ZIP/week) but **near-miss promotions still wrong** (baked beans, whiting, Ore-Ida, etc.). May **20 synced** remains unconfirmed typical — needs second-week capture. **Investigation closed** for actionable matching fixes this pass.
+
+**Evidence:** `npm test` **683/683** (138 files).
+
+### 2026-06-28 — Food Lion Flipp matching Stage 1 diagnosis (read-only)
+
+**Theme:** Same funnel diagnosis as Aldi/Kroger — live Flipp capture at ZIP 23111; bucket offers; classify near-misses; no code changes this pass.
+
+**Live capture (one pass):** **133 parsed → 15 matched (11.3%) → 12 unique ingredients**. Capture: `captures/weekly-ad-baseline/food-lion/2026-06-28T23-21-10.304Z/`. vs May baseline **137/20 synced** — current week thinner on unique dinner SKUs (12 vs ~20 implied May); staples present (lemon, olive oil, soy sauce) that Aldi/Kroger feeds lacked same ZIP/week.
+
+**Findings:** One matched false positive (`I Can't Believe It's Not Butter` → butter); one evidence-backed alias gap (`flour tortilla` singular → 0.74); six near-misses wrong to promote (baked beans/black beans, whiting/salmon, Ore-Ida/baby potatoes, turkey/chicken breast combo, fresh strawberries/frozen-berries); Chobani `Greek or Zero Sugar` title scores 0.54 (0.74 without `or Zero Sugar` — scoring limit, not missing alias). **Stage 2 proposals pending owner approval.**
+
+**Evidence:** Live Flipp only; `npm test` not re-run this sub-slice.
+
+### 2026-06-28 — Aldi Flipp matching close-out (false-positive guards + at-ceiling)
+
+**Theme:** Close Aldi weekly-ad matching investigation after Stage 1 funnel diagnosis — three chain-agnostic guard patterns for ingredient-name token collisions; no threshold change; no alias inflation.
+
+**Shipped:** `weekly-ad-match-guards.ts` — `honey` rejects `/graham/i` + `/hot honey/i`; `cheddar-cheese` rejects `/brats?/i` + `/smoked sausage/i`; `vanilla-extract` rejects `/vanilla bars/i`, `/ice cream/i`, `/crunch bars/i`. Unit tests for five Aldi false positives + eleven legitimate Aldi matches unchanged. Flipp funnel script generalized with `--chain aldi` + confidence buckets (prior slice).
+
+**Stage 1 diagnosis (ZIP 23111, one live Flipp pass):** **148 parsed → 23 matched (15.5%) → 14 unique ingredients** pre-guards; ~54% noise (LEGO/home goods); near-misses all wrong-target; no Greek-yogurt-class alias gap in this week's feed.
+
+**Live re-measure post-guards (ZIP 23111, one pass, 2026-06-28):** **148 parsed → 18 matched (12.2%) → 11 unique ingredients** — exactly **−5** false positives removed (honey ×2, cheddar-cheese ×2, vanilla-extract ×1). Capture: `captures/weekly-ad-baseline/aldi/2026-06-28T23-19-38.380Z/`. **Investigation closed.**
+
+**Decision:** Aldi Flipp **match rate at-ceiling for typical weekly inventory** — protein-heavy summer ad + off-list SKU noise; not a resolver bug. Known risk class: **compound product titles containing ingredient tokens** (honey/cheddar/vanilla in sausage, crackers, frozen bars) — check when diagnosing Food Lion/Publix.
+
+**Kroger cross-check (read-only):** None of Kroger's **13 matched** offers (2026-06-28 capture) target `honey`, `cheddar-cheese`, or `vanilla-extract` — **Kroger 13 matched close-out number unchanged.**
+
+**Evidence:** `npm test` **675/675** (138 files). Captures: pre-guard `…/2026-06-28T23-02-37.607Z/`; post-guard `…/2026-06-28T23-19-38.380Z/`.
+
+### 2026-06-28 — Kroger Flipp matching close-out (`greek yogurt` alias + at-ceiling decision)
+
+**Theme:** Close Kroger weekly-ad matching investigation after funnel diagnosis — one chain-agnostic alias fix; no threshold or wrong-target near-miss promotions.
+
+**Shipped:** `"greek yogurt"` alias on `plain-yogurt` in `weekly-ad-ingredient-search-terms.ts` (covers Flipp titles like Chobani/Fage); unit tests; match-funnel + baseline capture tooling from prior slice retained.
+
+**Live re-measure (ZIP 23111, one pass):** **119 parsed → 13 matched → 1 newly synced** (9 skipped unchanged — dev Postgres already held prior-session rows). vs pre-alias same inventory: **119 / 11 / 9** (2026-06-27). **+2 matched** (expected Chobani + Fage greek yogurt). Alias is chain-agnostic — may lift matching on Aldi/Food Lion/Publix/Walmart when those feeds include `"Greek Yogurt"` titles.
+
+**Same-day Food Lion Flipp diagnostic (2026-06-28, pre-alias capture):** 133 parsed, **15 matched** — for context only; May 2026 baseline **20 synced** still unconfirmed as typical week.
+
+**Decision:** Kroger Flipp **match rate treated as at-ceiling** for typical weekly inventory (~60% off-list SKU noise; Kroger ad lacked lemon/olive oil/soy/salmon/bell peppers present in Food Lion feed same ZIP/week). Not a bug; not further actionable without a second data source or a different week's capture. Food Lion May **20 synced** may be an unusually strong week — needs second-week data to confirm. **2026-06-28 Aldi guard slice:** none of Kroger's 13 matched offers (same ZIP/week capture) use `honey` / `cheddar-cheese` / `vanilla-extract` — **13 matched count unaffected** by the chain-agnostic false-positive guards.
+
+**Evidence:** `npm test` **654/654** (137 files). Live baseline: `npx tsx scripts/run-kroger-weekly-ad-live-baseline.ts`.
+
+### 2026-06-27 — Kroger weekly-ad Flipp-first parity (sale discovery path)
+
+**Theme:** Align Kroger sale-discovery with Aldi/Food Lion — full `resolveFlippWeeklyAdOffersForChain` (merchant + flyer + supplemental ingredient searches) as primary tier; chain scrape secondary; official Products API partial fill last.
+
+**Shipped:** `kroger-weekly-ad-ingestion.ts` reordered Flipp-first; `kroger-weekly-ad-ingestion.test.ts` (5 cases); Kroger case in `flipp-weekly-ad-resolver.test.ts`; `weekly-ad-chain-config.ts` termsNote; `docs/provider-integration-pattern.md` shape A now includes Kroger (three chains — shared-config trigger met, **not built**).
+
+**Root cause (code):** Prior path was scrape-first (Flipp skipped when scrape returned anything) and used simple `fetchFlippWeeklyAdOffers` only — missing flyer lookup and supplemental ingredient searches Aldi/Food Lion get. Matching threshold (`MIN_WEEKLY_AD_MATCH_CONFIDENCE` 0.55) and weekly-ad alias terms are chain-agnostic; Kroger’s 101 `provider_search_terms` rows affect official API sync only, not Flipp matching.
+
+**Honest limits:** Single live attempt 2026-06-27; Food Lion still 20 synced at same ZIP (May baseline). Supplemental Flipp ingredient searches did not appear in retrieval label this run (merchant+flyer already had matches). `probe:kroger-live-scrape.mjs` still documents old scrape-first path — update separately if kept as owner probe.
+
+**Evidence:** Live baseline @ ZIP 23111 — **119 parsed → 9 synced** (11 matched pre-dedupe); Flipp-first, scrape/API not used. Prior May 2026: 122→4. `npm test` **650/650** before live run.
+
+
+**Theme:** Generalize Kroger data-path audit lessons into store-agnostic documentation — no speculative plugin layer.
+
+**Shipped:** [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md) — three data-type categories (store location, item pricing, sale discovery); per-source structural capability matrix; generalized audit checklist; store-agnostic vs Kroger-hardcoded codebase inventory; explicit non-goals. Cross-linked from Resume + Decision log.
+
+**Honest limits:** Documentation + flagging only; no code refactor. Weekly-ad fallback order remains hand-written per chain file; official price sync remains Kroger-only in `syncProviderPreviewsToPriceObservations`.
+
+### 2026-06-26 — Post-audit follow-ups: trust banner expansion + M128 rule correction
+
+**Theme:** Owner decisions from five-stage audit close-out — restore modal trust depth via banner disclosure; align scrape-compliance rule with shipped ingest behavior.
+
+**Trust copy (item 1):** Expanded `PricingTrustHeadsUpBanner` with `<details>` disclosure — paragraph content recovered from deleted `trust-explainer-modal.tsx` (chain coverage, 24h cache/freshness, sale confidence, fallback, Kroger/Aldi production focus, other chains context-only, Walmart/OSM context). Inline heads-up message, card labels, and Tier C messaging unchanged. No modal, Settings section, or new route. Unit/component tests for section presence + M156 forbidden-claim patterns.
+
+**M128/M151 (item 2):** `yum4less-security-and-dependencies.mdc` now documents **manual owner-pause only** today; robots.txt checks, auto-pause on block signals, and automated per-chain kill switches explicitly **homelab-slice planned**, not shipped. No ingest automation added this pass.
+
+**Evidence:** `npm test` **644/644** (134 files); `npm run build` pass. Playwright MCP on production `next start` (:3000): ZIP **23111** flow; expanded banner light `#faece7` (`post-audit-light-trust-banner-expanded.png`) + dark `#101a14` (`post-audit-dark-trust-banner-expanded.png`); Chain coverage, 24h cache, Sale confidence, Fallback sections visible.
+
+**Honest limits:** M128/M151 automation still homelab queue. Not claiming verified/CI green/deploy-ready.
+
+### 2026-06-26 — Full-project audit close-out (Stages 1–5)
+
+**Theme:** Doc-vs-reality + QA + test/build gates + trust explainer modal removal + continuity sync.
+
+**Stage 1 (senior-auditor):** Cross-checked Resume/changelog vs code; flagged stale verification snapshot, mislabeled D7 Playwright screenshots, M128 scrape guard doc/code gap, Sprint E workflows local-only, decision-log contradictions.
+
+**Stage 2 (qa-engineer):** Playwright partial + code review; stale results idle copy; manual-pick zero-selection UX; dev `.next` corruption when `build` runs parallel to `dev`.
+
+**Stage 3 (testing-cicd):** Fixed `test-fixtures.ts` build types; updated results idle copy; manual-ingredient Continue guard; +3 unit tests; Playwright on `next start` — light/dark themes confirmed (`stage3-*.png`); Sprint D P0 claims match repo.
+
+**Stage 4:** Deleted `trust-explainer-modal.tsx`, auto-open state, “How to read these labels” trigger, `trust_explainer_dismissed` analytics; updated unit + e2e tests.
+
+**Stage 5 (verifier):** Re-ran `npm test` **636/636**, `npm run test:integration` **24/24**, `npm run build` pass; continuity + decision log updated below.
+
+**Honest limits:** `npm run test:e2e:ci` not re-run. Remote CI not inspected (unpushed working tree). M128/M151 robots.txt + per-chain auto-pause still policy-only. Long chain-coverage essays from modal not relocated — inline trust + hero/help hints only (owner to choose if expansion needed). Semgrep MCP not re-run.
+
+**Evidence:** `npm test` **636/636** (132 files); `npm run test:integration` **24/24**; `npm run build` pass; Playwright MCP production server ZIP **23111** rank **1** meal, themes light `#faece7` / dark `#101a14`.
+
+---
+
+### 2026-06-26 — Post-audit hardening Sprints A–E
+
+**Theme:** Close provider-search-terms debt, add meal-ranking test harness, Zod settings/shopping-route spine, P0 redesign component tests, dependency monitoring.
+
+**Shipped:**
+- **Sprint A:** `resolveKrogerPreviewTrackedIngredients` / `resolveKrogerSyncTrackedIngredients`; auto DB term load in `buildProviderPricingPreviews`; required `trackedIngredients` on coverage rollup; full-catalog static fallback (97 ingredients)
+- **Sprint B:** `recommendation-scoring.test.ts`, `shopping-plan-builder.test.ts`, frozen CI-02 regression baseline, `location-resolution.test.ts`, `meal-presentation.test.ts`
+- **Sprint C:** `contracts/shared/settings-preferences.ts`; `contracts/shopping-route.ts`; corrupt localStorage → null
+- **Sprint D (P0):** `test-fixtures.ts` + co-located tests for gate/ingredients/picker/rank/deals/meal-card trust branches
+- **Sprint E:** `.github/dependabot.yml`, `dependency-watch.yml`, README PostCSS advisory note
+
+**Honest limits:** Playwright MCP on P0 panels not run this slice. P1–P3 UI tests (settings, welcome, bottom-nav, map overlay, theme-sync) deferred. Workflow files not on remote — not claiming CI green.
+
+**Evidence:** `npm test` **633/633** (132 files); `npm run test:integration` **24/24**; `npm run build` pass; Postgres MCP Kroger **101** `provider_search_terms` rows.
+
+---
+
+### 2026-06-26 — D7: mockup color/tokens port (Theme C/D)
+
+**Theme:** Replace interim navy/mint tokens with mockup palette; flat page bg; system font; **light default on first visit**; apply trust/urgency/price roles to existing labels without copy changes.
+
+**Shipped:**
+- **`theme-tokens.css`:** Theme C (dark) + Theme D (light) from `.private/tokens.css` — base surfaces, action, trust/urgency/price/danger, tag-blue/coral/purple; legacy `--panel`/`--text`/`--accent` aliases; first-paint `html:not([data-theme])` = light (D7 overrides D2 OS-first)
+- **`globals.css`:** flat `var(--bg)` page; system font stack; recolored panels, buttons, bottom nav, map chrome, accordion/cards, warnings/trust banners; store-group heading tag chips
+- **First-visit default:** `defaultFormState.theme`, `ThemeSync`, and SSR `resolveThemePreference` fallback → **`light`** (Settings still offers light/dark/system; persisted choice unchanged after first save)
+- **Trust color roles:** `meal-recommendation-card`, `sale-ingredient-picker`, `deals-panel` — price/trust/urgency badge classes on existing Est./freshness/directional labels (no wording changes)
+- **`nearby-stores-map.tsx`:** search-radius circle reads `--action` token
+
+**Honest limits:** Owner browser verification of both themes **not yet run**. `npm run test:e2e:ci` not re-run. Not claiming verified/deploy-ready without owner sign-off.
+
+**Evidence:** `npm test` **549/549** (121 files); `npm run build` pass. Playwright MCP — first visit light (`#faece7`), dark switch (`#101a14`), trust-heads-up legible in both themes (`d7-light-trust-labels.png`, `d7-dark-trust-labels.png`).
+
+---
+
+### 2026-06-25 — Doc sync; Settings store dropdown + SSR hydration fixes
+
+**Theme:** Align shared docs with shipped redesign; fix Settings store picker empty when gates off; fix React hydration error in Cursor/browser preview.
+
+**Shipped:**
+- **`settings-store-selection.ts`:** Settings dropdown lists **Kroger + Aldi** regardless of `recommendationEnabled`; prefers ingested/catalog rows over `osm-` pins; defaults + auto market search on Settings when setup incomplete
+- **SSR hydration:** `SSR_DEFAULT_APP_TAB` (`settings`) for server/first paint; `resolveAppTabFromPreferences()` after mount; form prefs hydrate post-mount with guarded localStorage writes — fixes server Settings vs client Home mismatch
+
+**Docs:** `PROJECT_CONTINUITY.md`, `README.md`, `docs/redesign/redesign-analysis-handoff.md` refreshed for slices 1–5 + D1–D6 + D7 queue.
+
+**Honest limits:** D7 color port not started. Playwright MCP / `npm run test:e2e:ci` not re-run.
+
+**Evidence:** `npm test` **548/548** (121 files); `npm run build` pass.
+
+---
+
+### 2026-06-25 — Deferred redesign D1–D6: 5-tab shell, theme, ingredients, map link, pantry
+
+**Theme:** Ship deferred mobile-first shell and UX increments after slices 1–5 (Home/Deals/Cook/Saved/Settings tabs, light/dark theme, ingredient gate + manual pick chips, map overlay link, session pantry entry).
+
+**Shipped:**
+- **D1:** `bottom-nav.tsx`, `app-tab.ts`, `deals-panel.tsx`, `saved-placeholder-panel.tsx`; tab routing in `use-meal-planner.ts` + `index.tsx`; Cook enabled when `recommendationState.status === 'ready'` with results; Settings tab owns location/stores/theme; Home owns welcome → ingredients → rank → results
+- **D2:** `theme-tokens.css`, `ThemeSync`, `resolve-theme.ts`; Settings theme select persists to localStorage; `prefers-color-scheme` first paint before manual override
+- **D3:** `ingredient-gate-panel.tsx` (use-all vs manual); `sale-ingredient-picker.tsx` — search, category chips, multi-store grouping; `inferIngredientCategory` moved to client-safe `ingredient-category.ts`
+- **D4:** Single-column shell layout under bottom nav (accordion unchanged from slice 4)
+- **D5:** Map link bar above bottom nav on ingredients step; `store-map-overlay.tsx` (no map tab/column on main path)
+- **D6:** `pantry-prompt-card.tsx` on results — session-only add/remove; no persistence
+
+**Honest limits:** Playwright MCP and `npm run test:e2e:ci` not re-run. Pantry does not affect ranking yet. Saved tab is placeholder only. Cuisine chips (R11) not shipped.
+
+**Evidence:** `npm test` **544/544**; `npm run build` pass.
+
+---
+
+### 2026-06-25 — Redesign slice 5: Settings gate + welcome flow + opt-in deletion
+
+**Theme:** Settings-first entry, welcome budget/dietary, tap-step flow (ingredients → rank → results), full-screen rank loading, delete TheMealDB opt-in dead code.
+
+**Shipped:**
+- Flow steps on Home tab: `welcome` → `ingredients` → `rank` → `results` (`flow-step.ts`, `use-meal-planner.ts`); Settings is a **tab** (D1), not a flow step
+- New panels: `settings-panel`, `welcome-panel`, `ingredients-step-panel`, `rank-step-panel`, `rank-loading-overlay`
+- Settings gate via `isSettingsPreferencesComplete`; explicit `markSetupComplete` on Save (draft auto-save no longer completes setup)
+- Factory reset in Settings (`clearSettingsPreferences` + re-gate)
+- Deleted `location-search-panel.tsx`, TheMealDB opt-in UI/CSS, shopper `recipeSourceOptIn` on public API/contracts
+- `recommendation-service`: removed opt-in gate; public parse requires `recipeSource: internal-library`
+- Tests + e2e updated for new flow
+
+**Honest limits:** Playwright MCP and `npm run test:e2e:ci` not re-run. Deferred shell (5-tab nav, map-as-link-only) unchanged.
+
+**Evidence:** `npm test` **540/540**; `npm run build` pass.
+
+---
+
+### 2026-06-25 — Redesign slice 4: stacked accordion meal cards
+
+**Theme:** Replace swipe carousel with stacked accordion — title-only collapsed, one expanded at a time.
+
+**Shipped:**
+- `meal-results-accordion.tsx` — expand/collapse triggers; `hideTitle` on `MealRecommendationCard` when expanded
+- `meal-results-panel.tsx` — uses accordion instead of `RecommendationResultsCarousel`
+- Deleted `recommendation-results-carousel.tsx` + unit test; removed carousel CSS from `globals.css`
+- Tests: `meal-results-accordion.test.tsx`; C1 panel test + `meal-planner.test.tsx` expand before detail assertions; e2e accordion + core flow updates
+
+**Honest limits:** Welcome/settings gate and TheMealDB opt-in deletion still slice 5. Playwright MCP session could not reach ranked results (dev on `:3002`, no sale ingredients in that DB state); `npm run test:e2e:ci` not re-run.
+
+**Evidence:** `npm test` **542/542**; `npm run build` pass.
+
+---
+
+### 2026-06-25 — TheMealDB opt-in: schedule deletion (slice 5)
+
+**Theme:** Owner chose delete over keep-hidden; dead opt-in code removal bundled with slice 5 flow/settings work.
+
+**Changed:** Resume, implementation slices table, locked plan, decision log.
+
+---
+
+### 2026-06-25 — Redesign slice 3: store scope + ingredient defaults
+
+**Theme:** Shopper-selected stores drive UI and rank scope; server resolves default sale ingredients; remove 40-ID POST cap.
+
+**Shipped:**
+- `selectedStoreIds` on `MealPreferenceForm` + API validation (`parseSelectedStoreIds`, shopping-style bounds)
+- `store-scope.ts` — unselected stores hidden from scoped market, map, sale ingredients, rank observations
+- Default rank: omit `selectedIngredientIds` → server resolves all rankable ingredients at selected stores (`resolveEffectiveSelectedIngredientIds`)
+- Removed `selectedIngredientIds.length > 40` rejection; per-ID validation + 64 KB body limit unchanged
+- Settings prefs: `settings-preferences.ts` localStorage (`setupComplete` marker); auto-save from form; store dropdown under shopping style (single select / multi checkboxes)
+- Rank CTA enabled when store(s) selected; optional ingredient narrow only
+
+**Honest limits:** Settings-first gate routing + factory-reset UX deferred to slice 5. Carousel and welcome flow unchanged (slices 4–5). Playwright MCP not run.
+
+**Evidence:** `npm test` **540/540**; `npm run test:integration` **24/24**; `npm run build` pass.
+
+### 2026-06-25 — Redesign slice 2: merged TheMealDB ranking
+
+**Theme:** Single score-sorted list (internal library + sale-matched TheMealDB); hide shopper opt-in checkbox.
+
+**Shipped:**
+- `selectRecipesForRanking` / `filterRecipesForMergedRanking` — default `internal-library` path pools internal + TheMealDB imports; one sort, no per-source quota
+- TheMealDB scheduled-refresh metadata check runs on merged default path (DB-backed markets)
+- Client rank payload always sends `recipeSource: internal-library` (merged); checkbox hidden via `SHOW_THEMEALDB_OPT_IN_UI = false` in `location-search-panel.tsx` — `FormState.externalRecipeOptIn` + API `recipeSourceOptIn` kept for tests
+- Trust copy: scheduled-refresh notice updated for merged ranking; TheMealDB empty notice no longer references unchecked checkbox
+- Tests: merge sort order, zero-import eligibility (internal still ranks), sale-overlap exclusion, explicit `themealdb`+opt-in API path preserved
+
+**Honest limits:** Checkbox code not deleted — owner decision pending. Carousel, 40-ID cap, welcome/settings flow unchanged (slices 3–5). Playwright MCP not run this slice.
+
+**Evidence:** `npm test` **535/535** (116 files); `@verifier` Partially verified (Vitest only).
+
+### 2026-06-25 — Redesign slice 1: remove `dinnersWanted`
+
+**Theme:** No fixed meal-card cap; ranked result count = eligibility filters only.
+
+**Shipped:**
+- Removed `dinnersWanted` from `API_LIMITS`, Zod (`dinnersWantedSchema`), `MealPreferenceForm`, `parseRecommendationRequest`, client rank payload (`form-validation`, `use-meal-planner`), and `DEFAULT_DINNERS_WANTED`
+- `getRecommendationExperience` returns **all** qualifying ranked meals (removed `.slice(0, preferences.dinnersWanted)`)
+- Route/ranking/contract tests updated; out-of-bounds `dinnersWanted` rejection cases removed
+
+**Honest limits:** Carousel, 40-ingredient POST cap, TheMealDB checkbox, and welcome/settings flow unchanged (slices 2–5). `npm run build`, Playwright MCP, integration, and e2e **not** run this slice.
+
+**Evidence:** `npm test` **529/529** (116 files).
+
+### 2026-06-25 — Settings-first gate + factory reset (doc lock)
+
+**Theme:** Require saved Settings before welcome/ingredients; re-gate only on factory reset.
+
+**Shipped (docs):**
+- **Redesign plan:** entry order — no saved Settings or factory reset → Settings first; slice **3** owns prefs completeness; slice **5** owns routing + factory-reset control
+- **Decision log** row added; welcome-flow row clarified (Settings gate triggers defined)
+
+**Honest limits:** Not implemented in code yet.
+
+### 2026-06-25 — Redesign plan consolidated into continuity (decisions log retired)
+
+**Theme:** Single source of truth for redesign locks; owner refinements (budget/dietary on welcome, store dropdown under shopping style, unselected stores invisible).
+
+**Shipped:**
+- **Merged** former `docs/redesign/DECISIONS_LOG.md` into [**Redesign — locked plan**](#redesign--locked-plan-2026-06-25) + [**Implementation slices**](#redesign--implementation-slices-ordered)
+- **Deleted** `docs/redesign/DECISIONS_LOG.md`; updated `docs/redesign/README.md` to point here only
+- **Decision log:** superseded `dinnersWanted=3`, exclusive TheMealDB opt-in shopper UX, and split redesign rows — replaced with consolidated 2026-06-25 entries
+
+**Honest limits:** Redesign **code slices 1–5 not started** this entry; shipped code still uses carousel, `dinnersWanted`, 40-ID cap, ZIP-on-home flow, and TheMealDB checkbox.
+
+### 2026-06-25 — Redesign decisions log promoted to shared docs (superseded by consolidation entry above)
+
+**Theme:** Lock UI/UX redesign direction; supersede handoff open questions.
+
+**Shipped:** Initial promotion of redesign decisions to shared docs (later consolidated into this file).
+
+**Honest limits:** No redesign code slices started.
 
 ### 2026-06-22 — Rank payload trim + honest error copy + meal-results badges (Playwright-found blocker)
 
@@ -87,6 +846,7 @@
 
 **Shipped:**
 - **`probe:*` rename (K125):** `test:kroger-api` → `probe:kroger-api` (and five other live/network probes) in `package.json`; references updated in README, `.env.example`, `@ingest-standards`, Kroger provider copy, `sync-provider-prices.ts`. CI unchanged (never referenced old names).
+
 - **NEW** `.private/owner-decisions.md` (M153) — distilled bullets by topic + link to questionnaire.
 - **`AGENTS.md` shrink (K122):** agent index, Q56 verification floor, MCP table only; detail moved to agent files + orchestration/testing rules. Hook/continuity references updated.
 
@@ -348,7 +1108,7 @@
 - `getProviderSearchTerms` in `provider-search-terms.ts`; `sync:provider-prices` passes `trackedIngredients` to `buildProviderPricingPreviews`
 - `ensure-test-db.mjs` applies `011` on existing volumes; unit + integration tests
 
-**Honest limits:** Preview/coverage rollups still use `PROVIDER_TRACKED_INGREDIENTS` (static display names as search terms). Only Kroger seeded; other providers fall back to static list when no DB rows.
+**Honest limits:** Preview/coverage/sync paths load Kroger `provider_search_terms` from Postgres when available; static full-catalog fallback (display names) when DB unavailable. Only Kroger seeded; other providers fall back to static list when no DB rows.
 
 **Evidence:** `npm test` 412/412; `npm run test:integration` 19/19; Postgres MCP + integration test on seed rows.
 
@@ -774,7 +1534,7 @@
 - Rate limits on public routes; `npm audit --audit-level=high` in CI
 - Removed committed GitHub PAT from tracked MCP config; `.cursor/mcp.json.example`
 
-**Live ingest baseline (ZIP 23111, user-run):** Publix 655 parsed / 21 synced; Kroger 122 Flipp / 4 synced; Walmart 143 / 0 synced; Aldi 149 / 6 synced; Food Lion 137 / 20 synced.
+**Live ingest baseline (ZIP 23111):** Publix 655/21 (May 2026); Kroger **119/9 (2026-06-27 Flipp-first)** vs 122/4 (May 2026 old path); Walmart 143/0; Aldi 149/6; Food Lion 137/20.
 
 **Limits:** Live ingest still not demo-reliable; fixture ingest remains local trust path.
 
@@ -833,14 +1593,41 @@
 
 | Date | Decision | Status |
 |------|----------|--------|
-| 2026-06-15 | **M5 / Slice 4B:** Publix + Food Lion weekly-ad ingest/fixture gates remain for CI rehearsal; **shopper-facing ranked meal totals = Kroger family + Aldi only** (`MEAL_PRICING_COMING_LATER_CHAINS`) | **Active** (supersedes 2026-06-10 Slice 4B ranked shopper scope) |
+| 2026-07-03 | **Food Lion coordinate writes require storefront verification, not Nominatim alone.** `food-lion-mechanicsville` was corrected after Google satellite confirmed the old pin sat on Bell Creek Middle School and the new pin sat on the storefront; `osm-node-3103220732` and `osm-node-6527816794` stayed unchanged because SNAP + satellite showed the current stored pins already land on the storefront while Nominatim landed on road geometry | **Active** |
+| 2026-07-03 | **Coordinate sanity audits are promotion-review gates, not live shopper runtime gates, until store rows persist address-backed audit evidence.** Food Lion + Lidl require the audit path; Kroger/Aldi/Publix stay grandfathered to avoid silent rollout regressions; Walmart/BJ's remain context-only | **Active** |
+| 2026-06-28 | **Publix weekly-ad matching closed:** compound-title guard batch (butterbread, honey-in-deli, yogurt bars, garlic dip, focaccia, lime beer, onion cheese, shrimp ravioli, bacon sandwich, cream-cheese pie, vanilla cupcakes); live **619 → 71 matched / 32 unique** (from 86/35 pre-guard); **no** threshold or wrong-target near-miss promotions | **Closed** |
+| 2026-06-28 | **Food Lion Flipp matching closed:** `"flour tortilla"` alias + margarine `butter` guards; live **133 → 15 matched / 13 unique** (swap: +flour-tortillas, −false butter); **no** threshold or wrong-target near-miss promotions. May **20 synced** typicality still unconfirmed — broader staple coverage than Aldi/Kroger same week but not unlimited upside | **Closed** |
+| 2026-06-28 | **Aldi Flipp matching closed (at-ceiling):** chain-agnostic false-positive guards for `honey` (graham/hot-honey context), `cheddar-cheese` (brats/smoked sausage), `vanilla-extract` (bars/ice cream); live re-measure **148 → 18 matched / 11 unique** (from 23/14 pre-guard); **no** threshold change; **no** near-miss promotions. Aldi funnel ~12% match on dinner-tracked list is SKU-mix + off-list noise limited — compound titles with ingredient tokens are a known cross-chain guard class (check Food Lion/Publix when approved) | **Closed** |
+| 2026-06-28 | **Kroger Flipp matching at-ceiling:** chain-agnostic `"greek yogurt"` → `plain-yogurt` alias shipped (+2 matched on same 119-offer Kroger feed); **no** global threshold change and **no** wrong-target near-miss promotions (Campari/canned, Ore-Ida/baby-potatoes). Kroger Flipp funnel ~9–11% match on dinner-tracked list is inventory/SKU-mix limited, not a resolver bug — further gains need different weekly ad inventory or second source, not more Kroger-only matching tweaks. **Aldi guard slice (same day):** 13 matched count **unchanged** — no honey/cheddar/vanilla false positives in that capture | **Active** |
+| 2026-06-27 | **Provider integration pattern:** document three data-type categories (store location / item pricing / sale discovery) and per-source capability rules in [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md); new chains run the checklist before wiring fallbacks — do not build a speculative plugin/adapter layer until a second chain proves the shape | **Active** |
+| 2026-06-26 | **Trust depth via banner expansion:** recover deleted modal paragraphs inside expandable `PricingTrustHeadsUpBanner`; no new modal, Settings “About these estimates”, or route | **Active** |
+| 2026-06-26 | **M128/M151 rule accuracy:** security rule describes manual owner-pause only today; robots.txt + auto-pause + automated kill switches remain homelab-slice work — not implied as shipped | **Active** |
+| 2026-06-26 | **Trust explainer modal removed:** no “How to read these results” dialog or results-panel trigger; trust via inline banners, cards, help hints, hero copy | **Active** (superseded for depth by banner expansion row above) |
+| 2026-06-26 | **D7 color port (shipped):** Theme C + D from `.private/tokens.css`; **light default first visit**; flat bg; system font; trust/urgency/price/tag tokens on existing UI — not mockup layout | **Active** |
+| 2026-06-25 | ~~**D7 color port (locked, pending)**~~ | **Superseded** (2026-06-26 ship) |
+| ~~2026-06-25~~ | **Settings store dropdown:** list Kroger + Aldi for selection regardless of promotion gates; prefer non-OSM catalog rows | **Superseded** (2026-06-29: four-chain Settings selectable set — see row below) |
+| 2026-06-25 | **SSR hydration:** `activeTab` + form prefs use stable SSR initial state; resolve from localStorage after mount | **Active** |
+| 2026-06-25 | **5-tab shell + D2–D6:** Home/Deals/Cook/Saved/Settings tabs; interim theme; ingredient gate; map overlay; session pantry | **Active** |
+| 2026-06-25 | **Redesign plan authority:** locked UX/backend targets live in [Redesign — locked plan](#redesign--locked-plan-2026-06-25) + [Implementation slices](#redesign--implementation-slices-ordered); `.private/` is archive only (not decision authority) | **Active** |
+| 2026-06-25 | **Settings-first gate:** if no saved Settings preference data yet, or after **factory reset**, route to Settings before welcome/ingredients/rank; do not re-gate on normal return visits | **Active** |
+| 2026-06-25 | **Welcome flow:** budget + dietary on welcome (not Settings); after valid Settings → welcome → straight to ingredients | **Active** |
+| 2026-06-25 | **Store selection:** under Shopping style — single store = one dropdown pick; multi store = multiple picks; **unselected stores invisible** in all UI | **Active** |
+| 2026-06-25 | **Meal results:** remove `dinnersWanted` completely; no fixed card cap; `maxIngredients` unchanged hidden | **Active** |
+| 2026-06-25 | **TheMealDB opt-in:** deleted hidden UI + shopper API path (slice 5); public API `internal-library` only; merged ranking default | **Active** |
+| 2026-06-25 | **Ingredients API:** remove 40-ID POST cap; default all sale items at selected stores; safeguards = 64 KB body + rate limits + per-ID validation | **Active** |
+| 2026-06-25 | **Results UI:** stacked accordion cards (one expanded at a time); delete carousel; tap-to-rank; full-screen loading with honest TheMealDB copy | **Active** |
+| ~~2026-06-25~~ | ~~**Redesign deferred:** 5-tab shell, Deals, Cook session tab, Saved persistence, cuisine R11, pantry full UI, map-link-only shell move — after slices 1–5~~ | **Superseded** (D1–D6 shipped; Saved persistence + R11 + D7 still open) |
+| ~~2026-06-25~~ | ~~UI/UX redesign details in `docs/redesign/DECISIONS_LOG.md`~~ | **Superseded** (consolidated into this file) |
+| ~~2026-06-25~~ | ~~Redesign flow/UX rows (gate summary, Settings owns budget/dietary)~~ | **Superseded** (welcome budget/dietary + store dropdown locks above) |
+| 2026-06-29 | **Publix + Food Lion shopper-ranked:** removed from `MEAL_PRICING_COMING_LATER_CHAINS`; added to `SETTINGS_SELECTABLE_CHAINS` + `MAP_RANKED_CHAIN_KEYS` — same weekly-ad promotion → `recommendationEnabled` path as Aldi when gates pass | **Active** (supersedes 2026-06-15 M5 Kroger+Aldi-only shopper scope) |
+| 2026-06-15 | **M5 / Slice 4B:** Publix + Food Lion weekly-ad ingest/fixture gates remain for CI rehearsal; **shopper-facing ranked meal totals = Kroger family + Aldi only** (`MEAL_PRICING_COMING_LATER_CHAINS`) | **Superseded** (2026-06-29: Publix + Food Lion promoted to shopper-ranked v1) |
 | 2026-06-11 | **Map search:** Merge provider discovery + ephemeral OSM (24h cache, sparse-pin threshold) into map pins on `/api/market-search`; **no Postgres writes** on public read path | **Active** |
-| 2026-06-11 | **UX:** Ingredient-first-only in UI; `planningMode: standard` retained for API/tests only; Step 2 defaults `dinnersWanted=3`, `maxIngredients=20` server-side | **Active** |
+| ~~2026-06-11~~ | ~~Step 2 defaults `dinnersWanted=3`, `maxIngredients=20` server-side~~ | **Superseded** (2026-06-25: remove `dinnersWanted`; `maxIngredients` default unchanged) |
 | 2026-06-10 | **Phase 2A:** Owner daily path = live `ingest:weekly-ads:scheduled`; fixture ingest CI/rehearsal only | **Active** |
 | 2026-06-10 | **Phase 2B:** Live map-catalog ingest overwrites bootstrap seed coordinates for ranked chains when official discovery succeeds; seed SQL bootstrap-only | **Active** |
-| 2026-06-10 | **Slice 3:** TheMealDB on opt-in search is cache-first (Postgres); bounded refresh when imports stale/empty (24h TTL, 5 meals/run on search) — separate from provider price cache-only discipline | **Active** |
 | 2026-06-10 | **Slice 3:** TheMealDB cards require visible attribution (source name + meal link); trust labels remain estimated/directional | **Active** |
-| 2026-06-10 | **Slice 2:** Ingredient-first is default UX; internal library ranks without opt-in; TheMealDB requires explicit shopper opt-in + API flag | **Active** |
+| ~~2026-06-10~~ | ~~TheMealDB on opt-in search is cache-first (Postgres); bounded refresh when imports stale/empty (24h TTL, 5 meals/run on search)~~ | **Superseded** (2026-06-25: merged rank; no shopper opt-in) |
+| ~~2026-06-10~~ | ~~TheMealDB requires explicit shopper opt-in + API flag for shopper-facing rank~~ | **Superseded** (2026-06-25: merged rank; checkbox deleted slice 5) |
 | ~~2026-06-10~~ | ~~**Slice 2:** “Rank full dinner options” kept as Advanced alternate path (not removed)~~ | **Superseded** (2026-06-11: removed from UI; API `standard` for tests only) |
 | 2026-06-10 | **Slice 4B:** Publix + Food Lion weekly-ad promotion gates enabled when coverage passes; Walmart ranked pricing remains deferred | **Superseded** (2026-06-15: fixture/CI rehearsal only; not production-ranked shopper path) |
 | 2026-06-10 | **Slice 4A:** `ingest:map-catalog` upserts OSM map-context rows + chain locators on scheduled ingest only | **Active** |
@@ -850,9 +1637,9 @@
 | 2026-06-09 | 24h cache TTL on ranked reads; no live refresh on user search | **Active** |
 | 2026-06-09 | Daily scheduled ingest (`ingest:weekly-ads:scheduled`) is the write path | **Active** |
 | ~~2026-06-09~~ | ~~Do not auto-upsert detected stores on search until post beta/v1~~ | **Superseded** (2026-06-10: cron map-catalog upserts OK; user-search upserts still off) |
-| 2026-06-09 | Near-term ranked chains: Kroger family, Aldi, Publix, Food Lion (Walmart deferred) | **Active** |
+| ~~2026-06-09~~ | ~~Near-term ranked chains: Kroger family, Aldi, Publix, Food Lion (Walmart deferred)~~ | **Superseded** (2026-06-15 M5: shopper-ranked = Kroger + Aldi only; Publix/Food Lion fixture/CI) |
 | 2026-06 | Beta v1 = continental US entry + Tier C default | **Active** |
-| 2026-06 | v1 ranked chains: Kroger family + Aldi only | **Active** |
+| 2026-06 | v1 ranked chains: Kroger family + Aldi only | **Superseded** (2026-06-29: + Publix + Food Lion shopper-ranked) |
 | 2026-06 | Walmart ranked pricing deferred | **Active** |
 | 2026-06 | Homelab hosting; deploy when migration-ready | **Active** |
 | 2026-06 | v1 = beta; keep estimate/directional/verify-in-store wording | **Active** |
@@ -869,35 +1656,56 @@
 
 ## Appendix
 
+### Map catalog / OSM gap-fill trap (operational)
+
+Bootstrap seed data is thin by design (roughly one pin per chain near a market), which is why search-time OSM gap-fill and `npm run ingest:map-catalog` exist. **Previously:** live Overpass on `/api/market-search` was skipped once **total** Postgres pins within the search radius reached `YUM4LESS_MAP_SPARSE_PIN_THRESHOLD` (default **3**) — so having *some* catalog rows could block discovering *more* nearby branches (e.g. 12 pins overall but only one Kroger). **Now (2026-06-30):** gap-fill runs when any ranked v1 chain has &lt; **2** Postgres pins in radius, or any context-only catalog chain (Walmart, BJ's) or Costco/Sam's name match has **0** pins — see `needsSearchTimeOsmGapFill()` in `map-osm-ranked-chain-policy.ts`. Steady-state fix: run `npm run ingest:map-catalog` (live keys) or rely on homelab cron when wired — not another bootstrap seed tweak. Expected operational gap until scheduled ingest is live on hardware; not a code bug to patch ad hoc.
+
+**Owner dev DB spot-check (2026-06-30):** ZIP **23111**, coords **37.6085 / -77.3739**, **5 mi** — old total-pin rule would **skip** gap-fill (~12 pins); new rule **would trigger** for **Publix** (1 pin), **Food Lion** (1 pin), and **Costco** (0 pins). Kroger (2), Aldi (2), Walmart (1), BJ's (1), Sam's (1) satisfied.
+
 ### Verification snapshot
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` | 2026-06-22 | **528 tests**, 116 files |
-| `npm run build` | 2026-06-22 | OK (rank-payload trim slice) |
-| `npm run test:integration` | 2026-06-18 | 24 tests, 7 files (prior slices) |
-| `npm run test:e2e:ci` | 2026-06-18 | 4/4 (prior slices) |
-| Postgres (`provider_search_terms` kroger) | 2026-06-15 | 101 rows |
-| Playwright MCP (localhost) | 2026-06-22 | Store search OK (`mcp-happy-path-01-location-set.png`); full rank→meal-cards MCP incomplete — MCP disconnect; CLI happy path same slice (`happy-path-meal-cards.png`, 2 recipes) |
-| Semgrep MCP / hook | 2026-06-18 | Not re-run |
-| Remote CI | 2026-06-11 | Green on master — working tree not yet pushed |
+| `npm run lint` | 2026-07-04 | OK |
+| `npx tsc --noEmit` | 2026-07-04 | **64 errors** (test mock drift — baseline unchanged from Batch 4) |
+| `npm test` | 2026-07-04 | **808/808 passed**, 152 files |
+| `npm run build` | 2026-07-04 | OK — Next.js **15.5.19** |
+| `npm run test:integration` | 2026-07-04 | **24/24 passed**, 7 files; bootstrap upsert includes name/city/state |
+| `npm run test:e2e:ci` | 2026-07-04 | **22 passed**, **1 skipped** (H12 Leaflet quirk — intentional), **0 failed** (isolated rerun) |
+| Live ingest DB isolation | 2026-07-01 | `yum4less_test` fixture-only (**39** rows, `*-weekly-ad-scrape`); live owner ingest on `yum4less_dev` (**337** rows) — no cross-DB leak |
+| Postgres (`provider_search_terms` kroger) | 2026-06-15 | 101 rows — **not re-checked** this slice |
+| Playwright MCP (localhost) | 2026-06-26 | Production `next start` :3000; ZIP **23111** happy path; expanded trust banner light `#faece7` / dark `#101a14` (`post-audit-light-trust-banner-expanded.png`, `post-audit-dark-trust-banner-expanded.png`) |
+| Owner browser (both themes) | 2026-06-26 | **Pending** |
+| Semgrep MCP / hook | 2026-06-18 | Not re-run this slice |
+| Remote CI | 2026-06-11 | Green on master — remediation batches + Sprint E workflow changes **not pushed** |
+
+**Historical note:** the old `coordinate-first.spec.ts` cold-path timeout was fixed on 2026-07-03 by bounding search-time OSM gap-fill and warming the cache in the background. True cold verification on `37.675, -77.280` (zero `openstreetmap-overpass` rows in `yum4less_test` after fixture prep) stayed bounded at **3227ms** response / **3486ms** full flow, and committed regression coverage now lives in `e2e/coordinate-first-cold.spec.ts`.
 
 **Local demo:** `npm run db:up` → `ingest:weekly-ads:fixture` → `ingest:map-catalog:fixture` → `npm run build` → `npm run start` (ZIP `23111`).
 
 **Optional probes (not merge gates):** `npm run probe:kroger-api`, `npm run probe:publix-live-ingest`, live weekly-ad ingest scripts.
 
-### Live weekly-ad baseline (last measured 2026-05, ZIP 23111)
+### Live weekly-ad baseline (ZIP 23111)
 
-| Chain | Live result | Notes |
-|-------|-------------|-------|
-| Publix | 655 parsed, 21 synced | Browser + HTML parser |
-| Kroger | 122 Flipp, 4 synced | Direct scrape often 0 |
-| Walmart | 143 Flipp, **0 synced** | Matching gap |
-| Aldi | 149 Flipp, 6 synced | Flipp primary path |
-| Food Lion | 137 Flipp, 20 synced | HTTP often 403 |
-| Lidl / DG | Stub | Not wired |
+| Chain | Measured | Live result | Notes |
+|-------|----------|-------------|-------|
+| Publix | 2026-05 | 655 parsed, 21 synced | Browser + HTML parser |
+| Publix | **2026-06-28** | **619 parsed, 71 matched, 32 unique ingredients** | Post-guard browser scrape re-measure; closed; vs May **655/21 synced** |
+| Kroger | 2026-05 | 122 parsed, 4 synced | Scrape-first + simple Flipp merchant search |
+| Kroger | **2026-06-28** | **119 parsed, 13 matched, 1 newly synced** | Post-`greek yogurt` alias; +2 matched vs 2026-06-27; 9 sync skips = unchanged rows from prior dev DB session |
+| Kroger | **2026-06-27** | **119 parsed, 11 matched, 9 synced** | Flipp-first full resolver; fresh-ish dev DB |
+| Walmart | 2026-05 | 143 parsed, **0 synced** | Matching gap |
+| Aldi | 2026-05 | 149 parsed, 6 synced | Flipp primary path |
+| Aldi | **2026-06-28** | **148 parsed, 18 matched, 11 unique ingredients** | Post-guard live Flipp re-measure; closed at-ceiling; vs May 2026 **149/6 synced** (SKU-mix + week variance) |
+| Food Lion | 2026-05 | 137 parsed, 20 synced | HTTP often 403 |
+| Food Lion | **2026-06-28** | **133 parsed, 15 matched, 13 unique ingredients** | Post-fix live Flipp re-measure; closed; vs May **137/20 synced** (May likely stronger week) |
+| Lidl / DG | — | Stub | Not wired |
+
+**Kroger before/after (23111):** 122→4 (May 2026, old path) → **119→9 synced / 11 matched** (2026-06-27 Flipp-first) → **119→13 matched** (2026-06-28, `greek yogurt` alias; sync skip noise on warm dev DB). Still below Food Lion May **20 synced** — SKU mix + week variance, not unresolved Kroger matching bug.
 
 **Trusted local path:** `npm run ingest:weekly-ads:fixture` → Postgres → promotion gates.
+
+**Live Kroger re-measure:** `npx tsx scripts/run-kroger-weekly-ad-live-baseline.ts` · **Flipp funnel diagnostic (Kroger + Food Lion):** `npx tsx scripts/analyze-kroger-flipp-match-funnel.ts` — persists under `captures/weekly-ad-baseline/`.
 
 ### Deferred backlog (not v1)
 
@@ -905,11 +1713,18 @@
 |------|-----------|
 | Homelab deploy + exposure | After migration-ready checklist |
 | Walmart ranked pricing | Shopper API + Flipp matching work |
-| Publix ranked (v1 scope) | Regional; not in Phase 0 v1 chains |
-| Food Lion, BJ's, Lidl, DG | Regional or stub ingest |
+| BJ's ranked pricing | Regional; stub ingest — see Resume for v1 production-ranked chains (Publix + Food Lion shipped 2026-06-29) |
+| Lidl / DG | Stub ingest |
 | Spoonacular / Edamam rankings | License + alignment gates |
 | Redis / platform rate limits | Multi-instance production |
 | User accounts | Explicitly out of v1 |
+| **Live near-miss confidence analysis** | Before changing the 0.55 weekly-ad match threshold or expanding the ingredient catalog, run a targeted live-data diagnostic per chain on offers in the 0.35-0.55 confidence band. This confirms whether filtered-out weekly-ad items are legitimate near-misses before threshold or catalog changes lock in extra noise. |
+| **Ingredient catalog expansion (pending near-miss analysis)** | Candidate additions discussed: rotisserie/whole chicken, pork chops/ground pork, and lettuce/romaine/salad kits. Do not add them until live near-miss analysis shows they land above threshold often enough on real weekly-ad data to improve useful matches. |
+| **assertMarketDataAvailable() shared helper** | The DB-availability check is still repeated per-route. Extract it into a tiny shared helper alongside the next route addition so empty-vs-unavailable behavior cannot drift again across read APIs. |
+| **Store geographic breakdown audit** | Run a read-only Postgres query against `stores` to see whether the current 288 discovered rows are concentrated in Virginia or already spread across multiple states/regions. This should inform how much existing map/discovery head start Yum4Less has before expanding `YUM4LESS_INGEST_ZIPS`. |
+| **Bootstrap seed data provenance audit** | Confirm whether bootstrap rows in `yum4less_dev` carry a distinct `source_name` that separates hand-planted/CI bootstrap stores from real discovered stores. If not, add one in the bootstrap SQL so the app and future audits can distinguish seed rows from real discovery coverage. |
+| **Scale risk A — Client-trust audit across all public API routes** | From trust pass-through hardening (2026-07-01): only the rank pass-through path was hardened; other routes or client-supplied fields may still influence trust display without server-side recomputation. Systematic audit of all public API responses for client-controllable trust-sensitive fields deferred — should precede any significant traffic increase or public launch. Suggested owner: `@verifier` + `@web-backend-standards` |
+| **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
 
 ### Transcript index
 
@@ -922,6 +1737,7 @@ Full chat prose lives in agent transcripts; use these links for deep context.
 | 2026-05 | MCP, weekly-ad gates, integration CI | [MCP setup MVP completion](8145bf83-1d8c-4b90-9431-990a72d04817) |
 | 2026-05 | UI cleanup, security, live ingest | [UI cleanup MVP gaps](18194906-4795-46c3-b3bd-7ba257b5db93) |
 | 2026-06 | Phase 0 beta v1 + continuity journal automation | [Phase 0 and continuity hooks](ec7ad734-c4f5-4cda-b131-6c28a0f98262) |
+| 2026-06-25 | Redesign D1–D6, Settings store fix, SSR hydration, doc sync | [Redesign shell and doc sync](4755f11f-00a0-4417-830c-829823799f7d) |
 | 2026-06-11 | Deploy-readiness audit + Kroger/Aldi doc/trust/security/E2E slices | [Deploy-readiness audit slices](ad4a04bf-68c6-4e8e-b1f8-bded8f60e22a) |
 
 ### How to update this file
