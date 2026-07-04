@@ -1,0 +1,161 @@
+/**
+ * D7 — mockup palette (Theme C "sale night" dark / Theme D "warm pantry" light).
+ * Roles: action, trust, urgency, price — plus base surfaces and store tag chips.
+ */
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #101a14;
+  --surface: #172118;
+  --surface-raised: #1b2a1f;
+  --border: #2a3a2a;
+  --border-strong: #3a4a3a;
+
+  --text-primary: #eaf3de;
+  --text-secondary: #8a9485;
+  --text-tertiary: #5a6a55;
+
+  --action: #97c459;
+  --action-text: #173404;
+
+  --trust-bg: #0d2a1f;
+  --trust-text: #9fe1cb;
+  --trust-border: #2a4a3a;
+
+  --urgency-bg: #4b1528;
+  --urgency-text: #f4c0d1;
+
+  --price-bg: #412402;
+  --price-text: #fac775;
+
+  --danger-bg: #2a1518;
+  --danger-border: #4b1528;
+  --danger-text: #f4c0d1;
+
+  --tag-blue-bg: #13202c;
+  --tag-blue-text: #9fb6c8;
+  --tag-coral-bg: #2a1812;
+  --tag-coral-text: #e0b09f;
+  --tag-purple-bg: #241a2c;
+  --tag-purple-text: #c9aedd;
+
+  --panel: var(--surface);
+  --panel-border: var(--border);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --accent: var(--action);
+  --accent-soft: color-mix(in srgb, var(--action) 14%, transparent);
+  --trust: var(--trust-text);
+  --urgency: var(--urgency-text);
+  --price: var(--price-text);
+  --danger-soft: var(--danger-bg);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+  --bottom-nav-bg: color-mix(in srgb, var(--bg) 96%, transparent);
+  --map-bg: var(--surface-raised);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #faece7;
+  --surface: #ffffff;
+  --surface-raised: #fff8f5;
+  --border: #f0d8cc;
+  --border-strong: #e0b09f;
+
+  --text-primary: #4a1b0c;
+  --text-secondary: #712b13;
+  --text-tertiary: #99502b;
+
+  --action: #d85a30;
+  --action-text: #ffffff;
+
+  --trust-bg: #eaf3de;
+  --trust-text: #27500a;
+  --trust-border: #c0dd97;
+
+  --urgency-bg: #fbeaf0;
+  --urgency-text: #993556;
+
+  --price-bg: #faeeda;
+  --price-text: #633806;
+
+  --danger-bg: #fcebeb;
+  --danger-border: #f09595;
+  --danger-text: #791f1f;
+
+  --tag-blue-bg: #e6f1fb;
+  --tag-blue-text: #0c447c;
+  --tag-coral-bg: #faeeda;
+  --tag-coral-text: #633806;
+  --tag-purple-bg: #eeedfe;
+  --tag-purple-text: #3c3489;
+
+  --panel: var(--surface);
+  --panel-border: var(--border);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --accent: var(--action);
+  --accent-soft: color-mix(in srgb, var(--action) 12%, transparent);
+  --trust: var(--trust-text);
+  --urgency: var(--urgency-text);
+  --price: var(--price-text);
+  --danger-soft: var(--danger-bg);
+  --shadow: 0 18px 40px rgba(74, 27, 12, 0.08);
+  --bottom-nav-bg: color-mix(in srgb, var(--surface) 96%, transparent);
+  --map-bg: var(--surface-raised);
+}
+
+/* D7 first paint: light default until ThemeSync sets data-theme (overrides D2 OS-first). */
+html:not([data-theme]) {
+  color-scheme: light;
+
+  --bg: #faece7;
+  --surface: #ffffff;
+  --surface-raised: #fff8f5;
+  --border: #f0d8cc;
+  --border-strong: #e0b09f;
+
+  --text-primary: #4a1b0c;
+  --text-secondary: #712b13;
+  --text-tertiary: #99502b;
+
+  --action: #d85a30;
+  --action-text: #ffffff;
+
+  --trust-bg: #eaf3de;
+  --trust-text: #27500a;
+  --trust-border: #c0dd97;
+
+  --urgency-bg: #fbeaf0;
+  --urgency-text: #993556;
+
+  --price-bg: #faeeda;
+  --price-text: #633806;
+
+  --danger-bg: #fcebeb;
+  --danger-border: #f09595;
+  --danger-text: #791f1f;
+
+  --tag-blue-bg: #e6f1fb;
+  --tag-blue-text: #0c447c;
+  --tag-coral-bg: #faeeda;
+  --tag-coral-text: #633806;
+  --tag-purple-bg: #eeedfe;
+  --tag-purple-text: #3c3489;
+
+  --panel: var(--surface);
+  --panel-border: var(--border);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --accent: var(--action);
+  --accent-soft: color-mix(in srgb, var(--action) 12%, transparent);
+  --trust: var(--trust-text);
+  --urgency: var(--urgency-text);
+  --price: var(--price-text);
+  --danger-soft: var(--danger-bg);
+  --shadow: 0 18px 40px rgba(74, 27, 12, 0.08);
+  --bottom-nav-bg: color-mix(in srgb, var(--surface) 96%, transparent);
+  --map-bg: var(--surface-raised);
+}

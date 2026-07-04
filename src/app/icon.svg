@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Background badge: deep green-amber gradient, reads well on both dark "sale night" and light "warm pantry" surfaces -->
+  <defs>
+    <linearGradient id="badgeGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1F6F4A"/>
+      <stop offset="100%" stop-color="#0F4C32"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#badgeGrad)"/>
+
+  <!-- Letter mark: Y4L, condensed, the "4" rendered slightly smaller/raised like a price-tag accent -->
+  <text x="32" y="40"
+        font-family="Arial, Helvetica, sans-serif"
+        font-weight="800"
+        font-size="26"
+        text-anchor="middle"
+        fill="#FDF6E9"
+        letter-spacing="-1">Y4L</text>
+
+  <!-- Small accent dot, nods to a price-tag/sale marker without adding clutter at 16px -->
+  <circle cx="48" cy="18" r="4" fill="#F2A93B"/>
+</svg>
