@@ -78,7 +78,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
-    needs: verify
+    needs: [verify, integration]
 
     steps:
       - name: Checkout repository

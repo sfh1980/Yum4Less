@@ -2,7 +2,7 @@ export const zipCodeHelp = {
   tooltip: "Continental US ZIP codes.",
   popoverTitle: "ZIP code coverage",
   popoverContent:
-    "Yum4Less accepts continental US ZIP codes in beta. Ranked dinner estimates for production deploy focus on Kroger-family and Aldi when daily ingest and promotion gates pass. Other chains may appear on the map as context; ranked pricing for them is planned in upcoming releases. Tier C — map/context only — is normal where ranked data is not ready.",
+    "Yum4Less accepts continental US ZIP codes. Some stores show dinner estimates; others appear on the map for planning only. That is normal in many areas.",
 } as const;
 
 export const radiusHelp = {
@@ -16,7 +16,7 @@ export const mealTotalHelp = {
   tooltip: "Estimated cost, not a checkout total.",
   popoverTitle: "Estimated meal total",
   popoverContent:
-    "This total combines recently checked online prices and saved weekly-ad prices from nearby stores on the trusted pricing rollout. Treat it as an estimate—verify price, package size, and current shelf tags before you buy.",
+    "This total combines recently checked online prices and saved sale prices from nearby stores you selected. Treat it as an estimate—verify price, package size, and current shelf tags before you buy.",
 } as const;
 
 export const confidenceLabelHelp = {
@@ -30,33 +30,33 @@ export const freshnessLabelHelp = {
   tooltip: "How recent the price data is.",
   popoverTitle: "Freshness label",
   popoverContent:
-    "Freshness tells you how recently Yum4Less ingested or checked the underlying price information. Ranked reads use a 24-hour cache window refreshed by daily ingest — older rows are more directional. Electronic shelf labels and checkout systems can still change before you shop.",
+    "Freshness tells you how recently prices were checked. Prices can change before you shop; older rows are less reliable.",
 } as const;
 
 export const pricingTrustHeadsUpHelp = {
   tooltip: "Why these prices may differ from checkout.",
   popoverTitle: "Price trust signals",
   popoverContent:
-    "This beta banner appears when Yum4Less is using saved weekly ads, recently checked online prices, backup store data, limited ZIP lookup, or other non-checkout sources. Not every nearby chain is live-priced yet. Treat meal totals as estimates and confirm price, package size, and deals before you shop.",
+    "This banner appears when Yum4Less is using saved sale prices, recently checked online prices, backup store data, limited ZIP lookup, or other non-checkout sources. Treat meal totals as estimates and confirm price, package size, and deals before you shop.",
 } as const;
 
 export const recipeSourceHelp = {
-  tooltip: "Internal library or sale-matched TheMealDB.",
+  tooltip: "Merged internal library + TheMealDB ranking.",
   popoverTitle: "Recipe source",
   popoverContent:
-    "Suggest recipes from Yum4Less's internal library or opt-in TheMealDB imports that overlap local weekly-ad sale ingredients. TheMealDB meals include attribution and still require verify-in-store pricing.",
+    "Rank dinners from Yum4Less's internal recipe library merged with TheMealDB imports that overlap sale ingredients at your stores. TheMealDB meals include attribution and still require verify-in-store pricing.",
 } as const;
 
 export const nearbyStoresMapHelp = {
   tooltip: "Catalog pins — not live retailer GPS.",
   popoverTitle: "Nearby stores map",
   popoverContent:
-    "Pins use beta catalog, provider discovery, rehearsal seed, or OpenStreetMap coordinates merged at search time — not a live snapshot of every retailer address. Verify store locations before visiting. Chain-colored badges mark Kroger-family and Aldi stores that can feed ranked dinner totals when weekly-ad or online-cache rollout gates pass—totals stay estimated and directional. Other chains may appear for context; ranked pricing for them is planned in upcoming releases. Gray badges with a gold border are context only: nearby for planning, not ranked meal pricing. Walmart is always context only until trustworthy live matching exists.",
+    "Pins come from saved store data or map sources — confirm locations before visiting. Colored badges mark stores with dinner estimates; gray badges are nearby for planning only.",
 } as const;
 
 export const mealPriceSourceHelp = {
   tooltip: "Where this meal total came from.",
   popoverTitle: "Price source",
   popoverContent:
-    "Each ranked meal total combines saved store prices from nearby locations on the trusted rollout—usually recently checked online prices or weekly-ad pulls. Walmart is excluded until live matching is trustworthy. These are estimates, not checkout totals. Confirm price, package size, and deals in the store before you buy.",
+    "Each dinner total combines saved store prices from nearby locations you selected. These are estimates, not checkout totals. Confirm price, package size, and deals in the store before you buy.",
 } as const;

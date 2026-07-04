@@ -38,6 +38,20 @@ README.pdf
 live-probe-*.txt
 playwright-full-test-final.png
 
+# Local audit/debug screenshots (Playwright MCP, manual QA — repo root only)
+/d7-*.png
+/scenario*.png
+/osm-node-*.png
+/stage3-*.png
+/post-audit-*.png
+/mcp-*.png
+/happy-path-*.png
+/investigation-*.png
+/food-lion-*.png
+
+# TypeScript incremental build info
+tsconfig.tsbuildinfo
+
 # USDA SNAP retailer dumps and local Overpass probe artifacts (set YUM4LESS_SNAP_CSV_PATH locally)
 Historical SNAP Retailer Locator Data*.csv
 .tmp-overpass-*.json
