@@ -4,6 +4,7 @@ import type {
   ShopperNotice,
 } from "@/lib/recommendation-service";
 import type { RecipeSourceSelection } from "@/lib/recipe-sources/recipe-source-types";
+import type { ThemePreference } from "@/lib/settings-preferences";
 
 export type FormState = {
   zipCode: string;
@@ -12,8 +13,8 @@ export type FormState = {
   shoppingStyle: MealPreferenceForm["shoppingStyle"];
   dietaryFocus: MealPreferenceForm["dietaryFocus"];
   recipeSource: RecipeSourceSelection;
-  /** Explicit shopper opt-in before TheMealDB (or other non-internal sources) affect ranking. */
-  externalRecipeOptIn: boolean;
+  selectedStoreIds: string[];
+  theme: ThemePreference;
 };
 
 export type FieldErrors = Partial<Record<keyof FormState, string>>;
@@ -24,6 +25,7 @@ export type MarketSearchState = {
   error?: string;
   errorTitle?: string;
   errorHint?: string;
+  notice?: string;
   providerConfigured?: boolean;
 };
 
@@ -31,6 +33,7 @@ export type RecommendationState = {
   status: "idle" | "loading" | "ready" | "error";
   recommendations?: RecommendationExperience["recommendations"];
   shopperNotice?: ShopperNotice;
+  supplementaryShopperNotices?: ShopperNotice[];
   error?: string;
   errorTitle?: string;
   errorHint?: string;
@@ -80,6 +83,5 @@ export type RecommendationRequest = MealPreferenceForm & {
   latitude?: number;
   longitude?: number;
   selectedIngredientIds?: string[];
-  recipeSourceOptIn?: boolean;
   market?: RecommendationExperience["market"];
 };
