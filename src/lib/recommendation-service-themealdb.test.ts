@@ -108,7 +108,7 @@ function mockRankingReads(snapshot: ReturnType<typeof buildZip23111RankingSnapsh
   });
 }
 
-describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
+describe("getRecommendationExperience merged TheMealDB ranking", () => {
   beforeEach(() => {
     buildProviderPricingPreviews.mockReset();
     buildProviderPricingPreviews.mockResolvedValue([]);
@@ -125,7 +125,89 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
     await resetDbPoolForTests();
   });
 
-  it("does not call search-time ensure and surfaces attribution when saved imports rank", async () => {
+  it("merges internal library and TheMealDB imports in one score-sorted list", async () => {
+    const snapshot = withThemealdbSaleLabels(
+      buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
+    );
+    snapshot.recipes = [...snapshot.recipes, themealdbRecipe];
+    mockRankingReads(snapshot);
+
+    const experience = await getRecommendationExperience(
+      zip23111RankingPreferences,
+      zip23111MechanicsvilleLocation,
+      false,
+    );
+
+    expect(experience.recommendations.length).toBeGreaterThan(3);
+
+    const hasInternal = experience.recommendations.some(
+      (meal) => !meal.recipeAttribution?.includes("TheMealDB"),
+    );
+    const themealdbMeal = experience.recommendations.find((meal) =>
+      meal.title.includes("Teriyaki"),
+    );
+    expect(hasInternal).toBe(true);
+    expect(themealdbMeal?.recipeAttribution).toContain("TheMealDB");
+    expect(themealdbMeal?.recipeAttributionUrl).toBe(
+      "https://www.themealdb.com/meal/52772",
+    );
+
+    const scores = experience.recommendations.map((meal) => meal.score.total);
+    for (let index = 1; index < scores.length; index += 1) {
+      expect(scores[index - 1]!).toBeGreaterThanOrEqual(scores[index]!);
+    }
+  });
+
+  it("returns internal meals when zero TheMealDB imports exist — eligibility, not error", async () => {
+    mockRankingReads(buildZip23111RankingSnapshot(["kroger-mechanicsville"]));
+
+    const experience = await getRecommendationExperience(
+      zip23111RankingPreferences,
+      zip23111MechanicsvilleLocation,
+      false,
+    );
+
+    expect(experience.recommendations).toHaveLength(3);
+    expect(
+      experience.recommendations.every(
+        (meal) => !meal.recipeAttribution?.includes("TheMealDB"),
+      ),
+    ).toBe(true);
+    expect(experience.shopperNotice?.title ?? "").not.toContain("No TheMealDB meals");
+  });
+
+  it("keeps internal meals when TheMealDB imports fail sale overlap", async () => {
+    const snapshot = buildZip23111RankingSnapshot(["kroger-mechanicsville"]);
+    snapshot.recipes = [...snapshot.recipes, themealdbRecipe];
+    mockRankingReads(snapshot);
+
+    const experience = await getRecommendationExperience(
+      zip23111RankingPreferences,
+      zip23111MechanicsvilleLocation,
+      false,
+    );
+
+    expect(experience.recommendations).toHaveLength(3);
+    expect(
+      experience.recommendations.every((meal) => !meal.title.includes("Teriyaki")),
+    ).toBe(true);
+    expect(experience.shopperNotice?.title).not.toBe("No TheMealDB meals matched yet");
+  });
+
+  it("evaluates TheMealDB refresh when merged ranking is active (internal-library default)", async () => {
+    mockRankingReads(buildZip23111RankingSnapshot(["kroger-mechanicsville"]));
+
+    await getRecommendationExperience(
+      zip23111RankingPreferences,
+      zip23111MechanicsvilleLocation,
+      false,
+    );
+
+    expect(getLatestThemealdbImportAt).toHaveBeenCalled();
+    expect(shouldRefreshThemealdbRecipesOnSearch).toHaveBeenCalled();
+  });
+
+  it("does not call search-time ensure and surfaces attribution for explicit themealdb API path", async () => {
     const snapshot = withThemealdbSaleLabels(
       buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
     );
@@ -136,7 +218,6 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
       {
         ...zip23111RankingPreferences,
         recipeSource: "themealdb",
-        recipeSourceOptIn: true,
         planningMode: "ingredient-first",
         selectedIngredientIds: ["chicken-thighs", "garlic", "broccoli"],
       },
@@ -156,19 +237,6 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
     );
   });
 
-  it("does not evaluate TheMealDB refresh when internal library is selected", async () => {
-    mockRankingReads(buildZip23111RankingSnapshot(["kroger-mechanicsville"]));
-
-    await getRecommendationExperience(
-      zip23111RankingPreferences,
-      zip23111MechanicsvilleLocation,
-      false,
-    );
-
-    expect(getLatestThemealdbImportAt).not.toHaveBeenCalled();
-    expect(shouldRefreshThemealdbRecipesOnSearch).not.toHaveBeenCalled();
-  });
-
   it("surfaces scheduled refresh notice when saved imports are stale or empty", async () => {
     const snapshot = withThemealdbSaleLabels(
       buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
@@ -179,8 +247,6 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
     const experience = await getRecommendationExperience(
       {
         ...zip23111RankingPreferences,
-        recipeSource: "themealdb",
-        recipeSourceOptIn: true,
         planningMode: "ingredient-first",
         selectedIngredientIds: ["chicken-thighs"],
       },
@@ -194,7 +260,7 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
     expect(experience.shopperNotice?.body).not.toContain("npm run");
   });
 
-  it("replaces npm-script empty copy with shopper-facing notice", async () => {
+  it("replaces npm-script empty copy with shopper-facing notice for themealdb-only API path", async () => {
     mockRankingReads(buildZip23111RankingSnapshot(["kroger-mechanicsville"]));
 
     const experience = await getRecommendationExperience(
@@ -202,7 +268,6 @@ describe("getRecommendationExperience TheMealDB opt-in search merge", () => {
         ...zip23111RankingPreferences,
         planningMode: "ingredient-first",
         recipeSource: "themealdb",
-        recipeSourceOptIn: true,
         budget: 1,
         selectedIngredientIds: ["chicken-thighs"],
       },

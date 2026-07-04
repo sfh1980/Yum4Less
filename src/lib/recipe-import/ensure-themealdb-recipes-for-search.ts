@@ -60,7 +60,8 @@ export function shouldRefreshThemealdbRecipesOnSearch(input: {
   }
 
   if (rankableCount === 0) {
-    return true;
+    // Zero sale overlap is not fixed by a catalog refresh notice — only stale/empty imports are.
+    return !isThemealdbRecipeCacheFresh(input.latestImportAt);
   }
 
   return !isThemealdbRecipeCacheFresh(input.latestImportAt);
