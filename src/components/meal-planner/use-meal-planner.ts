@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buildNearbyStoresMapModel } from "@/lib/nearby-stores-map-model";
+import { buildDiscoveryMapModel } from "@/lib/nearby-stores-map-model";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
-import { DEFAULT_DINNERS_WANTED, DEFAULT_MAX_INGREDIENTS } from "@/lib/meal-preference-defaults";
+import { DEFAULT_MAX_INGREDIENTS } from "@/lib/meal-preference-defaults";
 import { getDefaultRecipeSource } from "@/lib/recipe-sources/recipe-source-registry";
 import {
   buildMealPreferencePayload,
@@ -16,6 +16,23 @@ import {
 } from "@/components/meal-planner/recommendation-error-copy";
 import { trackClientEvent } from "@/lib/analytics/track-client-event";
 import { trimMarketForRankingPassThrough } from "@/lib/market-pass-through";
+import {
+  buildSettingsPreferencesPatch,
+  clearSettingsPreferences,
+  isSettingsPreferencesComplete,
+  readSettingsPreferences,
+  writeSettingsPreferences,
+} from "@/lib/settings-preferences";
+import { scopeMarketSummaryToSelectedStores } from "@/lib/store-scope";
+import { defaultSelectedStoreIdsForSettings, filterSettingsSelectableStores } from "@/lib/settings-store-selection";
+import type { AppTab } from "@/components/meal-planner/app-tab";
+import {
+  resolveAppTabFromPreferences,
+  SSR_DEFAULT_APP_TAB,
+} from "@/components/meal-planner/app-tab";
+import type { IngredientPickMode } from "@/components/meal-planner/ingredient-pick-mode";
+import type { FlowStep } from "@/components/meal-planner/flow-step";
+import { getInitialFlowStep } from "@/components/meal-planner/flow-step";
 import type {
   ActiveLocationRequest,
   FieldErrors,
@@ -33,10 +50,10 @@ const defaultForm: MealPreferenceForm = {
   radiusMiles: 5,
   budget: 16,
   maxIngredients: DEFAULT_MAX_INGREDIENTS,
-  dinnersWanted: DEFAULT_DINNERS_WANTED,
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: getDefaultRecipeSource(),
+  selectedStoreIds: [],
   planningMode: "ingredient-first",
 };
 
@@ -47,14 +64,70 @@ const defaultFormState: FormState = {
   shoppingStyle: defaultForm.shoppingStyle,
   dietaryFocus: defaultForm.dietaryFocus,
   recipeSource: defaultForm.recipeSource,
-  externalRecipeOptIn: false,
+  selectedStoreIds: [],
+  theme: "light",
 };
 
 const initialMarketSearchState: MarketSearchState = { status: "idle" };
 const initialRecommendationState: RecommendationState = { status: "idle" };
 
+function hydrateFormFromSettings(): FormState {
+  const saved = readSettingsPreferences();
+  if (!saved) {
+    return defaultFormState;
+  }
+
+  return {
+    ...defaultFormState,
+    ...(saved.zipCode ? { zipCode: saved.zipCode } : {}),
+    ...(saved.radiusMiles !== undefined
+      ? { radiusMiles: String(saved.radiusMiles) }
+      : {}),
+    ...(saved.shoppingStyle ? { shoppingStyle: saved.shoppingStyle } : {}),
+    ...(saved.selectedStoreIds ? { selectedStoreIds: saved.selectedStoreIds } : {}),
+    ...(saved.theme ? { theme: saved.theme } : {}),
+  };
+}
+
+function readInitialLocationValidationMode(): "zip" | "browser" {
+  const saved = readSettingsPreferences();
+  return saved?.locationMode === "geolocation" ? "browser" : "zip";
+}
+
+function persistLocationPreferences(
+  form: FormState,
+  request?: ActiveLocationRequest,
+): void {
+  const radiusMiles = Number(form.radiusMiles);
+  if (!Number.isFinite(radiusMiles)) {
+    return;
+  }
+
+  writeSettingsPreferences(
+    buildSettingsPreferencesPatch({
+      zipCode: form.zipCode.trim(),
+      radiusMiles,
+      shoppingStyle: form.shoppingStyle,
+      selectedStoreIds: form.selectedStoreIds,
+      theme: form.theme,
+      ...(request?.mode === "browser"
+        ? {
+            locationMode: "geolocation" as const,
+            latitude: request.latitude,
+            longitude: request.longitude,
+          }
+        : request?.mode === "zip"
+          ? { locationMode: "zip" as const }
+          : {}),
+    }),
+  );
+}
+
 export function useMealPlanner() {
+  const [activeTab, setActiveTab] = useState<AppTab>(SSR_DEFAULT_APP_TAB);
+  const [flowStep, setFlowStep] = useState<FlowStep>(() => getInitialFlowStep());
   const [form, setForm] = useState<FormState>(defaultFormState);
+  const preferencesHydratedRef = useRef(false);
   const [marketSearchState, setMarketSearchState] =
     useState<MarketSearchState>(initialMarketSearchState);
   const [recommendationState, setRecommendationState] =
@@ -63,21 +136,23 @@ export function useMealPlanner() {
     useState<ActiveLocationRequest>();
   const [locationValidationMode, setLocationValidationMode] = useState<
     "zip" | "browser"
-  >("zip");
+  >(readInitialLocationValidationMode);
   const [hasAttemptedLocationSearch, setHasAttemptedLocationSearch] =
     useState(false);
   const [hasAttemptedRanking, setHasAttemptedRanking] = useState(false);
-  const [isTrustExplainerOpen, setIsTrustExplainerOpen] = useState(false);
-  const [hasDismissedTrustExplainer, setHasDismissedTrustExplainer] =
-    useState(false);
+  const [hasAttemptedWelcome, setHasAttemptedWelcome] = useState(false);
+  const [settingsSaveError, setSettingsSaveError] = useState<string>();
   const [isInternalDetailsOpen, setIsInternalDetailsOpen] = useState(false);
-  const [isEditingLocation, setIsEditingLocation] = useState(false);
-  const [focusMealPreferencesToken, setFocusMealPreferencesToken] = useState(0);
   const [selectedStoreId, setSelectedStoreId] = useState<string>();
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
+  const [ingredientPickMode, setIngredientPickMode] = useState<IngredientPickMode>("unset");
+  const [isMapOverlayOpen, setIsMapOverlayOpen] = useState(false);
+  const [pantryItems, setPantryItems] = useState<string[]>([]);
   const marketSearchRequestRef = useRef(0);
   const rankRequestRef = useRef(0);
   const geolocationRequestRef = useRef(0);
+  const autoMarketSearchAttemptedRef = useRef(false);
+  const rankedStoreScopeRef = useRef<string[] | null>(null);
 
   const marketSearchLoading = marketSearchState.status === "loading";
   const rankLoading = recommendationState.status === "loading";
@@ -96,46 +171,223 @@ export function useMealPlanner() {
   );
   const displayedErrors: FieldErrors = {
     ...(hasAttemptedLocationSearch ? locationErrors : {}),
-    ...(hasAttemptedRanking ? { ...mealErrors, ...rankLocationErrors } : {}),
+    ...(hasAttemptedWelcome || hasAttemptedRanking ? mealErrors : {}),
+    ...(hasAttemptedRanking ? rankLocationErrors : {}),
   };
 
   useEffect(() => {
-    if (
-      recommendationState.status === "ready" &&
-      !hasDismissedTrustExplainer
-    ) {
-      setIsTrustExplainerOpen(true);
+    setActiveTab(resolveAppTabFromPreferences());
+    setForm(hydrateFormFromSettings());
+    preferencesHydratedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (recommendationState.status === "ready") {
+      setFlowStep("results");
     }
-  }, [recommendationState.status, hasDismissedTrustExplainer]);
+  }, [recommendationState.status]);
 
   const market = marketSearchState.market;
+  const scopedMarket = useMemo(() => {
+    if (!market) {
+      return market;
+    }
+
+    return scopeMarketSummaryToSelectedStores(market, form.selectedStoreIds);
+  }, [market, form.selectedStoreIds]);
   const recommendations = recommendationState.recommendations ?? [];
   const shopperNotice = recommendationState.shopperNotice;
-  const marketBlocked = !!market && market.recommendationReadyStoreCount === 0;
+  const supplementaryShopperNotices =
+    recommendationState.supplementaryShopperNotices;
+  const marketBlocked = !!scopedMarket && scopedMarket.recommendationReadyStoreCount === 0;
   const nearbyStoresMapModel = useMemo(
-    () => (market ? buildNearbyStoresMapModel(market) : undefined),
-    [market],
+    () => (scopedMarket ? buildDiscoveryMapModel(scopedMarket) : undefined),
+    [scopedMarket],
   );
+  const cookEnabled =
+    recommendationState.status === "ready" && recommendations.length > 0;
+  const showMapLink =
+    activeTab === "home" &&
+    flowStep === "ingredients" &&
+    Boolean(scopedMarket) &&
+    !isMapOverlayOpen;
+  const showResultsInHomeFlow =
+    activeTab === "home" &&
+    (flowStep === "results" ||
+      flowStep === "rank" ||
+      rankLoading ||
+      recommendationState.status === "error");
+
+  useEffect(() => {
+    if (!preferencesHydratedRef.current) {
+      return;
+    }
+
+    const radiusMiles = Number(form.radiusMiles);
+    if (!Number.isFinite(radiusMiles)) {
+      return;
+    }
+
+    writeSettingsPreferences(
+      buildSettingsPreferencesPatch({
+        zipCode: form.zipCode.trim(),
+        radiusMiles,
+        shoppingStyle: form.shoppingStyle,
+        selectedStoreIds: form.selectedStoreIds,
+        theme: form.theme,
+      }),
+    );
+  }, [form.zipCode, form.radiusMiles, form.shoppingStyle, form.selectedStoreIds, form.theme]);
+
+  useEffect(() => {
+    if (!preferencesHydratedRef.current) {
+      return;
+    }
+
+    if (rankedStoreScopeRef.current === null) {
+      return;
+    }
+
+    if (sameSelectedStoreIds(form.selectedStoreIds, rankedStoreScopeRef.current)) {
+      return;
+    }
+
+    rankedStoreScopeRef.current = null;
+    rankRequestRef.current += 1;
+    setRecommendationState(initialRecommendationState);
+  }, [form.selectedStoreIds]);
 
   function resetLocationDependentState() {
     marketSearchRequestRef.current += 1;
     rankRequestRef.current += 1;
     geolocationRequestRef.current += 1;
+    autoMarketSearchAttemptedRef.current = false;
+    rankedStoreScopeRef.current = null;
     setMarketSearchState(initialMarketSearchState);
     setRecommendationState(initialRecommendationState);
     setActiveLocationRequest(undefined);
     setHasAttemptedRanking(false);
-    setIsEditingLocation(true);
     setSelectedStoreId(undefined);
     setSelectedIngredientIds([]);
+    setIngredientPickMode("unset");
+    setPantryItems([]);
+    setIsMapOverlayOpen(false);
+    setForm((current) => ({ ...current, selectedStoreIds: [] }));
+  }
+
+  function runMarketSearchFromSavedPreferences() {
+    const saved = readSettingsPreferences();
+    const radiusMiles = Number(form.radiusMiles);
+    if (!Number.isFinite(radiusMiles)) {
+      return;
+    }
+
+    if (
+      saved?.locationMode === "geolocation" &&
+      saved.latitude !== undefined &&
+      saved.longitude !== undefined
+    ) {
+      setLocationValidationMode("browser");
+
+      if (!("geolocation" in navigator)) {
+        void runMarketSearch(
+          {
+            zipCode: "",
+            radiusMiles,
+            latitude: saved.latitude,
+            longitude: saved.longitude,
+          },
+          {
+            mode: "browser",
+            latitude: saved.latitude,
+            longitude: saved.longitude,
+          },
+        );
+        return;
+      }
+
+      setMarketSearchState({ status: "loading" });
+      setRecommendationState(initialRecommendationState);
+
+      const geolocationRequestId = ++geolocationRequestRef.current;
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (geolocationRequestId !== geolocationRequestRef.current) {
+            return;
+          }
+
+          void runMarketSearch(
+            {
+              zipCode: "",
+              radiusMiles,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            },
+            {
+              mode: "browser",
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            },
+          );
+        },
+        () => {
+          if (geolocationRequestId !== geolocationRequestRef.current) {
+            return;
+          }
+
+          void runMarketSearchWithZipFallback(
+            "Location access was denied — using your saved ZIP instead.",
+            radiusMiles,
+          );
+        },
+      );
+      return;
+    }
+
+    setLocationValidationMode("zip");
+    if (Object.keys(validateLocationFields(form, true)).length > 0) {
+      return;
+    }
+
+    void runMarketSearch(
+      {
+        zipCode: form.zipCode.trim(),
+        radiusMiles,
+      },
+      { mode: "zip", zipCode: form.zipCode.trim() },
+    );
+  }
+
+  function runMarketSearchWithZipFallback(notice: string, radiusMiles: number) {
+    setLocationValidationMode("zip");
+
+    if (Object.keys(validateLocationFields(form, true)).length > 0) {
+      setMarketSearchState({
+        status: "error",
+        error: notice,
+      });
+      return;
+    }
+
+    void runMarketSearch(
+      {
+        zipCode: form.zipCode.trim(),
+        radiusMiles,
+      },
+      { mode: "zip", zipCode: form.zipCode.trim() },
+      { notice },
+    );
   }
 
   async function runMarketSearch(
     payload: MarketSearchRequest,
     request: ActiveLocationRequest,
+    options?: { notice?: string },
   ) {
     const requestId = ++marketSearchRequestRef.current;
     rankRequestRef.current += 1;
+    rankedStoreScopeRef.current = null;
     setMarketSearchState({ status: "loading" });
     setRecommendationState(initialRecommendationState);
     trackClientEvent("location_search_started", {
@@ -178,17 +430,40 @@ export function useMealPlanner() {
                 ? "provider_unconfigured"
                 : response.status === 404
                   ? "not_found"
-                  : "server",
+                  : response.status >= 500
+                    ? "server"
+                    : "server",
         });
         return;
       }
 
-      setMarketSearchState({ status: "ready", market: result.market });
+      setMarketSearchState({
+        status: "ready",
+        market: result.market,
+        ...(options?.notice ? { notice: options.notice } : {}),
+      });
       setActiveLocationRequest(request);
-      setIsEditingLocation(false);
-      setFocusMealPreferencesToken((current) => current + 1);
+      persistLocationPreferences(form, request);
       setSelectedStoreId(undefined);
       setSelectedIngredientIds([]);
+      setForm((current) => {
+        const selectable = filterSettingsSelectableStores(result.market.nearbyStores);
+        const selectableIds = new Set(selectable.map((store) => store.id));
+        const persistedSelection = current.selectedStoreIds.filter((storeId) =>
+          selectableIds.has(storeId),
+        );
+        const selectedStoreIds =
+          persistedSelection.length > 0
+            ? current.shoppingStyle === "single-store"
+              ? [persistedSelection[0]!]
+              : persistedSelection
+            : defaultSelectedStoreIdsForSettings(
+                result.market.nearbyStores,
+                current.shoppingStyle,
+              );
+
+        return { ...current, selectedStoreIds };
+      });
       trackClientEvent("location_search_completed", {
         mode: request.mode,
         in_mvp_area: result.market.dataSource !== "unavailable",
@@ -217,7 +492,45 @@ export function useMealPlanner() {
     }
   }
 
-  function handleZipSearch() {
+  useEffect(() => {
+    const shouldAutoLoadMarket =
+      (activeTab === "settings" &&
+        !isSettingsPreferencesComplete(readSettingsPreferences())) ||
+      (activeTab === "home" &&
+        (flowStep === "welcome" || flowStep === "ingredients")) ||
+      activeTab === "deals";
+
+    if (!shouldAutoLoadMarket) {
+      return;
+    }
+
+    if (!isSettingsPreferencesComplete(readSettingsPreferences())) {
+      return;
+    }
+
+    if (marketSearchState.status !== "idle" || autoMarketSearchAttemptedRef.current) {
+      return;
+    }
+
+    autoMarketSearchAttemptedRef.current = true;
+    runMarketSearchFromSavedPreferences();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load for home/deals tabs
+  }, [activeTab, flowStep, marketSearchState.status]);
+
+  function handleTabChange(tab: AppTab) {
+    if (tab === "cook" && !cookEnabled) {
+      return;
+    }
+
+    setActiveTab(tab);
+
+    if (tab === "cook" && cookEnabled) {
+      setFlowStep("results");
+    }
+  }
+
+  function handleFindStores() {
+    setSettingsSaveError(undefined);
     setLocationValidationMode("zip");
     setHasAttemptedLocationSearch(true);
     geolocationRequestRef.current += 1;
@@ -236,6 +549,7 @@ export function useMealPlanner() {
   }
 
   function handleBrowserLocationSearch() {
+    setSettingsSaveError(undefined);
     setLocationValidationMode("browser");
     setHasAttemptedLocationSearch(true);
     geolocationRequestRef.current += 1;
@@ -291,6 +605,85 @@ export function useMealPlanner() {
     );
   }
 
+  function handleSaveSettings() {
+    setSettingsSaveError(undefined);
+    setHasAttemptedLocationSearch(true);
+
+    if (!market) {
+      setSettingsSaveError("Find stores for your area before saving Settings.");
+      return;
+    }
+
+    if (Object.keys(validateLocationFields(form, true)).length > 0) {
+      return;
+    }
+
+    if (
+      form.selectedStoreIds.length === 0 ||
+      (form.shoppingStyle === "single-store" && form.selectedStoreIds.length !== 1)
+    ) {
+      setSettingsSaveError("Choose at least one store that matches your shopping style.");
+      return;
+    }
+
+    const radiusMiles = Number(form.radiusMiles);
+    const prefs = buildSettingsPreferencesPatch({
+      zipCode: form.zipCode.trim(),
+      radiusMiles,
+      shoppingStyle: form.shoppingStyle,
+      selectedStoreIds: form.selectedStoreIds,
+      theme: form.theme,
+      ...(activeLocationRequest?.mode === "browser"
+        ? {
+            locationMode: "geolocation" as const,
+            latitude: activeLocationRequest.latitude,
+            longitude: activeLocationRequest.longitude,
+          }
+        : { locationMode: "zip" as const }),
+      markSetupComplete: true,
+    });
+
+    if (!isSettingsPreferencesComplete(prefs)) {
+      setSettingsSaveError("Complete location, radius, shopping style, and store selection.");
+      return;
+    }
+
+    writeSettingsPreferences(prefs);
+    autoMarketSearchAttemptedRef.current = true;
+    setActiveTab("home");
+    setFlowStep("welcome");
+  }
+
+  function handleFactoryReset() {
+    clearSettingsPreferences();
+    resetLocationDependentState();
+    setForm(defaultFormState);
+    setSettingsSaveError(undefined);
+    setHasAttemptedLocationSearch(false);
+    setHasAttemptedWelcome(false);
+    setHasAttemptedRanking(false);
+    setLocationValidationMode("zip");
+    setActiveTab("settings");
+    setFlowStep("welcome");
+  }
+
+  function handleCompleteWelcome() {
+    setHasAttemptedWelcome(true);
+    if (Object.keys(validateMealFields(form)).length > 0) {
+      return;
+    }
+
+    setFlowStep("ingredients");
+    setIngredientPickMode("unset");
+    setSelectedIngredientIds([]);
+  }
+
+  function handleContinueToRank() {
+    rankedStoreScopeRef.current = null;
+    setRecommendationState(initialRecommendationState);
+    setFlowStep("rank");
+  }
+
   async function handleRankMeals() {
     setHasAttemptedRanking(true);
 
@@ -324,14 +717,12 @@ export function useMealPlanner() {
 
     const requestId = ++rankRequestRef.current;
 
-    const recipeSource = form.externalRecipeOptIn ? "themealdb" : "internal-library";
-
     const payload: RecommendationRequest = {
       ...preferences,
-      recipeSource,
-      recipeSourceOptIn: form.externalRecipeOptIn,
-      selectedIngredientIds,
-      market: trimMarketForRankingPassThrough(market),
+      recipeSource: getDefaultRecipeSource(),
+      selectedStoreIds: preferences.selectedStoreIds,
+      ...(selectedIngredientIds.length > 0 ? { selectedIngredientIds } : {}),
+      market: trimMarketForRankingPassThrough(scopedMarket ?? market),
       ...(activeLocationRequest.mode === "zip"
         ? { zipCode: activeLocationRequest.zipCode }
         : {
@@ -383,7 +774,9 @@ export function useMealPlanner() {
         status: "ready",
         recommendations: result.experience.recommendations,
         shopperNotice: result.experience.shopperNotice,
+        supplementaryShopperNotices: result.experience.supplementaryShopperNotices,
       });
+      rankedStoreScopeRef.current = [...preferences.selectedStoreIds];
       trackClientEvent("rank_meals_completed", {
         shopping_style: preferences.shoppingStyle,
         dietary_focus: preferences.dietaryFocus,
@@ -412,19 +805,13 @@ export function useMealPlanner() {
 
   function handleStoreSelect(storeId: string) {
     setSelectedStoreId(storeId);
-    const store = market?.nearbyStores.find((candidate) => candidate.id === storeId);
+    const store = scopedMarket?.nearbyStores.find((candidate) => candidate.id === storeId);
     if (store) {
       trackClientEvent("store_pin_selected", {
         chain: store.chainLabel,
         recommendation_enabled: store.recommendationEnabled,
       });
     }
-  }
-
-  function handleTrustExplainerClose() {
-    setIsTrustExplainerOpen(false);
-    setHasDismissedTrustExplainer(true);
-    trackClientEvent("trust_explainer_dismissed");
   }
 
   function handleToggleIngredient(ingredientId: string, checked: boolean) {
@@ -439,7 +826,7 @@ export function useMealPlanner() {
 
   function handleSelectAllIngredients() {
     setSelectedIngredientIds(
-      market?.saleIngredientChoices.map((choice) => choice.ingredientId) ?? [],
+      scopedMarket?.saleIngredientChoices.map((choice) => choice.ingredientId) ?? [],
     );
   }
 
@@ -447,7 +834,47 @@ export function useMealPlanner() {
     setSelectedIngredientIds([]);
   }
 
+  function handleUseAllIngredients() {
+    setIngredientPickMode("all");
+    setSelectedIngredientIds([]);
+  }
+
+  function handlePickIngredientsManually() {
+    setIngredientPickMode("manual");
+  }
+
+  function handleAddPantryItem(item: string) {
+    const trimmed = item.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setPantryItems((current) =>
+      current.includes(trimmed) ? current : [...current, trimmed],
+    );
+  }
+
+  function handleRemovePantryItem(item: string) {
+    setPantryItems((current) => current.filter((entry) => entry !== item));
+  }
+
+  function handleClearPantryItems() {
+    setPantryItems([]);
+  }
+
+  function handleOpenMapOverlay() {
+    setIsMapOverlayOpen(true);
+  }
+
+  function handleCloseMapOverlay() {
+    setIsMapOverlayOpen(false);
+  }
+
   return {
+    activeTab,
+    handleTabChange,
+    cookEnabled,
+    flowStep,
     form,
     setForm,
     resetLocationDependentState,
@@ -458,27 +885,40 @@ export function useMealPlanner() {
     rankLoading,
     activeLocationRequest,
     market,
+    scopedMarket,
     recommendations,
     shopperNotice,
+    supplementaryShopperNotices,
     marketBlocked,
     nearbyStoresMapModel,
-    isTrustExplainerOpen,
-    setIsTrustExplainerOpen,
-    handleTrustExplainerClose,
+    showMapLink,
+    isMapOverlayOpen,
+    showResultsInHomeFlow,
+    ingredientPickMode,
+    pantryItems,
+    settingsSaveError,
     isInternalDetailsOpen,
     setIsInternalDetailsOpen,
-    isEditingLocation,
-    setIsEditingLocation,
-    focusMealPreferencesToken,
     selectedStoreId,
     handleStoreSelect,
-    handleZipSearch,
+    handleFindStores,
     handleBrowserLocationSearch,
+    handleSaveSettings,
+    handleFactoryReset,
+    handleCompleteWelcome,
+    handleContinueToRank,
     handleRankMeals,
     selectedIngredientIds,
     handleToggleIngredient,
     handleSelectAllIngredients,
     handleClearIngredientSelection,
+    handleUseAllIngredients,
+    handlePickIngredientsManually,
+    handleAddPantryItem,
+    handleRemovePantryItem,
+    handleClearPantryItems,
+    handleOpenMapOverlay,
+    handleCloseMapOverlay,
   };
 }
 
@@ -492,4 +932,12 @@ function bucketCount(count: number) {
   }
 
   return "4+";
+}
+
+function sameSelectedStoreIds(current: string[], previous: string[]) {
+  if (current.length !== previous.length) {
+    return false;
+  }
+
+  return current.every((storeId, index) => storeId === previous[index]);
 }

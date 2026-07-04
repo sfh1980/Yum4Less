@@ -13,6 +13,7 @@ import {
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
+import { shouldFailWeeklyAdIngestExit } from "@/lib/ingest/ingest-script-exit-policy";
 
 loadEnvLocal();
 
@@ -111,16 +112,18 @@ async function main() {
     (total, summary) => total + summary.failedCount,
     0,
   );
-  if (persistFailures > 0) {
-    console.error(
-      `\nWeekly-ad ingest finished with ${persistFailures} persist failure(s). See structured error logs above.`,
-    );
-    process.exit(1);
-  }
-
   const chainErrors = allResults.filter((result) => result.status === "error");
-  if (allResults.length > 0 && chainErrors.length === allResults.length) {
-    console.error("\nAll weekly-ad chains failed during ingest.");
+
+  if (shouldFailWeeklyAdIngestExit({ results: allResults, syncSummaries: allSyncSummaries })) {
+    if (persistFailures > 0) {
+      console.error(
+        `\nWeekly-ad ingest finished with ${persistFailures} persist failure(s). See structured error logs above.`,
+      );
+    } else if (chainErrors.length > 0) {
+      console.error(
+        `\nWeekly-ad ingest finished with ${chainErrors.length} chain failure(s). See structured error logs above.`,
+      );
+    }
     process.exit(1);
   }
 

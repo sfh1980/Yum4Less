@@ -6,7 +6,7 @@ import { discoverFoodRetailStoresNearLocation } from "@/lib/osm-food-retail-disc
 import { getMarketDataSnapshot } from "@/lib/market-repository";
 import { searchOfficialProviderStores } from "@/lib/provider-market-service";
 import { buildProviderPricingPreviews } from "@/lib/provider-pricing-preview-service";
-import { getProviderSearchTerms } from "@/lib/provider-search-terms";
+import { resolveKrogerSyncTrackedIngredients } from "@/lib/provider-search-terms";
 import { resolvePreferredKrogerLocationIdForZip } from "@/lib/kroger-preferred-location";
 import { getProviderRolloutForStore } from "@/lib/provider-rollout";
 import { syncProviderPreviewsToPriceObservations } from "@/lib/provider-price-observation-sync";
@@ -21,6 +21,7 @@ import {
   parseIngestZipCodesFromEnv,
   syncV1ChainStoresToCatalog,
 } from "@/lib/store-catalog-sync";
+import { shouldFailProviderPriceSyncExit } from "@/lib/ingest/ingest-script-exit-policy";
 
 loadEnvLocal();
 
@@ -45,6 +46,9 @@ async function main() {
 
   const zipCodes = parseIngestZipCodesFromEnv();
   let totalSynced = 0;
+  const allSummaries: Awaited<
+    ReturnType<typeof syncProviderPreviewsToPriceObservations>
+  > = [];
   const purgedStale = await purgeStaleRankedPriceObservations();
   if (purgedStale > 0) {
     console.log(`[sync] purged ${purgedStale} stale ranked price observation row(s).`);
@@ -91,11 +95,7 @@ async function main() {
 
     const { snapshot } = await getMarketDataSnapshot();
 
-    // TODO(provider-search-terms): Sync uses DB-backed Kroger search terms; preview/coverage
-    // paths still read PROVIDER_TRACKED_INGREDIENTS until pool-threading lands.
-    const syncTrackedIngredients = await getProviderSearchTerms("kroger", getDbPool(), {
-      includeFallbackTerms: true,
-    });
+    const syncTrackedIngredients = await resolveKrogerSyncTrackedIngredients(getDbPool());
     const providerPricingPreviews = await buildProviderPricingPreviews({
       providerStores: providerStoreSearches.flatMap((search) => search.stores),
       readMode: "live-allowed",
@@ -116,6 +116,7 @@ async function main() {
 
     for (const summary of summaries) {
       totalSynced += summary.syncedCount;
+      allSummaries.push(summary);
       const storeHint = summary.internalStoreId
         ? ` store=${summary.internalStoreId}`
         : "";
@@ -145,6 +146,17 @@ async function main() {
   console.log(
     `Provider price sync finished for ${zipCodes.length} ZIP(s); ${totalSynced} row(s) synced.`,
   );
+
+  if (shouldFailProviderPriceSyncExit(allSummaries)) {
+    const failedCount = allSummaries.reduce(
+      (total, summary) => total + summary.failedCount,
+      0,
+    );
+    console.error(
+      `Provider price sync finished with ${failedCount} persist failure(s). See structured error logs above.`,
+    );
+    process.exit(1);
+  }
 }
 
 function toNearbyStoreSummary(
@@ -161,6 +173,8 @@ function toNearbyStoreSummary(
   return {
     id: store.id,
     name: store.name,
+    city: store.city,
+    state: store.state,
     kind: store.kind,
     latitude: store.latitude,
     longitude: store.longitude,

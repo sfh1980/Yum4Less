@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
+import { clearSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
 
 vi.mock("@/lib/analytics/track-client-event", () => ({
   trackClientEvent: vi.fn(),
@@ -72,6 +73,31 @@ function marketPayload(locationLabel: string, zipCode: string) {
   };
 }
 
+function marketPayloadWithStores(storeIds: string[]) {
+  const nearbyStores = storeIds.map((storeId, index) => ({
+    id: storeId,
+    name: storeId === "kroger-1" ? "Kroger Test" : "Aldi Test",
+    kind: "grocery",
+    latitude: 37.6153 + index * 0.01,
+    longitude: -77.3491,
+    distanceMiles: 2.4 + index,
+    chain: storeId.startsWith("kroger") ? "kroger" : "aldi",
+    chainLabel: storeId.startsWith("kroger") ? "Kroger" : "Aldi",
+    rolloutStatus: "weekly-ad-preview",
+    recommendationEnabled: true,
+    rolloutNote: "Fixture rollout note.",
+  }));
+
+  return {
+    ok: true,
+    market: {
+      ...marketPayload("Multi-store market", "23111").market,
+      nearbyStores,
+      recommendationReadyStoreCount: nearbyStores.length,
+    },
+  };
+}
+
 function recommendationPayload(title: string) {
   return {
     ok: true,
@@ -104,7 +130,12 @@ function recommendationPayload(title: string) {
 }
 
 describe("useMealPlanner request generation (C2, H4)", () => {
+  beforeEach(() => {
+    clearSettingsPreferences();
+  });
+
   afterEach(() => {
+    clearSettingsPreferences();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -130,12 +161,12 @@ describe("useMealPlanner request generation (C2, H4)", () => {
 
     await act(async () => {
       result.current.setForm((current) => ({ ...current, zipCode: "11111" }));
-      result.current.handleZipSearch();
+      result.current.handleFindStores();
     });
 
     await act(async () => {
       result.current.setForm((current) => ({ ...current, zipCode: "90210" }));
-      result.current.handleZipSearch();
+      result.current.handleFindStores();
     });
 
     await waitFor(() => {
@@ -185,7 +216,7 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     const { result } = renderHook(() => useMealPlanner());
 
     await act(async () => {
-      result.current.handleZipSearch();
+      result.current.handleFindStores();
     });
 
     await waitFor(() => {
@@ -193,7 +224,6 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     });
 
     await act(async () => {
-      result.current.handleToggleIngredient("chicken-thighs", true);
       result.current.handleRankMeals();
     });
 
@@ -201,7 +231,7 @@ describe("useMealPlanner request generation (C2, H4)", () => {
 
     await act(async () => {
       result.current.setForm((current) => ({ ...current, zipCode: "90210" }));
-      result.current.handleZipSearch();
+      result.current.handleFindStores();
     });
 
     await waitFor(() => {
@@ -226,5 +256,111 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(result.current.recommendations.some((meal) => meal.title === "Stale ranked meal")).toBe(
       false,
     );
+  });
+
+  it("clears stale ranked results when selected stores change in Settings", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(marketPayloadWithStores(["kroger-1", "aldi-1"])), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(recommendationPayload("Ranked for Kroger")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.handleFindStores();
+    });
+
+    await waitFor(() => {
+      expect(result.current.market?.nearbyStores).toHaveLength(2);
+    });
+
+    await act(async () => {
+      result.current.handleRankMeals();
+    });
+
+    await waitFor(() => {
+      expect(result.current.recommendationState.status).toBe("ready");
+    });
+
+    expect(result.current.recommendations[0]?.title).toBe("Ranked for Kroger");
+
+    await act(async () => {
+      result.current.setForm((current) => ({
+        ...current,
+        shoppingStyle: "multi-store",
+        selectedStoreIds: ["aldi-1"],
+      }));
+    });
+
+    expect(result.current.recommendationState.status).toBe("idle");
+    expect(result.current.recommendations).toHaveLength(0);
+  });
+
+  it("auto-loads geolocation market search from saved coordinates on mount", async () => {
+    writeSettingsPreferences({
+      zipCode: "23111",
+      radiusMiles: 5,
+      shoppingStyle: "single-store",
+      selectedStoreIds: ["kroger-1"],
+      locationMode: "geolocation",
+      latitude: 37.6085,
+      longitude: -77.3739,
+      setupComplete: true,
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(marketPayload("Current location", "23111")), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const geolocationMock = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          latitude: 37.61,
+          longitude: -77.37,
+          accuracy: 10,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as GeolocationPosition);
+    });
+    vi.stubGlobal("navigator", {
+      ...globalThis.navigator,
+      geolocation: { getCurrentPosition: geolocationMock },
+    });
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await waitFor(() => {
+      expect(result.current.market?.locationLabel).toBe("Current location");
+    });
+
+    expect(geolocationMock).toHaveBeenCalled();
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string) as {
+      latitude?: number;
+      longitude?: number;
+      zipCode?: string;
+    };
+    expect(requestBody.latitude).toBeCloseTo(37.61, 2);
+    expect(requestBody.longitude).toBeCloseTo(-77.37, 2);
+    expect(requestBody.zipCode).toBe("");
+    expect(result.current.activeLocationRequest?.mode).toBe("browser");
   });
 });
