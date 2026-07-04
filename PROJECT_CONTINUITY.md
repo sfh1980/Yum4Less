@@ -257,7 +257,8 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), pantry affecting rank, and
 | P1-10 No DB migration ledger | **DEFERRED** | Structural backlog |
 | tsc `--noEmit` (64 errors) | **STILL OPEN** | Test mock drift bucket; unchanged vs Batch 4 baseline |
 | M128/M151 automation | **DEFERRED** | Homelab slice |
-| Saved persistence / R11 cuisine chips | **DEFERRED** | Product backlog |
+| Saved persistence | **DEFERRED** | Shell/tab shipped as placeholder by design for beta v1 (session-first flow, no user accounts); no persistence model or storage decision (localStorage vs DB) recorded yet — scope decision, not a technical blocker |
+| R11 — cuisine/ethnic filter chips | **DEFERRED** | Blocked on recipe DB cuisine tags per 2026-06-25 locked redesign plan (“hide cuisine row until DB tags exist”); recipes have generic `tags[]` / `dietary_tags[]` but no cuisine facet — data-dependency blocker, not a scope decision |
 
 **Evidence (Batch 6, this session):**
 - `npm run lint` — clean
