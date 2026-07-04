@@ -14,26 +14,37 @@ vi.mock("@/lib/debug/pipeline-debug-service", () => ({
 }));
 
 import { GET } from "@/app/api/debug/pipeline/route";
+import { resetRateLimitsForTests } from "@/lib/rate-limit";
 
 const originalNodeEnv = process.env.NODE_ENV;
+const originalDebugRoutesEnabled = process.env.YUM4LESS_DEBUG_ROUTES_ENABLED;
 
 describe("GET /api/debug/pipeline", () => {
   beforeEach(() => {
     resolveLocationInput.mockReset();
     getPipelineDebugView.mockReset();
+    resetRateLimitsForTests();
     process.env.NODE_ENV = "development";
+    process.env.YUM4LESS_DEBUG_ROUTES_ENABLED = "1";
   });
 
   afterEach(() => {
+    resetRateLimitsForTests();
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;
     } else {
       process.env.NODE_ENV = originalNodeEnv;
     }
+    if (originalDebugRoutesEnabled === undefined) {
+      delete process.env.YUM4LESS_DEBUG_ROUTES_ENABLED;
+    } else {
+      process.env.YUM4LESS_DEBUG_ROUTES_ENABLED = originalDebugRoutesEnabled;
+    }
   });
 
   it("returns 404 in production", async () => {
     process.env.NODE_ENV = "production";
+    process.env.YUM4LESS_DEBUG_ROUTES_ENABLED = "1";
 
     const response = await GET(
       new Request("http://localhost/api/debug/pipeline?zip=23111"),
@@ -44,6 +55,17 @@ describe("GET /api/debug/pipeline", () => {
       ok: false,
       error: "Not found.",
     });
+    expect(getPipelineDebugView).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 in non-production without YUM4LESS_DEBUG_ROUTES_ENABLED", async () => {
+    delete process.env.YUM4LESS_DEBUG_ROUTES_ENABLED;
+
+    const response = await GET(
+      new Request("http://localhost/api/debug/pipeline?zip=23111"),
+    );
+
+    expect(response.status).toBe(404);
     expect(getPipelineDebugView).not.toHaveBeenCalled();
   });
 
@@ -112,7 +134,7 @@ describe("GET /api/debug/pipeline", () => {
           distanceMiles: 1.2,
           recommendationEnabled: true,
           rolloutStatus: "weekly-ad-preview",
-          trustBadge: "Est. weekly-ad prices",
+          trustBadge: "Est. sale prices",
         },
       ],
       priceObservations: [
@@ -196,6 +218,51 @@ describe("GET /api/debug/pipeline", () => {
     expect(resolveLocationInput).toHaveBeenCalledWith({
       latitude: 37.6,
       longitude: -77.4,
+    });
+  });
+
+  it("returns 503 when the database is unavailable", async () => {
+    resolveLocationInput.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: false,
+    });
+
+    getPipelineDebugView.mockResolvedValue({
+      ok: true,
+      zipCode: "23111",
+      latitude: 37.6085,
+      longitude: -77.3321,
+      radiusMiles: 10,
+      locationLabel: "Mechanicsville, VA",
+      dataSource: "unavailable",
+      nearbyStores: [],
+      priceObservations: [],
+      freshnessSummary: {
+        observationCount: 0,
+        freshWithin24Hours: 0,
+        staleCount: 0,
+        countsBySource: {},
+      },
+      trackedIngredientIds: [],
+      missingIngredientIds: [],
+    });
+
+    const response = await GET(
+      new Request("http://localhost/api/debug/pipeline?zip=23111"),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Pipeline debug requires database access.",
     });
   });
 });

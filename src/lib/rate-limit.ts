@@ -22,8 +22,38 @@ type BucketEntry = {
 
 const buckets = new Map<string, BucketEntry>();
 
+let unsafeProxyTrustWarningLogged = false;
+
+/**
+ * Logs once when TRUST_PROXY_HEADERS=1 without YUM4LESS_TRUSTED_PROXY_VERIFIED=1.
+ * Operators must set the verified flag only after a trusted reverse proxy is configured.
+ */
+export function warnIfUnsafeProxyTrustConfiguration() {
+  if (unsafeProxyTrustWarningLogged) {
+    return;
+  }
+
+  if (process.env.TRUST_PROXY_HEADERS !== "1") {
+    return;
+  }
+
+  if (process.env.YUM4LESS_TRUSTED_PROXY_VERIFIED === "1") {
+    return;
+  }
+
+  unsafeProxyTrustWarningLogged = true;
+  console.warn(
+    "[Yum4Less] TRUST_PROXY_HEADERS=1 is set without YUM4LESS_TRUSTED_PROXY_VERIFIED=1. " +
+      "Clients can spoof X-Forwarded-For and bypass per-IP rate limits unless a trusted " +
+      "reverse proxy strips client-supplied forwarding headers.",
+  );
+}
+
+warnIfUnsafeProxyTrustConfiguration();
+
 export const RATE_LIMITS = {
   apiAnalyticsEvents: { windowMs: 60_000, maxRequests: 60 },
+  apiDebugPipeline: { windowMs: 60_000, maxRequests: 10 },
   apiFeedback: { windowMs: 60_000, maxRequests: 10 },
   apiMarketSearch: { windowMs: 60_000, maxRequests: 30 },
   apiRecommendations: { windowMs: 60_000, maxRequests: 20 },
@@ -77,4 +107,8 @@ export function getClientIp(request: Request): string {
 
 export function resetRateLimitsForTests() {
   buckets.clear();
+}
+
+export function resetUnsafeProxyTrustWarningForTests() {
+  unsafeProxyTrustWarningLogged = false;
 }

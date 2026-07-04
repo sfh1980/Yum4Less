@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
 import { API_LIMITS, clampInteger, isValidZipCode } from "@/lib/api-request";
+import { isDebugRoutesEnabled } from "@/lib/debug/debug-routes-policy";
 import { getPipelineDebugView } from "@/lib/debug/pipeline-debug-service";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
+import { RecommendationDependencyUnavailableError } from "@/lib/recommendation-service";
 
 const DEFAULT_RADIUS_MILES = 10;
 
@@ -16,8 +19,13 @@ function parseCoordinate(value: string | null) {
 }
 
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === "production") {
+  if (!isDebugRoutesEnabled()) {
     return NextResponse.json({ ok: false, error: "Not found." }, { status: 404 });
+  }
+
+  const rateLimit = enforceApiRateLimit(request, "apiDebugPipeline");
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   const { searchParams } = new URL(request.url);
@@ -107,8 +115,24 @@ export async function GET(request: Request) {
       radiusMiles,
     });
 
+    if (view.dataSource === "unavailable") {
+      throw new RecommendationDependencyUnavailableError(
+        "Pipeline debug requires database access.",
+      );
+    }
+
     return NextResponse.json(view);
   } catch (error) {
+    if (error instanceof RecommendationDependencyUnavailableError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+        },
+        { status: 503 },
+      );
+    }
+
     return publicApiErrorResponse(
       "api.debug.pipeline",
       error,

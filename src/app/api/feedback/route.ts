@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
 import { parseJsonBody } from "@/lib/api-request";
+import { isFeedbackListAuthorized } from "@/lib/feedback/feedback-admin-auth";
 import { isFeedbackEnabled } from "@/lib/feedback/feedback-policy";
 import {
   insertCustomerFeedback,
@@ -17,6 +18,10 @@ export async function GET(request: Request) {
 
   if (!isFeedbackEnabled()) {
     return NextResponse.json({ ok: true, feedback: [] });
+  }
+
+  if (!isFeedbackListAuthorized(request)) {
+    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
   try {

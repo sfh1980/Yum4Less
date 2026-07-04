@@ -1,20 +1,30 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   consumeRateLimit,
   getClientIp,
   resetRateLimitsForTests,
+  resetUnsafeProxyTrustWarningForTests,
+  warnIfUnsafeProxyTrustConfiguration,
 } from "@/lib/rate-limit";
 
 const originalTrustProxy = process.env.TRUST_PROXY_HEADERS;
+const originalTrustedProxyVerified = process.env.YUM4LESS_TRUSTED_PROXY_VERIFIED;
 
 describe("rate-limit", () => {
   afterEach(() => {
     resetRateLimitsForTests();
+    resetUnsafeProxyTrustWarningForTests();
     if (originalTrustProxy === undefined) {
       delete process.env.TRUST_PROXY_HEADERS;
     } else {
       process.env.TRUST_PROXY_HEADERS = originalTrustProxy;
     }
+    if (originalTrustedProxyVerified === undefined) {
+      delete process.env.YUM4LESS_TRUSTED_PROXY_VERIFIED;
+    } else {
+      process.env.YUM4LESS_TRUSTED_PROXY_VERIFIED = originalTrustedProxyVerified;
+    }
+    vi.restoreAllMocks();
   });
 
   it("allows requests under the configured limit", () => {
@@ -82,5 +92,29 @@ describe("rate-limit", () => {
       ok: false,
       retryAfterSeconds: expect.any(Number),
     });
+  });
+
+  it("warns when TRUST_PROXY_HEADERS=1 is set without verified proxy confirmation", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    process.env.TRUST_PROXY_HEADERS = "1";
+    delete process.env.YUM4LESS_TRUSTED_PROXY_VERIFIED;
+
+    warnIfUnsafeProxyTrustConfiguration();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("TRUST_PROXY_HEADERS=1 is set without YUM4LESS_TRUSTED_PROXY_VERIFIED=1"),
+    );
+  });
+
+  it("does not warn when trusted proxy verification is set", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    process.env.TRUST_PROXY_HEADERS = "1";
+    process.env.YUM4LESS_TRUSTED_PROXY_VERIFIED = "1";
+
+    warnIfUnsafeProxyTrustConfiguration();
+
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

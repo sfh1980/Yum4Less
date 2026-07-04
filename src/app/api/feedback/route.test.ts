@@ -3,6 +3,7 @@ import { GET, POST } from "@/app/api/feedback/route";
 import { resetRateLimitsForTests } from "@/lib/rate-limit";
 
 const originalFeedbackEnabled = process.env.YUM4LESS_FEEDBACK_ENABLED;
+const originalFeedbackAdminKey = process.env.YUM4LESS_FEEDBACK_ADMIN_KEY;
 
 const insertCustomerFeedback = vi.fn();
 const listRecentCustomerFeedback = vi.fn();
@@ -86,6 +87,7 @@ describe("GET /api/feedback", () => {
     resetRateLimitsForTests();
     listRecentCustomerFeedback.mockReset();
     restoreEnv("YUM4LESS_FEEDBACK_ENABLED", originalFeedbackEnabled);
+    restoreEnv("YUM4LESS_FEEDBACK_ADMIN_KEY", originalFeedbackAdminKey);
   });
 
   it("returns an empty feed when feedback is disabled", async () => {
@@ -98,8 +100,23 @@ describe("GET /api/feedback", () => {
     expect(listRecentCustomerFeedback).not.toHaveBeenCalled();
   });
 
-  it("returns recent rows when feedback is enabled", async () => {
+  it("returns 401 when feedback is enabled without admin auth", async () => {
     process.env.YUM4LESS_FEEDBACK_ENABLED = "1";
+    delete process.env.YUM4LESS_FEEDBACK_ADMIN_KEY;
+
+    const response = await GET(new Request("http://localhost/api/feedback"));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Unauthorized.",
+    });
+    expect(listRecentCustomerFeedback).not.toHaveBeenCalled();
+  });
+
+  it("returns recent rows when feedback is enabled and admin auth is valid", async () => {
+    process.env.YUM4LESS_FEEDBACK_ENABLED = "1";
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
     listRecentCustomerFeedback.mockResolvedValue([
       {
         id: 1,
@@ -111,7 +128,11 @@ describe("GET /api/feedback", () => {
       },
     ]);
 
-    const response = await GET(new Request("http://localhost/api/feedback"));
+    const response = await GET(
+      new Request("http://localhost/api/feedback", {
+        headers: { Authorization: "Bearer test-admin-key" },
+      }),
+    );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
