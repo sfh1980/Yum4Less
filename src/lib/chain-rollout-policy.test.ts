@@ -1,0 +1,78 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildDirectionalRolloutNote,
+  COORDINATE_SANITY_EXCEPTIONS,
+  getCoordinateSanityPromotionRequirement,
+  inferStoreChainFromName,
+  listProviderCatalogRolloutChains,
+  SETTINGS_SELECTABLE_CHAINS,
+  SHOPPER_RANKED_V1_CHAINS,
+  WEEKLY_AD_RANKED_PRICING_CHAINS,
+} from "@/lib/chain-rollout-policy";
+
+describe("chain rollout policy", () => {
+  it("derives settings, weekly-ad, and catalog lists from the v1 base", () => {
+    expect([...SETTINGS_SELECTABLE_CHAINS]).toEqual([...SHOPPER_RANKED_V1_CHAINS]);
+    expect(listProviderCatalogRolloutChains()).toEqual([
+      "kroger",
+      "aldi",
+      "publix",
+      "food-lion",
+      "lidl",
+      "walmart",
+      "bjs",
+    ]);
+    expect([...WEEKLY_AD_RANKED_PRICING_CHAINS]).toEqual([
+      "kroger",
+      "aldi",
+      "publix",
+      "food-lion",
+      "lidl",
+      "walmart",
+    ]);
+  });
+
+  it("templates directional rollout notes from chain label only", () => {
+    expect(buildDirectionalRolloutNote("Kroger")).toBe(
+      "Kroger dinner estimates use saved sale prices when available near you. Totals are estimates — verify in store.",
+    );
+    expect(buildDirectionalRolloutNote("Food Lion")).toContain("Food Lion");
+    expect(buildDirectionalRolloutNote("Food Lion")).not.toContain("BETA");
+  });
+
+  it("shares one store-name chain inference helper", () => {
+    expect(inferStoreChainFromName("Harris Teeter")).toBe("kroger");
+    expect(inferStoreChainFromName("Food Lion")).toBe("food-lion");
+    expect(inferStoreChainFromName("Trader Joe's")).toBe("trader-joes");
+  });
+
+  it("requires coordinate sanity audits only where rollout policy can enforce them safely today", () => {
+    expect(getCoordinateSanityPromotionRequirement("food-lion")).toEqual(
+      expect.objectContaining({ required: true }),
+    );
+    expect(getCoordinateSanityPromotionRequirement("lidl")).toEqual(
+      expect.objectContaining({ required: true }),
+    );
+    expect(getCoordinateSanityPromotionRequirement("kroger")).toEqual(
+      expect.objectContaining({ required: false }),
+    );
+    expect(getCoordinateSanityPromotionRequirement("aldi")).toEqual(
+      expect.objectContaining({ required: false }),
+    );
+    expect(getCoordinateSanityPromotionRequirement("publix")).toEqual(
+      expect.objectContaining({ required: false }),
+    );
+    expect(getCoordinateSanityPromotionRequirement("walmart").note).toContain(
+      "context-only",
+    );
+  });
+
+  it("persists the two reviewed Food Lion withheld rows as coordinate audit exceptions", () => {
+    expect(COORDINATE_SANITY_EXCEPTIONS["osm-node-3103220732"]).toContain(
+      "stored storefront pin was correct",
+    );
+    expect(COORDINATE_SANITY_EXCEPTIONS["osm-node-6527816794"]).toContain(
+      "stored storefront pin was correct",
+    );
+  });
+});

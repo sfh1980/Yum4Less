@@ -1,0 +1,354 @@
+"use client";
+
+import { useState, type Dispatch, type SetStateAction } from "react";
+import type { MealPreferenceForm } from "@/lib/recommendation-service";
+import { FormField } from "@/components/meal-planner/form-field";
+import { MapPinIcon } from "@/components/map-pin-icon";
+import { SingleStoreMapOverlay } from "@/components/single-store-map-overlay";
+import {
+  defaultSelectedStoreIdsForSettings,
+  filterSettingsSelectableStores,
+} from "@/lib/settings-store-selection";
+import { formatSettingsStoreOptionLabel } from "@/lib/store-display-labels";
+import { radiusHelp, zipCodeHelp } from "@/lib/help-hint-content";
+import type { FieldErrors, FormState, MarketSearchState } from "@/components/meal-planner/types";
+import type { RecommendationExperience } from "@/lib/recommendation-service";
+import type { ThemePreference } from "@/lib/settings-preferences";
+
+type SettingsPanelProps = {
+  form: FormState;
+  setForm: Dispatch<SetStateAction<FormState>>;
+  displayedErrors: FieldErrors;
+  market?: RecommendationExperience["market"];
+  storeCatalog?: RecommendationExperience["market"];
+  marketSearchLoading: boolean;
+  marketSearchState: MarketSearchState;
+  settingsSaveError?: string;
+  onFindStores: () => void;
+  onBrowserSearch: () => void;
+  onSaveSettings: () => void;
+  onFactoryReset: () => void;
+  onResetLocationState: () => void;
+};
+
+export function SettingsPanel({
+  form,
+  setForm,
+  displayedErrors,
+  market,
+  storeCatalog,
+  marketSearchLoading,
+  marketSearchState,
+  settingsSaveError,
+  onFindStores,
+  onBrowserSearch,
+  onSaveSettings,
+  onFactoryReset,
+  onResetLocationState,
+}: SettingsPanelProps) {
+  const selectableStores = filterSettingsSelectableStores(
+    (storeCatalog ?? market)?.nearbyStores ?? [],
+  );
+  const [storeMapTarget, setStoreMapTarget] = useState<
+    (typeof selectableStores)[number] | null
+  >(null);
+  const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
+  const storesReady = Boolean(market);
+  const storesMissingRankedChains = storesReady && selectableStores.length === 0;
+  const canSaveSettings =
+    storesReady &&
+    form.selectedStoreIds.length > 0 &&
+    (form.shoppingStyle !== "single-store" || form.selectedStoreIds.length === 1);
+
+  function handleShoppingStyleChange(shoppingStyle: MealPreferenceForm["shoppingStyle"]) {
+    setForm((current) => ({
+      ...current,
+      shoppingStyle,
+      selectedStoreIds: defaultSelectedStoreIdsForSettings(
+        selectableStores,
+        shoppingStyle,
+      ),
+    }));
+  }
+
+  function handleSingleStoreChange(storeId: string) {
+    setForm((current) => ({
+      ...current,
+      selectedStoreIds: storeId ? [storeId] : [],
+    }));
+  }
+
+  function handleMultiStoreToggle(storeId: string, checked: boolean) {
+    setForm((current) => {
+      if (checked) {
+        return current.selectedStoreIds.includes(storeId)
+          ? current
+          : { ...current, selectedStoreIds: [...current.selectedStoreIds, storeId] };
+      }
+
+      return {
+        ...current,
+        selectedStoreIds: current.selectedStoreIds.filter((id) => id !== storeId),
+      };
+    });
+  }
+
+  function handleOpenStoreMap(store: (typeof selectableStores)[number]) {
+    setStoreMapTarget(store);
+    setIsStoreMapOpen(true);
+  }
+
+  function handleCloseStoreMap() {
+    setIsStoreMapOpen(false);
+  }
+
+  const selectedSingleStore = selectableStores.find(
+    (store) => store.id === form.selectedStoreIds[0],
+  );
+
+  return (
+    <div className="panel panel-padding meal-planner-panel meal-planner-panel--inputs flow-panel flow-panel--settings">
+      <h2>Settings</h2>
+      <p className="panel-copy">
+        Set your location, search radius, shopping style, and store(s). Yum4Less
+        saves these preferences locally. Dinner price estimates come from the
+        store(s) you select — totals are estimates; always verify in store.
+      </p>
+
+      <div className="form-grid">
+        <FormField
+          id="settings-zip-code"
+          label="ZIP code"
+          error={displayedErrors.zipCode}
+          helpHint={zipCodeHelp}
+          hint="Continental US ZIP codes are supported in beta."
+        >
+          <input
+            id="settings-zip-code"
+            aria-invalid={displayedErrors.zipCode ? true : undefined}
+            value={form.zipCode}
+            onChange={(event) =>
+              setForm((current) => {
+                onResetLocationState();
+                return { ...current, zipCode: event.target.value };
+              })
+            }
+          />
+        </FormField>
+
+        <FormField
+          id="settings-radius-miles"
+          label="Radius in miles"
+          error={displayedErrors.radiusMiles}
+          helpHint={radiusHelp}
+        >
+          <input
+            id="settings-radius-miles"
+            aria-invalid={displayedErrors.radiusMiles ? true : undefined}
+            min={1}
+            max={25}
+            step={1}
+            type="number"
+            value={form.radiusMiles}
+            onChange={(event) =>
+              setForm((current) => {
+                onResetLocationState();
+                return { ...current, radiusMiles: event.target.value };
+              })
+            }
+          />
+        </FormField>
+
+        <FormField id="settings-shopping-style" label="Shopping style">
+          <select
+            id="settings-shopping-style"
+            value={form.shoppingStyle}
+            onChange={(event) =>
+              handleShoppingStyleChange(
+                event.target.value as MealPreferenceForm["shoppingStyle"],
+              )
+            }
+          >
+            <option value="single-store">Single store only</option>
+            <option value="multi-store">Multiple stores allowed</option>
+          </select>
+        </FormField>
+
+        {storesReady ? (
+          form.shoppingStyle === "single-store" ? (
+            <FormField id="settings-selected-store" label="Store">
+              <div className="settings-single-store-row">
+                <select
+                  id="settings-selected-store"
+                  value={form.selectedStoreIds[0] ?? ""}
+                  onChange={(event) => handleSingleStoreChange(event.target.value)}
+                >
+                  <option value="">Choose a store</option>
+                  {selectableStores.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {formatSettingsStoreOptionLabel(store)}
+                    </option>
+                  ))}
+                </select>
+                {selectedSingleStore ? (
+                  <button
+                    type="button"
+                    className="secondary-button settings-show-on-map-button"
+                    onClick={() => handleOpenStoreMap(selectedSingleStore)}
+                  >
+                    📍 Show on map
+                  </button>
+                ) : null}
+              </div>
+            </FormField>
+          ) : (
+            <FormField
+              id="settings-selected-stores"
+              label="Stores"
+              hint="Pick one or more stores. Unselected stores stay hidden from the map and ingredient list."
+            >
+              <div className="store-multi-select" id="settings-selected-stores">
+                {selectableStores.map((store) => {
+                  const checkboxId = `settings-store-${store.id}`;
+                  const selected = form.selectedStoreIds.includes(store.id);
+
+                  return (
+                    <div
+                      key={store.id}
+                      className={`store-multi-select-option${selected ? " store-multi-select-option--selected" : ""}`}
+                    >
+                      <input
+                        id={checkboxId}
+                        aria-label={`Select ${formatSettingsStoreOptionLabel(store)}`}
+                        checked={selected}
+                        onChange={(event) =>
+                          handleMultiStoreToggle(store.id, event.target.checked)
+                        }
+                        type="checkbox"
+                      />
+                      <label htmlFor={checkboxId} className="store-multi-select-label">
+                        {formatSettingsStoreOptionLabel(store)}
+                      </label>
+                      <button
+                        type="button"
+                        className="store-map-pin-button"
+                        aria-label={`Show ${formatSettingsStoreOptionLabel(store)} on map`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleOpenStoreMap(store);
+                        }}
+                      >
+                        <MapPinIcon size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </FormField>
+          )
+        ) : null}
+
+        {storesMissingRankedChains ? (
+          <p className="field-hint" role="status">
+            No stores with dinner estimates showed up in this search area. Try a
+            larger radius or another ZIP.
+          </p>
+        ) : null}
+
+        <FormField id="settings-theme" label="Theme">
+          <select
+            id="settings-theme"
+            value={form.theme}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                theme: event.target.value as ThemePreference,
+              }))
+            }
+          >
+            <option value="system">Match system</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </FormField>
+      </div>
+
+      {marketSearchLoading || marketSearchState.status === "loading" ? (
+        <p className="panel-copy" role="status">
+          Finding stores for this area…
+        </p>
+      ) : null}
+
+      {marketSearchState.status === "error" ? (
+        <p className="field-error" role="alert">
+          {marketSearchState.error ?? "Could not find stores for your area."}
+        </p>
+      ) : null}
+
+      {marketSearchState.status === "ready" && marketSearchState.notice ? (
+        <p className="field-hint" role="status">
+          {marketSearchState.notice}
+        </p>
+      ) : null}
+
+      {!storesReady ? (
+        <div className="action-row">
+          <button
+            className="primary-button"
+            type="button"
+            onClick={onFindStores}
+            disabled={marketSearchLoading}
+          >
+            Find stores for this area
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={onBrowserSearch}
+            disabled={marketSearchLoading}
+          >
+            Use my location
+          </button>
+        </div>
+      ) : (
+        <div className="action-row">
+          <button
+            className="primary-button"
+            type="button"
+            onClick={onSaveSettings}
+            disabled={!canSaveSettings || marketSearchLoading}
+          >
+            Save settings and continue
+          </button>
+        </div>
+      )}
+
+      {settingsSaveError ? (
+        <p className="field-error" role="alert">
+          {settingsSaveError}
+        </p>
+      ) : null}
+
+      <div className="settings-danger-zone">
+        <button className="secondary-button" type="button" onClick={onFactoryReset}>
+          Factory reset preferences
+        </button>
+        <p className="field-hint">
+          Clears saved Settings and returns to this screen — same as a first visit.
+        </p>
+      </div>
+
+      <p className="settings-feedback-link">
+        <a className="text-link" href="/feedback">
+          Send feedback or report a wrong price
+        </a>
+      </p>
+
+      <SingleStoreMapOverlay
+        isOpen={isStoreMapOpen}
+        store={storeMapTarget}
+        onClose={handleCloseStoreMap}
+      />
+    </div>
+  );
+}

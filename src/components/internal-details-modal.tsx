@@ -8,6 +8,7 @@ import type {
 import { useModalDialog } from "@/components/use-modal-dialog";
 import { buildInternalMarketDiagnosticLines } from "@/lib/internal-market-diagnostics";
 import { listSelectableRecipeSources } from "@/lib/recipe-sources/recipe-source-registry";
+import { formatStoreCityState } from "@/lib/store-display-labels";
 
 type InternalDetailsModalProps = {
   open: boolean;
@@ -206,7 +207,7 @@ export function InternalDetailsModal({
                             <li key={`${provider.provider}-${store.providerStoreId}`}>
                               {store.name}
                               {store.addressLine1 ? ` · ${store.addressLine1}` : ""}
-                              {` · ${store.city}, ${store.state}`}
+                              {formatProviderStoreLocation(store)}
                               {store.zipCode ? ` ${store.zipCode}` : ""}
                             </li>
                           ))}
@@ -455,7 +456,9 @@ export function InternalDetailsModal({
             <p>
               <strong>Provider promotion readiness</strong> is a checklist of gates that
               would need to pass before provider preview pricing could influence ranked
-              meal totals. Production rollout gates stay on for non-Kroger/Aldi chains.
+              meal totals. Production rollout gates apply equally to Kroger-family,
+              Aldi, Publix, and Food Lion; Walmart and other chains remain
+              context-only.
             </p>
           </section>
         </div>
@@ -642,4 +645,12 @@ function formatSignedCurrency(value: number) {
   }
 
   return "$0.00";
+}
+
+function formatProviderStoreLocation(store: {
+  city?: string;
+  state?: string;
+}) {
+  const location = formatStoreCityState(store);
+  return location ? ` · ${location}` : "";
 }

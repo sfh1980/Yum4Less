@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
 import { formatStoreKind } from "@/components/meal-planner/form-validation";
 import { buildStoreListStatusPill } from "@/lib/store-pricing-status-copy";
+import { formatStoreNameWithLocation } from "@/lib/store-display-labels";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 type NearbyStoresListProps = {
@@ -72,7 +73,7 @@ export function NearbyStoresList({
                 type="button"
               >
                 <span className="nearby-stores-list-item-topline">
-                  <strong>{store.name}</strong>
+                  <strong>{formatStoreNameWithLocation(store)}</strong>
                   <span
                     className={`store-status-pill${store.recommendationEnabled ? " is-ready" : " is-context"}`}
                   >
@@ -96,11 +97,11 @@ export function NearbyStoresList({
       <div aria-label="Map marker legend" className="map-legend">
         <span className="map-legend-item">
           <span className="map-legend-swatch is-ready" />
-          Chain-colored badges — est. ranked meal pricing when rollout allows
+          Chain-colored badges — est. dinner pricing when available
         </span>
         <span className="map-legend-item">
           <span className="map-legend-swatch is-context" />
-          Gray badges — context only (no ranked meal totals; Walmart always context-only)
+          Gray badges — context only (no dinner totals yet)
         </span>
       </div>
     </div>
@@ -113,7 +114,7 @@ function buildStoreCardLabel(
   isSelected: boolean,
 ) {
   return [
-    store.name,
+    formatStoreNameWithLocation(store),
     store.chainLabel,
     formatStoreKind(store.kind),
     `${store.distanceMiles} miles away`,
