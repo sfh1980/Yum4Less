@@ -1,14 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getRecommendationExperience, type MealPreferenceForm } from "@/lib/recommendation-service";
 import { resetDbPoolForTests } from "@/lib/db";
-import {
-  fixturePriceObservations,
+import { fixturePriceObservations,
   fixtureRecipes,
   fixtureStores,
 } from "@/lib/fixtures/market-catalog.fixtures";
+import { PROVIDER_TRACKED_INGREDIENTS } from "@/lib/provider-tracked-ingredients";
 
 const { buildProviderPricingPreviews } = vi.hoisted(() => ({
   buildProviderPricingPreviews: vi.fn(),
+}));
+
+const { resolveKrogerPreviewTrackedIngredients } = vi.hoisted(() => ({
+  resolveKrogerPreviewTrackedIngredients: vi.fn(),
 }));
 
 const { getMarketDataSnapshot, getMarketPricingContext, getRecipeCatalog } =
@@ -18,8 +22,18 @@ const { getMarketDataSnapshot, getMarketPricingContext, getRecipeCatalog } =
     getRecipeCatalog: vi.fn(),
   }));
 
+const { getLatestThemealdbImportAt, shouldRefreshThemealdbRecipesOnSearch } =
+  vi.hoisted(() => ({
+    getLatestThemealdbImportAt: vi.fn(),
+    shouldRefreshThemealdbRecipesOnSearch: vi.fn(),
+  }));
+
 vi.mock("@/lib/provider-pricing-preview-service", () => ({
   buildProviderPricingPreviews,
+}));
+
+vi.mock("@/lib/provider-search-terms", () => ({
+  resolveKrogerPreviewTrackedIngredients,
 }));
 
 vi.mock("@/lib/market-repository", () => ({
@@ -27,6 +41,18 @@ vi.mock("@/lib/market-repository", () => ({
   getMarketPricingContext,
   getRecipeCatalog,
 }));
+
+vi.mock("@/lib/recipe-import/ensure-themealdb-recipes-for-search", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/recipe-import/ensure-themealdb-recipes-for-search")
+  >("@/lib/recipe-import/ensure-themealdb-recipes-for-search");
+
+  return {
+    ...actual,
+    getLatestThemealdbImportAt,
+    shouldRefreshThemealdbRecipesOnSearch,
+  };
+});
 
 function mockRankingReads(snapshot: {
   stores: typeof fixtureStores;
@@ -56,10 +82,10 @@ const preferences: MealPreferenceForm = {
   radiusMiles: 6,
   budget: 18,
   maxIngredients: 8,
-  dinnersWanted: 3,
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: "internal-library",
+  selectedStoreIds: ["kroger-mechanicsville"],
   planningMode: "standard",
 };
 
@@ -84,6 +110,14 @@ const liveCacheObservations = fixturePriceObservations
 describe("getRecommendationExperience provider preview invariance", () => {
   beforeEach(() => {
     buildProviderPricingPreviews.mockReset();
+    resolveKrogerPreviewTrackedIngredients.mockReset();
+    resolveKrogerPreviewTrackedIngredients.mockResolvedValue(
+      PROVIDER_TRACKED_INGREDIENTS.slice(0, 5),
+    );
+    getLatestThemealdbImportAt.mockReset();
+    shouldRefreshThemealdbRecipesOnSearch.mockReset();
+    getLatestThemealdbImportAt.mockResolvedValue(new Date());
+    shouldRefreshThemealdbRecipesOnSearch.mockReturnValue(false);
     mockRankingReads({
       stores: fixtureStores,
       recipes: fixtureRecipes,

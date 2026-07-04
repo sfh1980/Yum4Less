@@ -17,6 +17,12 @@ const { getMarketDataSnapshot } = vi.hoisted(() => ({
   getMarketDataSnapshot: vi.fn(),
 }));
 
+const { getLatestThemealdbImportAt, shouldRefreshThemealdbRecipesOnSearch } =
+  vi.hoisted(() => ({
+    getLatestThemealdbImportAt: vi.fn(),
+    shouldRefreshThemealdbRecipesOnSearch: vi.fn(),
+  }));
+
 vi.mock("@/lib/provider-pricing-preview-service", () => ({
   buildProviderPricingPreviews,
 }));
@@ -24,6 +30,18 @@ vi.mock("@/lib/provider-pricing-preview-service", () => ({
 vi.mock("@/lib/market-repository", () => ({
   getMarketDataSnapshot,
 }));
+
+vi.mock("@/lib/recipe-import/ensure-themealdb-recipes-for-search", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/recipe-import/ensure-themealdb-recipes-for-search")
+  >("@/lib/recipe-import/ensure-themealdb-recipes-for-search");
+
+  return {
+    ...actual,
+    getLatestThemealdbImportAt,
+    shouldRefreshThemealdbRecipesOnSearch,
+  };
+});
 
 function passedMarketFromSnapshot(
   snapshot: ReturnType<typeof buildZip23111RankingSnapshot>,
@@ -48,7 +66,7 @@ function passedMarketFromSnapshot(
         recommendationEnabled: true,
         rolloutNote: "Fixture rollout note.",
         pricingStatus: "weekly-ad-preview",
-        pricingLabel: "Est. weekly-ad prices",
+        pricingLabel: "Est. sale prices",
         pricingNote: "Fixture pricing note.",
         locationProvenance: "postgres-catalog",
         locationBadge: "Catalog pin",
@@ -86,6 +104,10 @@ describe("getRecommendationExperience market pass-through (H1–H3)", () => {
   beforeEach(() => {
     buildProviderPricingPreviews.mockReset();
     buildProviderPricingPreviews.mockResolvedValue([]);
+    getLatestThemealdbImportAt.mockReset();
+    shouldRefreshThemealdbRecipesOnSearch.mockReset();
+    getLatestThemealdbImportAt.mockResolvedValue(new Date());
+    shouldRefreshThemealdbRecipesOnSearch.mockReturnValue(false);
     getMarketDataSnapshot.mockResolvedValue({
       source: "database",
       snapshot: buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
@@ -143,5 +165,37 @@ describe("getRecommendationExperience market pass-through (H1–H3)", () => {
     );
     expect(experience.market.nearbyStores[0]?.latitude).toBeTypeOf("number");
     expect(experience.recommendations.length).toBeGreaterThan(0);
+  });
+
+  it("recomputes trust-sensitive pass-through fields from server state", async () => {
+    const snapshot = buildZip23111RankingSnapshot(["kroger-mechanicsville"]);
+    const spoofedMarket = {
+      ...passedMarketFromSnapshot(snapshot),
+      lookupSource: "browser" as const,
+      lookupProviderConfigured: true,
+      dataSource: "database" as const,
+      providerCoverageRollup: {
+        ...passedMarketFromSnapshot(snapshot).providerCoverageRollup,
+        rankedPricingSource: "official-api-live" as const,
+        trustGate: "promotion-ready" as const,
+      },
+    };
+
+    const experience = await getRecommendationExperience(
+      zip23111RankingPreferences,
+      zip23111MechanicsvilleLocation,
+      false,
+      { passedMarket: trimMarketForRankingPassThrough(spoofedMarket) },
+    );
+
+    expect(experience.market.lookupSource).toBe("seed");
+    expect(experience.market.lookupProviderConfigured).toBe(false);
+    expect(experience.market.dataSource).toBe("database");
+    expect(experience.market.providerCoverageRollup.rankedPricingSource).toBe(
+      "weekly-ad-cache",
+    );
+    expect(experience.market.providerCoverageRollup.trustGate).not.toBe(
+      "promotion-ready",
+    );
   });
 });

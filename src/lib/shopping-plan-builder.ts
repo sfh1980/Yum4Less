@@ -17,6 +17,10 @@ import type {
   ShoppingPlanItem,
 } from "@/lib/recommendation-types";
 
+// TODO: add storeId to ShoppingPlanItem and StorePlan so overlay join
+// uses ID rather than name — avoids ambiguity when two same-chain
+// branches are in radius. See 2026-06-30 store-map-overlay session.
+
 export function buildSingleStorePlan(
   recipe: CatalogRecipeRecord,
   nearbyStores: NearbyStoreSummary[],

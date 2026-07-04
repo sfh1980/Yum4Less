@@ -6,10 +6,10 @@ const validPayload = {
   radiusMiles: 5,
   budget: 16,
   maxIngredients: 8,
-  dinnersWanted: 3,
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: "internal-library",
+  selectedStoreIds: ["kroger-mechanicsville"],
 } as const;
 
 describe("parseRecommendationRequest", () => {
@@ -19,8 +19,9 @@ describe("parseRecommendationRequest", () => {
       radiusMiles: 5,
       budget: 16,
       planningMode: "ingredient-first",
-      selectedIngredientIds: [],
+      selectedStoreIds: ["kroger-mechanicsville"],
     });
+    expect(parseRecommendationRequest(validPayload)?.selectedIngredientIds).toBeUndefined();
   });
 
   it("passes market through without validating snapshot shape", () => {
@@ -40,27 +41,36 @@ describe("parseRecommendationRequest", () => {
     expect(parseRecommendationRequest({ ...validPayload, budget: 251 })).toBeUndefined();
   });
 
-  it("accepts TheMealDB when recipeSourceOptIn is true", () => {
+  it("rejects non-internal recipe sources on the public API", () => {
     expect(
       parseRecommendationRequest({
         ...validPayload,
         recipeSource: "themealdb",
-        recipeSourceOptIn: true,
-      }),
-    ).toMatchObject({
-      recipeSource: "themealdb",
-      recipeSourceOptIn: true,
-    });
-  });
-
-  it("rejects TheMealDB without opt-in", () => {
-    expect(
-      parseRecommendationRequest({
-        ...validPayload,
-        recipeSource: "themealdb",
-        recipeSourceOptIn: false,
       }),
     ).toBeUndefined();
+  });
+
+  it("accepts large selectedIngredientIds lists within body safeguards", () => {
+    const ids = Array.from({ length: 50 }, (_, index) => `ingredient-${index}`);
+    expect(
+      parseRecommendationRequest({ ...validPayload, selectedIngredientIds: ids })
+        ?.selectedIngredientIds,
+    ).toEqual(ids);
+  });
+
+  it("accepts multi-store selections beyond the shopping-route stop cap", () => {
+    const selectedStoreIds = Array.from(
+      { length: 9 },
+      (_, index) => `store-${index}`,
+    );
+
+    expect(
+      parseRecommendationRequest({
+        ...validPayload,
+        shoppingStyle: "multi-store",
+        selectedStoreIds,
+      })?.selectedStoreIds,
+    ).toEqual(selectedStoreIds);
   });
 
   it.each([
@@ -75,7 +85,6 @@ describe("parseRecommendationRequest", () => {
 
   it.each([
     ["selectedIngredientIds", "not-an-array"],
-    ["selectedIngredientIds", Array.from({ length: 41 }, (_, index) => `id-${index}`)],
     ["selectedIngredientIds", ["has spaces"]],
     ["selectedIngredientIds", ["UPPERCASE"]],
   ])("rejects invalid selectedIngredientIds payload %s=%s", (_field, value) => {

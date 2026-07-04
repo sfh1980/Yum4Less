@@ -24,10 +24,10 @@ export const zip23111RankingPreferences: MealPreferenceForm = {
   radiusMiles: 6,
   budget: 18,
   maxIngredients: 8,
-  dinnersWanted: 3,
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: "internal-library",
+  selectedStoreIds: ["kroger-mechanicsville"],
   planningMode: "standard",
 };
 
@@ -77,8 +77,7 @@ const blackBeanTacoRecipe = fixtureRecipes.find(
 
 /**
  * Split-store fixture: neither Kroger nor Aldi alone stocks every taco ingredient,
- * but multi-store shopping can still build the meal across both production-ranked chains.
- * Publix rehearsal rows are excluded from ranked meal totals in beta v1.
+ * but multi-store shopping can still build the meal across production-ranked chains.
  */
 export function buildZip23111SplitStoreBlackBeanSnapshot() {
   const weeklyAdBase = {

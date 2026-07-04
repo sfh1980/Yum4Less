@@ -33,7 +33,7 @@ export function buildMarketShopperBlockedStatus(
       kind: "database-unavailable",
       title: "Store and meal prices aren't loading",
       body:
-        "This usually isn't your ZIP or search radius. Yum4Less couldn't load saved prices from the database, so the map and meal rankings may stay empty.",
+        "This usually isn't your ZIP or search radius. Yum4Less couldn't load saved prices, so the map and meal rankings may stay empty.",
       extra:
         "If you're running the app on your own computer, make sure the database is running and try again. Otherwise, wait a moment and refresh the page.",
     };
@@ -42,11 +42,11 @@ export function buildMarketShopperBlockedStatus(
   if (market.nearbyStores.length === 0) {
     return {
       kind: "no-stores-in-radius",
-      title: "No Kroger-family or Aldi stores in this search area",
+      title: "No stores in this search area",
       body:
-        "Yum4Less found your location but didn't see Kroger-family or Aldi stores inside the radius you chose. These are the production-ranked chains for the current release.",
+        "Yum4Less found your location but didn't see supported stores inside the radius you chose.",
       extra:
-        "Try a larger radius or another ZIP. Coverage varies by area in this beta.",
+        "Try a larger radius or another ZIP. Coverage varies by area.",
     };
   }
 
@@ -54,9 +54,9 @@ export function buildMarketShopperBlockedStatus(
     kind: "no-trusted-rollout",
     title: "Map ready — meal estimates not available here yet",
     body:
-      "Yum4Less found nearby Kroger-family or Aldi stores, but none have enough ingested sale data to rank dinner estimates right now. Other map pins may be context only until upcoming chain releases.",
+      "Yum4Less found nearby stores, but none have enough sale prices for dinner estimates right now. Other map pins may be for planning only.",
     extra:
-      "This is normal in many ZIPs during beta. Pricing refreshes on a daily schedule — check rollout labels on the map for coming soon, limited coverage, or directional estimates.",
+      "This is normal in many areas. Prices refresh on a daily schedule — check store labels on the map for limited coverage.",
   };
 }
 
@@ -70,7 +70,7 @@ export function buildMealRankingPausedStatus(
     return {
       title: "Meal rankings need saved prices",
       body:
-        "Store and meal prices didn't load from the database, so dinners can't be ranked yet. Fix the data connection before changing ZIP or radius.",
+        "Store and meal prices didn't load, so dinners can't be ranked yet. Fix the data connection before changing ZIP or radius.",
     };
   }
 
@@ -85,6 +85,6 @@ export function buildMealRankingPausedStatus(
   return {
     title: "Meal estimates not available for this area yet",
     body:
-      "Nearby Kroger-family or Aldi stores are on the map, but ranked dinner estimates need more ingested sale coverage. Pricing refreshes on a daily schedule — browse the map and rollout labels for context.",
+      "Nearby stores are on the map, but dinner estimates need more sale price coverage. Prices refresh on a daily schedule — browse the map for context.",
   };
 }

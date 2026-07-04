@@ -36,7 +36,7 @@ vi.mock("@/lib/provider-market-service", () => ({
 const FRESHNESS_LABELS = [
   "Checked within 1 hour",
   "Same-day online prices",
-  "Recent weekly-ad prices",
+  "Recent sale prices",
   "Older prices — verify in store",
 ] as const;
 
@@ -172,7 +172,7 @@ describe("recommendation path through Postgres (CI-06)", () => {
       expect(walmartStore.recommendationEnabled).toBe(false);
       expect(walmartStore.rolloutStatus).toBe("coming-soon");
       expect(walmartStore.rolloutNote).toContain(
-        "Live, current weekly-ad pricing from Walmart is not available",
+        "dinner price estimates are not available",
       );
     }
     expect(searchOfficialProviderStores).toHaveBeenCalled();
@@ -188,9 +188,6 @@ describe("recommendation path through Postgres (CI-06)", () => {
     // Fixture Kroger rows fully cover sheet-pan chicken single-store; other dinners
     // need ingredients Walmart fixture syncs but Walmart stays off ranked pricing.
     expect(experience.recommendations.length).toBeGreaterThanOrEqual(1);
-    expect(experience.recommendations.length).toBeLessThanOrEqual(
-      zip23111RankingPreferences.dinnersWanted,
-    );
 
     const scores = experience.recommendations.map((meal) => meal.score.total);
     for (let index = 1; index < experience.recommendations.length; index += 1) {

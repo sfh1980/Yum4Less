@@ -74,8 +74,8 @@ describe("buildRecipeProviderPreviewComparison", () => {
     expect(comparison.provider).toBe("kroger");
     expect(comparison.providerLabel).toBe("Kroger");
     expect(comparison.providerPreviewSubtotal).toBeNull();
-    expect(comparison.message).toContain("No Kroger provider preview prices");
-    expect(comparison.message).toContain("does not change the ranked meal total");
+    expect(comparison.message).toContain("Not enough overlapping store prices");
+    expect(comparison.message).toContain("saved prices from your selected store");
   });
 
   it("builds a partial directional comparison for overlapping preview ingredients", () => {
@@ -121,9 +121,9 @@ describe("buildRecipeProviderPreviewComparison", () => {
     expect(comparison.seedComparedSubtotal).toBe(6.49);
     expect(comparison.providerPreviewSubtotal).toBe(5.99);
     expect(comparison.priceDelta).toBe(-0.5);
-    expect(comparison.directionalLabel).toBe("Directional provider preview looks lower");
-    expect(comparison.message).toContain("Kroger provider preview matches");
-    expect(comparison.message).toContain("directional only");
+    expect(comparison.directionalLabel).toBe("Online check looks lower for these ingredients");
+    expect(comparison.message).toContain("saved prices and a recent online store check");
+    expect(comparison.message).toContain("does not change your meal total");
   });
 });
 
@@ -190,6 +190,6 @@ describe("buildRecipeProviderPreviewComparisons", () => {
     expect(comparisons[0]?.comparisonStatus).toBe("partial");
     expect(comparisons[1]?.provider).toBe("publix");
     expect(comparisons[1]?.comparisonStatus).toBe("unavailable");
-    expect(comparisons[1]?.message).toContain("No Publix provider preview prices");
+    expect(comparisons[1]?.message).toContain("Not enough overlapping store prices");
   });
 });

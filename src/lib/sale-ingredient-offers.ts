@@ -169,6 +169,28 @@ export function buildNearbySaleIngredientChoices(input: {
   );
 }
 
+/** Ingredient IDs with ranked price rows at the given stores (default rank scope). */
+export function collectRankableIngredientIdsAtStores(
+  observations: CatalogPriceObservation[],
+  storeIds?: Set<string>,
+): string[] {
+  const ids = new Set<string>();
+
+  for (const observation of observations) {
+    if (storeIds && !storeIds.has(observation.storeId)) {
+      continue;
+    }
+
+    if (!isLiveRankedPriceSource(observation.priceSource)) {
+      continue;
+    }
+
+    ids.add(observation.ingredientId);
+  }
+
+  return [...ids].sort();
+}
+
 export function filterRecipesBySelectedIngredientIds<T extends { ingredients: Array<{ ingredientId: string }> }>(
   recipes: T[],
   selectedIngredientIds: string[] | undefined,

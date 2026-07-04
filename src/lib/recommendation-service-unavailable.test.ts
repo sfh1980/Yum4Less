@@ -19,6 +19,12 @@ const { getMarketDataSnapshot } = vi.hoisted(() => ({
   getMarketDataSnapshot: vi.fn(),
 }));
 
+const { getLatestThemealdbImportAt, shouldRefreshThemealdbRecipesOnSearch } =
+  vi.hoisted(() => ({
+    getLatestThemealdbImportAt: vi.fn(),
+    shouldRefreshThemealdbRecipesOnSearch: vi.fn(),
+  }));
+
 vi.mock("@/lib/provider-pricing-preview-service", () => ({
   buildProviderPricingPreviews,
 }));
@@ -26,6 +32,18 @@ vi.mock("@/lib/provider-pricing-preview-service", () => ({
 vi.mock("@/lib/market-repository", () => ({
   getMarketDataSnapshot,
 }));
+
+vi.mock("@/lib/recipe-import/ensure-themealdb-recipes-for-search", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/recipe-import/ensure-themealdb-recipes-for-search")
+  >("@/lib/recipe-import/ensure-themealdb-recipes-for-search");
+
+  return {
+    ...actual,
+    getLatestThemealdbImportAt,
+    shouldRefreshThemealdbRecipesOnSearch,
+  };
+});
 
 function passedMarket(overrides: Partial<MarketSummary> = {}): MarketSummary {
   return {
@@ -48,7 +66,7 @@ function passedMarket(overrides: Partial<MarketSummary> = {}): MarketSummary {
         recommendationEnabled: true,
         rolloutNote: "Fixture rollout note.",
         pricingStatus: "weekly-ad-preview",
-        pricingLabel: "Est. weekly-ad prices",
+        pricingLabel: "Est. sale prices",
         pricingNote: "Fixture pricing note.",
         locationProvenance: "postgres-catalog",
         locationBadge: "Catalog pin",
@@ -87,6 +105,10 @@ describe("getRecommendationExperience unavailable vs empty (M4, M5)", () => {
   beforeEach(() => {
     buildProviderPricingPreviews.mockReset();
     buildProviderPricingPreviews.mockResolvedValue([]);
+    getLatestThemealdbImportAt.mockReset();
+    shouldRefreshThemealdbRecipesOnSearch.mockReset();
+    getLatestThemealdbImportAt.mockResolvedValue(new Date());
+    shouldRefreshThemealdbRecipesOnSearch.mockReturnValue(false);
   });
 
   afterEach(async () => {

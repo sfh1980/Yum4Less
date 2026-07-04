@@ -23,6 +23,13 @@ export type LocationResolutionResult =
       providerConfigured: boolean;
     };
 
+/** Shopper-facing label for a resolved search location (ZIP/geocode or browser). */
+export function buildSearchLocationLabel(location: ResolvedSearchLocation): string {
+  return location.source === "browser"
+    ? "Current location"
+    : `${location.city}, ${location.state}`;
+}
+
 export async function resolveLocationInput(input: {
   zipCode?: string;
   latitude?: number;

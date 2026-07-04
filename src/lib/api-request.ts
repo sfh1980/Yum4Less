@@ -3,7 +3,6 @@ export const API_LIMITS = {
   radiusMiles: { min: 1, max: 25 },
   budget: { min: 5, max: 250 },
   maxIngredients: { min: 3, max: 20 },
-  dinnersWanted: { min: 1, max: 12 },
   shoppingRouteStops: { max: 8 },
   shoppingRouteStoreNameLength: { max: 120 },
   shoppingRouteHomeLabelLength: { max: 80 },

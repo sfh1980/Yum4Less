@@ -49,7 +49,7 @@ describe("market-shopper-status", () => {
     });
 
     expect(mealStatus.title).toMatch(/saved prices/i);
-    expect(mealStatus.body).toMatch(/database/i);
+    expect(mealStatus.body).toMatch(/didn't load/i);
     expect(mealStatus.body).not.toMatch(/trusted pricing rollout/i);
   });
 });

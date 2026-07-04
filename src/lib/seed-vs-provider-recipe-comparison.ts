@@ -130,7 +130,6 @@ export function buildRecipeProviderPreviewComparison(input: {
     comparisonStatus,
     directionalLabel: buildDirectionalLabel(priceDelta, comparisonStatus),
     message: buildComparisonMessage({
-      providerLabel,
       comparedIngredientCount,
       totalRecipeIngredients,
       comparisonStatus,
@@ -203,26 +202,25 @@ function buildDirectionalLabel(
   comparisonStatus: RecipeProviderComparisonStatus,
 ) {
   if (comparisonStatus === "unavailable") {
-    return "No directional provider comparison";
+    return "No side-by-side price check yet";
   }
 
   if (priceDelta === null) {
-    return "Directional provider comparison";
+    return "Side-by-side price check";
   }
 
   if (priceDelta <= -0.5) {
-    return "Directional provider preview looks lower";
+    return "Online check looks lower for these ingredients";
   }
 
   if (priceDelta >= 0.5) {
-    return "Directional provider preview looks higher";
+    return "Online check looks higher for these ingredients";
   }
 
-  return "Directional provider preview looks similar";
+  return "Online check looks similar for these ingredients";
 }
 
 function buildComparisonMessage(input: {
-  providerLabel: string;
   comparedIngredientCount: number;
   totalRecipeIngredients: number;
   comparisonStatus: RecipeProviderComparisonStatus;
@@ -231,16 +229,16 @@ function buildComparisonMessage(input: {
   providerPreviewSubtotal: number | null;
 }) {
   if (input.comparisonStatus === "unavailable") {
-    return `No ${input.providerLabel} provider preview prices overlapped this recipe's ingredients, so Yum4Less cannot show a directional comparison yet. Ranked meal pricing still uses ingested cache rows only and does not change the ranked meal total above.`;
+    return "Not enough overlapping store prices to show a side-by-side check for this recipe yet. Your meal total above still uses saved prices from your selected store(s).";
   }
 
-  const overlapNote = `Compared ${input.comparedIngredientCount} of ${input.totalRecipeIngredients} recipe ingredient(s) where ${input.providerLabel} provider preview matches exist.`;
+  const overlapNote = `Compared ${input.comparedIngredientCount} of ${input.totalRecipeIngredients} recipe ingredient(s) using saved prices and a recent online store check.`;
   const deltaNote =
     input.priceDelta !== null && input.providerPreviewSubtotal !== null
-      ? ` For those overlapping ingredients, ranked cache subtotal is $${input.seedComparedSubtotal.toFixed(2)} versus a directional ${input.providerLabel} preview subtotal of $${input.providerPreviewSubtotal.toFixed(2)} (${formatSignedCurrency(input.priceDelta)}).`
+      ? ` For those ingredients, saved total is $${input.seedComparedSubtotal.toFixed(2)} versus online check $${input.providerPreviewSubtotal.toFixed(2)} (${formatSignedCurrency(input.priceDelta)}).`
       : "";
 
-  return `${overlapNote}${deltaNote} This comparison is directional only and does not change the ranked meal total above.`;
+  return `${overlapNote}${deltaNote} This note does not change your meal total above.`;
 }
 
 function formatSignedCurrency(value: number) {

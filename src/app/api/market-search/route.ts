@@ -5,7 +5,10 @@ import { parseMarketSearchRequest } from "@/contracts/market-search";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
 import { sanitizeMarketSummaryForPublicApi } from "@/lib/public-api-response-sanitizer";
 import { resolveLocationInput } from "@/lib/location-resolution";
-import { getMarketSearchExperience } from "@/lib/recommendation-service";
+import {
+  getMarketSearchExperience,
+  RecommendationDependencyUnavailableError,
+} from "@/lib/recommendation-service";
 
 export async function POST(request: Request) {
   const rateLimit = enforceApiRateLimit(request, "apiMarketSearch");
@@ -49,11 +52,25 @@ export async function POST(request: Request) {
       locationResult.providerConfigured,
     );
 
+    if (experience.market.dataSource === "unavailable") {
+      throw new RecommendationDependencyUnavailableError();
+    }
+
     return NextResponse.json({
       ok: true,
       market: sanitizeMarketSummaryForPublicApi(experience.market),
     });
   } catch (error) {
+    if (error instanceof RecommendationDependencyUnavailableError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+        },
+        { status: 503 },
+      );
+    }
+
     return publicApiErrorResponse(
       "api.market-search",
       error,

@@ -144,7 +144,7 @@ export function getFreshnessLabel(shoppingPlan: ShoppingPlanItem[]) {
     return "Same-day online prices";
   }
   if (averageDays <= 3.5) {
-    return "Recent weekly-ad prices";
+    return "Recent sale prices";
   }
   return "Older prices — verify in store";
 }

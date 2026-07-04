@@ -6,9 +6,13 @@ import { publicApiErrorResponse } from "@/lib/public-api-error";
 import { sanitizeMarketSummaryForPublicApi } from "@/lib/public-api-response-sanitizer";
 import {
   parsePassedMarketSummary,
+  trimMarketForRankingPassThrough,
   validatePassedMarketForRanking,
 } from "@/lib/market-pass-through";
-import { resolveLocationInput } from "@/lib/location-resolution";
+import {
+  buildSearchLocationLabel,
+  resolveLocationInput,
+} from "@/lib/location-resolution";
 import {
   getRecommendationExperience,
   RecommendationDependencyUnavailableError,
@@ -83,7 +87,10 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
-      passedMarket = marketValidation.market;
+      passedMarket = {
+        ...trimMarketForRankingPassThrough(marketValidation.market),
+        locationLabel: buildSearchLocationLabel(locationResult.location),
+      };
     }
 
     const experience = await getRecommendationExperience(
@@ -93,12 +100,17 @@ export async function POST(request: Request) {
       passedMarket ? { passedMarket } : undefined,
     );
 
+    const locationLabel = buildSearchLocationLabel(locationResult.location);
+
     return NextResponse.json(
       {
         ok: true,
         experience: {
           ...experience,
-          market: sanitizeMarketSummaryForPublicApi(experience.market),
+          market: sanitizeMarketSummaryForPublicApi({
+            ...experience.market,
+            locationLabel,
+          }),
         },
       });
   } catch (error) {

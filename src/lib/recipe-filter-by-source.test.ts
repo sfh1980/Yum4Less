@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { CatalogRecipeRecord } from "@/lib/market-catalog-types";
 import { THEMEALDB_SOURCE_NAME } from "@/lib/recipe-import/themealdb-types";
-import { filterRecipesBySource } from "@/lib/recipe-filter-by-source";
+import {
+  filterRecipesBySource,
+  filterRecipesForMergedRanking,
+  selectRecipesForRanking,
+} from "@/lib/recipe-filter-by-source";
 
 const baseRecipe = (overrides: Partial<CatalogRecipeRecord>): CatalogRecipeRecord => ({
   id: "recipe-1",
@@ -35,5 +39,43 @@ describe("filterRecipesBySource", () => {
     ];
 
     expect(filterRecipesBySource(recipes, "themealdb").map((r) => r.id)).toEqual(["themealdb"]);
+  });
+});
+
+describe("filterRecipesForMergedRanking", () => {
+  it("returns internal catalog and TheMealDB imports together", () => {
+    const recipes = [
+      baseRecipe({ id: "internal", sourceName: "yum4less-internal-catalog" }),
+      baseRecipe({ id: "themealdb", sourceName: THEMEALDB_SOURCE_NAME }),
+      baseRecipe({ id: "blocked", sourceName: "spoonacular" }),
+    ];
+
+    expect(filterRecipesForMergedRanking(recipes).map((r) => r.id)).toEqual([
+      "internal",
+      "themealdb",
+    ]);
+  });
+});
+
+describe("selectRecipesForRanking", () => {
+  it("uses merged pool for internal-library default", () => {
+    const recipes = [
+      baseRecipe({ id: "internal", sourceName: "yum4less-internal-catalog" }),
+      baseRecipe({ id: "themealdb", sourceName: THEMEALDB_SOURCE_NAME }),
+    ];
+
+    expect(selectRecipesForRanking(recipes, "internal-library").map((r) => r.id)).toEqual([
+      "internal",
+      "themealdb",
+    ]);
+  });
+
+  it("keeps exclusive themealdb path for explicit API selection", () => {
+    const recipes = [
+      baseRecipe({ id: "internal", sourceName: "yum4less-internal-catalog" }),
+      baseRecipe({ id: "themealdb", sourceName: THEMEALDB_SOURCE_NAME }),
+    ];
+
+    expect(selectRecipesForRanking(recipes, "themealdb").map((r) => r.id)).toEqual(["themealdb"]);
   });
 });

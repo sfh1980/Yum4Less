@@ -30,10 +30,10 @@ const preferences: MealPreferenceForm = {
   radiusMiles: 6,
   budget: 18,
   maxIngredients: 8,
-  dinnersWanted: 3,
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: "internal-library",
+  selectedStoreIds: ["kroger-mechanicsville"],
 };
 
 const location = {
@@ -78,17 +78,6 @@ describe("getRecommendationExperience", () => {
     await expect(
       getRecommendationExperience(preferences, location, false),
     ).rejects.toBeInstanceOf(RecommendationDependencyUnavailableError);
-  });
-
-  it("blocks non-internal recipe sources unless recipeSourceOptIn is true", async () => {
-    const experience = await getRecommendationExperience(
-      { ...preferences, recipeSource: "themealdb" },
-      location,
-      false,
-    );
-
-    expect(experience.recommendations).toHaveLength(0);
-    expect(experience.shopperNotice?.title).toBe("Recipe source requires opt-in");
   });
 
   it("returns a layman shopper notice instead of market.message for inactive recipe sources", async () => {

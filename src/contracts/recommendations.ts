@@ -29,7 +29,6 @@ import {
   listSelectableRecipeSources,
 } from "@/lib/recipe-sources/recipe-source-registry";
 import {
-  DEFAULT_DINNERS_WANTED,
   DEFAULT_MAX_INGREDIENTS,
   DEFAULT_PLANNING_MODE,
 } from "@/lib/meal-preference-defaults";
@@ -38,11 +37,12 @@ import { radiusMilesSchema } from "@/contracts/shared/location";
 import {
   apiBudgetSchema,
   dietaryFocusSchema,
-  dinnersWantedSchema,
   maxIngredientsSchema,
   mealPlanningModeSchema,
   parseSelectedIngredientIds,
+  parseSelectedStoreIds,
   shoppingStyleSchema,
+  validateSelectedStoreIdsForShoppingStyle,
 } from "@/contracts/shared/meal-preferences";
 
 export type MealPlanningMode = z.infer<typeof mealPlanningModeSchema>;
@@ -52,14 +52,12 @@ export type MealPreferenceForm = {
   radiusMiles: number;
   budget: number;
   maxIngredients: number;
-  dinnersWanted: number;
   shoppingStyle: z.infer<typeof shoppingStyleSchema>;
   dietaryFocus: z.infer<typeof dietaryFocusSchema>;
   recipeSource: RecipeSourceSelection;
   planningMode?: MealPlanningMode;
+  selectedStoreIds: string[];
   selectedIngredientIds?: string[];
-  /** Must be true when recipeSource is not internal-library. */
-  recipeSourceOptIn?: boolean;
 };
 
 export type RecipeDifficulty = "easy" | "medium";
@@ -67,6 +65,8 @@ export type RecipeDifficulty = "easy" | "medium";
 export type NearbyStoreSummary = {
   id: string;
   name: string;
+  city?: string;
+  state?: string;
   kind: CatalogStore["kind"];
   latitude: number;
   longitude: number;
@@ -176,8 +176,10 @@ export type MealRecommendation = {
 export type RecommendationExperience = {
   market: MarketSummary;
   recommendations: MealRecommendation[];
-  /** Layman notice for the main UI (e.g. inactive recipe source). */
+  /** Primary layman notice for the main UI (e.g. inactive recipe source). */
   shopperNotice?: ShopperNotice;
+  /** Additional notices shown alongside the primary (C1 — never replace empty-meal copy). */
+  supplementaryShopperNotices?: ShopperNotice[];
 };
 
 /** Internal ranking candidate before presentation formatting. */
@@ -268,12 +270,7 @@ export function parseRecommendationRequest(
       ? { success: true as const, data: DEFAULT_MAX_INGREDIENTS }
       : maxIngredientsSchema.safeParse(record.maxIngredients);
 
-  const dinnersWantedResult =
-    record.dinnersWanted === undefined || record.dinnersWanted === null
-      ? { success: true as const, data: DEFAULT_DINNERS_WANTED }
-      : dinnersWantedSchema.safeParse(record.dinnersWanted);
-
-  if (!maxIngredientsResult.success || !dinnersWantedResult.success) {
+  if (!maxIngredientsResult.success) {
     return undefined;
   }
 
@@ -281,13 +278,18 @@ export function parseRecommendationRequest(
   const selectedIngredientIds = parseSelectedIngredientIds(
     record.selectedIngredientIds,
   );
-  const recipeSourceOptIn = record.recipeSourceOptIn === true;
+  const selectedStoreIds = parseSelectedStoreIds(record.selectedStoreIds);
 
-  if (!recipeSource || selectedIngredientIds === undefined) {
-    return undefined;
-  }
-
-  if (recipeSource !== "internal-library" && !recipeSourceOptIn) {
+  if (
+    !recipeSource ||
+    recipeSource !== "internal-library" ||
+    selectedIngredientIds === undefined ||
+    !selectedStoreIds ||
+    !validateSelectedStoreIdsForShoppingStyle(
+      selectedStoreIds,
+      shoppingStyleResult.data,
+    )
+  ) {
     return undefined;
   }
 
@@ -301,17 +303,14 @@ export function parseRecommendationRequest(
     radiusMiles: radiusResult.data,
     budget: budgetResult.data,
     maxIngredients: maxIngredientsResult.data,
-    dinnersWanted: dinnersWantedResult.data,
     shoppingStyle: shoppingStyleResult.data,
     dietaryFocus: dietaryFocusResult.data,
     recipeSource,
-    ...(recipeSourceOptIn ? { recipeSourceOptIn: true } : {}),
+    selectedStoreIds,
     planningMode: resolvedPlanningMode,
-    ...(selectedIngredientIds.length > 0
+    ...(selectedIngredientIds && selectedIngredientIds.length > 0
       ? { selectedIngredientIds }
-      : resolvedPlanningMode === "ingredient-first"
-        ? { selectedIngredientIds: [] }
-        : {}),
+      : {}),
   };
 
   return {
