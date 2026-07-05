@@ -14,6 +14,12 @@ import {
 } from "@/lib/store-location-reconciliation";
 import { getDistanceMiles } from "@/lib/geo-distance";
 import {
+  findProximityLinkedKrogerStore,
+  isApiDerivedKrogerCatalogStoreId,
+  KROGER_SAME_STORE_MERGE_PROXIMITY_MILES,
+  preferKrogerCanonicalStoreId,
+} from "@/lib/kroger-catalog-canonical";
+import {
   buildOsmCatalogStoreId,
   discoverFoodRetailStoresNearLocation,
   OSM_MAP_CATALOG_SOURCE,
@@ -48,9 +54,7 @@ export type ExistingCatalogStoreRow = {
   longitude: number;
 };
 
-export function isApiDerivedKrogerCatalogStoreId(storeId: string) {
-  return /^kroger-\d+$/.test(storeId);
-}
+export { isApiDerivedKrogerCatalogStoreId } from "@/lib/kroger-catalog-canonical";
 
 /** @deprecated Slug ids are legacy CI bootstrap only; production catalog is ingest-backed. */
 export function isBootstrapSeedStoreRow(store: {
@@ -84,7 +88,40 @@ export function findCanonicalStoreIdForApiDiscoveredStore(input: {
   );
 
   if (linkedStores.length === 0) {
-    return undefined;
+    if (input.chain !== "kroger") {
+      return undefined;
+    }
+
+    const proximityMatch = findProximityLinkedKrogerStore(
+      input.existingStores,
+      {
+        catalogStoreId: input.catalogStoreId,
+        latitude: input.discovered.latitude,
+        longitude: input.discovered.longitude,
+        source_store_id: input.discovered.providerStoreId,
+      },
+      input.mergeRadiusMiles ?? KROGER_SAME_STORE_MERGE_PROXIMITY_MILES,
+    );
+
+    if (!proximityMatch) {
+      return undefined;
+    }
+
+    const survivor = preferKrogerCanonicalStoreId(
+      {
+        id: input.catalogStoreId,
+        source_name: KROGER_CATALOG_SOURCE,
+        source_store_id: input.discovered.providerStoreId,
+      },
+      proximityMatch,
+    );
+
+    // Incoming API row wins — upsert separately; slug reconciled after catalog sync.
+    if (survivor !== proximityMatch.id) {
+      return undefined;
+    }
+
+    return proximityMatch.id;
   }
 
   return findPrimaryStoreIdForChain(
@@ -420,8 +457,9 @@ export async function syncV1ChainStoresToCatalog(input: {
     existingStores: existingResult.rows,
   });
   const reconciledCount = await reconcileDuplicateApiDerivedKrogerStores();
+  const proximityReconciledCount = await reconcileProximityDuplicateKrogerSlugStores();
 
-  return providerUpserted + mergedCount + refreshed + reconciledCount;
+  return providerUpserted + mergedCount + refreshed + reconciledCount + proximityReconciledCount;
 }
 
 function mapExistingCatalogStoreRows(
@@ -527,6 +565,106 @@ async function reconcileDuplicateApiDerivedKrogerStores(): Promise<number> {
         sourceStoreId: store.source_store_id,
       },
     });
+  }
+
+  return reconciledCount;
+}
+
+async function reconcileProximityDuplicateKrogerSlugStores(): Promise<number> {
+  const { getProviderRolloutForStore } = await import("@/lib/provider-rollout");
+  const pool = getDbPool();
+  const existingResult = await pool.query<{
+    id: string;
+    name: string;
+    source_name: string | null;
+    source_store_id: string | null;
+    city: string;
+    state: string;
+    latitude: string;
+    longitude: string;
+  }>(`
+    select id, name, source_name, source_store_id, city, state, latitude, longitude
+    from stores
+  `);
+  const existingStores = mapExistingCatalogStoreRows(existingResult.rows);
+  let reconciledCount = 0;
+  const mergedDuplicateIds = new Set<string>();
+
+  for (const store of existingStores) {
+    if (!isApiDerivedKrogerCatalogStoreId(store.id)) {
+      continue;
+    }
+
+    if (getProviderRolloutForStore(store.name).chain !== "kroger") {
+      continue;
+    }
+
+    const slugMatches = existingStores.filter((candidate) => {
+      if (candidate.id === store.id || mergedDuplicateIds.has(candidate.id)) {
+        return false;
+      }
+
+      if (isApiDerivedKrogerCatalogStoreId(candidate.id)) {
+        return false;
+      }
+
+      if (getProviderRolloutForStore(candidate.name).chain !== "kroger") {
+        return false;
+      }
+
+      // Legacy bootstrap slugs (e.g. source_store_id=kroger-mechanicsville) stay
+      // separate from numeric API rows (source_store_id=02900529) even when nearby.
+      if (
+        candidate.source_store_id &&
+        store.source_store_id &&
+        candidate.source_store_id !== store.source_store_id
+      ) {
+        return false;
+      }
+
+      return (
+        getDistanceMiles(
+          store.latitude,
+          store.longitude,
+          candidate.latitude,
+          candidate.longitude,
+        ) <= KROGER_SAME_STORE_MERGE_PROXIMITY_MILES
+      );
+    });
+
+    for (const duplicate of slugMatches) {
+      reconciledCount += await mergeApiDiscoveredStoreIntoCanonical({
+        canonicalStoreId: store.id,
+        duplicateStoreId: duplicate.id,
+        catalog: {
+          id: store.id,
+          name: store.name,
+          kind: "grocery",
+          city: store.city,
+          state: store.state,
+          latitude: store.latitude,
+          longitude: store.longitude,
+          sourceName: store.source_name ?? KROGER_CATALOG_SOURCE,
+          sourceStoreId: store.source_store_id ?? "",
+        },
+      });
+      mergedDuplicateIds.add(duplicate.id);
+      applyCanonicalStoreMergeToSnapshot(existingStores, {
+        canonicalStoreId: store.id,
+        duplicateStoreId: duplicate.id,
+        catalog: {
+          id: store.id,
+          name: store.name,
+          kind: "grocery",
+          city: store.city,
+          state: store.state,
+          latitude: store.latitude,
+          longitude: store.longitude,
+          sourceName: store.source_name ?? KROGER_CATALOG_SOURCE,
+          sourceStoreId: store.source_store_id ?? "",
+        },
+      });
+    }
   }
 
   return reconciledCount;

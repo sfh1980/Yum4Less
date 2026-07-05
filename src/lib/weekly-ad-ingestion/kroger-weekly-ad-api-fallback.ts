@@ -1,3 +1,10 @@
+/**
+ * Last-resort **partial enrichment** for Kroger weekly-ad ingest only.
+ *
+ * Fires after direct scrape and Flipp both return zero offers. Queries the
+ * official Products API once per already-tracked dinner ingredient — not general
+ * sale discovery. Never Flipp-equivalent coverage; never a primary weekly-ad path.
+ */
 import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
 import {
   createKrogerApiClient,
@@ -5,6 +12,10 @@ import {
 } from "@/lib/providers/kroger/kroger-api-client";
 import { readKrogerItemPrices } from "@/lib/providers/kroger/kroger-api-types";
 import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
+
+/** Distinct from Flipp's "Directional — weekly ad syndicated feed" partner-feed label. */
+export const KROGER_WEEKLY_AD_API_PARTIAL_FILL_SALE_LABEL =
+  "Partial — tracked-ingredient product API fill (not weekly ad discovery)";
 
 export async function fetchKrogerOffersFromOfficialApi(input: {
   zipCode: string;
@@ -54,7 +65,9 @@ export async function fetchKrogerOffersFromOfficialApi(input: {
     offers.push({
       productName: description,
       price: resolvedPrice,
-      saleLabel: hasPromo ? "Official API promo" : undefined,
+      saleLabel: hasPromo
+        ? `${KROGER_WEEKLY_AD_API_PARTIAL_FILL_SALE_LABEL} · promo if shown`
+        : KROGER_WEEKLY_AD_API_PARTIAL_FILL_SALE_LABEL,
     });
   }
 

@@ -40,7 +40,7 @@ export function getSaleConfidence(input: {
     return {
       level: "no-sale-data",
       label: "Sample sale reference",
-      note: "This sale label comes from legacy sample pricing data, not a live weekly ad pull. Verify current deals in store before relying on it.",
+      note: "This sale label comes from sample pricing data, not a live store check. Verify current deals in store before relying on it.",
     };
   }
 
@@ -48,7 +48,7 @@ export function getSaleConfidence(input: {
     return {
       level: "no-sale-data",
       label: "Price unavailable",
-      note: "PostgreSQL market data was unavailable, so this line item could not be priced from ingested observations.",
+      note: "Saved store prices were unavailable, so this line item could not be priced.",
     };
   }
 
@@ -56,7 +56,7 @@ export function getSaleConfidence(input: {
     return {
       level: "advertised-recent",
       label: "Recent advertised price — verify",
-      note: "This item was tagged with a sale label from relatively fresh local data, but weekly ads can change before you shop. Confirm in store or in the chain app.",
+      note: "This item was tagged with a sale label from relatively fresh local data, but prices can change before you shop. Confirm in store.",
     };
   }
 
@@ -72,7 +72,7 @@ export function getSaleConfidence(input: {
     return {
       level: "advertised-aging",
       label: "Aging sale snapshot",
-      note: "This advertised sale is older than a typical weekly ad cycle. Assume the deal may have ended until you verify it.",
+      note: "This advertised sale is older than a typical ad cycle. Assume the deal may have ended until you verify it.",
     };
   }
 
@@ -90,7 +90,6 @@ function getWeeklyAdScrapeSaleConfidence(input: {
   priceSource?: string;
   matchConfidence?: number;
 }): SaleConfidence {
-  const chainLabel = formatWeeklyAdChainLabel(input.priceSource);
   const matchPercent =
     input.matchConfidence !== undefined
       ? `${Math.round(input.matchConfidence * 100)}% ingredient match`
@@ -109,9 +108,9 @@ function getWeeklyAdScrapeSaleConfidence(input: {
       level: staleLevel,
       label:
         staleLevel === "advertised-stale"
-          ? `Stale ${chainLabel} weekly-ad price`
-          : `Aging ${chainLabel} weekly-ad price`,
-      note: `This price came from a scraped ${chainLabel} weekly-ad pull (${matchPercent}) that is ${input.freshnessDaysAgo} day(s) old. Treat it as directional and verify the current shelf tag before shopping.`,
+          ? "Stale sale price — estimate only"
+          : "Aging sale price — estimate only",
+      note: `This price came from saved sale data (${matchPercent}) that is ${input.freshnessDaysAgo} day(s) old. Treat it as an estimate and verify the current shelf tag before shopping.`,
     };
   }
 
@@ -119,31 +118,19 @@ function getWeeklyAdScrapeSaleConfidence(input: {
     return {
       level: weakMatch ? "directional-provider-match" : "advertised-recent",
       label: weakMatch
-        ? `Estimated ${chainLabel} weekly ad match`
-        : `${chainLabel} weekly-ad price — directional`,
-      note: `This sale came from a scraped ${chainLabel} weekly-ad pull (${matchPercent}). Weekly ads and electronic shelf labels can change before you shop, so confirm price and package size in store.`,
+        ? "Estimated sale match — verify in store"
+        : "Sale price — estimate only",
+      note: `This sale came from saved store prices (${matchPercent}). Shelf labels can change before you shop, so confirm price and package size in store.`,
     };
   }
 
   return {
     level: weakMatch ? "directional-provider-match" : "advertised-recent",
     label: weakMatch
-      ? `Estimated ${chainLabel} weekly ad price`
-      : `${chainLabel} weekly-ad price — directional`,
-    note: `This price came from a scraped ${chainLabel} weekly-ad pull (${matchPercent}). Treat it as directional until you verify the exact product and shelf tag in store.`,
+      ? "Estimated sale price — verify in store"
+      : "Sale price — estimate only",
+    note: `This price came from saved store prices (${matchPercent}). Treat it as an estimate until you verify the exact product and shelf tag in store.`,
   };
-}
-
-function formatWeeklyAdChainLabel(priceSource?: string) {
-  if (!priceSource) {
-    return "store";
-  }
-
-  return priceSource
-    .replace(/-weekly-ad-scrape$/, "")
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }
 
 function getKrogerOfficialSaleConfidence(input: {
@@ -171,17 +158,17 @@ function getKrogerOfficialSaleConfidence(input: {
     return {
       level: weakMatch ? "directional-provider-match" : "advertised-recent",
       label: weakMatch
-        ? "Estimated Kroger promo — verify in store"
-        : `${freshnessLabel} Kroger promo — verify at shelf`,
-      note: `This promo/sale price came from the official Kroger API path (${matchPercent}). Electronic shelf labels and checkout systems can still change before you shop, so confirm before checkout.`,
+        ? "Estimated sale — verify in store"
+        : `${freshnessLabel} sale price — verify at shelf`,
+      note: `This promo/sale price came from recently checked online store data (${matchPercent}). Shelf labels and checkout systems can still change before you shop, so confirm before checkout.`,
     };
   }
 
   return {
     level: weakMatch ? "directional-provider-match" : "advertised-recent",
     label: weakMatch
-      ? "Estimated Kroger price — verify in store"
-      : `${freshnessLabel} online Kroger price — verify at shelf`,
-    note: `This price came from the official Kroger API path (${matchPercent}). Treat it as a recently checked online price, not a guaranteed shelf or checkout total.`,
+      ? "Estimated store price — verify in store"
+      : `${freshnessLabel} store price — verify at shelf`,
+    note: `This price came from recently checked online store data (${matchPercent}). Treat it as an estimate until you verify the exact product and shelf tag in store.`,
   };
 }

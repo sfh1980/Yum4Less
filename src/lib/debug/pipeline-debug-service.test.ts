@@ -6,12 +6,14 @@ const {
   getRecipeCatalog,
   buildNearbyStoresForSearch,
   collectRecipeIngredientIdsForRollout,
+  resolveKrogerPreviewTrackedIngredients,
 } = vi.hoisted(() => ({
   getMarketPricingContext: vi.fn(),
   getRankedPriceObservationsWithTimestamps: vi.fn(),
   getRecipeCatalog: vi.fn(),
   buildNearbyStoresForSearch: vi.fn(),
   collectRecipeIngredientIdsForRollout: vi.fn(),
+  resolveKrogerPreviewTrackedIngredients: vi.fn(),
 }));
 
 vi.mock("@/lib/market-repository", () => ({
@@ -25,6 +27,11 @@ vi.mock("@/lib/recommendation-service", () => ({
   collectRecipeIngredientIdsForRollout,
 }));
 
+vi.mock("@/lib/provider-search-terms", () => ({
+  resolveKrogerPreviewTrackedIngredients,
+}));
+
+import { PROVIDER_TRACKED_INGREDIENTS } from "@/lib/provider-tracked-ingredients";
 import { getPipelineDebugView } from "@/lib/debug/pipeline-debug-service";
 
 describe("getPipelineDebugView", () => {
@@ -34,6 +41,9 @@ describe("getPipelineDebugView", () => {
     getRecipeCatalog.mockReset();
     buildNearbyStoresForSearch.mockReset();
     collectRecipeIngredientIdsForRollout.mockReset();
+    resolveKrogerPreviewTrackedIngredients.mockReset();
+
+    resolveKrogerPreviewTrackedIngredients.mockResolvedValue(PROVIDER_TRACKED_INGREDIENTS);
 
     getRecipeCatalog.mockResolvedValue({
       source: "database",
@@ -117,13 +127,14 @@ describe("getPipelineDebugView", () => {
       radiusMiles: 10,
     });
 
+    expect(resolveKrogerPreviewTrackedIngredients).toHaveBeenCalledOnce();
     expect(view.ok).toBe(true);
     expect(view.nearbyStores).toHaveLength(1);
     expect(view.nearbyStores[0]).toMatchObject({
       id: "kroger-mechanicsville",
       chain: "kroger",
       recommendationEnabled: true,
-      trustBadge: "Est. weekly-ad prices",
+          trustBadge: "Est. sale prices",
     });
     expect(view.priceObservations).toHaveLength(2);
     expect(view.priceObservations[1]?.validThrough).toBe("2026-06-20T00:00:00.000Z");
@@ -133,12 +144,11 @@ describe("getPipelineDebugView", () => {
       staleCount: 1,
       countsBySource: { "kroger-official-api": 2 },
     });
-    expect(view.missingIngredientIds).toEqual([
-      "baby-potatoes",
-      "broccoli",
-      "lemon",
-      "olive-oil",
-    ]);
+    expect(view.missingIngredientIds).toEqual(
+      PROVIDER_TRACKED_INGREDIENTS.map((ingredient) => ingredient.ingredientId).filter(
+        (ingredientId) => ingredientId !== "chicken-thighs" && ingredientId !== "ground-beef",
+      ),
+    );
     expect(view).not.toHaveProperty("recipes");
     expect(view).not.toHaveProperty("recommendations");
     expect(view).not.toHaveProperty("weeklyAdIngestionStatus");

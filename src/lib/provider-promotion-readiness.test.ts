@@ -4,6 +4,7 @@ import {
   buildProviderPromotionReadiness,
 } from "@/lib/provider-promotion-readiness";
 import type { ProviderCoverageRollup } from "@/lib/provider-coverage-rollup";
+import { PROVIDER_TRACKED_INGREDIENTS } from "@/lib/provider-tracked-ingredients";
 import type { ProviderPricingPreviewResult } from "@/lib/providers/provider-types";
 
 function buildRollup(
@@ -175,6 +176,7 @@ describe("buildAllProviderPromotionReadiness", () => {
           configured: false,
         }),
       ],
+      trackedIngredients: PROVIDER_TRACKED_INGREDIENTS,
     });
 
     expect(readiness.map((entry) => entry.provider)).toEqual([

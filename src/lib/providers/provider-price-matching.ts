@@ -183,7 +183,7 @@ function tokenMatches(descriptionWord: string, termToken: string) {
   );
 }
 
-function scoreProviderProductMatchWithBreakdown(input: {
+export function scoreProviderProductMatchWithBreakdown(input: {
   ingredient: ProviderPricingPreviewIngredient;
   description: string;
   inStock: boolean;

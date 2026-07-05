@@ -1,10 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getSaleConfidence } from "@/lib/sale-confidence";
 import { createAldiWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
 import {
   getWeeklyAdIngestionClients,
   runWeeklyAdIngestionForStores,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
+import * as weeklyAdOfferSync from "@/lib/weekly-ad-ingestion/weekly-ad-offer-sync";
+import * as priceObservationWrites from "@/lib/price-observation-writes";
 
 const originalFixtureFlag = process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
 
@@ -21,7 +23,7 @@ describe("weekly ad ingestion service", () => {
     }
   });
 
-  it("registers live scrapers for five priority chains plus Lidl and Dollar General stubs", () => {
+  it("registers live scrapers for six configured chains plus the Dollar General stub", () => {
     const clients = getWeeklyAdIngestionClients();
 
     expect(clients.map((client) => client.chain)).toEqual([
@@ -38,7 +40,7 @@ describe("weekly ad ingestion service", () => {
     expect(clients.find((client) => client.chain === "publix")?.configured).toBe(true);
     expect(clients.find((client) => client.chain === "kroger")?.configured).toBe(true);
     expect(clients.find((client) => client.chain === "walmart")?.configured).toBe(true);
-    expect(clients.find((client) => client.chain === "lidl")?.configured).toBe(false);
+    expect(clients.find((client) => client.chain === "lidl")?.configured).toBe(true);
   });
 
   it("parses and matches Aldi fixture offers for tracked ingredients", async () => {
@@ -82,6 +84,42 @@ describe("weekly ad ingestion service", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("fans out one Kroger weekly-ad ingest to every Kroger store id when persisting", async () => {
+    const purgeSpy = vi
+      .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")
+      .mockResolvedValue(0);
+    const syncSpy = vi
+      .spyOn(weeklyAdOfferSync, "syncWeeklyAdOffersToPriceObservations")
+      .mockResolvedValue({
+        chain: "kroger",
+        storeId: "kroger-mechanicsville",
+        syncedCount: 1,
+        skippedCount: 0,
+        failedCount: 0,
+        retrievalMode: "fixture",
+        message: "synced",
+      });
+
+    await runWeeklyAdIngestionForStores({
+      nearbyStores: [
+        { id: "kroger-mechanicsville", name: "Kroger", chain: "kroger" },
+        { id: "kroger-02900529", name: "Kroger Marketplace", chain: "kroger" },
+      ],
+      zipCode: "23111",
+      persistToDatabase: true,
+    });
+
+    expect(purgeSpy).toHaveBeenCalledTimes(1);
+    expect(syncSpy).toHaveBeenCalledTimes(2);
+    const syncedStoreIds = syncSpy.mock.calls.map(
+      (call) => call[0]?.result.offers[0]?.storeId,
+    );
+    expect(syncedStoreIds.sort()).toEqual(["kroger-02900529", "kroger-mechanicsville"]);
+
+    purgeSpy.mockRestore();
+    syncSpy.mockRestore();
+  });
+
   it("parses Food Lion fixture offers for tracked ingredients", async () => {
     const { createFoodLionWeeklyAdIngestionClient } = await import(
       "@/lib/weekly-ad-ingestion/food-lion-weekly-ad-ingestion"
@@ -121,6 +159,25 @@ describe("weekly ad ingestion service", () => {
     );
     expect(result.offers.some((offer) => offer.ingredientId === "broccoli")).toBe(true);
     expect(result.offers.some((offer) => offer.ingredientId === "parmesan")).toBe(true);
+  });
+
+  it("parses Lidl fixture offers for tracked ingredients", async () => {
+    const { createLidlWeeklyAdIngestionClient } = await import(
+      "@/lib/weekly-ad-ingestion/lidl-weekly-ad-ingestion"
+    );
+    const client = createLidlWeeklyAdIngestionClient();
+    const result = await client.ingestWeeklyAd({
+      chain: "lidl",
+      storeId: "lidl-mechanicsville",
+      storeName: "Lidl",
+      zipCode: "23111",
+      trackedIngredientIds: ["ground-beef", "salmon-fillet", "bell-peppers", "butter"],
+    });
+
+    expect(result.status).toBe("cached");
+    expect(result.offers.some((offer) => offer.ingredientId === "ground-beef")).toBe(true);
+    expect(result.offers.some((offer) => offer.ingredientId === "salmon-fillet")).toBe(true);
+    expect(result.offers.some((offer) => offer.ingredientId === "bell-peppers")).toBe(true);
   });
 
   it("parses Kroger fixture offers for tracked ingredients", async () => {
@@ -187,7 +244,7 @@ describe("weekly ad sale confidence", () => {
       matchConfidence: 0.82,
     });
 
-    expect(confidence.label).toContain("Aldi");
-    expect(confidence.note).toContain("scraped");
+    expect(confidence.label).toBe("Sale price — estimate only");
+    expect(confidence.note).toContain("saved store prices");
   });
 });

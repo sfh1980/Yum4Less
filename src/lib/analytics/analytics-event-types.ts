@@ -5,7 +5,6 @@ export const ANALYTICS_EVENT_NAMES = [
   "rank_meals_started",
   "rank_meals_completed",
   "rank_meals_failed",
-  "trust_explainer_dismissed",
   "store_pin_selected",
 ] as const;
 

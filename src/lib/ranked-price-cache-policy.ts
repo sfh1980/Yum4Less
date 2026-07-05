@@ -23,5 +23,5 @@ export const RANKED_PRICE_DAILY_REFRESH_USER_MESSAGE =
   "Pricing refreshes on a daily schedule (about every 24 hours), not when you search.";
 
 export function rankedPriceCacheMissMessage(resourceLabel: string): string {
-  return `No saved ${resourceLabel} within the last ${RANKED_PRICE_CACHE_TTL_HOURS} hours. ${RANKED_PRICE_DAILY_REFRESH_USER_MESSAGE} Try again after the next ingest run.`;
+  return `No saved ${resourceLabel} within the last ${RANKED_PRICE_CACHE_TTL_HOURS} hours. ${RANKED_PRICE_DAILY_REFRESH_USER_MESSAGE} Try again later — prices refresh daily.`;
 }

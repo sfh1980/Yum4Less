@@ -58,7 +58,7 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
       "https://www.kroger.com/search?query=weekly%20ad&searchType=mktg%20content",
     ],
     termsNote:
-      "Kroger weekly-ad pages use a hardened headless browser fetch with network JSON capture, then optional official API fallback when credentials are configured. Verify current deals in store before checkout.",
+      "Kroger weekly-ad offers use the Flipp syndicated feed first (merchant search, flyer lookup, and supplemental ingredient searches), then a hardened headless browser scrape with network JSON capture when the feed is empty. Official product API runs only as a last-resort partial fill for tracked ingredients when both Flipp and scrape return nothing — not general sale discovery. Verify current deals in store before checkout.",
   },
   {
     chain: "walmart",
@@ -72,11 +72,14 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
   },
   {
     chain: "lidl",
-    label: "Lidl weekly ad ingestion (research)",
-    implementation: "research-stub",
-    fetchStrategy: "http",
+    label: "Lidl weekly ad ingestion",
+    implementation: "live-scraper",
+    fetchStrategy: "browser-fallback",
+    browserWaitSelector:
+      "#weekly-ad-offers-data, [data-weekly-ad-product], [class*='weekly'], iframe",
     researchTargets: ["https://www.lidl.com/weekly-ads"],
-    termsNote: "Lidl weekly-ad ingestion will follow the same trust metadata pattern as Aldi.",
+    termsNote:
+      "Lidl weekly-ad offers use the Flipp syndicated feed first, then optional direct page scrape when the feed is empty. Verify current deals in store before checkout.",
   },
   {
     chain: "dollar-general",

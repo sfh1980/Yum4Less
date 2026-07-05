@@ -8,7 +8,7 @@ import {
 } from "@/lib/store-map-location-copy";
 
 describe("store map location copy", () => {
-  it("labels OSM catalog pins with ingest source", () => {
+  it("labels OSM catalog pins with map source", () => {
     expect(
       buildStoreMapLocationNote({
         storeId: "osm-node-900003",
@@ -25,7 +25,7 @@ describe("store map location copy", () => {
     ).toContain("last verified");
   });
 
-  it("labels seed catalog pins honestly before live ingest", () => {
+  it("labels seed catalog pins honestly", () => {
     expect(
       resolveStoreMapLocationProvenance({
         storeId: "kroger-mechanicsville",
@@ -46,7 +46,7 @@ describe("store map location copy", () => {
     ).toContain("Seed catalog coordinates");
   });
 
-  it("labels live Kroger API pins with ingest source and verification age", () => {
+  it("labels verified store pins with source and verification age", () => {
     const note = buildStoreMapLocationNote({
       storeId: "kroger-mechanicsville",
       sourceName: "kroger-official-api",
@@ -65,24 +65,22 @@ describe("store map location copy", () => {
         sourceName: "kroger-official-api",
         lastVerifiedAt: new Date(Date.now() - 90 * 60_000).toISOString(),
       }),
-    ).toBe("API-verified pin");
-    expect(note).toContain("Kroger Location API");
+    ).toBe("Verified store pin");
+    expect(note).toContain("retailer store directory");
     expect(note).toContain("last verified");
   });
 
-  it("labels Publix locator context pins as indicative (not ranked)", () => {
+  it("labels store locator context pins as indicative (not ranked)", () => {
     expect(
       buildStoreMapLocationNote({
         storeId: "publix-1626",
         sourceName: "publix-store-locator",
       }),
-    ).toContain("Not used for ranked meal estimates");
-    expect(
-      formatIngestSourceLabel("publix-store-locator"),
-    ).toBe("Publix store locator");
+    ).toContain("Not used for dinner estimates");
+    expect(formatIngestSourceLabel("publix-store-locator")).toBe("store locator");
   });
 
-  it("labels Aldi market catalog pins as API-verified (not ZIP centroid)", () => {
+  it("labels market catalog pins as verified (not ZIP centroid)", () => {
     const note = buildStoreMapLocationNote({
       storeId: "aldi-mechanicsville",
       sourceName: "yum4less-market-catalog",
@@ -96,22 +94,22 @@ describe("store map location copy", () => {
         sourceName: "yum4less-market-catalog",
         lastVerifiedAt: new Date(Date.now() - 6 * 3_600_000).toISOString(),
       }),
-    ).toBe("API-verified pin");
+    ).toBe("Verified store pin");
   });
 
-  it("maps known ingest source names to readable labels", () => {
+  it("maps known source names to readable labels", () => {
     expect(formatIngestSourceLabel("kroger-official-api")).toBe(
-      "Kroger Location API",
+      "retailer store directory",
     );
     expect(formatIngestSourceLabel("openstreetmap-overpass")).toBe(
       "OpenStreetMap",
     );
     expect(formatIngestSourceLabel("usda-snap-retailer-locator")).toBe(
-      "USDA SNAP retailer directory",
+      "retailer directory",
     );
   });
 
-  it("labels USDA SNAP context pins honestly", () => {
+  it("labels directory context pins honestly", () => {
     expect(
       resolveStoreMapLocationProvenance({
         storeId: "snap-va-23111-food-lion",
@@ -123,13 +121,13 @@ describe("store map location copy", () => {
         storeId: "snap-va-23111-food-lion",
         sourceName: "usda-snap-retailer-locator",
       }),
-    ).toBe("SNAP context pin");
+    ).toBe("Map context pin");
     expect(
       buildStoreMapLocationNote({
         storeId: "snap-va-23111-food-lion",
         sourceName: "usda-snap-retailer-locator",
       }),
-    ).toMatch(/Not used for ranked meal estimates/i);
+    ).toMatch(/Not used for dinner estimates/i);
   });
 
   it("formats last verified age for map tooltips", () => {

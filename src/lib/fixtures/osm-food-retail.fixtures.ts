@@ -73,10 +73,10 @@ export const fixtureOsmFoodRetailStores23111: OsmDiscoveredFoodRetailStore[] = [
     osmId: 900005,
     name: "BJ's Wholesale Club",
     kind: "big-box",
-    city: "Glen Allen",
+    city: "Mechanicsville",
     state: "VA",
-    latitude: 37.6551,
-    longitude: -77.5124,
+    latitude: 37.601124,
+    longitude: -77.34944,
     shopTag: "wholesale",
   },
 ];

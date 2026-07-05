@@ -30,43 +30,43 @@ const CHAIN_MARKER_STYLES: Record<StoreChain, StoreMarkerStyle> = {
     abbreviation: "A",
     backgroundColor: "#00529b",
     textColor: "#ffffff",
-    borderColor: "#ffc87e",
+    borderColor: "#993556",
   },
   bjs: {
     abbreviation: "BJ",
     backgroundColor: "#c8102e",
     textColor: "#ffffff",
-    borderColor: "#ffc87e",
+    borderColor: "#993556",
   },
   "food-lion": {
     abbreviation: "FL",
     backgroundColor: "#00843d",
     textColor: "#ffffff",
-    borderColor: "#ffc87e",
+    borderColor: "#993556",
   },
   lidl: {
     abbreviation: "L",
     backgroundColor: "#0050aa",
     textColor: "#fff000",
-    borderColor: "#ffc87e",
+    borderColor: "#993556",
   },
   "trader-joes": {
     abbreviation: "TJ",
     backgroundColor: "#c8102e",
     textColor: "#ffffff",
-    borderColor: "#ffc87e",
+    borderColor: "#993556",
   },
   "dollar-general": {
     abbreviation: "DG",
     backgroundColor: "#ffcc00",
     textColor: "#000000",
-    borderColor: "#ffc87e",
+    borderColor: "#993556",
   },
   unknown: {
     abbreviation: "?",
     backgroundColor: "#4a5568",
     textColor: "#ffffff",
-    borderColor: "#ffc87e",
+    borderColor: "#993556",
   },
 };
 
@@ -111,7 +111,7 @@ export function getStoreMarkerStyle(input: {
   return {
     ...styledBase,
     backgroundColor: "#334155",
-    borderColor: "#ffc87e",
+    borderColor: "#993556",
     textColor: "#f8fafc",
   };
 }

@@ -3,7 +3,8 @@ import {
   getLatestProviderPricingPreviewSnapshot,
   persistProviderPricingPreviewResult,
 } from "@/lib/provider-product-pricing-cache";
-import { PROVIDER_TRACKED_INGREDIENTS } from "@/lib/provider-tracked-ingredients";
+import { resolveKrogerPreviewTrackedIngredients } from "@/lib/provider-search-terms";
+import type { Pool } from "pg";
 import { getProviderPricingPreviewLabel } from "@/lib/providers/provider-labels";
 import { getStoreDiscoveryProviders } from "@/lib/providers/provider-registry";
 import type {
@@ -62,11 +63,14 @@ export async function buildProviderPricingPreviews(input: {
   preferredProviderStoreIds?: Partial<
     Record<ProviderDiscoveredStore["provider"], string>
   >;
-  /** TODO(provider-search-terms): Only the sync script passes DB-backed terms today. */
+  /** When omitted, loads Kroger preview terms from Postgres (static catalog fallback when unavailable). */
   trackedIngredients?: ProviderPricingPreviewIngredient[];
+  db?: Pool;
 }): Promise<ProviderPricingPreviewResult[]> {
   const readMode = input.readMode ?? "cache-only";
-  const trackedIngredients = input.trackedIngredients ?? PROVIDER_TRACKED_INGREDIENTS;
+  const trackedIngredients =
+    input.trackedIngredients ??
+    (await resolveKrogerPreviewTrackedIngredients(input.db));
   const providers = getStoreDiscoveryProviders();
 
   return Promise.all(

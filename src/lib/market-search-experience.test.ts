@@ -3,6 +3,7 @@ import { getMarketSearchExperience } from "@/lib/recommendation-service";
 import { clearMapSearchOsmCacheForTests } from "@/lib/map-search-osm-cache";
 import { buildZip23111RankingSnapshot } from "@/lib/recommendation-service-ranking.fixture";
 import { zip23111MechanicsvilleLocation } from "@/lib/recommendation-service-ranking.fixture";
+import * as mapContextDiscovery from "@/lib/map-context-discovery";
 
 const { buildProviderPricingPreviews, searchOfficialProviderStores, getMarketDataSnapshot } =
   vi.hoisted(() => ({
@@ -32,7 +33,6 @@ describe("getMarketSearchExperience map merge", () => {
       snapshot: buildZip23111RankingSnapshot(),
     });
     clearMapSearchOsmCacheForTests();
-    vi.stubEnv("YUM4LESS_MAP_SPARSE_PIN_THRESHOLD", "999");
   });
 
   afterEach(() => {
@@ -76,6 +76,50 @@ describe("getMarketSearchExperience map merge", () => {
     );
   });
 
+  it("keeps multiple distinct Kroger stores in the nearby-store list", async () => {
+    const snapshot = buildZip23111RankingSnapshot();
+    getMarketDataSnapshot.mockResolvedValue({
+      source: "database",
+      snapshot: {
+        ...snapshot,
+        stores: [
+          {
+            ...snapshot.stores.find((store) => store.id === "kroger-mechanicsville")!,
+            sourceStoreId: "kroger-mechanicsville",
+          },
+          {
+            ...snapshot.stores.find((store) => store.id === "aldi-mechanicsville")!,
+          },
+          {
+            id: "kroger-atlee",
+            name: "Kroger Atlee",
+            kind: "grocery",
+            city: "Mechanicsville",
+            state: "VA",
+            latitude: 37.6282,
+            longitude: -77.282,
+            sourceName: "kroger-official-api",
+            sourceStoreId: "09999999",
+            lastVerifiedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+
+    const { market } = await getMarketSearchExperience(
+      8,
+      zip23111MechanicsvilleLocation,
+      true,
+    );
+
+    expect(
+      market.nearbyStores
+        .filter((store) => store.chain === "kroger")
+        .map((store) => store.id)
+        .sort(),
+    ).toEqual(["kroger-atlee", "kroger-mechanicsville"]);
+  });
+
   it("suppresses conflicting OSM Kroger when ingested Kroger is already on the map", async () => {
     const snapshot = buildZip23111RankingSnapshot();
     getMarketDataSnapshot.mockResolvedValue({
@@ -85,7 +129,6 @@ describe("getMarketSearchExperience map merge", () => {
         stores: snapshot.stores.filter((store) => store.id === "kroger-mechanicsville"),
       },
     });
-    vi.stubEnv("YUM4LESS_MAP_SPARSE_PIN_THRESHOLD", "3");
     vi.stubEnv("YUM4LESS_MAP_CATALOG_FIXTURE", "1");
 
     const { market } = await getMarketSearchExperience(
@@ -123,10 +166,10 @@ describe("getMarketSearchExperience map merge", () => {
     expect(market.nearbyStores.some((store) => store.id.startsWith("snap-"))).toBe(
       true,
     );
-    expect(market.mapDiscoveryNotice).toMatch(/USDA SNAP/i);
+    expect(market.mapDiscoveryNotice).toMatch(/directory context/i);
   });
 
-  it("merges ephemeral OSM pins when DB pin count is below sparse threshold", async () => {
+  it("merges ephemeral OSM pins when Postgres catalog has per-chain gaps", async () => {
     getMarketDataSnapshot.mockResolvedValue({
       source: "database",
       snapshot: {
@@ -146,6 +189,71 @@ describe("getMarketSearchExperience map merge", () => {
       true,
     );
     expect(market.usesEphemeralOsmDiscovery).toBe(true);
-    expect(market.mapDiscoveryNotice).toMatch(/OpenStreetMap/i);
+    expect(market.mapDiscoveryNotice).toMatch(/map context pins/i);
+  });
+
+  it("returns the initial market quickly when map-context discovery exceeds the budget", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("YUM4LESS_MAP_SEARCH_GAP_FILL_TIMEOUT_MS", "50");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    getMarketDataSnapshot.mockResolvedValue({
+      source: "database",
+      snapshot: {
+        ...buildZip23111RankingSnapshot(),
+        stores: [],
+      },
+    });
+
+    vi.spyOn(mapContextDiscovery, "discoverMapContextStores").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                stores: [
+                  {
+                    id: "osm-node-900006",
+                    name: "Kroger",
+                    kind: "grocery",
+                    city: "Mechanicsville",
+                    state: "VA",
+                    latitude: 37.6095,
+                    longitude: -77.3736,
+                    sourceName: "openstreetmap-overpass",
+                    sourceStoreId: "node-900006",
+                  },
+                ],
+                sources: [
+                  {
+                    source: "fixture",
+                    stores: [],
+                    message: "Fixture context",
+                    cacheHit: false,
+                  },
+                ],
+              }),
+            5_000,
+          );
+        }),
+    );
+
+    const resultPromise = getMarketSearchExperience(
+      12,
+      zip23111MechanicsvilleLocation,
+      false,
+    );
+    await vi.advanceTimersByTimeAsync(60);
+    const { market } = await resultPromise;
+
+    expect(market.nearbyStores.some((store) => store.id.startsWith("osm-"))).toBe(false);
+    expect(market.usesEphemeralOsmDiscovery).toBeUndefined();
+    expect(market.mapDiscoveryNotice).toMatch(/background discovery warms/i);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("deferred map context discovery"),
+    );
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    warnSpy.mockRestore();
   });
 });

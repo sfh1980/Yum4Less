@@ -1,9 +1,11 @@
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
+import { pickPrimaryKrogerStoreForWeeklyAdIngestList } from "@/lib/kroger-catalog-canonical";
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import { createAldiWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
 import { createFoodLionWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/food-lion-weekly-ad-ingestion";
 import { createPublixWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-ingestion";
 import { createKrogerWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-ingestion";
+import { createLidlWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/lidl-weekly-ad-ingestion";
 import { createWalmartWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/walmart-weekly-ad-ingestion";
 import {
   isWeeklyAdChain,
@@ -34,7 +36,7 @@ export function getWeeklyAdIngestionClients(): WeeklyAdIngestionClient[] {
     createPublixWeeklyAdIngestionClient(),
     createKrogerWeeklyAdIngestionClient(),
     createWalmartWeeklyAdIngestionClient(),
-    createResearchWeeklyAdIngestionClient("lidl"),
+    createLidlWeeklyAdIngestionClient(),
     createResearchWeeklyAdIngestionClient("dollar-general"),
   ];
 }
@@ -63,7 +65,40 @@ export async function runWeeklyAdIngestionForStores(input: {
     await purgeStaleRankedPriceObservations();
   }
 
-  for (const store of input.nearbyStores) {
+  const krogerStores = input.nearbyStores.filter((store) => store.chain === "kroger");
+  const nonKrogerStores = input.nearbyStores.filter((store) => store.chain !== "kroger");
+
+  if (krogerStores.length > 0) {
+    const krogerClient = getWeeklyAdIngestionClient("kroger");
+    if (krogerClient) {
+      const primaryStore = pickPrimaryKrogerStoreForWeeklyAdIngestList(krogerStores);
+      const result = await krogerClient.ingestWeeklyAd({
+        chain: "kroger",
+        storeId: primaryStore.id,
+        storeName: primaryStore.name,
+        zipCode,
+        trackedIngredientIds,
+      });
+      results.push(result);
+
+      if (input.persistToDatabase && result.offers.length > 0) {
+        for (const targetStore of krogerStores) {
+          const fanOutResult: WeeklyAdIngestionResult = {
+            ...result,
+            offers: result.offers.map((offer) => ({
+              ...offer,
+              storeId: targetStore.id,
+            })),
+          };
+          syncSummaries.push(
+            await syncWeeklyAdOffersToPriceObservations({ result: fanOutResult }),
+          );
+        }
+      }
+    }
+  }
+
+  for (const store of nonKrogerStores) {
     if (!isWeeklyAdChain(store.chain)) {
       continue;
     }

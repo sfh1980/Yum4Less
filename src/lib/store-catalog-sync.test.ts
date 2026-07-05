@@ -164,13 +164,13 @@ describe("store-catalog-sync", () => {
     );
   });
 
-  it("does not merge API-discovered Kroger stores by proximity alone", () => {
+  it("dedupes co-located Kroger slug when API row is upserted separately", () => {
     const canonicalId = findCanonicalStoreIdForApiDiscoveredStore({
       existingStores: [
         {
           id: "kroger-mechanicsville",
           name: "Kroger",
-          source_name: "yum4less-internal-catalog",
+          source_name: "kroger-weekly-ad-scrape",
           source_store_id: "kroger-mechanicsville",
           latitude: 37.61546,
           longitude: -77.32939,
@@ -186,7 +186,6 @@ describe("store-catalog-sync", () => {
       },
       catalogStoreId: "kroger-02900529",
       getRolloutForStore: getProviderRolloutForStore,
-      mergeRadiusMiles: BOOTSTRAP_STORE_MERGE_RADIUS_MILES,
     });
 
     expect(canonicalId).toBeUndefined();

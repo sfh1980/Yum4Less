@@ -130,7 +130,7 @@ function buildWeeklyAdPromotionGates(
       label: "Approved rollout chain",
       passed: WEEKLY_AD_RANKED_PRICING_CHAINS.has(chain as never),
       note: WEEKLY_AD_RANKED_PRICING_CHAINS.has(chain as never)
-        ? `${chain} is in the approved Kroger → Publix → Walmart weekly-ad rollout order.`
+        ? `${chain} is in the approved weekly-ad ranked-pricing rollout.`
         : `${chain} is not in the current weekly-ad ranked-pricing rollout.`,
     },
     {

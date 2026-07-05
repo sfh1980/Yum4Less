@@ -10,7 +10,7 @@ import type {
   ProviderPricingPreviewItem,
   ProviderPricingPreviewResult,
 } from "@/lib/providers/provider-types";
-import { isApiDerivedKrogerCatalogStoreId } from "@/lib/store-catalog-sync";
+import { isApiDerivedKrogerCatalogStoreId } from "@/lib/kroger-catalog-canonical";
 import { logServerError } from "@/lib/server-log";
 
 const KROGER_OFFICIAL_PRICE_SOURCE = OFFICIAL_API_SOURCE;
@@ -203,11 +203,11 @@ export function resolveInternalKrogerStoreId(input: {
     (store) => store.sourceStoreId === input.providerStoreId,
   );
   if (bySourceStoreId.length > 0) {
-    const bootstrapMatch = bySourceStoreId.find(
-      (store) => !isApiDerivedKrogerCatalogStoreId(store.id),
+    const apiDerivedMatch = bySourceStoreId.find((store) =>
+      isApiDerivedKrogerCatalogStoreId(store.id),
     );
-    if (bootstrapMatch) {
-      return bootstrapMatch.id;
+    if (apiDerivedMatch) {
+      return apiDerivedMatch.id;
     }
 
     if (bySourceStoreId.length === 1) {

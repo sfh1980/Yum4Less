@@ -1,10 +1,14 @@
 import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
 import type { ProviderPricingPreviewIngredient } from "@/lib/providers/provider-types";
 
-// TODO(provider-search-terms): Preview/coverage paths keep static catalog display names as
-// search terms. The sync script loads tuned Kroger terms from provider_search_terms instead.
+/**
+ * Static fallback when Postgres `provider_search_terms` is empty or unavailable.
+ * Uses full internal catalog breadth; search terms are display names (not DB-tuned).
+ * Production preview/coverage/sync paths load tuned Kroger terms via
+ * {@link resolveKrogerPreviewTrackedIngredients} / {@link resolveKrogerSyncTrackedIngredients}.
+ */
 export const PROVIDER_TRACKED_INGREDIENTS: ProviderPricingPreviewIngredient[] =
-  INTERNAL_CATALOG_INGREDIENTS.slice(0, 5).map((ingredient) => ({
+  INTERNAL_CATALOG_INGREDIENTS.map((ingredient) => ({
     ingredientId: ingredient.id,
     ingredientName: ingredient.name,
     searchTerm: ingredient.name,

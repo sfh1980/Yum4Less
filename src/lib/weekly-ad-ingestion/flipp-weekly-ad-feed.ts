@@ -9,7 +9,8 @@ export type FlippWeeklyAdMerchantName =
   | "Walmart"
   | "Publix"
   | "ALDI"
-  | "Food Lion";
+  | "Food Lion"
+  | "Lidl";
 
 export type FlippWeeklyAdItem = {
   name?: string;

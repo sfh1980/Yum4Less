@@ -91,9 +91,9 @@ function groupSearchTermsByIngredient(rows: ProviderSearchTermRow[]) {
   return grouped;
 }
 
-/** Loads Kroger catalog breadth for preview/coverage denominators; static fallback when DB is unavailable. */
-export async function resolveKrogerCoverageTrackedIngredients(
+async function resolveKrogerTrackedIngredients(
   db?: Pool,
+  options?: GetProviderSearchTermsOptions,
 ): Promise<ProviderPricingPreviewIngredient[]> {
   if (!process.env.DATABASE_URL?.trim()) {
     return PROVIDER_TRACKED_INGREDIENTS;
@@ -101,9 +101,30 @@ export async function resolveKrogerCoverageTrackedIngredients(
 
   try {
     const pool = db ?? getDbPool();
-    const terms = await getProviderSearchTerms("kroger", pool);
+    const terms = await getProviderSearchTerms("kroger", pool, options);
     return terms.length > 0 ? terms : PROVIDER_TRACKED_INGREDIENTS;
   } catch {
     return PROVIDER_TRACKED_INGREDIENTS;
   }
+}
+
+/** Priority-1 Kroger terms for preview/coverage/debug denominators. */
+export async function resolveKrogerPreviewTrackedIngredients(
+  db?: Pool,
+): Promise<ProviderPricingPreviewIngredient[]> {
+  return resolveKrogerTrackedIngredients(db);
+}
+
+/** Priority-1 plus priority-2 fallback terms for provider price sync. */
+export async function resolveKrogerSyncTrackedIngredients(
+  db?: Pool,
+): Promise<ProviderPricingPreviewIngredient[]> {
+  return resolveKrogerTrackedIngredients(db, { includeFallbackTerms: true });
+}
+
+/** @deprecated Use {@link resolveKrogerPreviewTrackedIngredients}. */
+export async function resolveKrogerCoverageTrackedIngredients(
+  db?: Pool,
+): Promise<ProviderPricingPreviewIngredient[]> {
+  return resolveKrogerPreviewTrackedIngredients(db);
 }

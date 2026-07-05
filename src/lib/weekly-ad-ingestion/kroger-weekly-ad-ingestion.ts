@@ -1,4 +1,4 @@
-import { fetchFlippWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
+import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { fetchKrogerOffersFromOfficialApi } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-api-fallback";
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
@@ -15,6 +15,7 @@ import type {
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 const FIXTURE_FILE_NAME = "kroger-weekly-ad-sample.html";
+const KROGER_FLIPP_MERCHANT = "Kroger";
 
 export function createKrogerWeeklyAdIngestionClient(): WeeklyAdIngestionClient {
   const config = getWeeklyAdChainConfig("kroger");
@@ -60,26 +61,30 @@ async function ingestKrogerWeeklyAd(
   });
 
   try {
-    const pageFetch = await fetchKrogerWeeklyAdPage({ url: sourceUrl });
-    let rawOffers = parseKrogerWeeklyAd({
-      html: pageFetch.html,
-      networkJsonBodies: pageFetch.networkJsonBodies,
+    const flippResult = await resolveFlippWeeklyAdOffersForChain({
+      chain: "kroger",
+      zipCode: input.zipCode,
+      merchantName: KROGER_FLIPP_MERCHANT,
+      trackedIngredientIds: input.trackedIngredientIds,
     });
-    let retrievalLabel = `${pageFetch.method} scrape`;
-    let provenance: WeeklyAdIngestionResult["provenance"] = "weekly-ad-scrape";
-    let fallbackUsed = pageFetch.method === "browser" || pageFetch.browserFailed === true;
+    let rawOffers = flippResult.rawOffers;
+    let retrievalLabel = flippResult.retrievalLabel;
+    let provenance: WeeklyAdIngestionResult["provenance"] = "weekly-ad-partner-feed";
+    let fallbackUsed = true;
+    let captureHtml = "";
+    let pageFetchMethod: string | undefined;
 
     if (rawOffers.length === 0) {
-      const flippOffers = await fetchFlippWeeklyAdOffers({
-        zipCode: input.zipCode,
-        merchantName: "Kroger",
+      const pageFetch = await fetchKrogerWeeklyAdPage({ url: sourceUrl });
+      captureHtml = pageFetch.html;
+      pageFetchMethod = pageFetch.method;
+      rawOffers = parseKrogerWeeklyAd({
+        html: pageFetch.html,
+        networkJsonBodies: pageFetch.networkJsonBodies,
       });
-      if (flippOffers.length > 0) {
-        rawOffers = flippOffers;
-        retrievalLabel = "Flipp syndicated weekly-ad feed";
-        provenance = "weekly-ad-partner-feed";
-        fallbackUsed = true;
-      }
+      retrievalLabel = `${pageFetch.method} scrape`;
+      provenance = "weekly-ad-scrape";
+      fallbackUsed = pageFetch.method === "browser" || pageFetch.browserFailed === true;
     }
 
     if (rawOffers.length === 0) {
@@ -89,8 +94,9 @@ async function ingestKrogerWeeklyAd(
       });
       if (apiOffers.length > 0) {
         rawOffers = apiOffers;
-        retrievalLabel = "official Kroger product API fallback";
-        provenance = "weekly-ad-partner-feed";
+        retrievalLabel =
+          "last-resort partial product API fill (tracked ingredients only; not weekly ad discovery)";
+        provenance = "weekly-ad-scrape";
         fallbackUsed = true;
       }
     }
@@ -100,10 +106,14 @@ async function ingestKrogerWeeklyAd(
         chain: "kroger",
         zipCode: input.zipCode,
         sourceUrl,
-        html: pageFetch.html,
-        networkJsonBodies: pageFetch.networkJsonBodies,
-        errorMessage: "No Kroger weekly-ad offers parsed from scrape, Flipp feed, or API fallback.",
+        html: captureHtml,
+        errorMessage:
+          "No Kroger weekly-ad offers parsed from Flipp feed, direct scrape, or API fallback.",
       });
+
+      const scrapeNote = pageFetchMethod
+        ? ` Direct scrape via ${pageFetchMethod} also returned no parseable offers.`
+        : "";
 
       return {
         chain: "kroger",
@@ -114,7 +124,7 @@ async function ingestKrogerWeeklyAd(
         configured: true,
         fallbackUsed,
         offers: [],
-        message: `${label} loaded via ${pageFetch.method} (${pageFetch.attempts} attempt(s), ${pageFetch.networkJsonBodies.length} network payload(s))${storeContext.locationId ? ` for store ${storeContext.locationId}` : ""}, but Yum4Less could not extract offer rows yet. Set YUM4LESS_WEEKLY_AD_CAPTURE=1 to save HTML/network artifacts for parser work.`,
+        message: `${label} could not load Kroger weekly-ad offers for ZIP ${input.zipCode} via Flipp syndicated feed, direct page scrape, or last-resort product API fill.${scrapeNote}${storeContext.locationId ? ` Store context: ${storeContext.locationId}.` : ""} Set YUM4LESS_WEEKLY_AD_CAPTURE=1 to save HTML/network artifacts for parser work.`,
         fetchedAt,
         termsNote,
       };

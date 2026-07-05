@@ -123,6 +123,22 @@ describe("weekly ad ingredient matching", () => {
     expect(matched.some((offer) => offer.ingredientId === "mozzarella")).toBe(true);
   });
 
+  it("matches Flipp-style greek yogurt titles to plain-yogurt at or above threshold", () => {
+    for (const productName of ["Chobani Greek Yogurt", "Fage Greek Yogurt"]) {
+      const offers = matchWeeklyAdOffers({
+        chain: "kroger",
+        storeId: "kroger-mechanicsville",
+        sourceUrl: "https://www.kroger.com/weeklyad",
+        observedAt: "2026-06-28T00:00:00.000Z",
+        rawOffers: [{ productName, price: 1.25 }],
+        trackedIngredientIds: ["plain-yogurt"],
+      });
+
+      expect(offers[0]?.ingredientId).toBe("plain-yogurt");
+      expect(offers[0]?.matchConfidence).toBeGreaterThanOrEqual(MIN_WEEKLY_AD_MATCH_CONFIDENCE);
+    }
+  });
+
   it("does not match tortilla chips to flour tortillas", () => {
     const offers = matchWeeklyAdOffers({
       chain: "walmart",

@@ -21,7 +21,7 @@ describe("getSaleConfidence", () => {
     });
 
     expect(confidence.level).toBe("no-sale-data");
-    expect(confidence.note).toContain("legacy sample pricing data");
+    expect(confidence.note).toContain("sample pricing data");
   });
 
   it("marks aging database-backed sale references cautiously", () => {
@@ -45,7 +45,7 @@ describe("getSaleConfidence", () => {
     });
 
     expect(confidence.level).toBe("directional-provider-match");
-    expect(confidence.note).toContain("Kroger");
+    expect(confidence.note).toContain("online store data");
   });
 
   it("labels strong official Kroger API promo matches with verify wording", () => {
@@ -59,7 +59,7 @@ describe("getSaleConfidence", () => {
     });
 
     expect(confidence.level).toBe("advertised-recent");
-    expect(confidence.label).toBe("Recently checked Kroger promo — verify at shelf");
+    expect(confidence.label).toBe("Recently checked sale price — verify at shelf");
   });
 
   it("labels strong official Kroger regular prices as checked online estimates", () => {
@@ -73,9 +73,9 @@ describe("getSaleConfidence", () => {
 
     expect(confidence.level).toBe("advertised-recent");
     expect(confidence.label).toBe(
-      "Same-day checked online Kroger price — verify at shelf",
+      "Same-day checked store price — verify at shelf",
     );
-    expect(confidence.note).toContain("not a guaranteed shelf or checkout total");
+    expect(confidence.note).toContain("estimate");
   });
 
   it("downgrades stale weekly-ad rows instead of labeling them recent", () => {
@@ -89,7 +89,7 @@ describe("getSaleConfidence", () => {
     });
 
     expect(confidence.level).toBe("advertised-stale");
-    expect(confidence.label).toBe("Stale Kroger weekly-ad price");
+    expect(confidence.label).toBe("Stale sale price — estimate only");
     expect(confidence.note).toContain("9 day(s) old");
   });
 });

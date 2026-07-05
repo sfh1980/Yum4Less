@@ -22,7 +22,7 @@ import {
   type ProviderCoverageRollup,
 } from "@/lib/provider-coverage-rollup";
 import { buildProviderPricingPreviews } from "@/lib/provider-pricing-preview-service";
-import { resolveKrogerCoverageTrackedIngredients } from "@/lib/provider-search-terms";
+import { resolveKrogerPreviewTrackedIngredients } from "@/lib/provider-search-terms";
 import type { ProviderPriceObservationSyncSummary } from "@/lib/provider-price-observation-sync";
 import {
   buildAllProviderPromotionReadiness,
@@ -50,13 +50,18 @@ import { buildNearbySaleIngredientChoices } from "@/lib/sale-ingredient-offers";
 import {
   discoverMapContextStores,
   mapContextCandidateToCatalogStore,
+  type MapContextDiscoveryResult,
 } from "@/lib/map-context-discovery";
-import { resolveMapSparsePinThreshold } from "@/lib/map-search-osm-cache";
 import {
   filterMapContextCatalogStoresConflictingWithIngestedRankedChains,
+  needsSearchTimeOsmGapFill,
   resolveMapOsmRankedChainPolicy,
   shouldRunSearchTimeOsmDiscovery,
 } from "@/lib/map-osm-ranked-chain-policy";
+import {
+  dedupeKrogerStoresByIdentity,
+  filterSupersededOsmKrogerFixturePins,
+} from "@/lib/kroger-catalog-canonical";
 import {
   buildCatalogStoresFromProviderSearches,
   catalogStoreRecordToCatalogStore,
@@ -95,84 +100,94 @@ export async function getMarketSearchExperience(
     providerCatalogStores,
   );
 
-  const dbPinCount = buildNearbyStoresForSearch(
-    mergedCatalogStores,
-    location,
-    radiusMiles,
-    snapshot.priceObservations,
-    recipeIngredientIds,
-  ).length;
-
   let mapDiscoveryNotice: string | undefined;
   let usesEphemeralOsmDiscovery = false;
-  const sparseThreshold = resolveMapSparsePinThreshold();
   const osmRankedChainPolicy = resolveMapOsmRankedChainPolicy();
 
   if (
     source !== "unavailable" &&
     shouldRunSearchTimeOsmDiscovery(osmRankedChainPolicy) &&
-    dbPinCount < sparseThreshold
+    needsSearchTimeOsmGapFill(
+      snapshot.stores,
+      location.latitude,
+      location.longitude,
+      radiusMiles,
+    )
   ) {
-    const mapContextDiscovery = await discoverMapContextStores({
+    const gapFillOutcome = await discoverMapContextStoresWithinBudget({
       latitude: location.latitude,
       longitude: location.longitude,
       radiusMiles,
       zipCode: location.zipCode,
     });
 
-    if (mapContextDiscovery.stores.length > 0) {
-      let contextCatalogStores = mapContextDiscovery.stores
-        .map(mapContextCandidateToCatalogStore)
-        .map(catalogStoreRecordToCatalogStore);
-
-      let suppressedRankedChainConflicts = 0;
-      if (osmRankedChainPolicy === "suppress-conflicts") {
-        const filtered = filterMapContextCatalogStoresConflictingWithIngestedRankedChains(
-          mergedCatalogStores,
-          contextCatalogStores,
-          MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES,
-        );
-        contextCatalogStores = filtered.kept;
-        suppressedRankedChainConflicts = filtered.suppressedCount;
-      }
-
-      if (contextCatalogStores.length > 0) {
-        mergedCatalogStores = mergeCatalogStoresForMap(
-          mergedCatalogStores,
-          contextCatalogStores,
-        );
-        usesEphemeralOsmDiscovery = true;
-      }
-
-      const osmSource = mapContextDiscovery.sources.find(
-        (entry) => entry.source === "openstreetmap-overpass" || entry.source === "fixture",
-      );
-      const snapSource = mapContextDiscovery.sources.find(
-        (entry) => entry.source === "usda-snap-retailer-locator",
-      );
-
-      if (contextCatalogStores.length === 0 && suppressedRankedChainConflicts > 0) {
-        mapDiscoveryNotice =
-          "Map-context discovery returned Kroger/Aldi pins, but ingested catalog coordinates already cover those chains — duplicates were suppressed. Ranked estimates remain Kroger-family and Aldi only when gates pass.";
-      } else if (contextCatalogStores.length > 0) {
-        const parts: string[] = [];
-        if (osmSource && osmSource.stores.length > 0) {
-          parts.push(
-            osmSource.cacheHit
-              ? "cached OpenStreetMap context pins"
-              : "OpenStreetMap context pins",
-          );
-        }
-        if (snapSource && snapSource.stores.length > 0) {
-          parts.push("USDA SNAP directory context pins (verify in store)");
-        }
-        mapDiscoveryNotice = `Map includes ${parts.join(" and ")} for gaps only — not live checkout data. Kroger-family and Aldi pins prefer Postgres and retailer API coordinates when present.`;
-      }
-    } else {
+    if (gapFillOutcome.timedOut) {
       mapDiscoveryNotice =
-        "Some nearby stores may be missing from the map. Map-context discovery was unavailable or returned no results — pins show ingested catalog and provider data only. Verify locations in store.";
+        "Saved store locations loaded first. Additional map-context pins may appear on a later refresh while background discovery warms.";
+    } else {
+      const mapContextDiscovery = gapFillOutcome.result;
+
+      if (mapContextDiscovery.stores.length > 0) {
+        let contextCatalogStores = mapContextDiscovery.stores
+          .map(mapContextCandidateToCatalogStore)
+          .map(catalogStoreRecordToCatalogStore);
+
+        let suppressedRankedChainConflicts = 0;
+        if (osmRankedChainPolicy === "suppress-conflicts") {
+          const filtered = filterMapContextCatalogStoresConflictingWithIngestedRankedChains(
+            mergedCatalogStores,
+            contextCatalogStores,
+            MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES,
+          );
+          contextCatalogStores = filtered.kept;
+          suppressedRankedChainConflicts = filtered.suppressedCount;
+        }
+
+        if (contextCatalogStores.length > 0) {
+          mergedCatalogStores = mergeCatalogStoresForMap(
+            mergedCatalogStores,
+            contextCatalogStores,
+          );
+          usesEphemeralOsmDiscovery = true;
+        }
+
+        const osmSource = mapContextDiscovery.sources.find(
+          (entry) => entry.source === "openstreetmap-overpass" || entry.source === "fixture",
+        );
+        const snapSource = mapContextDiscovery.sources.find(
+          (entry) => entry.source === "usda-snap-retailer-locator",
+        );
+
+        if (contextCatalogStores.length === 0 && suppressedRankedChainConflicts > 0) {
+          mapDiscoveryNotice =
+            "Some map pins were skipped because saved store locations already cover those stores nearby.";
+        } else if (contextCatalogStores.length > 0) {
+          const parts: string[] = [];
+          if (osmSource && osmSource.stores.length > 0) {
+            parts.push(
+              osmSource.cacheHit
+                ? "cached map context pins"
+                : "map context pins",
+            );
+          }
+          if (snapSource && snapSource.stores.length > 0) {
+            parts.push("directory context pins (verify in store)");
+          }
+          mapDiscoveryNotice = `Map includes ${parts.join(" and ")} for gaps only — not live checkout data. Saved store locations are preferred when available.`;
+        }
+      } else {
+        mapDiscoveryNotice =
+          "Some nearby stores may be missing from the map. Verify store locations before visiting.";
+      }
     }
   }
+
+  mergedCatalogStores = dedupeKrogerStoresByIdentity(mergedCatalogStores);
+  mergedCatalogStores = filterSupersededOsmKrogerFixturePins(
+    mergedCatalogStores,
+    location,
+    radiusMiles,
+  );
 
   let nearbyStores = buildNearbyStoresForSearch(
     mergedCatalogStores,
@@ -181,7 +196,7 @@ export async function getMarketSearchExperience(
     snapshot.priceObservations,
     recipeIngredientIds,
   );
-  const coverageTrackedIngredients = await resolveKrogerCoverageTrackedIngredients();
+  const coverageTrackedIngredients = await resolveKrogerPreviewTrackedIngredients();
   const providerPricingPreviews = await buildProviderPricingPreviews({
     providerStores: providerStoreSearches.flatMap((search) => search.stores),
     trackedIngredients: coverageTrackedIngredients,
@@ -207,6 +222,7 @@ export async function getMarketSearchExperience(
   );
   const providerPromotionReadiness = buildAllProviderPromotionReadiness({
     previews: providerPricingPreviews,
+    trackedIngredients: coverageTrackedIngredients,
   });
   const weeklyAdIngestionStatus = await getWeeklyAdIngestionMarketSummaries({
     storeIds: nearbyStores.map((store) => store.id),
@@ -287,6 +303,8 @@ export function buildNearbyStoresForSearch(
       return {
         id: store.id,
         name: store.name,
+        city: store.city,
+        state: store.state,
         kind: store.kind,
         latitude: store.latitude,
         longitude: store.longitude,
@@ -341,6 +359,56 @@ export function collectRecipeIngredientIdsForRollout(
 
 function collectRecipeIngredientIds(recipes: CatalogRecipeRecord[]): string[] {
   return collectRecipeIngredientIdsForRollout(recipes);
+}
+
+const MAP_SEARCH_GAP_FILL_TIMEOUT_MS = 3_000;
+
+function resolveMapSearchGapFillTimeoutMs(
+  value = process.env.YUM4LESS_MAP_SEARCH_GAP_FILL_TIMEOUT_MS,
+): number {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  return MAP_SEARCH_GAP_FILL_TIMEOUT_MS;
+}
+
+async function discoverMapContextStoresWithinBudget(input: {
+  latitude: number;
+  longitude: number;
+  radiusMiles: number;
+  zipCode?: string;
+}): Promise<
+  | { timedOut: true }
+  | { timedOut: false; result: MapContextDiscoveryResult }
+> {
+  const timeoutMs = resolveMapSearchGapFillTimeoutMs();
+  const discoveryPromise = discoverMapContextStores(input);
+
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<{ timedOut: true }>((resolve) => {
+    timeoutHandle = setTimeout(() => resolve({ timedOut: true }), timeoutMs);
+  });
+
+  const discoveryOutcome = discoveryPromise.then((result) => ({
+    timedOut: false as const,
+    result,
+  }));
+
+  const outcome = await Promise.race([discoveryOutcome, timeoutPromise]);
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+  }
+
+  if (outcome.timedOut) {
+    void discoveryPromise.catch(() => undefined);
+    console.warn(
+      `[market-search] deferred map context discovery after ${timeoutMs}ms for ${input.latitude.toFixed(3)},${input.longitude.toFixed(3)} radius=${input.radiusMiles}`,
+    );
+  }
+
+  return outcome;
 }
 
 function buildWeeklyAdCoverageByStoreId(

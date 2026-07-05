@@ -70,8 +70,8 @@ describe("getSaleConfidence", () => {
       matchConfidence: 0.88,
     });
 
-    expect(confidence.label).toBe("Recently checked Kroger promo — verify at shelf");
-    expect(confidence.note).toContain("official Kroger API");
+    expect(confidence.label).toBe("Recently checked sale price — verify at shelf");
+    expect(confidence.note).toContain("online store data");
   });
 
   it("labels weak Kroger matches as directional", () => {
@@ -83,7 +83,7 @@ describe("getSaleConfidence", () => {
     });
 
     expect(confidence.level).toBe("directional-provider-match");
-    expect(confidence.label).toBe("Estimated Kroger price — verify in store");
+    expect(confidence.label).toBe("Estimated store price — verify in store");
   });
 });
 
@@ -121,7 +121,7 @@ describe("resolveInternalKrogerStoreId", () => {
     ).toBe("kroger-mechanicsville");
   });
 
-  it("prefers bootstrap slug ids over API-derived ids when source_store_id matches", () => {
+  it("prefers API-derived Kroger ids over bootstrap slugs when source_store_id matches", () => {
     expect(
       resolveInternalKrogerStoreId({
         previewStoreName: "Kroger",
@@ -141,7 +141,7 @@ describe("resolveInternalKrogerStoreId", () => {
           }),
         ],
       }),
-    ).toBe("kroger-mechanicsville");
+    ).toBe("kroger-02900529");
   });
 
   it("does not map a lone Kroger row without sourceStoreId or canonical id match (H8)", () => {

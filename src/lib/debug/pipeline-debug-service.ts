@@ -4,8 +4,7 @@ import {
   getRankedPriceObservationsWithTimestamps,
   getRecipeCatalog,
 } from "@/lib/market-repository";
-import { resolveKrogerCoverageTrackedIngredients } from "@/lib/provider-search-terms";
-import { PROVIDER_TRACKED_INGREDIENTS } from "@/lib/provider-tracked-ingredients";
+import { resolveKrogerPreviewTrackedIngredients } from "@/lib/provider-search-terms";
 import type { ProviderRolloutStatus, StoreChain } from "@/lib/provider-rollout";
 import {
   buildNearbyStoresForSearch,
@@ -124,14 +123,10 @@ export async function getPipelineDebugView(input: {
   location: ResolvedSearchLocation;
   radiusMiles: number;
 }): Promise<PipelineDebugResponse> {
-  let trackedIngredientIds = PROVIDER_TRACKED_INGREDIENTS.map(
+  const previewTrackedIngredients = await resolveKrogerPreviewTrackedIngredients();
+  const trackedIngredientIds = previewTrackedIngredients.map(
     (ingredient) => ingredient.ingredientId,
   );
-
-  const dbTerms = await resolveKrogerCoverageTrackedIngredients();
-  if (dbTerms.length > 0) {
-    trackedIngredientIds = dbTerms.map((ingredient) => ingredient.ingredientId);
-  }
 
   const [pricingContext, recipeCatalog] = await Promise.all([
     getMarketPricingContext(),

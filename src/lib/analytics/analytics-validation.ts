@@ -31,7 +31,6 @@ export const ANALYTICS_EVENT_PROPERTY_ALLOWLISTS: Record<
     "has_fallback_notice",
   ],
   rank_meals_failed: ["error_code"],
-  trust_explainer_dismissed: [],
   store_pin_selected: ["chain", "recommendation_enabled"],
 };
 

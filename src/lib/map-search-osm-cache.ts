@@ -1,9 +1,6 @@
 import type { OsmDiscoveredFoodRetailStore } from "@/lib/osm-food-retail-discovery";
 import { discoverFoodRetailStoresNearLocation } from "@/lib/osm-food-retail-discovery";
 
-/** Default sparse-pin threshold: trigger search-time Overpass when DB pins within radius are below this count. */
-export const DEFAULT_MAP_SPARSE_PIN_THRESHOLD = 3;
-
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 type OsmCacheEntry = {
@@ -24,17 +21,6 @@ export function resolveMapSearchOsmCacheTtlMs(
   }
 
   return DEFAULT_CACHE_TTL_MS;
-}
-
-export function resolveMapSparsePinThreshold(
-  value = process.env.YUM4LESS_MAP_SPARSE_PIN_THRESHOLD,
-): number {
-  const parsed = Number(value);
-  if (Number.isFinite(parsed) && parsed >= 0) {
-    return parsed;
-  }
-
-  return DEFAULT_MAP_SPARSE_PIN_THRESHOLD;
 }
 
 export function shouldUseMapSearchOsmFixture(): boolean {

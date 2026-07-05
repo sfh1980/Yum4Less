@@ -1,3 +1,9 @@
+import {
+  buildDirectionalRolloutNote,
+  inferStoreChainFromName,
+  listProviderCatalogRolloutChains,
+} from "@/lib/chain-rollout-policy";
+
 export type StoreChain =
   | "kroger"
   | "publix"
@@ -34,10 +40,7 @@ export type WeeklyAdRolloutContext = {
 };
 
 /** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
-const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>([
-  "publix",
-  "food-lion",
-]);
+const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>(["lidl"]);
 
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
@@ -46,8 +49,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     status: "coming-soon",
     recommendationEnabled: false,
     priority: 1,
-    note:
-      "Kroger meal estimates are not ready in this area yet. Weekly-ad or official online coverage is still building.",
+    note: buildDirectionalRolloutNote("Kroger"),
   },
   publix: {
     chain: "publix",
@@ -55,8 +57,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     status: "coming-soon",
     recommendationEnabled: false,
     priority: 2,
-    note:
-      "BETA: Publix meal estimates use weekly-ad deals when ingested near you and promotion gates pass. Totals are directional—verify in store.",
+    note: buildDirectionalRolloutNote("Publix"),
   },
   walmart: {
     chain: "walmart",
@@ -65,7 +66,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 3,
     note:
-      "Walmart is nearby context only. Live, current weekly-ad pricing from Walmart is not available yet—this store does not feed ranked meal totals.",
+      "Shown on the map for nearby planning — dinner price estimates are not available from this store yet.",
   },
   aldi: {
     chain: "aldi",
@@ -73,8 +74,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     status: "coming-soon",
     recommendationEnabled: false,
     priority: 4,
-    note:
-      "BETA: Aldi meal estimates use weekly-ad deals when ingested near you and promotion gates pass. Totals are directional—verify in store.",
+    note: buildDirectionalRolloutNote("Aldi"),
   },
   bjs: {
     chain: "bjs",
@@ -83,7 +83,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 5,
     note:
-      "BJ's remains on the later-chain roadmap and is not active for recommendation pricing yet.",
+      "Shown on the map for nearby planning — dinner price estimates are not available from this store yet.",
   },
   "food-lion": {
     chain: "food-lion",
@@ -91,8 +91,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     status: "coming-soon",
     recommendationEnabled: false,
     priority: 99,
-    note:
-      "BETA: Food Lion meal estimates use weekly-ad deals when ingested near you and promotion gates pass. Totals are directional—verify in store.",
+    note: buildDirectionalRolloutNote("Food Lion"),
   },
   lidl: {
     chain: "lidl",
@@ -101,7 +100,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 99,
     note:
-      "Lidl is outside the current trusted rollout path, so it is shown only as nearby-store context.",
+      "Lidl sale coverage is being rehearsed for Yum4Less, but dinner price estimates are not available from this store yet.",
   },
   "trader-joes": {
     chain: "trader-joes",
@@ -110,7 +109,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 99,
     note:
-      "Trader Joe's is outside the current trusted rollout path, so it is shown only as nearby-store context.",
+      "Shown on the map for nearby planning — dinner price estimates are not available from this store yet.",
   },
   "dollar-general": {
     chain: "dollar-general",
@@ -119,7 +118,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 99,
     note:
-      "Dollar General is outside the current trusted rollout path, so it is shown only as nearby-store context.",
+      "Shown on the map for nearby planning — dinner price estimates are not available from this store yet.",
   },
   unknown: {
     chain: "unknown",
@@ -128,12 +127,12 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 99,
     note:
-      "This store is not part of the current trusted pricing rollout, so it is not used for ranked recommendations.",
+      "Shown on the map for nearby planning — dinner price estimates are not available from this store yet.",
   },
 };
 
 export function getProviderRolloutForStore(storeName: string): ProviderRolloutEntry {
-  return PROVIDER_ROLLOUT[inferStoreChain(storeName)];
+  return PROVIDER_ROLLOUT[inferStoreChainFromName(storeName)];
 }
 
 export function resolveProviderRolloutForStore(
@@ -155,7 +154,7 @@ export function resolveProviderRolloutForStore(
       ...base,
       status: "weekly-ad-preview",
       recommendationEnabled: true,
-      note: `${base.label} meal prices use weekly ad deals (${weeklyAdContext.matchedIngredientCount} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`,
+      note: `${base.label} meal prices use saved sale prices (${weeklyAdContext.matchedIngredientCount} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`,
     };
   }
 
@@ -168,7 +167,7 @@ export function resolveProviderRolloutForStore(
       ...base,
       status: "official-api-preview",
       recommendationEnabled: true,
-      note: `${base.label} meal prices use recently checked official Kroger API data (${freshCount} fresh ingredient price(s) within 24 hours). Totals are estimated—verify price, package size, and tags in store before checkout.`,
+      note: `${base.label} meal prices use recently checked online store prices (${freshCount} fresh ingredient price(s) within 24 hours). Totals are estimated—verify price, package size, and tags in store before checkout.`,
     };
   }
 
@@ -177,7 +176,7 @@ export function resolveProviderRolloutForStore(
       ...base,
       status: "limited-coverage",
       recommendationEnabled: false,
-      note: `${base.label} has some weekly ad prices (${weeklyAdContext.matchedIngredientCount} matched ingredients), but coverage is limited for ranked meal pricing right now.`,
+      note: `${base.label} has some saved sale prices (${weeklyAdContext.matchedIngredientCount} matched ingredients), but coverage is limited for dinner estimates right now.`,
     };
   }
 
@@ -201,78 +200,13 @@ export function listResolvedProviderRollout(input?: {
       ...entry,
       status: "weekly-ad-preview" as const,
       recommendationEnabled: true,
-      note: `${entry.label} meal prices can use weekly ad deals when nearby stores have enough coverage. Totals are estimated—verify in store before checkout.`,
+      note: `${entry.label} meal prices can use saved sale prices when nearby stores have enough coverage. Totals are estimated—verify in store before checkout.`,
     };
   });
 }
 
 export function listProviderRollout(): ProviderRolloutEntry[] {
-  return [
-    PROVIDER_ROLLOUT.kroger,
-    PROVIDER_ROLLOUT.publix,
-    PROVIDER_ROLLOUT.walmart,
-    PROVIDER_ROLLOUT.aldi,
-    PROVIDER_ROLLOUT.bjs,
-  ];
-}
-
-const KROGER_FAMILY_NAME_MARKERS = [
-  "kroger",
-  "harris teeter",
-  "ralphs",
-  "fred meyer",
-  "king soopers",
-  "smith's",
-  "smiths",
-  "fry's",
-  "frys",
-  "qfc",
-  "mariano",
-  "pick n save",
-  "metro market",
-  "jay c",
-  "food 4 less",
-  "food4less",
-  "dillons",
-  "gerbes",
-  "baker's",
-  "bakers",
-  "city market",
-  "pay less",
-];
-
-function inferStoreChain(storeName: string): StoreChain {
-  const normalized = storeName.trim().toLowerCase();
-
-  if (KROGER_FAMILY_NAME_MARKERS.some((marker) => normalized.includes(marker))) {
-    return "kroger";
-  }
-  if (normalized.includes("publix")) {
-    return "publix";
-  }
-  if (normalized.includes("walmart")) {
-    return "walmart";
-  }
-  if (normalized.includes("aldi")) {
-    return "aldi";
-  }
-  if (normalized.includes("bj")) {
-    return "bjs";
-  }
-  if (normalized.includes("food lion")) {
-    return "food-lion";
-  }
-  if (normalized.includes("lidl")) {
-    return "lidl";
-  }
-  if (normalized.includes("trader joe")) {
-    return "trader-joes";
-  }
-  if (normalized.includes("dollar general")) {
-    return "dollar-general";
-  }
-
-  return "unknown";
+  return listProviderCatalogRolloutChains().map((chain) => PROVIDER_ROLLOUT[chain]);
 }
 
 function resolveComingLaterMealPricingRollout(
@@ -281,7 +215,7 @@ function resolveComingLaterMealPricingRollout(
 ): ProviderRolloutEntry {
   const rehearsalNote =
     weeklyAdContext?.usesWeeklyAdSource
-      ? " Rehearsal or fixture weekly-ad rows may exist in development; they are not used for ranked meal totals."
+      ? " Saved test prices may exist in development; they are not used for dinner totals."
       : "";
 
   return {
@@ -298,7 +232,7 @@ function resolveWalmartRollout(
 ): ProviderRolloutEntry {
   const rehearsalNote =
     weeklyAdContext?.usesWeeklyAdSource
-      ? " Saved rehearsal or test rows may exist in development, but they are not live Walmart deals."
+      ? " Saved test prices may exist in development; they are not live store deals."
       : "";
 
   return {

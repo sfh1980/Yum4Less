@@ -113,6 +113,7 @@ const WEEKLY_AD_INGREDIENT_SEARCH_ALIASES: Record<string, string[]> = {
   ],
   "flour-tortillas": [
     "flour tortillas",
+    "flour tortilla",
     "soft flour tortillas",
     "burrito tortillas",
     "large flour tortillas",
@@ -219,7 +220,7 @@ const WEEKLY_AD_INGREDIENT_SEARCH_ALIASES: Record<string, string[]> = {
   avocado: ["avocado", "hass avocado", "avocados"],
   "cream-cheese": ["cream cheese", "philadelphia cream cheese", "soft cream cheese"],
   "heavy-cream": ["heavy cream", "heavy whipping cream", "whipping cream"],
-  "plain-yogurt": ["plain yogurt", "greek yogurt plain", "whole milk yogurt"],
+  "plain-yogurt": ["plain yogurt", "greek yogurt", "greek yogurt plain", "whole milk yogurt"],
   "shredded-cheese-blend": [
     "mexican cheese blend",
     "shredded mexican cheese",

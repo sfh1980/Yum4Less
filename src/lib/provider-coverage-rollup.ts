@@ -1,4 +1,3 @@
-import { PROVIDER_TRACKED_INGREDIENTS } from "@/lib/provider-tracked-ingredients";
 import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
 import type { ProviderPricingPreviewIngredient } from "@/lib/providers/provider-types";
 import type { RankedPricingSource } from "@/lib/price-source-policy";
@@ -40,8 +39,8 @@ export type ProviderCoverageRollup = {
 
 export function buildProviderCoverageRollup(
   previews: ProviderPricingPreviewResult[],
-  rankedPricingSource: RankedPricingSource = "none",
-  trackedIngredients: ProviderPricingPreviewIngredient[] = PROVIDER_TRACKED_INGREDIENTS,
+  rankedPricingSource: RankedPricingSource,
+  trackedIngredients: ProviderPricingPreviewIngredient[],
 ): ProviderCoverageRollup {
   return buildSingleProviderCoverageRollup(
     selectPrimaryPricingPreview(previews),
@@ -52,8 +51,8 @@ export function buildProviderCoverageRollup(
 
 export function buildSingleProviderCoverageRollup(
   preview: ProviderPricingPreviewResult | undefined,
-  rankedPricingSource: RankedPricingSource = "none",
-  trackedIngredients: ProviderPricingPreviewIngredient[] = PROVIDER_TRACKED_INGREDIENTS,
+  rankedPricingSource: RankedPricingSource,
+  trackedIngredients: ProviderPricingPreviewIngredient[],
 ): ProviderCoverageRollup {
   const totalTrackedIngredients = resolveTotalTrackedIngredients(
     preview,

@@ -1,5 +1,6 @@
 import { getDbPool } from "@/lib/db";
 import type { CatalogPriceObservation, CatalogRecipeRecord } from "@/lib/market-catalog-types";
+import { RANKED_PRICE_CACHE_AGE_SQL_FILTER } from "@/lib/ranked-price-cache-policy";
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
 import {
   buildThemealdbMealUrl,
@@ -90,6 +91,7 @@ export async function getSaleIngredientIdsForRanking(): Promise<Set<string>> {
       where po.source_name like '%-weekly-ad-scrape'
         and po.sale_label is not null
         and (po.valid_through is null or po.valid_through >= now())
+        and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
     `,
   );
 

@@ -18,30 +18,56 @@ describe("store catalog sync (integration)", () => {
       `delete from stores where source_name = 'kroger-official-api' and id <> 'kroger-mechanicsville'`,
     );
     await pool.query(`
-      update stores
-      set
-        latitude = 37.615300,
-        longitude = -77.349100,
-        source_name = 'yum4less-internal-catalog',
-        source_store_id = 'kroger-mechanicsville',
-        name = 'Kroger',
-        last_verified_at = now()
-      where id = 'kroger-mechanicsville'
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values (
+        'kroger-mechanicsville',
+        'Kroger',
+        'grocery',
+        'Mechanicsville',
+        'VA',
+        37.615460,
+        -77.329390,
+        'yum4less-internal-catalog',
+        'kroger-mechanicsville',
+        now()
+      )
+      on conflict (id) do update set
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        source_name = excluded.source_name,
+        source_store_id = excluded.source_store_id,
+        name = excluded.name,
+        last_verified_at = excluded.last_verified_at
     `);
   });
 
   afterEach(async () => {
     const pool = getDbPool();
     await pool.query(`
-      update stores
-      set
-        latitude = 37.615300,
-        longitude = -77.349100,
-        source_name = 'yum4less-internal-catalog',
-        source_store_id = 'kroger-mechanicsville',
-        name = 'Kroger',
-        last_verified_at = now()
-      where id = 'kroger-mechanicsville'
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values (
+        'kroger-mechanicsville',
+        'Kroger',
+        'grocery',
+        'Mechanicsville',
+        'VA',
+        37.615460,
+        -77.329390,
+        'yum4less-internal-catalog',
+        'kroger-mechanicsville',
+        now()
+      )
+      on conflict (id) do update set
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        source_name = excluded.source_name,
+        source_store_id = excluded.source_store_id,
+        name = excluded.name,
+        last_verified_at = excluded.last_verified_at
     `);
     await pool.query(`delete from stores where id like 'osm-%'`);
     await pool.query(

@@ -1,4 +1,5 @@
 import type { CatalogPriceObservation } from "@/lib/market-catalog-types";
+import { WEEKLY_AD_RANKED_PRICING_CHAINS } from "@/lib/chain-rollout-policy";
 import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
 import type { ProviderPricingCoverageStatus } from "@/lib/providers/provider-types";
 import type { StoreChain } from "@/lib/provider-rollout";
@@ -9,13 +10,7 @@ export const MIN_WEEKLY_AD_PROMOTION_MATCHES = 3;
 export const MIN_WEEKLY_AD_PROMOTION_CONFIDENCE = 0.45;
 export const MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS = 14;
 
-export const WEEKLY_AD_RANKED_PRICING_CHAINS = new Set<WeeklyAdChain>([
-  "kroger",
-  "publix",
-  "walmart",
-  "aldi",
-  "food-lion",
-]);
+export { WEEKLY_AD_RANKED_PRICING_CHAINS } from "@/lib/chain-rollout-policy";
 
 export type WeeklyAdStoreCoverage = {
   storeId: string;

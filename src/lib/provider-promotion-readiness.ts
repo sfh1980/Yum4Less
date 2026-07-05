@@ -3,6 +3,7 @@ import { buildSingleProviderCoverageRollup } from "@/lib/provider-coverage-rollu
 import { getProviderChainLabel } from "@/lib/providers/provider-labels";
 import { getStoreDiscoveryProviders } from "@/lib/providers/provider-registry";
 import type {
+  ProviderPricingPreviewIngredient,
   ProviderPricingPreviewResult,
   StoreDiscoveryProvider,
 } from "@/lib/providers/provider-types";
@@ -42,6 +43,7 @@ export type ProviderPromotionReadiness = {
 
 export function buildAllProviderPromotionReadiness(input: {
   previews: ProviderPricingPreviewResult[];
+  trackedIngredients: ProviderPricingPreviewIngredient[];
 }): ProviderPromotionReadiness[] {
   const providers = getStoreDiscoveryProviders();
 
@@ -52,7 +54,11 @@ export function buildAllProviderPromotionReadiness(input: {
 
     return buildProviderPromotionReadiness({
       provider: providerClient.provider,
-      coverageRollup: buildSingleProviderCoverageRollup(preview),
+      coverageRollup: buildSingleProviderCoverageRollup(
+        preview,
+        "none",
+        input.trackedIngredients,
+      ),
       preview,
     });
   });
