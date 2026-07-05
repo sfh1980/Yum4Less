@@ -10,7 +10,8 @@ alwaysApply: true
 - Never hardcode secrets, credentials, API keys, tokens, or connection strings; use environment variables and keep sensitive logic server-side.
 - Treat location data, store feeds, scraped content, recipe imports, and all external API responses as untrusted input.
 - For data acquisition, prefer official APIs first and use scraping only where terms, reliability, and maintenance burden are acceptable.
-- **Per-chain scrape compliance guard (M128/M151):** check robots.txt before scheduled scrapes; detect block signals (403, CAPTCHA, challenge pages) and auto-pause that chain's ingest without affecting others; manual per-chain kill switch always available independent of automation.
+- **Per-chain scrape compliance guard (M128/M151) — shipped today:** ingest operators can **manually pause** a chain when block signals appear (403, WAF/challenge pages, repeated failures). There is **no** automated robots.txt check, **no** automated per-chain auto-pause, and **no** automated kill-switch yet — do not assume those protections exist in code.
+- **M128/M151 automation (homelab slice, not shipped):** planned homelab deploy work adds robots.txt checks before scheduled scrapes, automatic per-chain pause on block signals without affecting other chains, and owner-accessible per-chain kill switches independent of automation.
 - When proposing a new dependency, explain why it is needed, what risk it adds, and whether a smaller alternative exists.
 - Favor architectures that are cache-first, rate-aware, and resilient to upstream data instability.
 - Protect user privacy by storing only the minimum location and preference data needed for the product to function.

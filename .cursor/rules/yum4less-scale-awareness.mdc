@@ -1,0 +1,47 @@
+---
+description: Scale-awareness check on every issue fix — symptom vs root cause
+alwaysApply: true
+---
+
+# Yum4Less Scale-Awareness On Issue Fixes
+
+When any issue is identified and fixed — regardless of how small it appears — the implementing agent **MUST** answer two questions before the fix is considered complete.
+
+## Q1 — Small scale
+
+Does this fix resolve today's specific symptom correctly, with no unintended side effects?
+
+## Q2 — Large scale
+
+Is this fix addressing a root cause, or patching a symptom of a deeper structural pattern that will recur as the app scales? Specifically:
+
+- Is there a shared abstraction (function, model, component, config) being used in a context it wasn't designed for?
+- Is there a hardcoded value, parallel list, or duplicated definition that will need to be manually kept in sync as the app grows?
+- Is there a missing separation of concerns (one thing doing two jobs) that will produce a new variant of this bug when a new feature/chain/surface is added?
+
+If Q2 reveals a deeper pattern: the fix **MUST** address the root cause, not just the symptom. If the root-cause fix is out of scope for this slice, it **MUST** be explicitly flagged with a **Scale risk: [description]** note so it lands in the owner's backlog — not silently deferred.
+
+## Applies to
+
+- Bug fixes (any severity)
+- Copy/doc drift corrections
+- Test failures
+- Configuration mismatches
+- Any "one-line fix" — highest-risk candidates for hiding a deeper pattern
+
+## Does not require
+
+- Fixing everything in one slice — scope discipline still applies
+- Architectural rewrites for every small bug — sometimes the small fix **IS** the right fix; Q2 just requires confirming that explicitly
+
+## Required format in every fix response
+
+Include this block in the routing/findings section of every response that includes a fix:
+
+```
+Scale check:
+- Small scale: [one sentence — symptom resolved Y/N and how]
+- Large scale: [one sentence — root cause addressed Y/N, or scale risk flagged: description]
+```
+
+Future map surfaces (e.g. ingredients link bar, "stores near this deal") **MUST** get their own builder or explicitly reuse `buildDiscoveryMapModel` / `buildSingleStoreMapModel` with a documented reason — not assume the discovery model fits by default. See `src/lib/nearby-stores-map-model.ts`.

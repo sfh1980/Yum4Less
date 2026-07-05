@@ -36,6 +36,7 @@ Rules:
 6. Prefer additive schema changes, explicit constraints, and indexes that match real query patterns.
 7. Avoid storing unnecessary precise location history; treat ZIP and approximate location inputs as sensitive data.
 8. After schema, seed, or ingest changes, verify with integration tests when they exist and Postgres MCP for latest-row reads (`price_observations`, store lineup, constraints) after `npm run db:up`; MCP is read-only and must not replace migrations.
+9. **Canonical domain lists:** Before adding a new hardcoded list/array/Set of domain values (chains, statuses, categories, etc.), check whether a canonical source already exists in the codebase (e.g. `chain-rollout-policy.ts`) and derive from it instead of typing an independent copy. If no canonical source exists yet but this is the second or third place the same set of values is being typed out, flag it for consolidation rather than adding a fourth copy.
 
 When invoked:
 1. Inspect the affected schema, queries, and rollout risk.

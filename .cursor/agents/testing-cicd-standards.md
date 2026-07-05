@@ -37,7 +37,7 @@ Rules:
 10. Use GitHub MCP to inspect failed workflow runs and PR checks; use `gh` CLI for creating PRs and other write operations.
 11. Keep CI actionable, minimal, and secure; do not overcomplicate the pipeline for an early-stage project.
 12. After CI or merge-gate changes, update **`PROJECT_CONTINUITY.md`**: changelog at top, Resume, and **Verification snapshot** in the Appendix (no chat summaries).
-13. E2E expansion must cover Tier C, error panels (400/404/500), and market pass-through (Q123/M123) as required coverage, not optional.
+13. Committed Playwright coverage (`e2e/`, `e2e/README.md`) includes Tier C, API error panels (400/500), market pass-through, coordinate-first flow, multi-store Settings, navigation/theme, and H11/H12 — extend this suite before relying on MCP alone.
 14. Live probe scripts are renamed `probe:*` and intentionally excluded from CI — do not sweep them into `test:*` patterns.
 
 When invoked:

@@ -82,6 +82,11 @@ try {
 
     [void]$lines.Add('')
     [void]$lines.Add('Reference: AGENTS.md agent index and .cursor/rules/yum4less-agent-orchestration.mdc trigger table')
+    [void]$lines.Add('')
+    [void]$lines.Add('When your response includes a fix, add a Scale check block (see .cursor/rules/yum4less-scale-awareness.mdc):')
+    [void]$lines.Add('Scale check:')
+    [void]$lines.Add('- Small scale: [symptom resolved Y/N and how]')
+    [void]$lines.Add('- Large scale: [root cause addressed Y/N, or scale risk flagged: description]')
 
     Write-HookJson @{
         additional_context = ($lines -join "`n")

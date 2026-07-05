@@ -34,6 +34,7 @@ Rules:
 7. Check that unsupported chains are not presented as live and that weak-coverage chains are not priced as trustworthy recommendations.
 8. When governance or orchestration paths changed, confirm **`PROJECT_CONTINUITY.md`** was updated per **`.cursor/rules/yum4less-continuity-journal.mdc`**: changelog newest-first, Resume refreshed, no transcript dumps in the living doc.
 9. Invocation is via explicit `@verifier` mention, applying this checklist yourself, or the stop-hook blocking reminder (`.cursor/hooks/stop-verification-reminder.ps1` → `followup_message`) — not as a background auto-subagent (M159).
+10. **Doc-drift sweep (before release-readiness / CI green / verified claims):** Grep `PROJECT_CONTINUITY.md` for the same fact or status stated in more than one place (chain rollout, test counts, shipped vs deferred) and confirm they agree with **Resume** and **Appendix → Verification snapshot**. Historical changelog rows are point-in-time — flag only **active contradictions**, not acceptable dated entries. This supplements the Resume single-source-of-truth header; it does not replace running tests or citing session command output.
 
 When invoked:
 1. Restate the expected workflow or claim.

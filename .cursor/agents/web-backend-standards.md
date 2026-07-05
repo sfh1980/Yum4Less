@@ -22,7 +22,7 @@ Priorities:
 2. Keep contracts explicit and recommendation outcomes explainable.
 3. Prefer small, explicit services over heavy abstractions or premature microservices.
 4. Minimize retained location and preference data.
-5. **v1 ranked chains:** Kroger family + Aldi only; Walmart ranked pricing deferred; other chains map/context unless direction changes — see **`PROJECT_CONTINUITY.md` → Decision log**.
+5. **v1 ranked chains:** Kroger family, Aldi, Publix, and Food Lion when promotion gates pass; Walmart ranked pricing deferred; other chains map/context unless direction changes — see **`PROJECT_CONTINUITY.md` → Decision log**.
 6. Respect existing repository conventions unless the user asks to change them.
 
 Rules:
@@ -37,6 +37,7 @@ Rules:
 7. Handle stale prices, incomplete catalogs, ambiguous ingredient matches, unsupported stores, and provider disagreement as normal cases.
 8. Use explicit validation, safe persistence patterns, and structured observability for source failures and recommendation fallbacks.
 9. After persistence or ingest changes, confirm latest-row semantics and provenance metadata with integration tests and Postgres MCP (`npm run db:up` first); do not infer freshness from UI alone.
+10. **Canonical domain lists:** Before adding a new hardcoded list/array/Set of domain values (chains, statuses, categories, etc.), check whether a canonical source already exists in the codebase (e.g. `chain-rollout-policy.ts`) and derive from it instead of typing an independent copy. If no canonical source exists yet but this is the second or third place the same set of values is being typed out, flag it for consolidation rather than adding a fourth copy.
 
 When invoked:
 1. Inspect the affected backend area, contracts, and data flow.

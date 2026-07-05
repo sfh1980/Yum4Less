@@ -16,7 +16,7 @@ Follow **`.cursor/rules/yum4less-agent-orchestration.mdc`** (trigger table) and 
 - **MUST** run `npm test` before calling any implementation slice verified or complete.
 - **MUST** run `npm run build` when imports, routes, or Next.js config changed.
 - **MUST** run `npm run test:integration` when Postgres merge-gating behavior changed (`npm run db:up` first).
-- **MUST** run `npm run test:e2e:ci` only when explicitly validating the full beta v1 browser flow (heavy; not every slice).
+- **MUST** run `npm run test:e2e:ci` when Playwright specs, trust-sensitive UI flows, map/tab navigation, or location-to-results wiring changed (see `e2e/README.md`).
 - Ranking changes **MUST** include fixture-based before/after checks on representative searches so trust-sensitive regressions are visible.
 - Add the smallest high-value tests first: unit logic, route tests, DB/seed fallback checks, then UI smoke coverage.
 - Security-sensitive routes **MUST** keep deterministic tests for validation bounds, public API read-only behavior (`YUM4LESS_ENABLE_API_DB_WRITES`), response sanitization, and shopping-route stop limits.
@@ -55,11 +55,20 @@ Read each MCP tool schema under `mcps/<server>/tools/` before calling MCP tools.
 - **MUST** use (or `gh`) to inspect PR checks and workflow failures before claiming release readiness or CI green.
 - Prefer `gh` CLI for mutating GitHub actions unless the user explicitly wants MCP.
 
-### Playwright MCP
+### Playwright (`@playwright/test` — CI merge gate)
 
-- **MUST** use when Vitest cannot prove trust-sensitive UI (geolocation/coordinate-first flow, map, carousel, trust/fallback labels, modals).
-- Run `npm run dev` first on `localhost:3000` with coordinates **`37.6085`, `-77.3739`** primary (ZIP **`23111`** fallback-path only) and fixture/seed data.
+Committed specs under `e2e/` are the **primary** browser verification layer. CI runs the full suite via `npm run test:e2e:ci` (see `e2e/README.md` for file map).
+
+**Coverage includes:** ZIP + geolocation Settings flows, four-chain store selection, Tier C (mocked), API 400/500 error copy, market pass-through on rank, trust labels/accordion, bottom nav + theme, H11/H12 error surfaces, mobile smoke.
+
+**MUST** run `npm run test:e2e:ci` when e2e specs or trust-sensitive UI/flow wiring changed.
+
+### Playwright MCP (exploratory — not CI)
+
+- Use when Vitest and committed e2e still leave a gap (novel confused-user paths, one-off audits, screenshot evidence).
+- Run `npm run dev` on `localhost:3000` with coordinates **`37.6085`, `-77.3739`** primary (ZIP **`23111`** fallback-path only) and fixture/seed data.
 - **MUST** assert explicit trust wording (`estimated`, `directional`, `limited coverage`, coming soon, context only) — not just that elements render.
+- Codify recurring MCP findings into `e2e/*.spec.ts` — do not rely on MCP alone for merge gates.
 - Keep checks deterministic; do not gate merge on live retailer pages or unstable external sites.
 - Do not use Playwright MCP for production weekly-ad scraping or as a substitute for fast unit/integration tests.
 

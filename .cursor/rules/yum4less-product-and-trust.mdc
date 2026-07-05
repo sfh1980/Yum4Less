@@ -5,25 +5,25 @@ alwaysApply: true
 
 # Yum4Less Product And Trust
 
-Source of truth for locked decisions: **`.private/owner-decisions.md`** (distilled bullets) and **`PROJECT_CONTINUITY.md` → Decision log** (one-line summaries + engineering queue order).
+Source of truth for locked decisions: **`PROJECT_CONTINUITY.md` → [Decision log](PROJECT_CONTINUITY.md#decision-log)** and **[Redesign — locked plan](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25)** (UI/UX redesign). Do **not** treat `.private/` as agent decision authority (owner archive/mockups only).
 
 ## Documentation owners (link; do not duplicate)
 
 | File | Owns |
 |---|---|
 | `README.md` | Public vision, beta scope, setup, commands, troubleshooting |
-| `PROJECT_CONTINUITY.md` | Newest-first **changelog**, **Resume**, **Decision log**, verification snapshot |
+| `PROJECT_CONTINUITY.md` | Newest-first **changelog**, **Resume**, **Decision log**, **redesign plan**, verification snapshot |
 | `AGENTS.md` | Agent/MCP/hook index and verification gates |
 | `.env.example` | Environment variable truth |
-| `.private/owner-decisions.md` | Distilled locked decisions + link to questionnaire; never duplicate into shared docs |
+| `.private/` | Owner archive and mockups only — **not** shared decision authority for agents |
 
 ## Beta v1 scope (active)
 
 - **Product:** location-aware **dinner** meal planning with budget, ingredient-count, dietary, and one-store vs multi-store preferences.
 - **Geography:** continental US; three-tier location model — browser/mobile **geolocation primary**, **ZIP fallback**, future **ZIP + landmark hybrid** (`us-service-area.ts`). Internal representation is always coordinates; server derives ZIP for ingest when required. CI/E2E anchor: coordinates **`37.6085`, `-77.3739`** primary; ZIP **`23111`** fallback-path tests only — not a hard geo fence.
-- **Default UX (Tier C):** map and nearby-store **context** everywhere; **ranked meal estimates** only where Kroger-family or Aldi ingested data and promotion gates pass. Tier C is normal, not failure.
-- **v1 ranked chains:** **Kroger family** (official API + weekly-ad fallback) and **Aldi** (weekly-ad / Flipp). **Production deploy focus** is Kroger-family + Aldi ranked estimates when gates pass.
-- **Other chains** (Publix, Food Lion, BJ's, Walmart, etc.): map/context or **upcoming releases** — not the current production-ranked scope unless direction changes.
+- **Default UX (Tier C):** map and nearby-store **context** everywhere; **ranked meal estimates** for Kroger-family, Aldi, Publix, and Food Lion when ingested data and promotion gates pass. Tier C is normal outside those gates, not failure.
+- **v1 ranked chains:** **Kroger family** (official API + weekly-ad fallback), **Aldi**, **Publix**, and **Food Lion** (weekly-ad) when promotion gates pass.
+- **Other chains** (BJ's, Walmart, etc.): map/context or **upcoming releases** — not the current production-ranked scope unless direction changes.
 - **Auth:** no user accounts in v1.
 - **Hosting:** self-hosted homelab deploy is an **active queued phase** with defined precursors (see **`PROJECT_CONTINUITY.md` → Resume**); not indefinitely deferred.
 - **Labeling:** v1 = **beta** — keep `estimated`, `directional`, `limited coverage`, verify-in-store, and fixture/rehearsal honesty.

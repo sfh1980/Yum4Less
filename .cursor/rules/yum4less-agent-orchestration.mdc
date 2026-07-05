@@ -7,7 +7,7 @@ alwaysApply: true
 
 Use this rule on **every implementation slice**. Do not mark work verified, complete, or merge-ready until the checklist for the touched area passes.
 
-See also: `AGENTS.md`, **`.cursor/rules/yum4less-testing-and-release-gates.mdc`** (test gates + MCP detail), **`.cursor/rules/yum4less-product-and-trust.mdc`** (scope + trust), and project agents in `.cursor/agents/`.
+See also: `AGENTS.md`, **`.cursor/rules/yum4less-testing-and-release-gates.mdc`** (test gates + MCP detail), **`.cursor/rules/yum4less-product-and-trust.mdc`** (scope + trust), **`.cursor/rules/yum4less-scale-awareness.mdc`** (symptom vs root-cause on every fix), and project agents in `.cursor/agents/`.
 
 ## User question routing (every conversation)
 
@@ -43,6 +43,7 @@ Full product scope, trust labeling, and forbidden claims → **`yum4less-product
 3. If trust-sensitive UI or pricing claims changed, invoke **`verifier`** or apply its checklist yourself in readonly mode.
 4. On **material implementation slices**, update **`PROJECT_CONTINUITY.md`** per **`.cursor/rules/yum4less-continuity-journal.mdc`**: changelog at top, refresh Resume, update Decision log / verification snapshot when applicable; **no chat summaries** (transcript index links only).
 5. State what you ran and what you did **not** run (with reason).
+6. On any response that includes a fix, include the **Scale check** block from **`yum4less-scale-awareness.mdc`** in routing/findings.
 
 Do **not** claim `verified`, `production-ready`, `CI green`, `deploy-ready`, or `beta v1 demo-complete` without evidence from tests, MCP, or `gh`/GitHub MCP.
 
@@ -50,7 +51,7 @@ Do **not** claim `verified`, `production-ready`, `CI green`, `deploy-ready`, or 
 
 | If you changed… | Required before done | MCP / agent |
 |---|---|---|
-| `src/components/**`, `src/app/globals.css`, map/UI, trust copy | `npm test`; Playwright MCP on `localhost:3000` after `npm run dev` when Vitest cannot prove visible UI/trust copy | `@web-frontend-standards`; `@verifier` for trust-label changes; scoped: **`yum4less-frontend-workflow.mdc`** |
+| `src/components/**`, `src/app/globals.css`, map/UI, trust copy | `npm test`; `npm run test:e2e:ci` when specs or flow wiring changed; Playwright MCP for gaps committed `e2e/` does not cover | `@web-frontend-standards`; `@verifier` for trust-label changes; scoped: **`yum4less-frontend-workflow.mdc`** |
 | `src/app/api/**`, `src/lib/rate-limit*`, `src/lib/public-api-*`, recommendation/market routes | `npm test`; route tests for validation/sanitization bounds | `@web-backend-standards`; scoped: **`yum4less-backend-api-workflow.mdc`** |
 | `db/init/**`, `src/lib/market-repository*`, weekly-ad ingest, `price_observations` | `npm test`; `npm run test:integration` when DB merge behavior changed (`yum4less_test`; fixture ingest on `yum4less_test` only — not `yum4less_dev`) | Postgres MCP after `npm run db:up`; `@database-codegen-standards`; `@ingest-standards` for ingest/scrape; scoped: **`yum4less-database-ingest-workflow.mdc`** |
 | `.github/workflows/**`, release/CI claims | Inspect workflow result | GitHub MCP or `gh` (read-only for status) |
