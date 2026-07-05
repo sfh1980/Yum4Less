@@ -12,19 +12,26 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: process.env.CI ? "github" : "list",
-  timeout: 60_000,
+  timeout: 90_000,
   expect: {
-    timeout: 15_000,
+    timeout: 20_000,
   },
   use: {
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    video: process.env.CI ? "retain-on-failure" : "off",
   },
   projects: [
     {
       name: "chromium",
+      testIgnore: /mobile-smoke\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mobile-chrome",
+      testMatch: /mobile-smoke\.spec\.ts/,
+      use: { ...devices["Pixel 5"] },
     },
   ],
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER

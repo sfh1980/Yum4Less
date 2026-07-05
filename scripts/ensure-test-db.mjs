@@ -166,20 +166,6 @@ function applyPhaseCMigrationsIfMissing() {
   }
 }
 
-function ciBootstrapPinsPresent() {
-  try {
-    const count = Number(
-      psqlQueryScalar(
-        activeDatabaseName,
-        "select count(*) from stores where id = 'kroger-mechanicsville';",
-      ),
-    );
-    return count >= 1;
-  } catch {
-    return false;
-  }
-}
-
 function applyCiBootstrapStoresIfNeeded() {
   if (
     process.env.YUM4LESS_CI_BOOTSTRAP_STORES !== "1" &&
@@ -189,10 +175,6 @@ function applyCiBootstrapStoresIfNeeded() {
   }
 
   try {
-    if (ciBootstrapPinsPresent()) {
-      return;
-    }
-
     console.log(
       "Applying db/ci/014_ci_bootstrap_stores.sql for CI/integration bootstrap pins...",
     );
@@ -332,6 +314,11 @@ export async function ensureTestDatabase() {
     );
     await resetDatabaseVolume();
   }
+
+  // Always re-apply after init/migrations/reset. Weekly-ad fixture ingest and integration
+  // tests FK to bootstrap store ids (e.g. kroger-mechanicsville); a stale-seed reset
+  // only reapplies db/init and would otherwise leave pins missing.
+  applyCiBootstrapStoresIfNeeded();
 
   const snapEnsure = spawnNodeScript("scripts/ensure-snap-context.mjs", ["--quiet"], {
     env: process.env,
