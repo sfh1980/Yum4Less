@@ -28,7 +28,7 @@ describe("publix weekly ad ingestion", () => {
     const client = createPublixWeeklyAdIngestionClient();
     const result = await client.ingestWeeklyAd({
       chain: "publix",
-      storeId: "publix-atlee",
+      storeId: "publix-1626",
       storeName: "Publix",
       zipCode: "23111",
       trackedIngredientIds: ["chicken-thighs", "broccoli"],
@@ -42,13 +42,13 @@ describe("publix weekly ad ingestion", () => {
   it("adds Flipp-only ingredient matches without replacing scrape-covered ingredients", async () => {
     vi.spyOn(publixStore, "resolvePublixStoreForZip").mockResolvedValue({
       storeCookie: {
-        StoreName: "Publix Atlee",
-        StoreNumber: 1234,
+        StoreName: "Brandy Creek Commons",
+        StoreNumber: 1626,
         Option: "ACFHLNOTY",
-        ShortStoreName: "Publix Atlee",
+        ShortStoreName: "Brandy Creek Commons",
       },
-      storeKey: "publix-atlee",
-      storeName: "Publix Atlee",
+      storeKey: "1626",
+      storeName: "Brandy Creek Commons",
     });
     vi.spyOn(publixFetcher, "fetchPublixWeeklyAdPage").mockResolvedValue({
       html: "<html></html>",
@@ -72,7 +72,7 @@ describe("publix weekly ad ingestion", () => {
     const client = createPublixWeeklyAdIngestionClient();
     const result = await client.ingestWeeklyAd({
       chain: "publix",
-      storeId: "publix-atlee",
+      storeId: "publix-1626",
       storeName: "Publix",
       zipCode: "23111",
       trackedIngredientIds: ["chicken-breast", "broccoli", "parmesan"],
@@ -87,13 +87,13 @@ describe("publix weekly ad ingestion", () => {
   it("keeps scrape results when Flipp supplemental lookup fails", async () => {
     vi.spyOn(publixStore, "resolvePublixStoreForZip").mockResolvedValue({
       storeCookie: {
-        StoreName: "Publix Atlee",
-        StoreNumber: 1234,
+        StoreName: "Brandy Creek Commons",
+        StoreNumber: 1626,
         Option: "ACFHLNOTY",
-        ShortStoreName: "Publix Atlee",
+        ShortStoreName: "Brandy Creek Commons",
       },
-      storeKey: "publix-atlee",
-      storeName: "Publix Atlee",
+      storeKey: "1626",
+      storeName: "Brandy Creek Commons",
     });
     vi.spyOn(publixFetcher, "fetchPublixWeeklyAdPage").mockResolvedValue({
       html: "<html></html>",
@@ -112,7 +112,7 @@ describe("publix weekly ad ingestion", () => {
     const client = createPublixWeeklyAdIngestionClient();
     const result = await client.ingestWeeklyAd({
       chain: "publix",
-      storeId: "publix-atlee",
+      storeId: "publix-1626",
       storeName: "Publix",
       zipCode: "23111",
       trackedIngredientIds: ["broccoli"],

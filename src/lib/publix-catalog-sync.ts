@@ -10,6 +10,16 @@ import { upsertCatalogStores } from "@/lib/store-catalog-sync";
 
 export const PUBLIX_STORE_LOCATOR_SOURCE = "publix-store-locator";
 
+/** Legacy bootstrap slug — no storefront at Atlee Rd; retired 2026-07-05. */
+export const RETIRED_PUBLIX_BOOTSTRAP_STORE_ID = "publix-atlee";
+
+/** Brandy Creek Commons — verified via Publix store locator for Mechanicsville CI anchor. */
+export const PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_NUMBER = 1626;
+
+export const PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID = buildPublixCatalogStoreId(
+  PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_NUMBER,
+);
+
 export function buildPublixCatalogStoreId(storeNumber: number): string {
   return `publix-${storeNumber}`;
 }
@@ -48,10 +58,62 @@ export function buildPublixCatalogStoreFromLocator(
   };
 }
 
+export async function retirePublixAtleeBootstrapStore(
+  canonicalStoreId: string,
+): Promise<{ migratedPrices: number; deletedStore: boolean }> {
+  if (canonicalStoreId === RETIRED_PUBLIX_BOOTSTRAP_STORE_ID) {
+    return { migratedPrices: 0, deletedStore: false };
+  }
+
+  try {
+    const pool = getDbPool();
+
+    const retiredExists = await pool.query<{ exists: boolean }>(
+      `select exists(select 1 from stores where id = $1) as exists`,
+      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID],
+    );
+    if (!retiredExists.rows[0]?.exists) {
+      return { migratedPrices: 0, deletedStore: false };
+    }
+
+    await pool.query(
+      `
+        delete from price_observations target
+        using price_observations source
+        where source.store_id = $1
+          and target.store_id = $2
+          and target.ingredient_id = source.ingredient_id
+      `,
+      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, canonicalStoreId],
+    );
+
+    const migrated = await pool.query(
+      `
+        update price_observations
+        set store_id = $2
+        where store_id = $1
+      `,
+      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, canonicalStoreId],
+    );
+
+    const deleted = await pool.query(
+      `delete from stores where id = $1`,
+      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID],
+    );
+
+    return {
+      migratedPrices: migrated.rowCount ?? 0,
+      deletedStore: (deleted.rowCount ?? 0) > 0,
+    };
+  } catch (error) {
+    logServerError("publix-retire-atlee-bootstrap", error);
+    return { migratedPrices: 0, deletedStore: false };
+  }
+}
+
 export async function syncPublixContextStoresForZip(input: {
   zipCode: string;
-  bootstrapStoreId?: string;
-}): Promise<{ upserted: number; message: string }> {
+}): Promise<{ upserted: number; message: string; retiredAtlee: boolean }> {
   try {
     const client = createPublixServicesApiClient();
     const stores = await client.searchStoresByZip({
@@ -67,6 +129,7 @@ export async function syncPublixContextStoresForZip(input: {
       return {
         upserted: 0,
         message: `Publix store locator returned no mappable stores for ZIP ${input.zipCode}.`,
+        retiredAtlee: false,
       };
     }
 
@@ -74,16 +137,13 @@ export async function syncPublixContextStoresForZip(input: {
       preserveRankedSources: true,
     });
 
-    if (input.bootstrapStoreId) {
-      upserted += await refreshPublixBootstrapStoreCoordinates({
-        bootstrapStoreId: input.bootstrapStoreId,
-        nearestStore: catalogStores[0]!,
-      });
-    }
+    const nearestStore = catalogStores[0]!;
+    const retirement = await retirePublixAtleeBootstrapStore(nearestStore.id);
 
     return {
       upserted,
       message: `Publix store locator mapped ${catalogStores.length} context store(s) for ZIP ${input.zipCode}.`,
+      retiredAtlee: retirement.deletedStore,
     };
   } catch (error) {
     logServerError("publix-catalog-sync", error);
@@ -93,49 +153,7 @@ export async function syncPublixContextStoresForZip(input: {
         error instanceof Error
           ? `Publix store locator sync failed: ${error.message}`
           : "Publix store locator sync failed unexpectedly.",
+      retiredAtlee: false,
     };
-  }
-}
-
-async function refreshPublixBootstrapStoreCoordinates(input: {
-  bootstrapStoreId: string;
-  nearestStore: CatalogStoreRecord;
-}): Promise<number> {
-  try {
-    const pool = getDbPool();
-    const result = await pool.query(
-      `
-        update stores
-        set
-          latitude = $2,
-          longitude = $3,
-          name = $4,
-          city = $5,
-          state = $6,
-          source_store_id = $7,
-          last_verified_at = now()
-        where id = $1
-          and (
-            source_name is null
-            or source_name = 'yum4less-internal-catalog'
-            or source_name = $8
-          )
-      `,
-      [
-        input.bootstrapStoreId,
-        input.nearestStore.latitude,
-        input.nearestStore.longitude,
-        input.nearestStore.name,
-        input.nearestStore.city,
-        input.nearestStore.state,
-        input.nearestStore.sourceStoreId,
-        PUBLIX_STORE_LOCATOR_SOURCE,
-      ],
-    );
-
-    return result.rowCount ?? 0;
-  } catch (error) {
-    logServerError("publix-bootstrap-refresh", error);
-    return 0;
   }
 }

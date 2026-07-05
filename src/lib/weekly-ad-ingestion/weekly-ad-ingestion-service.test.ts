@@ -66,7 +66,7 @@ describe("weekly ad ingestion service", () => {
       nearbyStores: [
         { id: "aldi-mechanicsville", name: "Aldi", chain: "aldi" },
         { id: "food-lion-mechanicsville", name: "Food Lion", chain: "food-lion" },
-        { id: "publix-atlee", name: "Publix", chain: "publix" },
+        { id: "publix-1626", name: "Publix", chain: "publix" },
       ],
       zipCode: "23111",
       persistToDatabase: false,
@@ -147,7 +147,7 @@ describe("weekly ad ingestion service", () => {
     const client = createPublixWeeklyAdIngestionClient();
     const result = await client.ingestWeeklyAd({
       chain: "publix",
-      storeId: "publix-atlee",
+      storeId: "publix-1626",
       storeName: "Publix",
       zipCode: "23111",
       trackedIngredientIds: ["chicken-thighs", "broccoli", "lemon", "parmesan", "cabbage"],

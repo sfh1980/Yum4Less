@@ -7,7 +7,7 @@ import {
 import { runWeeklyAdIngestionForStores } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
 
 const zipCode = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
-const storeId = "publix-atlee";
+const storeId = "publix-1626";
 const storeName = "Publix";
 
 async function main() {

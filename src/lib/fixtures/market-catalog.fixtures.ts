@@ -25,13 +25,13 @@ export const fixtureStores: CatalogStore[] = [
     longitude: -77.341778,
   },
   {
-    id: "publix-atlee",
+    id: "publix-1626",
     name: "Publix",
     kind: "grocery",
     city: "Mechanicsville",
     state: "VA",
-    latitude: 37.632,
-    longitude: -77.348,
+    latitude: 37.610899,
+    longitude: -77.335779,
   },
   {
     id: "aldi-mechanicsville",
@@ -248,11 +248,11 @@ export const fixturePriceObservations: CatalogPriceObservation[] = [
   { storeId: "food-lion-mechanicsville", ingredientId: "black-beans", price: 0.99, freshnessDaysAgo: 3, inStock: true },
   { storeId: "food-lion-mechanicsville", ingredientId: "spinach", price: 2.29, freshnessDaysAgo: 1, inStock: true },
 
-  { storeId: "publix-atlee", ingredientId: "chicken-thighs", price: 6.79, saleLabel: "Weekly ad", freshnessDaysAgo: 1, inStock: true },
-  { storeId: "publix-atlee", ingredientId: "broccoli", price: 2.49, freshnessDaysAgo: 2, inStock: true },
-  { storeId: "publix-atlee", ingredientId: "lemon", price: 0.79, freshnessDaysAgo: 2, inStock: true },
-  { storeId: "publix-atlee", ingredientId: "butter", price: 2.89, freshnessDaysAgo: 2, inStock: true },
-  { storeId: "publix-atlee", ingredientId: "parmesan", price: 3.49, freshnessDaysAgo: 3, inStock: true },
+  { storeId: "publix-1626", ingredientId: "chicken-thighs", price: 6.79, saleLabel: "Weekly ad", freshnessDaysAgo: 1, inStock: true },
+  { storeId: "publix-1626", ingredientId: "broccoli", price: 2.49, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "publix-1626", ingredientId: "lemon", price: 0.79, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "publix-1626", ingredientId: "butter", price: 2.89, freshnessDaysAgo: 2, inStock: true },
+  { storeId: "publix-1626", ingredientId: "parmesan", price: 3.49, freshnessDaysAgo: 3, inStock: true },
 
   { storeId: "aldi-mechanicsville", ingredientId: "black-beans", price: 0.89, saleLabel: "Pantry value", freshnessDaysAgo: 2, inStock: true },
   { storeId: "aldi-mechanicsville", ingredientId: "corn-tortillas", price: 1.79, freshnessDaysAgo: 3, inStock: true },

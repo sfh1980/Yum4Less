@@ -217,8 +217,8 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
             rolloutNote: "Fixture coverage.",
           },
           {
-            id: "publix-atlee",
-            name: "Publix Atlee",
+            id: "publix-1626",
+            name: "Publix Brandy Creek",
             kind: "grocery",
             latitude: 37.65,
             longitude: -77.35,
@@ -235,7 +235,7 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
 
     expect(sanitized.nearbyStores.map((store) => store.id)).toEqual([
       "kroger-mechanicsville",
-      "publix-atlee",
+      "publix-1626",
     ]);
   });
 });

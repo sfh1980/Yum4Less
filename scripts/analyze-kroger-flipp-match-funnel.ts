@@ -165,7 +165,7 @@ async function resolveWeeklyAdRawOffersForFunnel(entry: FunnelChainEntry): Promi
     return {
       rawOffers,
       retrievalLabel: `Publix ${pageFetch.method} scrape (${pageFetch.attempts} attempt(s))`,
-      storeId: "publix-atlee",
+      storeId: "publix-1626",
       sourceUrl,
     };
   }

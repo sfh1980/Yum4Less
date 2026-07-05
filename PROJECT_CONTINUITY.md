@@ -34,7 +34,7 @@
 - **Coordinate sanity audit path:** `coordinate-sanity-check.ts` now reports `flagReasons[]` (including dual-flag rows like `unknown_city_state` + `coordinate_delta`), `scripts/audit-food-lion-coordinates.mjs` buckets correction-candidate vs metadata-only vs manual-review rows and supports `--ids=...`, rollout policy keeps Food Lion/Lidl as coordinate-audit-required, and the verified `food-lion-mechanicsville` pin is corrected in dev + CI/fixture bootstrap data
 - **Coordinate sanity exceptions:** the two 2026-07-03 withheld Food Lion rows (`osm-node-3103220732`, `osm-node-6527816794`) now live in `COORDINATE_SANITY_EXCEPTIONS`, so storefront-vs-road-geometry decisions persist across future audit reruns
 - **Phase C map context:** `discoverMapContextStores` unifies OSM + optional USDA SNAP (`YUM4LESS_MAP_SNAP_CONTEXT=1`); `snap_retailer_locations` reference table + `npm run ingest:snap-retailers`; SNAP pins labeled `SNAP context pin` — not ranked pricing
-- **Phase D ingest breadth:** Kroger Location API returns **Kroger-family** stores (limit `YUM4LESS_KROGER_LOCATION_SEARCH_LIMIT`, max 50) with multi-store catalog upsert; Aldi bootstrap refresh uses **nearest OSM Aldi** (never ZIP centroid); provider snapshot cache matches by **ZIP primary** with coord tolerance; Publix locator sync refreshes `publix-atlee` bootstrap + context rows (`publix-store-locator`); `sync:provider-prices` passes OSM discovery for Aldi parity
+- **Phase D ingest breadth:** Kroger Location API returns **Kroger-family** stores (limit `YUM4LESS_KROGER_LOCATION_SEARCH_LIMIT`, max 50) with multi-store catalog upsert; Aldi bootstrap refresh uses **nearest OSM Aldi** (never ZIP centroid); provider snapshot cache matches by **ZIP primary** with coord tolerance; Publix locator sync upserts `publix-{storeNumber}` rows and **retires legacy `publix-atlee`** on map-catalog ingest; `sync:provider-prices` passes OSM discovery for Aldi parity
 - **Phase A map truth:** Postgres/provider ranked pins beat OSM/SNAP context on merge (`kroger-official-api` priority 5; ranked-chain dedupe ~1.5 mi); `YUM4LESS_MAP_OSM_RANKED_CHAIN_POLICY=suppress-conflicts` (default) drops context Kroger/Aldi when ingested catalog covers chain; map/list badges (`Seed catalog pin`, `API-verified pin`, `OSM context pin`, `SNAP context pin`, `Weekly-ad ingest pin`)
 - **Map search merge (Rec 1–2):** `/api/market-search` merges provider-discovered stores into map pins; ephemeral map-context discovery (OSM ± SNAP) when **per-chain Postgres gaps** exist (ranked v1 chain &lt; **2** pins, or context-only catalog chain / Costco / Sam's at **0** pins within radius), 24h OSM cache, degraded copy on failure — **no Postgres writes** on public read path
 - **Unknown location metadata treatment:** store labels now render **`Approximate location`** when city/state metadata is the literal `Unknown`, instead of surfacing raw sentinel text or pretending the locality is verified
@@ -226,6 +226,18 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), pantry affecting rank, and
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-05 — Retire legacy `publix-atlee` bootstrap pin
+
+**Theme:** Remove the fictional Atlee Rd Publix bootstrap slug; anchor Mechanicsville Publix on official locator store **#1626 Brandy Creek Commons** (`37.610899`, `-77.335779`).
+
+**Shipped:**
+- **`db/init/015_retire_publix_atlee_bootstrap.sql`** — upserts `publix-1626`, migrates `price_observations`, deletes `publix-atlee`
+- **`db/ci/014_ci_bootstrap_stores.sql`** — bootstrap pin replaced (`publix-1626` / store number `1626`)
+- **`publix-catalog-sync.ts`** — `retirePublixAtleeBootstrapStore()` runs after locator upsert on map-catalog ingest
+- Fixtures, probe scripts, weekly-ad tests, e2e store-scoping spec updated to `publix-1626`
+
+**Evidence:** `npm test` **809/809** (152 files); owner `yum4less_dev` migration applied (`UPDATE 36` price rows migrated).
 
 ### 2026-07-04 — Six-batch remediation close-out (full-system audit follow-ups)
 

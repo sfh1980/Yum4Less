@@ -44,7 +44,7 @@ test.describe("Settings store selection", () => {
     const storeList = page.locator(".nearby-stores-list");
     await expect(storeList.locator('[data-store-id="kroger-mechanicsville"]')).toBeVisible();
     await expect(storeList.locator('[data-store-id="aldi-mechanicsville"]')).toBeVisible();
-    await expect(storeList.locator('[data-store-id="publix-atlee"]')).toHaveCount(0);
+    await expect(storeList.locator('[data-store-id="publix-1626"]')).toHaveCount(0);
     await expect(storeList.locator('[data-store-id="food-lion-mechanicsville"]')).toHaveCount(0);
   });
 

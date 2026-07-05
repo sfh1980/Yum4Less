@@ -88,7 +88,7 @@ async function main() {
   console.log("\n4) Ingredient matching...");
   const matched = matchWeeklyAdOffers({
     chain: "publix",
-    storeId: "publix-atlee",
+    storeId: "publix-1626",
     sourceUrl: url,
     observedAt: new Date().toISOString(),
     rawOffers,
