@@ -3,8 +3,11 @@ import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import {
   PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID,
   RETIRED_PUBLIX_BOOTSTRAP_STORE_ID,
+  retireDuplicateOsmPublixNearLocatorStores,
   retirePublixAtleeBootstrapStore,
 } from "@/lib/publix-catalog-sync";
+
+const TEST_OSM_PUBLIX_DUPLICATE_STORE_ID = "osm-way-test-publix-dedupe";
 
 describe("publix-catalog-sync (integration)", () => {
   async function cleanupPublixBootstrapFixture() {
@@ -74,5 +77,64 @@ describe("publix-catalog-sync (integration)", () => {
   it("is a no-op when the retired bootstrap row is already absent", async () => {
     const result = await retirePublixAtleeBootstrapStore(PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID);
     expect(result).toEqual({ migratedPrices: 0, deletedStore: false });
+  });
+
+  it("retires duplicate Publix OSM pins near locator stores and migrates prices", async () => {
+    const pool = getDbPool();
+
+    await pool.query(
+      `delete from price_observations where store_id in ($1, $2)`,
+      [TEST_OSM_PUBLIX_DUPLICATE_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+    );
+    await pool.query(
+      `delete from stores where id in ($1, $2)`,
+      [TEST_OSM_PUBLIX_DUPLICATE_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+    );
+
+    await pool.query(`
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values
+        ('${TEST_OSM_PUBLIX_DUPLICATE_STORE_ID}', 'Publix', 'grocery', 'Mechanicsville', 'VA', 37.610845, -77.335685, 'openstreetmap-overpass', '789560637', now()),
+        ('publix-1626', 'Brandy Creek Commons', 'grocery', 'Mechanicsville', 'VA', 37.610899, -77.335779, 'publix-store-locator', '1626', now())
+      on conflict (id) do nothing
+    `);
+
+    await pool.query(`
+      insert into price_observations (
+        store_id, ingredient_id, price, in_stock, source_name, confidence_score, observed_at
+      )
+      values
+        ('${TEST_OSM_PUBLIX_DUPLICATE_STORE_ID}', 'broccoli', 2.49, true, 'publix-weekly-ad-scrape', 0.8, now()),
+        ('${TEST_OSM_PUBLIX_DUPLICATE_STORE_ID}', 'lemon', 0.79, true, 'publix-weekly-ad-scrape', 0.8, now()),
+        ('publix-1626', 'broccoli', 2.99, true, 'publix-weekly-ad-scrape', 0.8, now())
+    `);
+
+    const result = await retireDuplicateOsmPublixNearLocatorStores();
+
+    expect(result.deletedStoreIds).toEqual([TEST_OSM_PUBLIX_DUPLICATE_STORE_ID]);
+    expect(result.migratedPrices).toBe(2);
+
+    const retired = await pool.query(`select id from stores where id = $1`, [
+      TEST_OSM_PUBLIX_DUPLICATE_STORE_ID,
+    ]);
+    expect(retired.rowCount).toBe(0);
+
+    const prices = await pool.query<{ store_id: string; ingredient_id: string }>(
+      `select store_id, ingredient_id from price_observations where store_id = $1 and ingredient_id in ('broccoli', 'lemon') order by ingredient_id`,
+      [PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+    );
+    expect(prices.rows).toEqual([
+      { store_id: "publix-1626", ingredient_id: "broccoli" },
+      { store_id: "publix-1626", ingredient_id: "lemon" },
+    ]);
+
+    await pool.query(`delete from price_observations where store_id = $1`, [
+      PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID,
+    ]);
+    await pool.query(`delete from stores where id = $1`, [
+      PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID,
+    ]);
   });
 });

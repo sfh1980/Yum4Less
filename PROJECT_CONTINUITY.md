@@ -227,6 +227,17 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), pantry affecting rank, and
 
 ## Changelog (newest first)
 
+### 2026-07-05 — Retire duplicate Publix OSM pins near locator stores (Option B)
+
+**Theme:** Tombstone `osm-*` Publix rows within `MAP_OSM_DEDUPE_PROXIMITY_MILES` (0.15 mi) of `publix-store-locator` rows — resolves `osm-way-789560637` → `publix-1626` and prevents split `price_observations` on future locator sync.
+
+**Shipped:**
+- **`retireDuplicateOsmPublixNearLocatorStores()`** in `publix-catalog-sync.ts` — runs after locator upsert alongside `retirePublixAtleeBootstrapStore()`
+- **`db/init/016_retire_duplicate_publix_osm_pins.sql`** — one-time migration for existing DBs
+- Integration test for OSM/locator dedupe + price migration
+
+**Deferred (Option A):** General locator-vs-OSM dedupe across all v1 chains — see [Deferred backlog](#deferred-backlog-not-v1).
+
 ### 2026-07-05 — Retire legacy `publix-atlee` bootstrap pin
 
 **Theme:** Remove the fictional Atlee Rd Publix bootstrap slug; anchor Mechanicsville Publix on official locator store **#1626 Brandy Creek Commons** (`37.610899`, `-77.335779`).
@@ -1738,6 +1749,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Bootstrap seed data provenance audit** | Confirm whether bootstrap rows in `yum4less_dev` carry a distinct `source_name` that separates hand-planted/CI bootstrap stores from real discovered stores. If not, add one in the bootstrap SQL so the app and future audits can distinguish seed rows from real discovery coverage. |
 | **Scale risk A — Client-trust audit across all public API routes** | From trust pass-through hardening (2026-07-01): only the rank pass-through path was hardened; other routes or client-supplied fields may still influence trust display without server-side recomputation. Systematic audit of all public API responses for client-controllable trust-sensitive fields deferred — should precede any significant traffic increase or public launch. Suggested owner: `@verifier` + `@web-backend-standards` |
 | **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
+| **General locator-vs-OSM dedupe across all v1 chains (Option A)** | Right long-term fix for duplicate storefront rows when map-catalog OSM ingest and chain locator/API sync both write Postgres (e.g. Publix `osm-way-*` + `publix-{storeNumber}`). Option B (2026-07-05) scoped Publix-only tombstone on locator sync; full Option A needs persist-time and/or read-time dedupe for Kroger/Aldi/Publix/Food Lion, cross-chain policy decisions (`isMapContextCatalogStore`, ranked-chain anchor rules), and fixture + integration + e2e coverage — out of scope for the narrow Publix fix. |
 
 ### Transcript index
 

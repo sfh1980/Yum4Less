@@ -1,4 +1,7 @@
 import { getDbPool } from "@/lib/db";
+import { getDistanceMiles } from "@/lib/geo-distance";
+import { MAP_OSM_DEDUPE_PROXIMITY_MILES } from "@/lib/market-store-catalog-merge";
+import { getProviderRolloutForStore } from "@/lib/provider-rollout";
 import { logServerError } from "@/lib/server-log";
 import {
   createPublixServicesApiClient,
@@ -19,6 +22,13 @@ export const PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_NUMBER = 1626;
 export const PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID = buildPublixCatalogStoreId(
   PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_NUMBER,
 );
+
+type StoreCoordinateRow = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+};
 
 export function buildPublixCatalogStoreId(storeNumber: number): string {
   return `publix-${storeNumber}`;
@@ -58,6 +68,52 @@ export function buildPublixCatalogStoreFromLocator(
   };
 }
 
+async function migratePriceObservationsAndRetireStore(
+  fromStoreId: string,
+  toStoreId: string,
+): Promise<{ migratedPrices: number; deletedStore: boolean }> {
+  if (fromStoreId === toStoreId) {
+    return { migratedPrices: 0, deletedStore: false };
+  }
+
+  const pool = getDbPool();
+
+  const retiredExists = await pool.query<{ exists: boolean }>(
+    `select exists(select 1 from stores where id = $1) as exists`,
+    [fromStoreId],
+  );
+  if (!retiredExists.rows[0]?.exists) {
+    return { migratedPrices: 0, deletedStore: false };
+  }
+
+  await pool.query(
+    `
+      delete from price_observations target
+      using price_observations source
+      where source.store_id = $1
+        and target.store_id = $2
+        and target.ingredient_id = source.ingredient_id
+    `,
+    [fromStoreId, toStoreId],
+  );
+
+  const migrated = await pool.query(
+    `
+      update price_observations
+      set store_id = $2
+      where store_id = $1
+    `,
+    [fromStoreId, toStoreId],
+  );
+
+  const deleted = await pool.query(`delete from stores where id = $1`, [fromStoreId]);
+
+  return {
+    migratedPrices: migrated.rowCount ?? 0,
+    deletedStore: (deleted.rowCount ?? 0) > 0,
+  };
+}
+
 export async function retirePublixAtleeBootstrapStore(
   canonicalStoreId: string,
 ): Promise<{ migratedPrices: number; deletedStore: boolean }> {
@@ -66,54 +122,102 @@ export async function retirePublixAtleeBootstrapStore(
   }
 
   try {
-    const pool = getDbPool();
-
-    const retiredExists = await pool.query<{ exists: boolean }>(
-      `select exists(select 1 from stores where id = $1) as exists`,
-      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID],
+    return await migratePriceObservationsAndRetireStore(
+      RETIRED_PUBLIX_BOOTSTRAP_STORE_ID,
+      canonicalStoreId,
     );
-    if (!retiredExists.rows[0]?.exists) {
-      return { migratedPrices: 0, deletedStore: false };
-    }
-
-    await pool.query(
-      `
-        delete from price_observations target
-        using price_observations source
-        where source.store_id = $1
-          and target.store_id = $2
-          and target.ingredient_id = source.ingredient_id
-      `,
-      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, canonicalStoreId],
-    );
-
-    const migrated = await pool.query(
-      `
-        update price_observations
-        set store_id = $2
-        where store_id = $1
-      `,
-      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, canonicalStoreId],
-    );
-
-    const deleted = await pool.query(
-      `delete from stores where id = $1`,
-      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID],
-    );
-
-    return {
-      migratedPrices: migrated.rowCount ?? 0,
-      deletedStore: (deleted.rowCount ?? 0) > 0,
-    };
   } catch (error) {
     logServerError("publix-retire-atlee-bootstrap", error);
     return { migratedPrices: 0, deletedStore: false };
   }
 }
 
+export async function retireDuplicateOsmPublixNearLocatorStores(): Promise<{
+  migratedPrices: number;
+  deletedStoreIds: string[];
+}> {
+  try {
+    const pool = getDbPool();
+
+    const locators = await pool.query<StoreCoordinateRow>(
+      `
+        select id, name, latitude, longitude
+        from stores
+        where source_name = $1
+      `,
+      [PUBLIX_STORE_LOCATOR_SOURCE],
+    );
+
+    if (locators.rowCount === 0) {
+      return { migratedPrices: 0, deletedStoreIds: [] };
+    }
+
+    const osmStores = await pool.query<StoreCoordinateRow>(
+      `
+        select id, name, latitude, longitude
+        from stores
+        where id like 'osm-%'
+      `,
+    );
+
+    const osmToLocator = new Map<string, string>();
+
+    for (const osm of osmStores.rows) {
+      if (getProviderRolloutForStore(osm.name).chain !== "publix") {
+        continue;
+      }
+
+      let nearestLocator: StoreCoordinateRow | undefined;
+      let nearestDistanceMiles = Number.POSITIVE_INFINITY;
+
+      for (const locator of locators.rows) {
+        const distanceMiles = getDistanceMiles(
+          osm.latitude,
+          osm.longitude,
+          locator.latitude,
+          locator.longitude,
+        );
+
+        if (
+          distanceMiles <= MAP_OSM_DEDUPE_PROXIMITY_MILES &&
+          distanceMiles < nearestDistanceMiles
+        ) {
+          nearestDistanceMiles = distanceMiles;
+          nearestLocator = locator;
+        }
+      }
+
+      if (nearestLocator) {
+        osmToLocator.set(osm.id, nearestLocator.id);
+      }
+    }
+
+    let migratedPrices = 0;
+    const deletedStoreIds: string[] = [];
+
+    for (const [osmStoreId, locatorStoreId] of osmToLocator) {
+      const result = await migratePriceObservationsAndRetireStore(osmStoreId, locatorStoreId);
+      migratedPrices += result.migratedPrices;
+      if (result.deletedStore) {
+        deletedStoreIds.push(osmStoreId);
+      }
+    }
+
+    return { migratedPrices, deletedStoreIds };
+  } catch (error) {
+    logServerError("publix-retire-duplicate-osm-near-locator", error);
+    return { migratedPrices: 0, deletedStoreIds: [] };
+  }
+}
+
 export async function syncPublixContextStoresForZip(input: {
   zipCode: string;
-}): Promise<{ upserted: number; message: string; retiredAtlee: boolean }> {
+}): Promise<{
+  upserted: number;
+  message: string;
+  retiredAtlee: boolean;
+  retiredOsmDuplicates: number;
+}> {
   try {
     const client = createPublixServicesApiClient();
     const stores = await client.searchStoresByZip({
@@ -130,20 +234,23 @@ export async function syncPublixContextStoresForZip(input: {
         upserted: 0,
         message: `Publix store locator returned no mappable stores for ZIP ${input.zipCode}.`,
         retiredAtlee: false,
+        retiredOsmDuplicates: 0,
       };
     }
 
-    let upserted = await upsertCatalogStores(catalogStores, {
+    const upserted = await upsertCatalogStores(catalogStores, {
       preserveRankedSources: true,
     });
 
     const nearestStore = catalogStores[0]!;
     const retirement = await retirePublixAtleeBootstrapStore(nearestStore.id);
+    const osmRetirement = await retireDuplicateOsmPublixNearLocatorStores();
 
     return {
       upserted,
       message: `Publix store locator mapped ${catalogStores.length} context store(s) for ZIP ${input.zipCode}.`,
       retiredAtlee: retirement.deletedStore,
+      retiredOsmDuplicates: osmRetirement.deletedStoreIds.length,
     };
   } catch (error) {
     logServerError("publix-catalog-sync", error);
@@ -154,6 +261,7 @@ export async function syncPublixContextStoresForZip(input: {
           ? `Publix store locator sync failed: ${error.message}`
           : "Publix store locator sync failed unexpectedly.",
       retiredAtlee: false,
+      retiredOsmDuplicates: 0,
     };
   }
 }
