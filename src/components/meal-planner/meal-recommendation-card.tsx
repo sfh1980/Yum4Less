@@ -1,5 +1,6 @@
 "use client";
 
+import { MapPinIcon } from "@/components/map-pin-icon";
 import type { MealRecommendation, RecommendationExperience } from "@/lib/recommendation-service";
 import { HelpHint } from "@/components/help-hint";
 import { formatDifficulty } from "@/components/meal-planner/form-validation";
@@ -16,27 +17,68 @@ import {
   mealTotalHelp,
 } from "@/lib/help-hint-content";
 import { buildMealPriceSourceSummary } from "@/lib/meal-price-source-copy";
+import { resolveNearbyStoreByName } from "@/lib/resolve-nearby-store-by-name";
+import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 
 type MealRecommendationCardProps = {
   meal: MealRecommendation;
   form: FormState;
   activeLocationRequest?: ActiveLocationRequest;
   market: RecommendationExperience["market"];
+  onOpenStoreMap: (store: NearbyStoreSummary | null) => void;
+  /** Accordion expanded panel: title lives on the trigger button. */
+  hideTitle?: boolean;
 };
+
+function StoreMapTapButton({
+  storeName,
+  nearbyStores,
+  onOpenStoreMap,
+  className,
+}: {
+  storeName: string;
+  nearbyStores: NearbyStoreSummary[];
+  onOpenStoreMap: (store: NearbyStoreSummary | null) => void;
+  className: string;
+}) {
+  function handleClick() {
+    const resolved = resolveNearbyStoreByName(storeName, nearbyStores);
+    onOpenStoreMap(resolved ?? null);
+  }
+
+  return (
+    <button
+      type="button"
+      className={`store-map-tap-button ${className}`}
+      onClick={handleClick}
+      aria-label={`Show ${storeName} on map`}
+    >
+      <MapPinIcon aria-hidden className="store-map-tap-icon" size={14} />
+      <span className="store-map-tap-label">{storeName}</span>
+    </button>
+  );
+}
 
 export function MealRecommendationCard({
   meal,
   form,
   activeLocationRequest,
   market,
+  onOpenStoreMap,
+  hideTitle = false,
 }: MealRecommendationCardProps) {
   const priceSource = buildMealPriceSourceSummary({ meal, market });
   const mealPriceAgeLabel = formatMealPriceAgeFromShoppingPlan(meal.shoppingPlan);
+  const nearbyStores = market.nearbyStores;
 
   return (
     <article className="card recommendation-card">
-      <div className="card-topline">
-        <h3 className="card-title">{meal.title}</h3>
+      <div
+        className={
+          hideTitle ? "card-topline card-topline--title-hidden" : "card-topline"
+        }
+      >
+        {hideTitle ? null : <h3 className="card-title">{meal.title}</h3>}
         <span className="price-with-hint">
           <span
             aria-label={`Estimated total ${formatEstimatedCurrency(meal.estimatedTotal)}`}
@@ -85,12 +127,12 @@ export function MealRecommendationCard({
       </p>
 
       {mealPriceAgeLabel ? (
-        <p className="field-hint meal-card-price-age">{mealPriceAgeLabel}</p>
+        <p className="field-hint meal-card-price-age badge-trust">{mealPriceAgeLabel}</p>
       ) : null}
 
       <div className="pill-row">
         <span className="pill-with-hint">
-          <span className="pill">{meal.confidenceLabel}</span>
+          <span className="pill pill--trust">{meal.confidenceLabel}</span>
           <HelpHint
             id={`${meal.title}-confidence-help`}
             label={`Confidence label for ${meal.title}`}
@@ -101,9 +143,14 @@ export function MealRecommendationCard({
         </span>
         <span className="pill">{meal.cookTimeMinutes} min</span>
         <span className="pill">{formatDifficulty(meal.difficulty)}</span>
-        <span className="pill">{meal.primaryStore}</span>
+        <StoreMapTapButton
+          className="pill store-map-tap-button--pill"
+          nearbyStores={nearbyStores}
+          onOpenStoreMap={onOpenStoreMap}
+          storeName={meal.primaryStore}
+        />
         <span className="pill-with-hint">
-          <span className="pill">{meal.freshnessLabel}</span>
+          <span className="pill pill--trust">{meal.freshnessLabel}</span>
           <HelpHint
             id={`${meal.title}-freshness-help`}
             label={`Freshness label for ${meal.title}`}
@@ -133,7 +180,12 @@ export function MealRecommendationCard({
         <div className="store-summary-list">
           {meal.storePlan.map((store) => (
             <div className="store-summary-item" key={store.storeName}>
-              <strong>{store.storeName}</strong>
+              <StoreMapTapButton
+                className="store-map-tap-button--plan"
+                nearbyStores={nearbyStores}
+                onOpenStoreMap={onOpenStoreMap}
+                storeName={store.storeName}
+              />
               <span>
                 {formatEstimatedCurrency(store.subtotal)} · {store.itemCount}{" "}
                 item(s)

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { createElement } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -10,10 +10,39 @@ vi.mock("@/components/nearby-stores-map", () => ({
 }));
 
 import { MealPlanner } from "@/components/meal-planner";
+import { clearSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
 
 const fetchMock = vi.fn();
 
+async function completeSettingsFlow(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Find stores for this area" }));
+  await screen.findByRole("combobox", { name: "Store" });
+  await user.click(screen.getByRole("button", { name: "Save settings and continue" }));
+  await screen.findByRole("heading", { name: "Welcome" });
+}
+
+async function completeWelcomeFlow(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Continue to ingredients" }));
+  await screen.findByRole("heading", { name: "Ingredients" });
+}
+
+async function completeIngredientGate(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("button", { name: /Use all \d+ sale ingredient/i }),
+  );
+}
+
+async function goToRankStep(user: ReturnType<typeof userEvent.setup>) {
+  await completeIngredientGate(user);
+  await user.click(screen.getByRole("button", { name: "Continue to rank" }));
+  await screen.findByRole("heading", { name: "Rank dinners" });
+}
+
 describe("MealPlanner", () => {
+  beforeEach(() => {
+    clearSettingsPreferences();
+  });
+
   afterEach(() => {
     fetchMock.mockReset();
     vi.unstubAllGlobals();
@@ -45,72 +74,40 @@ describe("MealPlanner", () => {
 
     render(createElement(MealPlanner));
 
-    expect(
-      screen.getByRole("heading", { name: "Step 1: Find nearby stores" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
-        name: "Nearby stores",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
-        name: "Dinner recommendations",
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Find nearby stores" }));
+    await completeSettingsFlow(user);
+    await completeWelcomeFlow(user);
+    await goToRankStep(user);
 
-    expect(await screen.findByText("Kroger Mechanicsville")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Location set" })).toBeInTheDocument();
-    expect(
-      await screen.findByRole("heading", { name: "Step 3: Browse nearby sale ingredients" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Step 3: Browse nearby sale ingredients" }),
-    ).toBeInTheDocument();
-    expect(await screen.findByText("Nearby stores map")).toBeInTheDocument();
+    expect(await screen.findByRole("navigation", { name: "Main" })).toBeInTheDocument();
     expect(screen.queryByText("Seed preview pricing")).not.toBeInTheDocument();
-    expect(await screen.findAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(2);
-    expect(
-      screen.getAllByText(/saved weekly ads and recently checked online store prices/i),
-    ).toHaveLength(2);
-    expect(screen.getAllByText(/saved backup data instead of a fresh store search/i)).toHaveLength(2);
+    expect(await screen.findAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(1);
     expect(
       screen.queryByRole("button", { name: "Project & data details (internal)" }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/best available sale prices for Kroger-family and Aldi stores/i),
-    ).toBeInTheDocument();
 
     const suggestButton = screen.getByRole("button", {
-      name: "Suggest recipes using my selected ingredients",
+      name: "Suggest recipes for my store(s)",
     });
-    expect(suggestButton).toBeDisabled();
-    expect(
-      screen.getByText(/Select at least one sale ingredient, then use Suggest recipes/i),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole("checkbox", { name: /Chicken thighs/i }));
     expect(suggestButton).not.toBeDisabled();
 
     await user.click(suggestButton);
 
     expect(await screen.findByText("Weeknight Lemon Chicken")).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: "How to read these results" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { name: "How to read these results" }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Kroger family and Aldi \(production focus\)/i),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "How to read these labels" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("note", { name: "Heads up about these prices" }),
+    ).toHaveTextContent(/Meal prices are estimates/i);
 
-    await user.click(screen.getByRole("button", { name: "Dismiss" }));
-
-    await waitFor(() => {
-      expect(
-        screen.queryByRole("heading", { name: "How to read these results" }),
-      ).not.toBeInTheDocument();
-    });
+    await user.click(
+      screen.getByRole("button", { name: "Weeknight Lemon Chicken" }),
+    );
 
     expect(screen.getByText("Est. $13.42")).toBeInTheDocument();
     expect(
@@ -118,18 +115,18 @@ describe("MealPlanner", () => {
     ).toHaveTextContent(/Prices from ~24 hours ago/i);
     expect(
       screen.getByText(
-        "Ranked meal totals below use saved weekly-ad prices — not live checkout.",
+        "Dinner totals below use saved sale prices — not live checkout.",
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Directional saved weekly-ad prices at Kroger Mechanicsville — not live checkout; confirm in store.",
+        "Saved sale prices at Kroger Mechanicsville — not live checkout; confirm in store.",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText(/Est\. \$6\.49/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(2);
-    expect(screen.getAllByText(/Treat totals as estimates/i)).toHaveLength(2);
-    expect(await screen.findByText("Kroger weekly-ad price — directional")).toBeInTheDocument();
+    expect(screen.getAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(1);
+    expect(screen.getAllByText(/Treat totals as estimates/i)).toHaveLength(1);
+    expect(await screen.findByText("Sale price — estimate only")).toBeInTheDocument();
     expect(screen.queryByText("Postgres catalog + ingested prices")).not.toBeInTheDocument();
     expect(screen.queryByText("Geocodio lookup")).not.toBeInTheDocument();
 
@@ -138,44 +135,44 @@ describe("MealPlanner", () => {
     ).not.toBeInTheDocument();
   }, 15_000);
 
-  it("shows database outage copy instead of adjust-radius guidance when dataSource is unavailable", async () => {
+  it("shows database outage copy instead of adjust-radius guidance when market search returns 503", async () => {
     const user = userEvent.setup({ delay: null });
-    const unavailableMarketPayload = {
-      ok: true,
-      market: {
-        ...marketSearchPayload.market,
-        nearbyStores: [],
-        recommendationReadyStoreCount: 0,
-        dataSource: "unavailable",
-      },
-    };
+
+    writeSettingsPreferences({
+      zipCode: "23111",
+      radiusMiles: 5,
+      shoppingStyle: "single-store",
+      selectedStoreIds: ["kroger-1"],
+      setupComplete: true,
+    });
 
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify(unavailableMarketPayload), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({
+          ok: false,
+          error:
+            "Store and meal prices are not loading right now. Try again shortly.",
+        }),
+        {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
     vi.stubGlobal("fetch", fetchMock);
 
     render(createElement(MealPlanner));
 
-    await user.click(screen.getByRole("button", { name: "Find nearby stores" }));
+    await user.click(screen.getByRole("button", { name: "Deals" }));
 
     expect(
-      await screen.findByRole("heading", {
-        name: "Store and meal prices aren't loading",
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/isn't your ZIP or search radius/i)).toBeInTheDocument();
+      screen.getByRole("alert").textContent,
+    ).toMatch(/Store and meal prices are not loading right now/i);
     expect(screen.queryByText(/Adjust the location search first/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Try a larger radius/i)).not.toBeInTheDocument();
-    expect(
-      await screen.findByRole("heading", { name: "Meal rankings need saved prices" }),
-    ).toBeInTheDocument();
   }, 15_000);
 
-  it("defaults to ingredient-first with TheMealDB opt-in unchecked and data-age copy on rows", async () => {
+  it("defaults to ingredient-first merged ranking without opt-in UI and shows data-age copy", async () => {
     const user = userEvent.setup({ delay: null });
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(marketSearchPayload), {
@@ -187,20 +184,22 @@ describe("MealPlanner", () => {
 
     render(createElement(MealPlanner));
 
-    await user.click(screen.getByRole("button", { name: "Find nearby stores" }));
+    await completeSettingsFlow(user);
+    await completeWelcomeFlow(user);
+    await user.click(screen.getByRole("button", { name: "Pick ingredients manually" }));
     await screen.findByText("Chicken thighs");
 
     expect(
-      screen.getByRole("checkbox", {
+      screen.queryByRole("checkbox", {
         name: /Also include TheMealDB recipes that match my sale ingredients/i,
       }),
-    ).not.toBeChecked();
+    ).not.toBeInTheDocument();
     expect(screen.getByText(/Prices from ~24 hours ago/i)).toBeInTheDocument();
-    expect(screen.getByText(/Weekly-ad price — directional/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sale price — estimate only/i)).toBeInTheDocument();
     expect(screen.queryByText(/cheapest|best price|live price/i)).not.toBeInTheDocument();
   });
 
-  it("shows Step 2 budget label and ingredient-first CTA after store search", async () => {
+  it("shows welcome budget controls after settings are saved", async () => {
     const user = userEvent.setup({ delay: null });
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(marketSearchPayload), {
@@ -212,21 +211,13 @@ describe("MealPlanner", () => {
 
     render(createElement(MealPlanner));
 
-    await user.click(screen.getByRole("button", { name: "Find nearby stores" }));
-    await screen.findByRole("heading", { name: "Step 2: Set meal preferences" });
+    await completeSettingsFlow(user);
 
     expect(
       screen.getByRole("spinbutton", { name: "How much do you want to spend?" }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Maximum ingredients")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Dinner options wanted")).not.toBeInTheDocument();
-    expect(screen.queryByText("Advanced options")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Step 3: Browse nearby sale ingredients" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Suggest recipes using my selected ingredients" }),
-    ).toBeDisabled();
   });
 
   it("shows internal diagnostics only when NEXT_PUBLIC_YUM4LESS_SHOW_INTERNAL_DETAILS=1", async () => {
@@ -247,8 +238,12 @@ describe("MealPlanner", () => {
     );
     render(createElement(DemoWithInternal));
 
-    await user.click(screen.getByRole("button", { name: "Find nearby stores" }));
-    await screen.findByText("Kroger Mechanicsville");
+    await completeSettingsFlow(user);
+    await completeWelcomeFlow(user);
+    await user.click(
+      screen.getByRole("button", { name: "Do you want to see store locations?" }),
+    );
+    await screen.findAllByText("Kroger Mechanicsville");
 
     await user.click(
       screen.getByRole("button", { name: "Project & data details (internal)" }),
@@ -306,7 +301,7 @@ const marketSearchPayload = {
         recommendationEnabled: false,
         priority: 2,
         note:
-          "Publix is an approved next target, but it is not yet active for trusted recommendation pricing in this MVP.",
+          "Publix dinner estimates use saved sale prices when available near you. Totals are estimates — verify in store.",
       },
     ],
     providerStoreSearches: [
@@ -638,8 +633,8 @@ const recommendationPayload = {
             saleLabel: "Weekly special",
             saleConfidence: {
               level: "advertised-recent",
-              label: "Kroger weekly-ad price — directional",
-              note: "This sale came from a scraped Kroger weekly-ad pull (88% ingredient match). Weekly ads and electronic shelf labels can change before you shop, so confirm price and package size in store.",
+              label: "Sale price — estimate only",
+              note: "This sale came from saved store prices (88% ingredient match). Shelf labels can change before you shop, so confirm price and package size in store.",
             },
           },
         ],
@@ -659,7 +654,7 @@ const recommendationPayload = {
         },
         confidenceLabel: "Single-store estimate",
         tags: ["family-friendly"],
-        freshnessLabel: "Recent weekly-ad prices",
+        freshnessLabel: "Recent sale prices",
         explanation: "The meal fits the budget and keeps the trip simple.",
         providerPreviewComparisons: [
           {
@@ -674,9 +669,9 @@ const recommendationPayload = {
             totalRecipeIngredients: 5,
             priceDelta: -0.5,
             comparisonStatus: "partial",
-            directionalLabel: "Directional provider preview looks lower",
+            directionalLabel: "Online check looks lower for these ingredients",
             message:
-              "Compared 1 of 5 recipe ingredient(s) where Kroger provider preview matches exist. For those overlapping ingredients, ranked cache subtotal is $6.49 versus a directional Kroger preview subtotal of $5.99 (-$0.50). This comparison is directional only and does not change the ranked meal total above.",
+              "Compared 1 of 5 recipe ingredient(s) using saved prices and a recent online store check. For those ingredients, saved total is $6.49 versus online check $5.99 (-$0.50). This note does not change your meal total above.",
             ingredients: [
               {
                 ingredientId: "chicken-thighs",
@@ -700,9 +695,9 @@ const recommendationPayload = {
             totalRecipeIngredients: 5,
             priceDelta: null,
             comparisonStatus: "unavailable",
-            directionalLabel: "No directional provider comparison",
+            directionalLabel: "No side-by-side price check yet",
             message:
-              "No Publix provider preview prices overlapped this recipe's ingredients, so Yum4Less cannot show a directional comparison yet. Ranked meal pricing still uses ingested cache rows only and does not change the ranked meal total above.",
+              "Not enough overlapping store prices to show a side-by-side check for this recipe yet. Your meal total above still uses saved prices from your selected store(s).",
             ingredients: [],
           },
         ],

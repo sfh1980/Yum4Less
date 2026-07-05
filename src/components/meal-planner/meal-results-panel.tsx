@@ -1,13 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type {
   MealRecommendation,
   RecommendationExperience,
   ShopperNotice,
 } from "@/lib/recommendation-service";
-import { RecommendationResultsCarousel } from "@/components/recommendation-results-carousel";
-import { MealRecommendationCard } from "@/components/meal-planner/meal-recommendation-card";
+import type { NearbyStoreSummary } from "@/lib/recommendation-types";
+import { SingleStoreMapOverlay } from "@/components/single-store-map-overlay";
+import { PantryPromptCard } from "@/components/meal-planner/pantry-prompt-card";
+import { MealResultsAccordion } from "@/components/meal-planner/meal-results-accordion";
 import { HelpHint } from "@/components/help-hint";
 import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
 import { mealTotalHelp } from "@/lib/help-hint-content";
@@ -27,9 +29,15 @@ type MealResultsPanelProps = {
   market?: RecommendationExperience["market"];
   recommendations: MealRecommendation[];
   shopperNotice?: ShopperNotice;
+  supplementaryShopperNotices?: ShopperNotice[];
   marketBlocked: boolean;
   activeLocationRequest?: ActiveLocationRequest;
-  onOpenTrustExplainer: () => void;
+  /** Full-screen overlay owns loading copy during rank (slice 5). */
+  suppressInlineLoading?: boolean;
+  pantryItems?: string[];
+  onAddPantryItem?: (item: string) => void;
+  onRemovePantryItem?: (item: string) => void;
+  onClearPantryItems?: () => void;
 };
 
 export function MealResultsPanel({
@@ -39,10 +47,27 @@ export function MealResultsPanel({
   market,
   recommendations,
   shopperNotice,
+  supplementaryShopperNotices,
   marketBlocked,
   activeLocationRequest,
-  onOpenTrustExplainer,
+  suppressInlineLoading = false,
+  pantryItems = [],
+  onAddPantryItem,
+  onRemovePantryItem,
+  onClearPantryItems,
 }: MealResultsPanelProps) {
+  const [storeMapTarget, setStoreMapTarget] = useState<NearbyStoreSummary | null>(null);
+  const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
+
+  function handleOpenStoreMap(store: NearbyStoreSummary | null) {
+    setStoreMapTarget(store);
+    setIsStoreMapOpen(true);
+  }
+
+  function handleCloseStoreMap() {
+    setIsStoreMapOpen(false);
+  }
+
   const mealPausedStatus =
     market && marketBlocked ? buildMealRankingPausedStatus(market) : null;
   const resultsPriceSourceLine =
@@ -75,13 +100,6 @@ export function MealResultsPanel({
           ) : null}
         </div>
         <div className="results-actions">
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={onOpenTrustExplainer}
-          >
-            How to read these labels
-          </button>
           <span className="badge">{badgeLabel}</span>
         </div>
       </div>
@@ -90,8 +108,8 @@ export function MealResultsPanel({
 
       <div className="warning warning-with-hint">
         <p>
-          Beta v1: totals are estimates. Check freshness and confidence labels
-          on each result before you shop.
+          Totals are estimates. Check freshness and confidence labels on each
+          result before you shop.
         </p>
         <HelpHint
           id="meal-totals-warning-help"
@@ -113,10 +131,10 @@ export function MealResultsPanel({
             title={mealPausedStatus.title}
             body={mealPausedStatus.body}
           />
-        ) : recommendationState.status === "loading" ? (
+        ) : recommendationState.status === "loading" && !suppressInlineLoading ? (
           <StatusCard
             title="Suggesting recipes"
-            body="Yum4Less is matching your selected sale ingredients to recipes using nearby Kroger-family and Aldi estimates where gates pass."
+            body="Yum4Less is matching your selected sale ingredients to recipes using saved prices at your selected store(s)."
           />
         ) : recommendationState.status === "error" ? (
           <StatusCard
@@ -134,15 +152,21 @@ export function MealResultsPanel({
         ) : recommendationState.status !== "ready" ? (
           <StatusCard
             title="Ready when you are"
-            body="Select sale ingredients in Step 3, then use Suggest recipes using my selected ingredients."
+            body="Choose sale ingredients on the Home tab, continue to rank, then tap Suggest recipes for my store(s)."
           />
         ) : (
           <>
-            {shopperNotice ? (
-              <StatusCard title={shopperNotice.title} body={shopperNotice.body} />
-            ) : null}
+            {[shopperNotice, ...(supplementaryShopperNotices ?? [])]
+              .filter((notice): notice is ShopperNotice => notice !== undefined)
+              .map((notice) => (
+                <StatusCard
+                  key={notice.title}
+                  title={notice.title}
+                  body={notice.body}
+                />
+              ))}
             {recommendations.length === 0 ? (
-              shopperNotice ? null : (
+              hasExplicitEmptyMealNotice(shopperNotice, supplementaryShopperNotices) ? null : (
                 <StatusCard
                   title="No recipes match the current filters"
                   body="That is useful feedback, not a failure. Your spending limit or store preference may be too strict for the nearby sale coverage."
@@ -155,21 +179,34 @@ export function MealResultsPanel({
                 />
               )
             ) : (
-              <RecommendationResultsCarousel ariaLabel="Suggested dinner recipes">
-                {recommendations.map((meal) => (
-                  <MealRecommendationCard
-                    activeLocationRequest={activeLocationRequest}
-                    form={_form}
-                    key={meal.title}
-                    market={market}
-                    meal={meal}
+              <>
+                {onAddPantryItem && onRemovePantryItem && onClearPantryItems ? (
+                  <PantryPromptCard
+                    items={pantryItems}
+                    onAddItem={onAddPantryItem}
+                    onRemoveItem={onRemovePantryItem}
+                    onClearItems={onClearPantryItems}
                   />
-                ))}
-              </RecommendationResultsCarousel>
+                ) : null}
+                <MealResultsAccordion
+                  activeLocationRequest={activeLocationRequest}
+                  ariaLabel="Suggested dinner recipes"
+                  form={_form}
+                  market={market}
+                  onOpenStoreMap={handleOpenStoreMap}
+                  recommendations={recommendations}
+                />
+              </>
             )}
           </>
         )}
       </div>
+
+      <SingleStoreMapOverlay
+        isOpen={isStoreMapOpen}
+        store={storeMapTarget}
+        onClose={handleCloseStoreMap}
+      />
     </div>
   );
 }
@@ -205,6 +242,22 @@ function resolveMealResultsBadgeLabel(input: {
   }
 
   return "Ready to suggest";
+}
+
+function hasExplicitEmptyMealNotice(
+  shopperNotice?: ShopperNotice,
+  supplementaryShopperNotices?: ShopperNotice[],
+): boolean {
+  const titles = [shopperNotice, ...(supplementaryShopperNotices ?? [])]
+    .filter((notice): notice is ShopperNotice => notice !== undefined)
+    .map((notice) => notice.title.toLowerCase());
+
+  return titles.some(
+    (title) =>
+      title.includes("no recipe") ||
+      title.includes("no themealdb") ||
+      title.includes("no sale ingredients"),
+  );
 }
 
 function StatusCard({

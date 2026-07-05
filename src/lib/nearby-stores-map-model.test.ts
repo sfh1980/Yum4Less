@@ -5,7 +5,8 @@ import {
   resolveStoreMapLocationProvenance,
 } from "@/lib/store-map-location-copy";
 import {
-  buildNearbyStoresMapModel,
+  buildDiscoveryMapModel,
+  buildSingleStoreMapModel,
   getMapBounds,
 } from "@/lib/nearby-stores-map-model";
 
@@ -27,8 +28,8 @@ function withLocationFields<
 }
 
 describe("nearby stores map model", () => {
-  it("builds map markers from the market summary anchor and nearby stores", () => {
-    const model = buildNearbyStoresMapModel({
+  it("builds discovery map markers from the market summary anchor and nearby stores", () => {
+    const model = buildDiscoveryMapModel({
       locationLabel: "Mechanicsville, VA",
       searchLatitude: 37.6085,
       searchLongitude: -77.3321,
@@ -53,6 +54,7 @@ describe("nearby stores map model", () => {
       ],
     });
 
+    expect(model.kind).toBe("discovery");
     expect(model.anchor.label).toBe("Mechanicsville, VA");
     expect(model.anchor.source).toBe("zip");
     expect(model.stores).toHaveLength(1);
@@ -62,7 +64,7 @@ describe("nearby stores map model", () => {
   });
 
   it("flags OSM map-catalog pins for attribution", () => {
-    const model = buildNearbyStoresMapModel({
+    const model = buildDiscoveryMapModel({
       locationLabel: "Mechanicsville, VA",
       searchLatitude: 37.6085,
       searchLongitude: -77.3321,
@@ -91,8 +93,33 @@ describe("nearby stores map model", () => {
     expect(model.stores[0]?.locationNote).toContain("OpenStreetMap");
   });
 
+  it("builds a single-store model with one pin and no search radius", () => {
+    const store = withLocationFields({
+      id: "kroger-mechanicsville",
+      name: "Kroger",
+      kind: "grocery",
+      latitude: 37.6153,
+      longitude: -77.3491,
+      distanceMiles: 1.2,
+      chain: "kroger",
+      chainLabel: "Kroger",
+      rolloutStatus: "weekly-ad-preview",
+      recommendationEnabled: true,
+      rolloutNote: "Seed preview pricing",
+      sourceName: "yum4less-internal-catalog",
+    });
+
+    const model = buildSingleStoreMapModel(store);
+
+    expect(model.kind).toBe("single-store");
+    expect(model.store.id).toBe("kroger-mechanicsville");
+    expect("radiusMiles" in model).toBe(false);
+    expect("anchor" in model).toBe(false);
+  });
+
   it("computes bounds that include the anchor and store coordinates", () => {
     const bounds = getMapBounds({
+      kind: "discovery",
       anchor: {
         latitude: 37.6085,
         longitude: -77.3321,
@@ -114,6 +141,8 @@ describe("nearby stores map model", () => {
           rolloutStatus: "weekly-ad-preview",
           rolloutNote: "Seed preview pricing",
           locationNote: "Indicative beta map pin — verify the store address before visiting.",
+          locationProvenance: "bootstrap",
+          locationBadge: "Catalog coordinates",
         },
       ],
     });
@@ -123,5 +152,33 @@ describe("nearby stores map model", () => {
       expect(bounds.southWest[0]).toBeLessThanOrEqual(bounds.northEast[0]);
       expect(bounds.southWest[1]).toBeLessThanOrEqual(bounds.northEast[1]);
     }
+  });
+
+  it("centers single-store bounds on the lone store pin", () => {
+    const bounds = getMapBounds({
+      kind: "single-store",
+      usesOsmCatalogData: false,
+      store: {
+        id: "kroger-mechanicsville",
+        name: "Kroger",
+        latitude: 37.6153,
+        longitude: -77.3491,
+        distanceMiles: 1.2,
+        chainLabel: "Kroger",
+        chain: "kroger",
+        recommendationEnabled: true,
+        rolloutStatus: "weekly-ad-preview",
+        rolloutNote: "Seed preview pricing",
+        locationNote: "Indicative beta map pin — verify the store address before visiting.",
+        locationProvenance: "bootstrap",
+        locationBadge: "Catalog coordinates",
+      },
+    });
+
+    expect(bounds).toEqual({
+      kind: "center",
+      center: [37.6153, -77.3491],
+      zoom: 14,
+    });
   });
 });

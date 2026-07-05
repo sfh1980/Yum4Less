@@ -13,7 +13,7 @@ describe("recommendation error copy", () => {
 
     expect(mapped.title).toContain("meal preferences");
     expect(mapped.body).toMatch(/\$5.*\$40/);
-    expect(mapped.hint).toMatch(/opted in/i);
+    expect(mapped.hint).toMatch(/sale ingredients/i);
   });
 
   it("maps recommendation 400 body too large to an honest capacity message", () => {

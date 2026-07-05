@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { NearbyStoresMapModel } from "@/lib/nearby-stores-map-model";
+import type {
+  DiscoveryMapModel,
+  MapStoreMarker,
+  StoresMapModel,
+} from "@/lib/nearby-stores-map-model";
 import { getMapBounds } from "@/lib/nearby-stores-map-model";
 import { escapeHtml } from "@/lib/html-escape";
 import {
@@ -13,10 +17,21 @@ import { MAP_CATALOG_LOCATION_FOOTNOTE } from "@/lib/store-map-location-copy";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 type NearbyStoresMapProps = {
-  model: NearbyStoresMapModel;
+  model: StoresMapModel;
   selectedStoreId?: string;
   onStoreSelect?: (storeId: string) => void;
 };
+
+function readThemeToken(name: string, fallback: string): string {
+  if (typeof document === "undefined") {
+    return fallback;
+  }
+
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() ||
+    fallback
+  );
+}
 
 export function NearbyStoresMap({
   model,
@@ -76,43 +91,14 @@ export function NearbyStoresMap({
         })
         .addTo(map);
 
-      leaflet
-        .circle([model.anchor.latitude, model.anchor.longitude], {
-          radius: model.radiusMiles * 1609.34,
-          color: "#75f0c0",
-          fillColor: "#75f0c0",
-          fillOpacity: 0.14,
-          weight: 2,
-          dashArray: "6 4",
-        })
-        .addTo(map)
-        .bindTooltip(
-          `<strong>${model.anchor.label}</strong><br/>${model.radiusMiles} mi search radius`,
-          { direction: "top", opacity: 0.95 },
-        );
+      if (model.kind === "discovery") {
+        mountDiscoveryChrome(leaflet, map, model);
+      }
 
-      const anchorIcon = leaflet.divIcon({
-        className: "store-map-marker-anchor-wrap",
-        html: '<span class="store-map-marker-anchor">You</span>',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      });
+      const stores =
+        model.kind === "single-store" ? [model.store] : model.stores;
 
-      leaflet
-        .marker([model.anchor.latitude, model.anchor.longitude], {
-          icon: anchorIcon,
-          zIndexOffset: 1000,
-        })
-        .addTo(map)
-        .bindTooltip(
-          `<strong>${model.anchor.label}</strong><br/>Search anchor · ${formatAnchorSource(model.anchor.source)}`,
-          { direction: "top", opacity: 0.95, sticky: true },
-        )
-        .bindPopup(
-          `<strong>${model.anchor.label}</strong><br/>Search anchor · ${formatAnchorSource(model.anchor.source)}<br/>${model.radiusMiles} mile radius`,
-        );
-
-      for (const store of model.stores) {
+      for (const store of stores) {
         const style = getStoreMarkerStyle({
           chain: store.chain,
           storeName: store.name,
@@ -258,10 +244,51 @@ export function NearbyStoresMap({
   );
 }
 
-function buildStorePopupHtml(
-  store: NearbyStoresMapModel["stores"][number],
-  pricingLabel: string,
+function mountDiscoveryChrome(
+  leaflet: typeof import("leaflet"),
+  map: import("leaflet").Map,
+  model: DiscoveryMapModel,
 ) {
+  const actionColor = readThemeToken("--action", "#d85a30");
+
+  leaflet
+    .circle([model.anchor.latitude, model.anchor.longitude], {
+      radius: model.radiusMiles * 1609.34,
+      color: actionColor,
+      fillColor: actionColor,
+      fillOpacity: 0.14,
+      weight: 2,
+      dashArray: "6 4",
+    })
+    .addTo(map)
+    .bindTooltip(
+      `<strong>${model.anchor.label}</strong><br/>${model.radiusMiles} mi search radius`,
+      { direction: "top", opacity: 0.95 },
+    );
+
+  const anchorIcon = leaflet.divIcon({
+    className: "store-map-marker-anchor-wrap",
+    html: '<span class="store-map-marker-anchor">You</span>',
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  });
+
+  leaflet
+    .marker([model.anchor.latitude, model.anchor.longitude], {
+      icon: anchorIcon,
+      zIndexOffset: 1000,
+    })
+    .addTo(map)
+    .bindTooltip(
+      `<strong>${model.anchor.label}</strong><br/>Search anchor · ${formatAnchorSource(model.anchor.source)}`,
+      { direction: "top", opacity: 0.95, sticky: true },
+    )
+    .bindPopup(
+      `<strong>${model.anchor.label}</strong><br/>Search anchor · ${formatAnchorSource(model.anchor.source)}<br/>${model.radiusMiles} mile radius`,
+    );
+}
+
+function buildStorePopupHtml(store: MapStoreMarker, pricingLabel: string) {
   const safeName = escapeHtml(store.name);
   const safeChainLabel = escapeHtml(store.chainLabel);
   const safePricingLabel = escapeHtml(pricingLabel);
@@ -271,7 +298,7 @@ function buildStorePopupHtml(
   return `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span><br/><span style="opacity:0.85">${safeRolloutNote}</span>`;
 }
 
-function formatAnchorSource(source: NearbyStoresMapModel["anchor"]["source"]) {
+function formatAnchorSource(source: DiscoveryMapModel["anchor"]["source"]) {
   switch (source) {
     case "browser":
       return "Browser location anchor";

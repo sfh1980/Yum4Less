@@ -13,7 +13,8 @@ const baseForm: FormState = {
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
   recipeSource: "internal-library",
-  externalRecipeOptIn: false,
+  theme: "system" as const,
+  selectedStoreIds: ["kroger-mechanicsville"],
 };
 
 describe("validateLocationFields", () => {

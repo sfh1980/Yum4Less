@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import type { RecommendationExperience } from "@/lib/recommendation-service";
 import { NearbyStoresMap } from "@/components/nearby-stores-map";
 import { NearbyStoresList } from "@/components/nearby-stores-list";
-import type { NearbyStoresMapModel } from "@/lib/nearby-stores-map-model";
+import type { DiscoveryMapModel } from "@/lib/nearby-stores-map-model";
 import { HelpHint } from "@/components/help-hint";
 import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
 import { nearbyStoresMapHelp } from "@/lib/help-hint-content";
@@ -15,7 +15,7 @@ type MarketDiscoveryPanelProps = {
   marketSearchState: MarketSearchState;
   market?: RecommendationExperience["market"];
   marketBlocked: boolean;
-  nearbyStoresMapModel?: NearbyStoresMapModel;
+  nearbyStoresMapModel?: DiscoveryMapModel;
   selectedStoreId?: string;
   onStoreSelect: (storeId: string) => void;
 };
@@ -49,6 +49,12 @@ export function MarketDiscoveryPanel({
       </div>
 
       <PricingTrustHeadsUpBanner instanceId="market" market={market} />
+
+      {marketSearchState.status === "ready" && marketSearchState.notice ? (
+        <p className="field-hint" role="status">
+          {marketSearchState.notice}
+        </p>
+      ) : null}
 
       {market?.mapDiscoveryNotice ? (
         <p className="field-hint map-discovery-notice" role="status">

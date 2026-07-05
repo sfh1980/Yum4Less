@@ -47,8 +47,8 @@ export function mapRecommendationApiError(input: {
     if (apiError.includes("Recommendation request payload is invalid")) {
       return {
         title: "Check your meal preferences",
-        body: "Spending limit must be between $5 and $40, search radius 1–25 miles, and external recipe sources need the opt-in checkbox before ranking.",
-        hint: "Adjust Step 2 filters or turn off TheMealDB unless you opted in.",
+        body: "Spending limit must be between $5 and $40 and search radius 1–25 miles. Check selected sale ingredients and dietary filters.",
+        hint: "Adjust Step 2 filters or select more sale ingredients before ranking.",
       };
     }
 

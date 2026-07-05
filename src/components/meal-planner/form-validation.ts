@@ -3,7 +3,6 @@ import { radiusMilesSchema } from "@/contracts/shared/location";
 import { formBudgetSchema } from "@/contracts/shared/meal-preferences";
 import { isValidZipCode } from "@/lib/api-request";
 import {
-  DEFAULT_DINNERS_WANTED,
   DEFAULT_MAX_INGREDIENTS,
   DEFAULT_PLANNING_MODE,
 } from "@/lib/meal-preference-defaults";
@@ -58,7 +57,15 @@ export function buildMealPreferencePayload(
   if (
     radiusMiles === undefined ||
     !radiusMilesSchema.safeParse(radiusMiles).success ||
-    !formBudgetSchema.safeParse(budget).success
+    !formBudgetSchema.safeParse(budget).success ||
+    form.selectedStoreIds.length === 0
+  ) {
+    return undefined;
+  }
+
+  if (
+    form.shoppingStyle === "single-store" &&
+    form.selectedStoreIds.length !== 1
   ) {
     return undefined;
   }
@@ -68,12 +75,25 @@ export function buildMealPreferencePayload(
     radiusMiles,
     budget,
     maxIngredients: DEFAULT_MAX_INGREDIENTS,
-    dinnersWanted: DEFAULT_DINNERS_WANTED,
     shoppingStyle: form.shoppingStyle,
     dietaryFocus: form.dietaryFocus,
     recipeSource: form.recipeSource,
+    selectedStoreIds: form.selectedStoreIds,
     planningMode: DEFAULT_PLANNING_MODE,
   };
+}
+
+export function defaultSelectedStoreIdsForMarket(
+  stores: Array<{ id: string; recommendationEnabled: boolean }>,
+  shoppingStyle: MealPreferenceForm["shoppingStyle"],
+): string[] {
+  const ranked = stores.filter((store) => store.recommendationEnabled);
+
+  if (shoppingStyle === "single-store") {
+    return ranked[0] ? [ranked[0].id] : [];
+  }
+
+  return ranked.map((store) => store.id);
 }
 
 export function formatDifficulty(difficulty: string) {

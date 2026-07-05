@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { ThemeSync } from "@/components/theme-sync";
 import { InternalDetailsModal } from "@/components/internal-details-modal";
+import { BottomNav } from "@/components/meal-planner/bottom-nav";
+import { DealsPanel } from "@/components/meal-planner/deals-panel";
 import { InternalDetailsDevTrigger } from "@/components/meal-planner/internal-details-dev-trigger";
-import { LocationSearchPanel } from "@/components/meal-planner/location-search-panel";
-import { MarketDiscoveryPanel } from "@/components/meal-planner/market-discovery-panel";
+import { IngredientsStepPanel } from "@/components/meal-planner/ingredients-step-panel";
 import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
-import { TrustExplainerModal } from "@/components/meal-planner/trust-explainer-modal";
+import { RankLoadingOverlay } from "@/components/meal-planner/rank-loading-overlay";
+import { RankStepPanel } from "@/components/meal-planner/rank-step-panel";
+import { SavedPlaceholderPanel } from "@/components/meal-planner/saved-placeholder-panel";
+import { SettingsPanel } from "@/components/meal-planner/settings-panel";
+import { StoreMapOverlay } from "@/components/meal-planner/store-map-overlay";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
+import { WelcomePanel } from "@/components/meal-planner/welcome-panel";
 import { isInternalDetailsUiEnabled } from "@/lib/show-internal-details-ui";
 import { throwIfLocalhostVerificationRenderErrorRequested } from "@/lib/localhost-verification-triggers";
 
@@ -16,79 +23,163 @@ export function MealPlanner() {
   const demo = useMealPlanner();
   const showInternalDetails = isInternalDetailsUiEnabled();
 
+  const resultsPanel = (
+    <MealResultsPanel
+      activeLocationRequest={demo.activeLocationRequest}
+      form={demo.form}
+      market={demo.scopedMarket}
+      marketBlocked={demo.marketBlocked}
+      marketSearchState={demo.marketSearchState}
+      pantryItems={demo.pantryItems}
+      onAddPantryItem={demo.handleAddPantryItem}
+      onRemovePantryItem={demo.handleRemovePantryItem}
+      onClearPantryItems={demo.handleClearPantryItems}
+      recommendationState={demo.recommendationState}
+      recommendations={demo.recommendations}
+      shopperNotice={demo.shopperNotice}
+      supplementaryShopperNotices={demo.supplementaryShopperNotices}
+      suppressInlineLoading={demo.rankLoading}
+    />
+  );
+
   return (
-    <section className="meal-planner-grid" aria-label="Beta v1 dinner planning flow">
-      <div className="meal-planner-grid-col meal-planner-grid-col--inputs">
-        <LocationSearchPanel
-          displayedErrors={demo.displayedErrors}
-          focusMealPreferencesToken={demo.focusMealPreferencesToken}
-          form={demo.form}
-          isEditingLocation={demo.isEditingLocation}
-          market={demo.market}
-          marketSearchLoading={demo.marketSearchLoading}
-          rankLoading={demo.rankLoading}
-          rankingPaused={demo.marketBlocked}
-          onBrowserSearch={demo.handleBrowserLocationSearch}
-          onEditLocation={() => demo.setIsEditingLocation(true)}
-          onRankMeals={demo.handleRankMeals}
-          onResetLocationState={demo.resetLocationDependentState}
-          onZipSearch={demo.handleZipSearch}
-          selectedIngredientIds={demo.selectedIngredientIds}
-          onToggleIngredient={demo.handleToggleIngredient}
-          onSelectAllIngredients={demo.handleSelectAllIngredients}
-          onClearIngredientSelection={demo.handleClearIngredientSelection}
-          setForm={demo.setForm}
-        />
-      </div>
+    <div className="app-shell">
+      <ThemeSync themePreference={demo.form.theme} />
+      <div className="app-shell-content">
+        {demo.activeTab === "home" ? (
+          <section className="meal-planner-grid" aria-label="Home dinner planning flow">
+            {demo.flowStep === "welcome" ? (
+              <WelcomePanel
+                displayedErrors={demo.displayedErrors}
+                form={demo.form}
+                onContinue={demo.handleCompleteWelcome}
+                setForm={demo.setForm}
+              />
+            ) : null}
 
-      <div className="meal-planner-grid-col meal-planner-grid-col--market">
-        <MarketDiscoveryPanel
-          market={demo.market}
-          marketBlocked={demo.marketBlocked}
-          marketSearchState={demo.marketSearchState}
-          nearbyStoresMapModel={demo.nearbyStoresMapModel}
-          onStoreSelect={demo.handleStoreSelect}
-          selectedStoreId={demo.selectedStoreId}
-        />
-      </div>
+            {demo.flowStep === "ingredients" && demo.scopedMarket ? (
+              <IngredientsStepPanel
+                market={demo.scopedMarket}
+                marketSearchLoading={demo.marketSearchLoading}
+                rankingPaused={demo.marketBlocked}
+                shoppingStyle={demo.form.shoppingStyle}
+                ingredientPickMode={demo.ingredientPickMode}
+                selectedIngredientIds={demo.selectedIngredientIds}
+                onClearIngredientSelection={demo.handleClearIngredientSelection}
+                onContinueToRank={demo.handleContinueToRank}
+                onPickManually={demo.handlePickIngredientsManually}
+                onSelectAllIngredients={demo.handleSelectAllIngredients}
+                onToggleIngredient={demo.handleToggleIngredient}
+                onUseAllIngredients={demo.handleUseAllIngredients}
+              />
+            ) : null}
 
-      <div className="meal-planner-grid-col meal-planner-grid-col--meals">
-        <MealResultsPanel
-          activeLocationRequest={demo.activeLocationRequest}
-          form={demo.form}
-          market={demo.market}
-          marketBlocked={demo.marketBlocked}
-          marketSearchState={demo.marketSearchState}
-          onOpenTrustExplainer={() => demo.setIsTrustExplainerOpen(true)}
-          recommendationState={demo.recommendationState}
-          recommendations={demo.recommendations}
-          shopperNotice={demo.shopperNotice}
-        />
-      </div>
+            {demo.flowStep === "ingredients" &&
+            !demo.scopedMarket &&
+            demo.marketSearchLoading ? (
+              <div className="panel panel-padding meal-planner-panel flow-panel">
+                <h2>Ingredients</h2>
+                <p className="panel-copy" role="status">
+                  Loading sale ingredients from your saved Settings…
+                </p>
+              </div>
+            ) : null}
 
-      <TrustExplainerModal
-        open={demo.isTrustExplainerOpen}
-        onClose={demo.handleTrustExplainerClose}
-      />
-      {showInternalDetails ? (
-        <>
-          <InternalDetailsDevTrigger
-            onOpen={() => demo.setIsInternalDetailsOpen(true)}
+            {demo.flowStep === "rank" ? (
+              <RankStepPanel
+                rankLoading={demo.rankLoading}
+                rankingPaused={demo.marketBlocked}
+                onRankMeals={demo.handleRankMeals}
+              />
+            ) : null}
+
+            {demo.showResultsInHomeFlow ? resultsPanel : null}
+          </section>
+        ) : null}
+
+        {demo.activeTab === "deals" ? (
+          <DealsPanel
+            market={demo.scopedMarket}
+            marketSearchLoading={demo.marketSearchLoading}
+            marketSearchState={demo.marketSearchState}
           />
-          <InternalDetailsModal
-            open={demo.isInternalDetailsOpen}
-            onClose={() => demo.setIsInternalDetailsOpen(false)}
+        ) : null}
+
+        {demo.activeTab === "cook" && demo.cookEnabled ? resultsPanel : null}
+
+        {demo.activeTab === "saved" ? <SavedPlaceholderPanel /> : null}
+
+        {demo.activeTab === "settings" ? (
+          <SettingsPanel
+            displayedErrors={demo.displayedErrors}
+            form={demo.form}
             market={demo.market}
-            recommendations={demo.recommendations}
+            marketSearchLoading={demo.marketSearchLoading}
+            marketSearchState={demo.marketSearchState}
+            settingsSaveError={demo.settingsSaveError}
+            storeCatalog={demo.market}
+            onBrowserSearch={demo.handleBrowserLocationSearch}
+            onFactoryReset={demo.handleFactoryReset}
+            onFindStores={demo.handleFindStores}
+            onResetLocationState={demo.resetLocationDependentState}
+            onSaveSettings={demo.handleSaveSettings}
+            setForm={demo.setForm}
           />
-        </>
+        ) : null}
+
+        {demo.rankLoading ? <RankLoadingOverlay /> : null}
+
+        {showInternalDetails ? (
+          <>
+            <InternalDetailsDevTrigger
+              onOpen={() => demo.setIsInternalDetailsOpen(true)}
+            />
+            <InternalDetailsModal
+              open={demo.isInternalDetailsOpen}
+              onClose={() => demo.setIsInternalDetailsOpen(false)}
+              market={demo.market}
+              recommendations={demo.recommendations}
+            />
+          </>
+        ) : null}
+
+        {demo.activeTab === "home" ? (
+          <footer className="meal-planner-footer-links">
+            <Link className="text-link" href="/feedback">
+              Send feedback or report a wrong price
+            </Link>
+          </footer>
+        ) : null}
+      </div>
+
+      {demo.showMapLink ? (
+        <div className="map-link-bar">
+          <button
+            type="button"
+            className="text-link map-link-button"
+            onClick={demo.handleOpenMapOverlay}
+          >
+            Do you want to see store locations?
+          </button>
+        </div>
       ) : null}
 
-      <footer className="meal-planner-footer-links">
-        <Link className="text-link" href="/feedback">
-          Send feedback or report a wrong price
-        </Link>
-      </footer>
-    </section>
+      <StoreMapOverlay
+        open={demo.isMapOverlayOpen}
+        market={demo.scopedMarket}
+        marketBlocked={demo.marketBlocked}
+        marketSearchState={demo.marketSearchState}
+        nearbyStoresMapModel={demo.nearbyStoresMapModel}
+        onClose={demo.handleCloseMapOverlay}
+        onStoreSelect={demo.handleStoreSelect}
+        selectedStoreId={demo.selectedStoreId}
+      />
+
+      <BottomNav
+        activeTab={demo.activeTab}
+        cookEnabled={demo.cookEnabled}
+        onTabChange={demo.handleTabChange}
+      />
+    </div>
   );
 }
