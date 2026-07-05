@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import {
   PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID,
@@ -7,7 +7,7 @@ import {
 } from "@/lib/publix-catalog-sync";
 
 describe("publix-catalog-sync (integration)", () => {
-  afterEach(async () => {
+  async function cleanupPublixBootstrapFixture() {
     const pool = getDbPool();
     await pool.query(
       `delete from price_observations where store_id in ($1, $2)`,
@@ -17,6 +17,14 @@ describe("publix-catalog-sync (integration)", () => {
       `delete from stores where id in ($1, $2)`,
       [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
     );
+  }
+
+  beforeEach(async () => {
+    await cleanupPublixBootstrapFixture();
+  });
+
+  afterEach(async () => {
+    await cleanupPublixBootstrapFixture();
     await resetDbPoolForTests();
   });
 
@@ -46,7 +54,7 @@ describe("publix-catalog-sync (integration)", () => {
     const result = await retirePublixAtleeBootstrapStore(PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID);
 
     expect(result.deletedStore).toBe(true);
-    expect(result.migratedPrices).toBe(1);
+    expect(result.migratedPrices).toBe(2);
 
     const retired = await pool.query(`select id from stores where id = $1`, [
       RETIRED_PUBLIX_BOOTSTRAP_STORE_ID,
@@ -54,7 +62,8 @@ describe("publix-catalog-sync (integration)", () => {
     expect(retired.rowCount).toBe(0);
 
     const prices = await pool.query<{ store_id: string; ingredient_id: string }>(
-      `select store_id, ingredient_id from price_observations where ingredient_id in ('broccoli', 'lemon') order by ingredient_id`,
+      `select store_id, ingredient_id from price_observations where store_id = $1 and ingredient_id in ('broccoli', 'lemon') order by ingredient_id`,
+      [PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
     );
     expect(prices.rows).toEqual([
       { store_id: "publix-1626", ingredient_id: "broccoli" },
