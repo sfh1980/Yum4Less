@@ -39,7 +39,7 @@ const WEEKLY_AD_CHAINS = [
 
 /** Maps legacy fixture day buckets to hours within the 24h promotion gate. */
 const LEGACY_FIXTURE_DAY_TO_PROMOTION_FRESHNESS_HOURS: Record<number, number> = {
-  1: 4,
+  1: 3,
   2: 11,
   3: 17,
   4: 23,
