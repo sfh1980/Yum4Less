@@ -1,8 +1,11 @@
 import {
   buildDirectionalRolloutNote,
+  inferStoreChainFromCatalog,
   inferStoreChainFromName,
   listProviderCatalogRolloutChains,
+  type CatalogStoreChainInput,
 } from "@/lib/chain-rollout-policy";
+import type { CatalogStore } from "@/lib/market-catalog-types";
 
 export type StoreChain =
   | "kroger"
@@ -135,12 +138,36 @@ export function getProviderRolloutForStore(storeName: string): ProviderRolloutEn
   return PROVIDER_ROLLOUT[inferStoreChainFromName(storeName)];
 }
 
+export function getProviderRolloutForCatalogStore(
+  store: Pick<CatalogStore, "id" | "name" | "sourceName"> | CatalogStoreChainInput,
+): ProviderRolloutEntry {
+  return PROVIDER_ROLLOUT[inferStoreChainFromCatalog(store)];
+}
+
 export function resolveProviderRolloutForStore(
   storeName: string,
   weeklyAdContext?: WeeklyAdRolloutContext,
 ): ProviderRolloutEntry {
-  const base = getProviderRolloutForStore(storeName);
+  return resolveProviderRolloutForBase(
+    getProviderRolloutForStore(storeName),
+    weeklyAdContext,
+  );
+}
 
+export function resolveProviderRolloutForCatalogStore(
+  store: Pick<CatalogStore, "id" | "name" | "sourceName"> | CatalogStoreChainInput,
+  weeklyAdContext?: WeeklyAdRolloutContext,
+): ProviderRolloutEntry {
+  return resolveProviderRolloutForBase(
+    getProviderRolloutForCatalogStore(store),
+    weeklyAdContext,
+  );
+}
+
+function resolveProviderRolloutForBase(
+  base: ProviderRolloutEntry,
+  weeklyAdContext?: WeeklyAdRolloutContext,
+): ProviderRolloutEntry {
   if (base.chain === "walmart") {
     return resolveWalmartRollout(base, weeklyAdContext);
   }

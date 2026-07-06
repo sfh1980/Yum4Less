@@ -134,6 +134,98 @@ export function inferStoreChainFromName(storeName: string): StoreChain {
   return "unknown";
 }
 
+export type CatalogStoreChainInput = {
+  id: string;
+  name: string;
+  sourceName?: string | null;
+  /** DB row alias — accepted for catalog-sync call sites. */
+  source_name?: string | null;
+};
+
+function readCatalogSourceName(
+  store: Pick<CatalogStoreChainInput, "sourceName" | "source_name">,
+): string | null | undefined {
+  return store.sourceName ?? store.source_name;
+}
+
+const CATALOG_SOURCE_CHAIN_BY_NAME: Record<string, StoreChain> = {
+  "publix-store-locator": "publix",
+  "kroger-official-api": "kroger",
+  "yum4less-market-catalog": "aldi",
+};
+
+const CATALOG_ID_PREFIX_CHAINS: ReadonlyArray<readonly [RegExp, StoreChain]> = [
+  [/^publix-/, "publix"],
+  [/^kroger-/, "kroger"],
+  [/^aldi-/, "aldi"],
+  [/^food-lion-/, "food-lion"],
+  [/^walmart-/, "walmart"],
+  [/^lidl-/, "lidl"],
+  [/^trader-joes-/, "trader-joes"],
+  [/^dollar-general-/, "dollar-general"],
+  [/^bjs-/, "bjs"],
+];
+
+const KNOWN_WEEKLY_AD_SOURCE_CHAINS = new Set<string>([
+  ...WEEKLY_AD_RANKED_PRICING_CHAINS,
+  "dollar-general",
+]);
+
+function isKnownStoreChain(value: string): value is StoreChain {
+  return value !== "unknown" && KNOWN_WEEKLY_AD_SOURCE_CHAINS.has(value);
+}
+
+export function inferStoreChainFromCatalogSource(
+  sourceName: string | null | undefined,
+): StoreChain | null {
+  const normalized = sourceName?.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const mapped = CATALOG_SOURCE_CHAIN_BY_NAME[normalized];
+  if (mapped) {
+    return mapped;
+  }
+
+  if (normalized.endsWith("-weekly-ad-scrape")) {
+    const candidate = normalized.replace(/-weekly-ad-scrape$/, "");
+    if (isKnownStoreChain(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+export function inferStoreChainFromIdPrefix(storeId: string): StoreChain | null {
+  for (const [pattern, chain] of CATALOG_ID_PREFIX_CHAINS) {
+    if (pattern.test(storeId)) {
+      return chain;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolve chain for catalog-backed stores. Prefer ingest-controlled `sourceName`
+ * and stable `id` conventions before locator/OSM display names.
+ */
+export function inferStoreChainFromCatalog(store: CatalogStoreChainInput): StoreChain {
+  const fromSource = inferStoreChainFromCatalogSource(readCatalogSourceName(store));
+  if (fromSource) {
+    return fromSource;
+  }
+
+  const fromId = inferStoreChainFromIdPrefix(store.id);
+  if (fromId) {
+    return fromId;
+  }
+
+  return inferStoreChainFromName(store.name);
+}
+
 export function getCoordinateSanityPromotionRequirement(
   chain: StoreChain,
 ): CoordinateSanityPromotionRequirement {

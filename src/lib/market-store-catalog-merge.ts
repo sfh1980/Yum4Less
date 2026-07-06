@@ -1,6 +1,6 @@
 import type { CatalogStore } from "@/lib/market-catalog-types";
 import { MAP_RANKED_CHAIN_KEYS } from "@/lib/map-osm-ranked-chain-policy";
-import { getProviderRolloutForStore } from "@/lib/provider-rollout";
+import { getProviderRolloutForCatalogStore, type StoreChain } from "@/lib/provider-rollout";
 import type {
   ProviderDiscoveredStore,
   ProviderStoreSearchResult,
@@ -142,8 +142,8 @@ function storesAreDuplicateForMap(left: CatalogStore, right: CatalogStore): bool
     return true;
   }
 
-  const leftChain = getProviderRolloutForStore(left.name).chain;
-  const rightChain = getProviderRolloutForStore(right.name).chain;
+  const leftChain = getProviderRolloutForCatalogStore(left).chain;
+  const rightChain = getProviderRolloutForCatalogStore(right).chain;
 
   if (leftChain === "unknown" || rightChain === "unknown" || leftChain !== rightChain) {
     return false;
@@ -160,7 +160,7 @@ function storesAreDuplicateForMap(left: CatalogStore, right: CatalogStore): bool
 function resolveDedupeProximityMiles(
   left: CatalogStore,
   right: CatalogStore,
-  chain: ReturnType<typeof getProviderRolloutForStore>["chain"],
+  chain: StoreChain,
 ): number {
   const leftContext = isMapContextCatalogStore(left);
   const rightContext = isMapContextCatalogStore(right);

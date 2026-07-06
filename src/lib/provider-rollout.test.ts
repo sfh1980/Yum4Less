@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  getProviderRolloutForCatalogStore,
   getProviderRolloutForStore,
   listProviderRollout,
+  resolveProviderRolloutForCatalogStore,
   resolveProviderRolloutForStore,
   listResolvedProviderRollout,
 } from "@/lib/provider-rollout";
@@ -50,6 +52,17 @@ describe("provider rollout", () => {
       "walmart",
       "bjs",
     ]);
+  });
+
+  it("resolves catalog stores with locator display names to the correct rollout", () => {
+    const rollout = getProviderRolloutForCatalogStore({
+      id: "publix-1626",
+      name: "Brandy Creek Commons",
+      sourceName: "publix-store-locator",
+    });
+
+    expect(rollout.chain).toBe("publix");
+    expect(rollout.label).toBe("Publix");
   });
 });
 
@@ -101,11 +114,18 @@ describe("resolveProviderRolloutForStore", () => {
   });
 
   it("enables Publix weekly-ad-preview when promotion gates pass", () => {
-    const rollout = resolveProviderRolloutForStore("Publix Atlee", {
-      matchedIngredientCount: 4,
-      usesWeeklyAdSource: true,
-      weeklyAdPromotionPassed: true,
-    });
+    const rollout = resolveProviderRolloutForCatalogStore(
+      {
+        id: "publix-1626",
+        name: "Brandy Creek Commons",
+        sourceName: "publix-store-locator",
+      },
+      {
+        matchedIngredientCount: 4,
+        usesWeeklyAdSource: true,
+        weeklyAdPromotionPassed: true,
+      },
+    );
 
     expect(rollout.status).toBe("weekly-ad-preview");
     expect(rollout.recommendationEnabled).toBe(true);

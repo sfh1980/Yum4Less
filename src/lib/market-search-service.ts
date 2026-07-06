@@ -10,9 +10,9 @@ import {
   type MarketDataSource,
 } from "@/lib/market-repository";
 import {
-  getProviderRolloutForStore,
+  getProviderRolloutForCatalogStore,
   listResolvedProviderRollout,
-  resolveProviderRolloutForStore,
+  resolveProviderRolloutForCatalogStore,
   type StoreChain,
 } from "@/lib/provider-rollout";
 import { searchOfficialProviderStores } from "@/lib/provider-market-service";
@@ -273,7 +273,7 @@ export function buildNearbyStoresForSearch(
 ): NearbyStoreSummary[] {
   return stores
     .map((store) => {
-      const baseRollout = getProviderRolloutForStore(store.name);
+      const baseRollout = getProviderRolloutForCatalogStore(store);
       const coverage = buildWeeklyAdStoreCoverage({
         storeId: store.id,
         chain: baseRollout.chain,
@@ -287,7 +287,7 @@ export function buildNearbyStoresForSearch(
               priceObservations,
             })
           : null;
-      const rollout = resolveProviderRolloutForStore(store.name, {
+      const rollout = resolveProviderRolloutForCatalogStore(store, {
         matchedIngredientCount: coverage.matchedIngredientCount,
         usesWeeklyAdSource: coverage.usesWeeklyAdSource,
         weeklyAdPromotionPassed: weeklyAdPromotionGatesPass(

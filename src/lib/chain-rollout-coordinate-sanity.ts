@@ -2,6 +2,7 @@ import { getDistanceMiles } from "@/lib/geo-distance";
 import {
   COORDINATE_SANITY_EXCEPTIONS,
   getCoordinateSanityPromotionRequirement,
+  inferStoreChainFromCatalog,
   inferStoreChainFromName,
 } from "@/lib/chain-rollout-policy";
 import {
@@ -70,7 +71,7 @@ export async function loadCoordinateSanityAuditStores(
   chain: StoreChain,
 ): Promise<CoordinateSanityAuditStore[]> {
   const stores = (await loadCatalogStores()).filter(
-    (store) => inferStoreChainFromName(store.name) === chain,
+    (store) => inferStoreChainFromCatalog(store) === chain,
   );
 
   const auditStores: CoordinateSanityAuditStore[] = [];

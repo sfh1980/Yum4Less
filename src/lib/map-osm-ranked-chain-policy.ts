@@ -6,7 +6,7 @@ import {
   SHOPPER_RANKED_V1_CHAINS,
 } from "@/lib/chain-rollout-policy";
 import { isMapContextCatalogStore } from "@/lib/map-context-types";
-import { getProviderRolloutForStore, type StoreChain } from "@/lib/provider-rollout";
+import { getProviderRolloutForCatalogStore, type StoreChain } from "@/lib/provider-rollout";
 
 /** Beta v1 chains with Postgres/provider ingest paths — OSM must not override these on the map. */
 export const MAP_RANKED_CHAIN_KEYS: Set<StoreChain> = SETTINGS_SELECTABLE_CHAINS;
@@ -69,7 +69,7 @@ function filterPostgresStoresWithinRadius(
 
 function countStoresForChain(stores: CatalogStore[], chain: StoreChain): number {
   return stores.filter(
-    (store) => getProviderRolloutForStore(store.name).chain === chain,
+    (store) => getProviderRolloutForCatalogStore(store).chain === chain,
   ).length;
 }
 
@@ -142,7 +142,7 @@ function isIngestedRankedChainStore(store: CatalogStore): boolean {
     return false;
   }
 
-  const chain = getProviderRolloutForStore(store.name).chain;
+  const chain = getProviderRolloutForCatalogStore(store).chain;
   return MAP_RANKED_CHAIN_KEYS.has(chain);
 }
 
@@ -164,7 +164,7 @@ export function filterMapContextCatalogStoresConflictingWithIngestedRankedChains
       continue;
     }
 
-    const candidateChain = getProviderRolloutForStore(candidate.name).chain;
+    const candidateChain = getProviderRolloutForCatalogStore(candidate).chain;
 
     if (!MAP_RANKED_CHAIN_KEYS.has(candidateChain)) {
       kept.push(candidate);
@@ -176,7 +176,7 @@ export function filterMapContextCatalogStoresConflictingWithIngestedRankedChains
         return false;
       }
 
-      const baseChain = getProviderRolloutForStore(base.name).chain;
+      const baseChain = getProviderRolloutForCatalogStore(base).chain;
       if (baseChain !== candidateChain) {
         return false;
       }

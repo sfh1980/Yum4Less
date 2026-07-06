@@ -3,6 +3,7 @@ import {
   buildDirectionalRolloutNote,
   COORDINATE_SANITY_EXCEPTIONS,
   getCoordinateSanityPromotionRequirement,
+  inferStoreChainFromCatalog,
   inferStoreChainFromName,
   listProviderCatalogRolloutChains,
   SETTINGS_SELECTABLE_CHAINS,
@@ -44,6 +45,29 @@ describe("chain rollout policy", () => {
     expect(inferStoreChainFromName("Harris Teeter")).toBe("kroger");
     expect(inferStoreChainFromName("Food Lion")).toBe("food-lion");
     expect(inferStoreChainFromName("Trader Joe's")).toBe("trader-joes");
+  });
+
+  it("resolves locator-backed catalog stores from sourceName and id before display name", () => {
+    expect(
+      inferStoreChainFromCatalog({
+        id: "publix-1626",
+        name: "Brandy Creek Commons",
+        sourceName: "publix-store-locator",
+      }),
+    ).toBe("publix");
+    expect(
+      inferStoreChainFromCatalog({
+        id: "publix-1626",
+        name: "Brandy Creek Commons",
+        sourceName: "publix-weekly-ad-scrape",
+      }),
+    ).toBe("publix");
+    expect(
+      inferStoreChainFromCatalog({
+        id: "publix-1566",
+        name: "Nuckols Place",
+      }),
+    ).toBe("publix");
   });
 
   it("requires coordinate sanity audits only where rollout policy can enforce them safely today", () => {

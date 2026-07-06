@@ -15,7 +15,7 @@ import {
   parseIngestZipCodesFromEnv,
   resolveIngestRadiusMiles,
 } from "@/lib/store-catalog-sync";
-import { getProviderRolloutForStore } from "@/lib/provider-rollout";
+import { getProviderRolloutForCatalogStore } from "@/lib/provider-rollout";
 import type { ProviderDiscoveredStore } from "@/lib/providers/provider-types";
 import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.fixtures";
 import { OSM_MAP_CATALOG_SOURCE } from "@/lib/osm-food-retail-discovery";
@@ -135,7 +135,7 @@ describe("store-catalog-sync", () => {
         },
       ],
       "kroger",
-      getProviderRolloutForStore,
+      getProviderRolloutForCatalogStore,
     );
 
     expect(storeId).toBe("kroger-02900529");
@@ -185,7 +185,7 @@ describe("store-catalog-sync", () => {
         longitude: -77.3294,
       },
       catalogStoreId: "kroger-02900529",
-      getRolloutForStore: getProviderRolloutForStore,
+      getRolloutForStore: getProviderRolloutForCatalogStore,
     });
 
     expect(canonicalId).toBeUndefined();
@@ -212,7 +212,7 @@ describe("store-catalog-sync", () => {
         longitude: -77.401,
       },
       catalogStoreId: "kroger-02900515",
-      getRolloutForStore: getProviderRolloutForStore,
+      getRolloutForStore: getProviderRolloutForCatalogStore,
       mergeRadiusMiles: BOOTSTRAP_STORE_MERGE_RADIUS_MILES,
     });
 
@@ -240,7 +240,7 @@ describe("store-catalog-sync", () => {
         longitude: -77.3294,
       },
       catalogStoreId: "kroger-02900529",
-      getRolloutForStore: getProviderRolloutForStore,
+      getRolloutForStore: getProviderRolloutForCatalogStore,
     });
 
     expect(canonicalId).toBe("kroger-mechanicsville");

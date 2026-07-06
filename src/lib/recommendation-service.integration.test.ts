@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
 import { deleteAllPriceObservations } from "@/lib/test-only/price-observation-writes";
-import { getProviderRolloutForStore } from "@/lib/provider-rollout";
+import { getProviderRolloutForCatalogStore } from "@/lib/provider-rollout";
 import {
   getMarketSearchExperience,
   getRecommendationExperience,
@@ -55,7 +55,7 @@ async function ingestFixtureWeeklyAdsFromSeedCatalog() {
   const { snapshot } = await getMarketDataSnapshot();
   const nearbyStores = snapshot.stores
     .map((store) => {
-      const rollout = getProviderRolloutForStore(store.name);
+      const rollout = getProviderRolloutForCatalogStore(store);
       return {
         id: store.id,
         name: store.name,

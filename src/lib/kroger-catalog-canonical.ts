@@ -2,7 +2,7 @@ import { getDistanceMiles } from "@/lib/geo-distance";
 import type { CatalogStore } from "@/lib/market-catalog-types";
 import type { StoreChain } from "@/lib/provider-rollout";
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
-import { getProviderRolloutForStore } from "@/lib/provider-rollout";
+import { getProviderRolloutForCatalogStore } from "@/lib/provider-rollout";
 
 /** Same-building Kroger slug ↔ numeric locationId merge radius. */
 export const KROGER_SAME_STORE_MERGE_PROXIMITY_MILES = 0.15;
@@ -96,7 +96,7 @@ export function findProximityLinkedKrogerStore(
       return false;
     }
 
-    if (getProviderRolloutForStore(store.name).chain !== "kroger") {
+    if (getProviderRolloutForCatalogStore(store).chain !== "kroger") {
       return false;
     }
 
@@ -173,10 +173,10 @@ export function dedupeKrogerStoresByIdentity<T extends KrogerDedupeStore>(
   mergeRadiusMiles = KROGER_SAME_STORE_MERGE_PROXIMITY_MILES,
 ): T[] {
   const krogerStores = stores.filter(
-    (store) => getProviderRolloutForStore(store.name).chain === "kroger",
+    (store) => getProviderRolloutForCatalogStore(store).chain === "kroger",
   );
   const otherStores = stores.filter(
-    (store) => getProviderRolloutForStore(store.name).chain !== "kroger",
+    (store) => getProviderRolloutForCatalogStore(store).chain !== "kroger",
   );
 
   if (krogerStores.length <= 1) {
@@ -230,7 +230,7 @@ export function filterSupersededOsmKrogerFixturePins<T extends KrogerDedupeStore
   radiusMiles: number,
 ): T[] {
   const hasOfficialApiKrogerInRadius = stores.some((store) => {
-    if (getProviderRolloutForStore(store.name).chain !== "kroger") {
+    if (getProviderRolloutForCatalogStore(store).chain !== "kroger") {
       return false;
     }
 
@@ -253,7 +253,7 @@ export function filterSupersededOsmKrogerFixturePins<T extends KrogerDedupeStore
   }
 
   return stores.filter((store) => {
-    if (getProviderRolloutForStore(store.name).chain !== "kroger") {
+    if (getProviderRolloutForCatalogStore(store).chain !== "kroger") {
       return true;
     }
 

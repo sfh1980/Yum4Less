@@ -77,14 +77,16 @@ export function findCanonicalStoreIdForApiDiscoveredStore(input: {
   chain: StoreChain;
   discovered: Pick<ProviderDiscoveredStore, "providerStoreId" | "latitude" | "longitude">;
   catalogStoreId: string;
-  getRolloutForStore: (storeName: string) => { chain: StoreChain };
+  getRolloutForStore: (store: { id: string; name: string; source_name?: string | null }) => {
+    chain: StoreChain;
+  };
   mergeRadiusMiles?: number;
 }): string | undefined {
   const linkedStores = input.existingStores.filter(
     (store) =>
       store.id !== input.catalogStoreId &&
       store.source_store_id === input.discovered.providerStoreId &&
-      input.getRolloutForStore(store.name).chain === input.chain,
+      input.getRolloutForStore(store).chain === input.chain,
   );
 
   if (linkedStores.length === 0) {
@@ -382,7 +384,7 @@ export async function syncV1ChainStoresToCatalog(input: {
   providerStoreSearches: ProviderStoreSearchResult[];
   osmFoodRetailStores?: OsmDiscoveredFoodRetailStore[];
 }): Promise<number> {
-  const { getProviderRolloutForStore } = await import("@/lib/provider-rollout");
+  const { getProviderRolloutForCatalogStore } = await import("@/lib/provider-rollout");
   const pool = getDbPool();
   const existingResult = await pool.query<{
     id: string;
@@ -414,7 +416,7 @@ export async function syncV1ChainStoresToCatalog(input: {
         chain: "kroger",
         discovered,
         catalogStoreId: catalogStore.id,
-        getRolloutForStore: getProviderRolloutForStore,
+        getRolloutForStore: getProviderRolloutForCatalogStore,
       });
 
       if (canonicalStoreId && canonicalStoreId !== catalogStore.id) {
@@ -487,7 +489,7 @@ function mapExistingCatalogStoreRows(
 }
 
 async function reconcileDuplicateApiDerivedKrogerStores(): Promise<number> {
-  const { getProviderRolloutForStore } = await import("@/lib/provider-rollout");
+  const { getProviderRolloutForCatalogStore } = await import("@/lib/provider-rollout");
   const pool = getDbPool();
   const existingResult = await pool.query<{
     id: string;
@@ -510,7 +512,7 @@ async function reconcileDuplicateApiDerivedKrogerStores(): Promise<number> {
       continue;
     }
 
-    if (getProviderRolloutForStore(store.name).chain !== "kroger") {
+    if (getProviderRolloutForCatalogStore(store).chain !== "kroger") {
       continue;
     }
 
@@ -528,7 +530,7 @@ async function reconcileDuplicateApiDerivedKrogerStores(): Promise<number> {
         longitude: store.longitude,
       },
       catalogStoreId,
-      getRolloutForStore: getProviderRolloutForStore,
+      getRolloutForStore: getProviderRolloutForCatalogStore,
     });
 
     if (!canonicalStoreId || canonicalStoreId === catalogStoreId) {
@@ -571,7 +573,7 @@ async function reconcileDuplicateApiDerivedKrogerStores(): Promise<number> {
 }
 
 async function reconcileProximityDuplicateKrogerSlugStores(): Promise<number> {
-  const { getProviderRolloutForStore } = await import("@/lib/provider-rollout");
+  const { getProviderRolloutForCatalogStore } = await import("@/lib/provider-rollout");
   const pool = getDbPool();
   const existingResult = await pool.query<{
     id: string;
@@ -595,7 +597,7 @@ async function reconcileProximityDuplicateKrogerSlugStores(): Promise<number> {
       continue;
     }
 
-    if (getProviderRolloutForStore(store.name).chain !== "kroger") {
+    if (getProviderRolloutForCatalogStore(store).chain !== "kroger") {
       continue;
     }
 
@@ -608,7 +610,7 @@ async function reconcileProximityDuplicateKrogerSlugStores(): Promise<number> {
         return false;
       }
 
-      if (getProviderRolloutForStore(candidate.name).chain !== "kroger") {
+      if (getProviderRolloutForCatalogStore(candidate).chain !== "kroger") {
         return false;
       }
 
@@ -706,7 +708,7 @@ export async function refreshIngestedRankedStoreCoordinates(input: {
   osmFoodRetailStores?: OsmDiscoveredFoodRetailStore[];
   existingStores?: { id: string; name: string; source_name?: string | null; source_store_id?: string | null }[];
 }): Promise<number> {
-  const { getProviderRolloutForStore } = await import("@/lib/provider-rollout");
+  const { getProviderRolloutForCatalogStore } = await import("@/lib/provider-rollout");
   const existing =
     input.existingStores ??
     (
@@ -728,7 +730,7 @@ export async function refreshIngestedRankedStoreCoordinates(input: {
       const catalog = buildKrogerCatalogStore(discovered);
       const linkedStore = existing.find(
         (store) =>
-          getProviderRolloutForStore(store.name).chain === "kroger" &&
+          getProviderRolloutForCatalogStore(store).chain === "kroger" &&
           store.source_store_id === discovered.providerStoreId,
       );
       const storeId = linkedStore?.id ?? catalog.id;
@@ -756,7 +758,7 @@ export async function refreshIngestedRankedStoreCoordinates(input: {
   if (aldiCatalog) {
     const linkedAldi = existing.find(
       (store) =>
-        getProviderRolloutForStore(store.name).chain === "aldi" &&
+        getProviderRolloutForCatalogStore(store).chain === "aldi" &&
         store.id === aldiCatalog.id,
     );
     const aldiStoreId = linkedAldi?.id ?? aldiCatalog.id;
@@ -772,10 +774,12 @@ export const refreshBootstrapRankedStoreCoordinates = refreshIngestedRankedStore
 export function findPrimaryStoreIdForChain(
   stores: { id: string; name: string; source_name?: string | null }[],
   chain: StoreChain,
-  getRolloutForStore: (storeName: string) => { chain: StoreChain },
+  getRolloutForStore: (store: { id: string; name: string; source_name?: string | null }) => {
+    chain: StoreChain;
+  },
 ): string | undefined {
   const matches = stores.filter(
-    (store) => getRolloutForStore(store.name).chain === chain,
+    (store) => getRolloutForStore(store).chain === chain,
   );
   if (matches.length === 0) {
     return undefined;

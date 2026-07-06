@@ -1,7 +1,7 @@
 import { getDbPool } from "@/lib/db";
 import { getDistanceMiles } from "@/lib/geo-distance";
 import { MAP_OSM_DEDUPE_PROXIMITY_MILES } from "@/lib/market-store-catalog-merge";
-import { getProviderRolloutForStore } from "@/lib/provider-rollout";
+import { inferStoreChainFromCatalog } from "@/lib/chain-rollout-policy";
 import { logServerError } from "@/lib/server-log";
 import {
   createPublixServicesApiClient,
@@ -163,7 +163,7 @@ export async function retireDuplicateOsmPublixNearLocatorStores(): Promise<{
     const osmToLocator = new Map<string, string>();
 
     for (const osm of osmStores.rows) {
-      if (getProviderRolloutForStore(osm.name).chain !== "publix") {
+      if (inferStoreChainFromCatalog({ id: osm.id, name: osm.name }) !== "publix") {
         continue;
       }
 
