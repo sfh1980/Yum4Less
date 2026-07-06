@@ -37,6 +37,36 @@ const WEEKLY_AD_CHAINS = [
   { storeId: "walmart-rocketts", priceSource: "walmart-weekly-ad-scrape" },
 ] as const;
 
+/** Maps legacy fixture day buckets to hours within the 24h promotion gate. */
+const LEGACY_FIXTURE_DAY_TO_PROMOTION_FRESHNESS_HOURS: Record<number, number> = {
+  1: 4,
+  2: 11,
+  3: 17,
+  4: 23,
+};
+
+export function legacyFixtureDayToPromotionFreshnessHours(
+  freshnessDaysAgo: number,
+): number {
+  return (
+    LEGACY_FIXTURE_DAY_TO_PROMOTION_FRESHNESS_HOURS[freshnessDaysAgo] ?? 11
+  );
+}
+
+export function weeklyAdPromotionFreshObservationFields(
+  freshnessDaysAgo: number,
+): Pick<
+  CatalogPriceObservation,
+  "freshnessHoursAgo" | "freshnessDaysAgo" | "inStock" | "matchConfidence"
+> {
+  return {
+    freshnessHoursAgo: legacyFixtureDayToPromotionFreshnessHours(freshnessDaysAgo),
+    freshnessDaysAgo: 0,
+    inStock: true,
+    matchConfidence: 0.85,
+  };
+}
+
 /**
  * Fixture price observations that enable weekly-ad-ranked stores near ZIP 23111.
  * No live APIs — mirrors ingested weekly-ad cache rows used in ranking fixture tests.
@@ -54,7 +84,7 @@ export function buildZip23111WeeklyAdPriceObservations(
       return {
         ...observation,
         priceSource: chain?.priceSource ?? "kroger-weekly-ad-scrape",
-        matchConfidence: 0.85,
+        ...weeklyAdPromotionFreshObservationFields(observation.freshnessDaysAgo),
       };
     });
 }
@@ -80,68 +110,62 @@ const blackBeanTacoRecipe = fixtureRecipes.find(
  * but multi-store shopping can still build the meal across production-ranked chains.
  */
 export function buildZip23111SplitStoreBlackBeanSnapshot() {
-  const weeklyAdBase = {
-    freshnessDaysAgo: 1,
-    inStock: true,
-    matchConfidence: 0.85,
-  } as const;
-
   const priceObservations: CatalogPriceObservation[] = [
     {
       storeId: "kroger-mechanicsville",
       ingredientId: "black-beans",
       price: 1.09,
       priceSource: "kroger-weekly-ad-scrape",
-      ...weeklyAdBase,
+      ...weeklyAdPromotionFreshObservationFields(3),
     },
     {
       storeId: "kroger-mechanicsville",
       ingredientId: "corn-tortillas",
       price: 2.29,
       priceSource: "kroger-weekly-ad-scrape",
-      ...weeklyAdBase,
+      ...weeklyAdPromotionFreshObservationFields(4),
     },
     {
       storeId: "kroger-mechanicsville",
       ingredientId: "cabbage",
       price: 2.19,
       priceSource: "kroger-weekly-ad-scrape",
-      ...weeklyAdBase,
+      ...weeklyAdPromotionFreshObservationFields(2),
     },
     {
       storeId: "kroger-mechanicsville",
       ingredientId: "taco-seasoning",
       price: 0.89,
       priceSource: "kroger-weekly-ad-scrape",
-      ...weeklyAdBase,
+      ...weeklyAdPromotionFreshObservationFields(3),
     },
     {
       storeId: "kroger-mechanicsville",
       ingredientId: "cumin",
       price: 0.79,
       priceSource: "kroger-weekly-ad-scrape",
-      ...weeklyAdBase,
+      ...weeklyAdPromotionFreshObservationFields(3),
     },
     {
       storeId: "aldi-mechanicsville",
       ingredientId: "lime",
       price: 0.45,
       priceSource: "aldi-weekly-ad-scrape",
-      ...weeklyAdBase,
+      ...weeklyAdPromotionFreshObservationFields(2),
     },
     {
       storeId: "aldi-mechanicsville",
       ingredientId: "olive-oil",
       price: 2.49,
       priceSource: "aldi-weekly-ad-scrape",
-      ...weeklyAdBase,
+      ...weeklyAdPromotionFreshObservationFields(4),
     },
     {
       storeId: "aldi-mechanicsville",
       ingredientId: "black-beans",
       price: 0.89,
       priceSource: "aldi-weekly-ad-scrape",
-      ...weeklyAdBase,
+      ...weeklyAdPromotionFreshObservationFields(2),
     },
   ];
 

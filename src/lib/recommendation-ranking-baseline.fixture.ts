@@ -10,9 +10,9 @@ export const zip23111DefaultRankingBaseline = {
   ] as const,
   estimatedTotals: [10.68, 13.99, 15.4] as const,
   scores: [
-    { total: 82, price: 34, convenience: 30, freshness: 6, fit: 12 },
-    { total: 79, price: 27, convenience: 30, freshness: 8, fit: 14 },
-    { total: 70, price: 24, convenience: 20, freshness: 10, fit: 16 },
+    { total: 90, price: 34, convenience: 30, freshness: 14, fit: 12 },
+    { total: 86, price: 27, convenience: 30, freshness: 15, fit: 14 },
+    { total: 76, price: 24, convenience: 20, freshness: 16, fit: 16 },
   ] as const satisfies readonly ScoreBreakdown[],
 };
 

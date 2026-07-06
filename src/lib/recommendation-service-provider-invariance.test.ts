@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getRecommendationExperience, type MealPreferenceForm } from "@/lib/recommendation-service";
 import { resetDbPoolForTests } from "@/lib/db";
-import { fixturePriceObservations,
-  fixtureRecipes,
-  fixtureStores,
-} from "@/lib/fixtures/market-catalog.fixtures";
+import { fixtureRecipes, fixtureStores } from "@/lib/fixtures/market-catalog.fixtures";
+import { buildZip23111WeeklyAdPriceObservations } from "@/lib/recommendation-service-ranking.fixture";
 import { PROVIDER_TRACKED_INGREDIENTS } from "@/lib/provider-tracked-ingredients";
 
 const { buildProviderPricingPreviews } = vi.hoisted(() => ({
@@ -99,13 +97,9 @@ const location = {
   source: "seed" as const,
 };
 
-const liveCacheObservations = fixturePriceObservations
-  .filter((observation) => observation.storeId === "kroger-mechanicsville")
-  .map((observation) => ({
-    ...observation,
-    priceSource: "kroger-weekly-ad-scrape",
-    matchConfidence: 0.85,
-  }));
+const liveCacheObservations = buildZip23111WeeklyAdPriceObservations([
+  "kroger-mechanicsville",
+]);
 
 describe("getRecommendationExperience provider preview invariance", () => {
   beforeEach(() => {
