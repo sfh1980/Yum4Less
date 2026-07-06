@@ -3,12 +3,15 @@ import { WEEKLY_AD_RANKED_PRICING_CHAINS } from "@/lib/chain-rollout-policy";
 import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
 import type { ProviderPricingCoverageStatus } from "@/lib/providers/provider-types";
 import type { StoreChain } from "@/lib/provider-rollout";
+import { RANKED_PRICE_CACHE_TTL_HOURS } from "@/lib/ranked-price-cache-policy";
 import { getWeeklyAdSourceName } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 export const MIN_WEEKLY_AD_PROMOTION_MATCHES = 3;
 export const MIN_WEEKLY_AD_PROMOTION_CONFIDENCE = 0.45;
-export const MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS = 14;
+
+/** Same window as ranked price reads — do not define a separate freshness TTL here. */
+export const WEEKLY_AD_PROMOTION_FRESHNESS_HOURS = RANKED_PRICE_CACHE_TTL_HOURS;
 
 export { WEEKLY_AD_RANKED_PRICING_CHAINS } from "@/lib/chain-rollout-policy";
 
@@ -18,10 +21,21 @@ export type WeeklyAdStoreCoverage = {
   matchedIngredientCount: number;
   totalRecipeIngredientCount: number;
   averageMatchConfidence: number | null;
+  maxFreshnessHoursAgo: number | null;
   maxFreshnessDaysAgo: number | null;
   coverageStatus: ProviderPricingCoverageStatus;
   usesWeeklyAdSource: boolean;
 };
+
+export function isFreshWeeklyAdObservation(
+  observation: CatalogPriceObservation,
+): boolean {
+  if (observation.freshnessHoursAgo !== undefined) {
+    return observation.freshnessHoursAgo < WEEKLY_AD_PROMOTION_FRESHNESS_HOURS;
+  }
+
+  return observation.freshnessDaysAgo * 24 < WEEKLY_AD_PROMOTION_FRESHNESS_HOURS;
+}
 
 export function buildWeeklyAdStoreCoverage(input: {
   storeId: string;
@@ -35,7 +49,8 @@ export function buildWeeklyAdStoreCoverage(input: {
       observation.storeId === input.storeId &&
       observation.priceSource === weeklyAdSource &&
       observation.inStock &&
-      observation.ingredientId !== undefined,
+      observation.ingredientId !== undefined &&
+      isFreshWeeklyAdObservation(observation),
   );
 
   const matchedIngredientIds = new Set(
@@ -54,6 +69,12 @@ export function buildWeeklyAdStoreCoverage(input: {
     )
     .map((observation) => observation.matchConfidence ?? 0);
 
+  const freshnessHours = weeklyAdObservations.map(
+    (observation) =>
+      observation.freshnessHoursAgo ?? observation.freshnessDaysAgo * 24,
+  );
+  const maxFreshnessHoursAgo =
+    freshnessHours.length > 0 ? Math.max(...freshnessHours) : null;
   const maxFreshnessDaysAgo =
     weeklyAdObservations.length > 0
       ? Math.max(...weeklyAdObservations.map((o) => o.freshnessDaysAgo))
@@ -68,6 +89,7 @@ export function buildWeeklyAdStoreCoverage(input: {
     matchedIngredientCount,
     totalRecipeIngredientCount,
     averageMatchConfidence: average(confidences),
+    maxFreshnessHoursAgo,
     maxFreshnessDaysAgo,
     coverageStatus: getPricingCoverageStatus({
       matchedIngredientCount,
@@ -105,8 +127,8 @@ export function weeklyAdPromotionGatesPass(
   }
 
   if (
-    coverage.maxFreshnessDaysAgo !== null &&
-    coverage.maxFreshnessDaysAgo > MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS
+    coverage.maxFreshnessHoursAgo !== null &&
+    coverage.maxFreshnessHoursAgo >= WEEKLY_AD_PROMOTION_FRESHNESS_HOURS
   ) {
     return false;
   }

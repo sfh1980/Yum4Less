@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { RANKED_PRICE_CACHE_TTL_HOURS } from "@/lib/ranked-price-cache-policy";
 import { fixturePriceObservations } from "@/lib/fixtures/market-catalog.fixtures";
 import {
   buildWeeklyAdStoreCoverage,
   MIN_WEEKLY_AD_PROMOTION_MATCHES,
+  WEEKLY_AD_PROMOTION_FRESHNESS_HOURS,
   weeklyAdPromotionGatesPass,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-coverage";
 
@@ -15,6 +17,11 @@ describe("weekly ad coverage", () => {
     "black-beans",
     "lemon",
   ];
+
+  it("uses the same freshness threshold as ranked price cache reads", () => {
+    expect(WEEKLY_AD_PROMOTION_FRESHNESS_HOURS).toBe(RANKED_PRICE_CACHE_TTL_HOURS);
+    expect(WEEKLY_AD_PROMOTION_FRESHNESS_HOURS).toBe(24);
+  });
 
   it("counts weekly-ad observations for a store", () => {
     const coverage = buildWeeklyAdStoreCoverage({
@@ -80,6 +87,48 @@ describe("weekly ad coverage", () => {
     expect(coverage.matchedIngredientCount).toBeLessThan(
       MIN_WEEKLY_AD_PROMOTION_MATCHES,
     );
+    expect(weeklyAdPromotionGatesPass(coverage, "kroger")).toBe(false);
+  });
+
+  it("does not promote weekly-ad observations older than the ranked cache window", () => {
+    const coverage = buildWeeklyAdStoreCoverage({
+      storeId: "kroger-mechanicsville",
+      chain: "kroger",
+      priceObservations: [
+        {
+          storeId: "kroger-mechanicsville",
+          ingredientId: "chicken-thighs",
+          price: 5.79,
+          freshnessHoursAgo: 25,
+          freshnessDaysAgo: 1,
+          inStock: true,
+          priceSource: "kroger-weekly-ad-scrape",
+          matchConfidence: 0.82,
+        },
+        {
+          storeId: "kroger-mechanicsville",
+          ingredientId: "broccoli",
+          price: 1.99,
+          freshnessHoursAgo: 25,
+          freshnessDaysAgo: 1,
+          inStock: true,
+          priceSource: "kroger-weekly-ad-scrape",
+          matchConfidence: 0.76,
+        },
+        {
+          storeId: "kroger-mechanicsville",
+          ingredientId: "black-beans",
+          price: 0.99,
+          freshnessHoursAgo: 25,
+          freshnessDaysAgo: 1,
+          inStock: true,
+          priceSource: "kroger-weekly-ad-scrape",
+          matchConfidence: 0.71,
+        },
+      ],
+      recipeIngredientIds,
+    });
+
     expect(weeklyAdPromotionGatesPass(coverage, "kroger")).toBe(false);
   });
 
@@ -171,6 +220,7 @@ describe("weekly ad coverage", () => {
       matchedIngredientCount: 5,
       totalRecipeIngredientCount: 6,
       averageMatchConfidence: 0.88,
+      maxFreshnessHoursAgo: 0,
       maxFreshnessDaysAgo: 0,
       coverageStatus: "strong" as const,
       usesWeeklyAdSource: true,

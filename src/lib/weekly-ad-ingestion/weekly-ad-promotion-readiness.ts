@@ -1,9 +1,9 @@
 import type { StoreChain } from "@/lib/provider-rollout";
 import { getProviderRolloutForStore } from "@/lib/provider-rollout";
 import {
-  MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS,
   MIN_WEEKLY_AD_PROMOTION_CONFIDENCE,
   MIN_WEEKLY_AD_PROMOTION_MATCHES,
+  WEEKLY_AD_PROMOTION_FRESHNESS_HOURS,
   WEEKLY_AD_RANKED_PRICING_CHAINS,
   weeklyAdPromotionGatesPass,
   type WeeklyAdStoreCoverage,
@@ -166,13 +166,13 @@ function buildWeeklyAdPromotionGates(
       id: "freshness-window",
       label: "Freshness window",
       passed:
-        coverage.maxFreshnessDaysAgo === null ||
-        coverage.maxFreshnessDaysAgo <= MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS,
+        coverage.maxFreshnessHoursAgo === null ||
+        coverage.maxFreshnessHoursAgo < WEEKLY_AD_PROMOTION_FRESHNESS_HOURS,
       note:
-        coverage.maxFreshnessDaysAgo === null ||
-        coverage.maxFreshnessDaysAgo <= MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS
-          ? `Weekly-ad observations are within the ${MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS}-day freshness window.`
-          : `Weekly-ad observations are older than ${MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS} days and need refresh before promotion.`,
+        coverage.maxFreshnessHoursAgo === null ||
+        coverage.maxFreshnessHoursAgo < WEEKLY_AD_PROMOTION_FRESHNESS_HOURS
+          ? `Weekly-ad observations are within the last ${WEEKLY_AD_PROMOTION_FRESHNESS_HOURS} hours (same as ranked price reads).`
+          : `Weekly-ad observations are older than ${WEEKLY_AD_PROMOTION_FRESHNESS_HOURS} hours and need refresh before promotion.`,
     },
   ];
 }
@@ -227,6 +227,7 @@ function emptyCoverage(storeId: string, chain: StoreChain): WeeklyAdStoreCoverag
     matchedIngredientCount: 0,
     totalRecipeIngredientCount: 0,
     averageMatchConfidence: null,
+    maxFreshnessHoursAgo: null,
     maxFreshnessDaysAgo: null,
     coverageStatus: "none",
     usesWeeklyAdSource: false,

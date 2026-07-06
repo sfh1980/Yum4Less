@@ -105,13 +105,16 @@ export function InternalDetailsModal({
 
                 {market.weeklyAdIngestionStatus.length > 0 ? (
                   <div className="pill-row">
+                    <span className="pill" title="Row counts include stale data; use promotion readiness for freshness.">
+                      All-time weekly-ad rows in PostgreSQL (not freshness)
+                    </span>
                     {market.weeklyAdIngestionStatus.map((summary) => (
                       <span
                         className="pill"
                         key={`${summary.storeId}-${summary.sourceName}`}
+                        title={summary.message}
                       >
-                        {summary.observationCount} scraped weekly-ad price(s) for{" "}
-                        {summary.chain}
+                        {summary.observationCount} all-time row(s) for {summary.chain}
                       </span>
                     ))}
                   </div>

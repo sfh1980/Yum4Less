@@ -123,7 +123,7 @@ flowchart TD
 - `usesWeeklyAdSource` and `matchedIngredientCount > 0`
 - ≥ `MIN_WEEKLY_AD_PROMOTION_MATCHES` (3) matched ingredients
 - Average match confidence ≥ `MIN_WEEKLY_AD_PROMOTION_CONFIDENCE` (0.45)
-- Max freshness ≤ `MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS` (14)
+- Max freshness < `WEEKLY_AD_PROMOTION_FRESHNESS_HOURS` (24, same as `RANKED_PRICE_CACHE_TTL_HOURS`)
 - `coverageStatus !== "none"`
 
 **Key files:** `src/app/api/market-search/route.ts`, `src/lib/market-search-service.ts`, `src/lib/provider-rollout.ts`, `src/lib/weekly-ad-ingestion/weekly-ad-coverage.ts`

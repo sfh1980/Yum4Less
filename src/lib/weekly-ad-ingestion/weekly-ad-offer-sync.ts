@@ -195,6 +195,7 @@ function buildWeeklyAdObservationNotes(
   return `${modeLabel}; matched ${offer.productName}; verify package size and sale timing in store.`;
 }
 
+/** All-time weekly-ad row counts in Postgres — intentionally ignores the 24h ranked-read window. */
 export async function getWeeklyAdIngestionStatusSummaries(input: {
   storeIds: string[];
 }): Promise<
@@ -233,7 +234,7 @@ export async function getWeeklyAdIngestionStatusSummaries(input: {
       sourceName: row.source_name,
       observationCount: row.observation_count,
       lastCapturedAt: row.last_captured_at,
-      message: `${row.observation_count} scraped weekly-ad observation(s) captured for ${row.store_id} (${row.source_name}).`,
+      message: `${row.observation_count} all-time scraped weekly-ad row(s) in PostgreSQL for ${row.store_id} (${row.source_name}); not a freshness signal.`,
     }));
   } catch {
     return [];

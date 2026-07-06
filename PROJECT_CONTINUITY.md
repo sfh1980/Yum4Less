@@ -4,11 +4,11 @@
 
 ---
 
-## Resume (as of 2026-07-03)
+## Resume (as of 2026-07-06)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 rule wording corrected to match manual-pause-only ingest reality. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene locally; runtime gates green this session — see [Changelog → 2026-07-04](#2026-07-04--six-batch-remediation-close-out-full-system-audit-follow-ups). **Active queue:** push local commits + Sprint E workflows when ready; Saved persistence + cuisine chips (R11) deferred.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 rule wording corrected to match manual-pause-only ingest reality. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene — now on `origin/master`. **2026-07-06:** three Dependabot PR merges (#5 pg, #6 react-dom, #8 zod) + Publix locator/dedupe direct commits already on master; **weekly-ad freshness alignment (FRESH-1) coded locally but uncommitted** — see [Changelog → 2026-07-06 verification](#2026-07-06--post-merge-verification-pass-read-only). **Active queue:** commit/push FRESH-1; owner Publix re-ingest for `publix-1626`; Saved persistence + cuisine chips (R11) deferred.
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-04):** Gate results → [Appendix → Verification snapshot](#verification-snapshot). **Six-batch remediation** (local commits `a26b098`…`1b141e9` + continuity update): P1-2/P1-3/P1-4 debug/feedback/proxy hardening; P1-6/P1-7 cron exit codes; P1-9 rank invalidation on store change; Food Lion coordinate exceptions + approximate-location copy; tsc mock drift reduction (141→64); e2e overlay flake fix; P2 README/CI/bootstrap/e2e-doc/hygiene. **This session:** `npm run lint` clean; `npx tsc --noEmit` **64 errors** (unchanged baseline — weekly-ad test mocks); `npm test` **808/808**; `npm run build` OK; `npm run test:integration` **24/24**; isolated `npm run test:e2e:ci` **22 passed / 1 skipped / 0 failed**; CI bootstrap upsert reapplies (`INSERT 0 8`); `COORDINATE_SANITY_EXCEPTIONS` holds both withheld Food Lion ids. Not claiming remote CI green, homelab deploy-ready, or beta v1 demo-complete until pushed + owner sign-off.
+**Verified (2026-07-06):** Gate results → [Appendix → Verification snapshot](#verification-snapshot). **Remote CI green on `origin/master` HEAD `5f2a7bb`** ([run 28811806834](https://github.com/sfh1980/Yum4Less/actions/runs/28811806834)): lint + unit **809/809** + build + integration **27/27** + e2e **21 passed / 1 skipped** (one flaky retry on `single-store-map-overlay.spec.ts`). **Local cross-check (working tree incl. uncommitted FRESH-1):** `npm test` **811/811**; `npm run test:integration` **27/27**; `npm run lint` / `npm run build` / `npm run test:e2e:ci` **failed** on this Windows host (ESLint circular-config + `theme-tokens.css` type error — CI Linux run passed on committed HEAD). **FRESH-1** alignment test passes locally; **not on `origin/master`**. `yum4less_dev` **`publix-1626` has 0 `price_observations`** (cannot confirm ranked dinner estimates until owner re-ingest). Not claiming beta v1 demo-complete or homelab deploy-ready.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -226,6 +226,79 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), pantry affecting rank, and
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-06 — Post-merge verification pass (read-only)
+
+**Theme:** Canonical “where we stand” snapshot after Dependabot merges and local FRESH-1 work — verification only, no application code changes in this pass.
+
+**Git truth (`origin/master` HEAD `5f2a7bb`):**
+- Local `master` **in sync** with `origin/master` (no unpushed/unpulled commits on branch tip).
+- Working tree **not clean:** 15 modified files (FRESH-1 code + docs + continuity) — **uncommitted**.
+- **Three PR merge commits today** (not six): `6c695e3` PR #5 pg 8.22.0; `37802e8` PR #6 react-dom 19.2.7; `5f2a7bb` PR #8 zod 4.4.3 — each touches **only** `package.json` + `package-lock.json`; no unexpected conflict resolutions.
+- **Three additional direct commits** already on master before today’s merges: `f970123` retire `publix-atlee` → `publix-1626`; `880dcd3` integration test fix; `759eee1` duplicate Publix OSM pin tombstone (Option B). PR #4 and #7 were **closed without merge**.
+
+**Remote CI** ([28811806834](https://github.com/sfh1980/Yum4Less/actions/runs/28811806834) on `5f2a7bb`): verify (lint + **809** unit + build) **success**; integration **27/27** **success**; e2e **21 passed / 1 skipped** **success** (overlay spec flaky once, retried green); semgrep skipped (no token).
+
+**FRESH-1 on `origin/master`:** **STILL OPEN** — committed `weekly-ad-coverage.ts` still exports `MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS = 14` and gates on `maxFreshnessDaysAgo > 14`. **Local working tree** has the fix (`WEEKLY_AD_PROMOTION_FRESHNESS_HOURS = RANKED_PRICE_CACHE_TTL_HOURS` from `ranked-price-cache-policy.ts`); `weekly-ad-coverage.test.ts` shared-threshold test **passes locally**; **not committed**.
+
+**`publix-1626` spot-check (`yum4less_dev`):** store row exists (`publix-store-locator`); **`price_observations` count = 0** (all-time and 24h-fresh). Cannot confirm ranked dinner estimates — owner needs `probe:publix-live-ingest` or scheduled ingest.
+
+**PR/regression cross-check:** Publix commits touch `publix-catalog-sync.ts` + migrations — **intended** closure of publix-atlee + OSM dedupe (Option B); no edits to coordinate-sanity, debug-route gating, or cron exit-code paths. Dependabot bumps only — no closed-finding regression surface.
+
+**Canonical backlog status** → table below. **New findings for triage** → [deferred backlog](#new-findings-for-triage-2026-07-06).
+
+**Audit / backlog status (canonical as of 2026-07-06):**
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P0-1 Settings hides market-search failures | **CLOSED** | On master; unchanged by 2026-07-06 merges |
+| P0-2 Multi-store uncheck-all shows all stores | **CLOSED** | On master |
+| **FRESH-1** Weekly-ad promotion gate freshness policy mismatch | **STILL OPEN on `origin/master`** | 14-day gate on HEAD `5f2a7bb`; **fix present locally, uncommitted** — shared `WEEKLY_AD_PROMOTION_FRESHNESS_HOURS` (= `RANKED_PRICE_CACHE_TTL_HOURS`); `getWeeklyAdIngestionStatusSummaries()` kept unfiltered, relabeled all-time inventory |
+| Publix-atlee retirement → `publix-1626` | **CLOSED** | `f970123` on master + migration `015` |
+| Publix OSM/locator dedupe (Option B) | **CLOSED** | `759eee1` on master + migration `016` |
+| P1-1 E2e CI regression | **CLOSED** | Remote e2e green; overlay spec still flaky on retry |
+| P1-2 Debug pipeline exposure | **CLOSED** | Not touched by 2026-07-06 merges |
+| P1-3 Rate limiting production-safe | **CLOSED** (partial) | Redis/multi-instance deferred |
+| P1-4 Unauthenticated feedback GET | **CLOSED** | Not touched |
+| P1-5 M128/M151 doc drift | **CLOSED** | Not touched |
+| P1-6 Provider-sync exit 0 on failure | **CLOSED** | Not touched |
+| P1-7 Partial weekly-ad exit 0 | **CLOSED** | Not touched |
+| P1-8 Cook tab vs marketBlocked | **DEFERRED** | Not touched |
+| P1-9 Store selection invalidates rank | **CLOSED** | Not touched |
+| P1-10 No DB migration ledger | **DEFERRED** | Migrations `015`/`016` add SQL files without ledger |
+| tsc `--noEmit` | **STILL OPEN** | **66 errors** locally on working tree (was 64 on 2026-07-04) |
+| M128/M151 automation | **DEFERRED** | Homelab slice |
+| Saved persistence | **DEFERRED** | Unchanged |
+| R11 — cuisine/ethnic filter chips | **DEFERRED** | Unchanged |
+| General locator-vs-OSM dedupe (Option A) | **DEFERRED** | Option B shipped for Publix only |
+
+### 2026-07-06 — Weekly-ad freshness policy alignment (FRESH-1 — local only, not on master)
+
+**Theme:** Single **24-hour** freshness rule for ranked reads and weekly-ad promotion gates; relabel all-time ingestion row counts so they are not read as freshness.
+
+**Status:** Implemented in **uncommitted working tree** as of verification pass — **not** on `origin/master` HEAD `5f2a7bb`. Do not treat as shipped until committed and CI re-runs.
+
+**Shipped (local working tree only):**
+- **`weekly-ad-coverage.ts`** — promotion gate uses `WEEKLY_AD_PROMOTION_FRESHNESS_HOURS` (= `RANKED_PRICE_CACHE_TTL_HOURS`, 24h); removed 14-day `MAX_WEEKLY_AD_PROMOTION_FRESHNESS_DAYS`
+- **`weekly-ad-promotion-readiness.ts`** — freshness-window gate copy updated to 24h
+- **`getWeeklyAdIngestionStatusSummaries()`** — documented and messaged as **all-time inventory, not freshness**; internal modal + diagnostics copy updated
+- **`weekly-ad-coverage.test.ts`** — shared-threshold test + boundary at 25h
+- **Ranking fixtures** — weekly-ad rows use `freshnessHoursAgo: 2` (within 24h); CI-02 score baseline updated
+- **Docs:** `homelab-deploy.md`, `application-decision-trees.md` (local edits uncommitted)
+
+**Note:** `weeklyAdIngestionStatus` intentionally stays unfiltered so operators can distinguish “rows exist but stale” from “never ingested” when compared with promotion readiness. `getWeeklyAdIngestionStatusSummaries()` message: `"${count} all-time scraped weekly-ad row(s) in PostgreSQL for ${storeId} (${sourceName}); not a freshness signal."`
+
+### 2026-07-06 — Weekly-ad promotion gate freshness policy mismatch (diagnosis only)
+
+**Theme:** Document an open **DEFERRED** item — ranked-price reads, ingestion status reporting, and promotion freshness gates use **inconsistent time windows**, producing misleading “healthy ingest / failed gate” signals. **Not** caused by Publix OSM/locator dedupe (Option B, cleared 2026-07-05).
+
+**Finding (distinct open item):** [Weekly-ad promotion gate freshness policy mismatch](#deferred-backlog-not-v1) — diagnosed when investigating why `publix-1626` showed `weeklyAdIngestionStatus` observation counts alongside a failed `weekly-ad-observations` promotion gate despite Postgres rows existing.
+
+**Shipped:** Continuity journal entry only — no code changes.
+
+**Fix options on record:** Re-run weekly-ad ingest for quick symptom relief; align the 24h ranked-read filter (`loadRankedPriceObservations`) with the 14-day promotion freshness window as the real fix; or apply the same filter to `weeklyAdIngestionStatus` so ingestion health and gate logic stop disagreeing.
+
+**Priority note:** May silently suppress ranked pricing for any chain/store more often than currently visible — especially when data is older than 24h but younger than 14 days (common given weekly refresh cycles).
 
 ### 2026-07-05 — Retire duplicate Publix OSM pins near locator stores (Option B)
 
@@ -1690,18 +1763,20 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm run lint` | 2026-07-04 | OK |
-| `npx tsc --noEmit` | 2026-07-04 | **64 errors** (test mock drift — baseline unchanged from Batch 4) |
-| `npm test` | 2026-07-04 | **808/808 passed**, 152 files |
-| `npm run build` | 2026-07-04 | OK — Next.js **15.5.19** |
-| `npm run test:integration` | 2026-07-04 | **24/24 passed**, 7 files; bootstrap upsert includes name/city/state |
-| `npm run test:e2e:ci` | 2026-07-04 | **22 passed**, **1 skipped** (H12 Leaflet quirk — intentional), **0 failed** (isolated rerun) |
-| Live ingest DB isolation | 2026-07-01 | `yum4less_test` fixture-only (**39** rows, `*-weekly-ad-scrape`); live owner ingest on `yum4less_dev` (**337** rows) — no cross-DB leak |
-| Postgres (`provider_search_terms` kroger) | 2026-06-15 | 101 rows — **not re-checked** this slice |
-| Playwright MCP (localhost) | 2026-06-26 | Production `next start` :3000; ZIP **23111** happy path; expanded trust banner light `#faece7` / dark `#101a14` (`post-audit-light-trust-banner-expanded.png`, `post-audit-dark-trust-banner-expanded.png`) |
+| **Remote CI** (`5f2a7bb`) | 2026-07-06 | **Green** — [run 28811806834](https://github.com/sfh1980/Yum4Less/actions/runs/28811806834): verify (lint + unit + build) + integration **27/27** + e2e **21+1 skip** |
+| `npm run lint` (local) | 2026-07-06 | **FAIL** — ESLint 10.6 circular-config crash (CI Linux **pass** on same HEAD) |
+| `npx tsc --noEmit` (local) | 2026-07-06 | **66 errors** (test mock drift; +2 vs 2026-07-04 baseline on working tree) |
+| `npm test` (local, working tree) | 2026-07-06 | **811/811 passed**, 152 files (CI committed HEAD: **809/809**) |
+| `npm run build` (local) | 2026-07-06 | **FAIL** — `theme-tokens.css` side-effect import + ESLint during build (CI **pass**) |
+| `npm run test:integration` (local) | 2026-07-06 | **27/27 passed**, 8 files; bootstrap `INSERT 0 8` |
+| `npm run test:e2e:ci` (local) | 2026-07-06 | **Not completed** — blocked by local build failure |
+| FRESH-1 alignment test (local) | 2026-07-06 | **7/7 pass** in `weekly-ad-coverage.test.ts` (uncommitted; absent on HEAD) |
+| `publix-1626` ranked path (`yum4less_dev`) | 2026-07-06 | **0** `price_observations` — store exists; ranked estimates **not confirmable** until re-ingest |
+| Live ingest DB isolation | 2026-07-01 | `yum4less_test` fixture-only; `yum4less_dev` **263** total obs — **not re-audited** this pass |
+| Postgres (`provider_search_terms` kroger) | 2026-06-15 | 101 rows — **not re-checked** |
+| Playwright MCP (localhost) | 2026-06-26 | **Not re-run** this pass |
 | Owner browser (both themes) | 2026-06-26 | **Pending** |
-| Semgrep MCP / hook | 2026-06-18 | Not re-run this slice |
-| Remote CI | 2026-06-11 | Green on master — remediation batches + Sprint E workflow changes **not pushed** |
+| Semgrep MCP / hook | 2026-07-06 | CI job skipped (no `SEMGREP_APP_TOKEN`); not run locally |
 
 **Historical note:** the old `coordinate-first.spec.ts` cold-path timeout was fixed on 2026-07-03 by bounding search-time OSM gap-fill and warming the cache in the background. True cold verification on `37.675, -77.280` (zero `openstreetmap-overpass` rows in `yum4less_test` after fixture prep) stayed bounded at **3227ms** response / **3486ms** full flow, and committed regression coverage now lives in `e2e/coordinate-first-cold.spec.ts`.
 
@@ -1750,6 +1825,18 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Scale risk A — Client-trust audit across all public API routes** | From trust pass-through hardening (2026-07-01): only the rank pass-through path was hardened; other routes or client-supplied fields may still influence trust display without server-side recomputation. Systematic audit of all public API responses for client-controllable trust-sensitive fields deferred — should precede any significant traffic increase or public launch. Suggested owner: `@verifier` + `@web-backend-standards` |
 | **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
 | **General locator-vs-OSM dedupe across all v1 chains (Option A)** | Right long-term fix for duplicate storefront rows when map-catalog OSM ingest and chain locator/API sync both write Postgres (e.g. Publix `osm-way-*` + `publix-{storeNumber}`). Option B (2026-07-05) scoped Publix-only tombstone on locator sync; full Option A needs persist-time and/or read-time dedupe for Kroger/Aldi/Publix/Food Lion, cross-chain policy decisions (`isMapContextCatalogStore`, ranked-chain anchor rules), and fixture + integration + e2e coverage — out of scope for the narrow Publix fix. |
+| **Weekly-ad promotion gate freshness policy mismatch (FRESH-1)** | **STILL OPEN on `origin/master`.** Local working tree has 24h alignment via `WEEKLY_AD_PROMOTION_FRESHNESS_HOURS` (= `RANKED_PRICE_CACHE_TTL_HOURS`); unfiltered `getWeeklyAdIngestionStatusSummaries()` relabeled as all-time inventory. **Commit + push + CI re-run required** before CLOSED. |
+
+### New findings for triage (2026-07-06)
+
+| Finding | Severity | Notes |
+|---------|----------|-------|
+| FRESH-1 fix uncommitted | **P0** | `origin/master` still uses 14-day promotion gate; local fix ready but not on remote |
+| `publix-1626` zero price rows in `yum4less_dev` | **P1** | Store catalog row exists; 36 migrated rows from 2026-07-05 no longer present — owner re-ingest needed before Publix ranked demo |
+| Local lint/build fail while CI green | **P2** | Windows host: ESLint circular JSON + `theme-tokens.css` type error on `npm run build`; Linux CI passes on `5f2a7bb` — investigate env drift before trusting local gates |
+| e2e overlay flake persists | **P2** | `single-store-map-overlay.spec.ts` failed once on CI run 28811806834, retried green — same class as 2026-07-04 port/overlay flake |
+| Unit test count local vs CI mismatch | **P3** | Local **811** vs CI **809** — uncommitted FRESH-1 tests/fixtures (+2) |
+| “Six PR merges” expectation vs git | **info** | Only **3** PR merges on 2026-07-06 (#5, #6, #8); plus **3** direct master commits (Publix); PR #4/#7 closed without merge |
 
 ### Transcript index
 

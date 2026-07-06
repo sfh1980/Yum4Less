@@ -57,7 +57,7 @@ export function buildInternalMarketDiagnosticLines(
 
   if (market.weeklyAdIngestionStatus.length > 0) {
     lines.push(
-      `${market.weeklyAdIngestionStatus.length} store(s) with scraped weekly-ad observations in PostgreSQL.`,
+      `${market.weeklyAdIngestionStatus.length} store(s) with all-time scraped weekly-ad rows in PostgreSQL (not a freshness signal).`,
     );
   }
 

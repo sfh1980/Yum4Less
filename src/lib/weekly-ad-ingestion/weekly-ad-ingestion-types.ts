@@ -80,6 +80,10 @@ export type WeeklyAdOfferSyncSummary = {
   message: string;
 };
 
+/**
+ * All-time weekly-ad scrape row inventory per store — not a freshness or health signal.
+ * Compare with `weeklyAdPromotionReadiness` when diagnosing stale vs missing ingest.
+ */
 export type WeeklyAdIngestionStatusSummary = {
   chain: WeeklyAdChain;
   storeId: string;
