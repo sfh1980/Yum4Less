@@ -180,6 +180,6 @@ describe("formatSettingsStoreOptionLabel", () => {
         state: "VA",
         distanceMiles: 2.4,
       }),
-    ).toBe("Kroger — Mechanicsville, VA (2.4 mi)");
+    ).toBe("Kroger — Mechanicsville, VA (2.4 mi straight-line)");
   });
 });

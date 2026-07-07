@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
 import { formatStoreKind } from "@/components/meal-planner/form-validation";
 import { buildStoreListStatusPill } from "@/lib/store-pricing-status-copy";
-import { formatStoreNameWithLocation } from "@/lib/store-display-labels";
+import { formatStoreNameWithLocation, formatStraightLineDistanceMiles } from "@/lib/store-display-labels";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 type NearbyStoresListProps = {
@@ -82,7 +82,7 @@ export function NearbyStoresList({
                 </span>
                 <span className="nearby-stores-list-item-meta">
                   {store.chainLabel} · {formatStoreKind(store.kind)} ·{" "}
-                  {store.distanceMiles} mi · {store.locationBadge}
+                  {formatStraightLineDistanceMiles(store.distanceMiles)} · {store.locationBadge}
                 </span>
                 <span className="nearby-stores-list-item-note">
                   {store.locationNote}
@@ -117,7 +117,7 @@ function buildStoreCardLabel(
     formatStoreNameWithLocation(store),
     store.chainLabel,
     formatStoreKind(store.kind),
-    `${store.distanceMiles} miles away`,
+    formatStraightLineDistanceMiles(store.distanceMiles),
     statusLabel,
     store.rolloutNote,
     isSelected ? "selected" : undefined,

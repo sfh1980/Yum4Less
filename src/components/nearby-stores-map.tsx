@@ -14,6 +14,7 @@ import {
 } from "@/lib/store-chain-marker-style";
 import { buildStoreMapPricingLabel } from "@/lib/store-pricing-status-copy";
 import { MAP_CATALOG_LOCATION_FOOTNOTE } from "@/lib/store-map-location-copy";
+import { formatStraightLineDistanceMiles } from "@/lib/store-display-labels";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 type NearbyStoresMapProps = {
@@ -128,7 +129,7 @@ export function NearbyStoresMap({
           })
           .addTo(map)
           .bindTooltip(
-            `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span>`,
+            `<strong>${safeName}</strong><br/>${safeChainLabel} · ${escapeHtml(formatStraightLineDistanceMiles(store.distanceMiles))}<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span>`,
             { direction: "top", opacity: 0.95, sticky: true },
           )
           .bindPopup(buildStorePopupHtml(store, pricingLabel));
@@ -295,7 +296,7 @@ function buildStorePopupHtml(store: MapStoreMarker, pricingLabel: string) {
   const safeLocationBadge = escapeHtml(store.locationBadge);
   const safeLocationNote = escapeHtml(store.locationNote);
   const safeRolloutNote = escapeHtml(store.rolloutNote);
-  return `<strong>${safeName}</strong><br/>${safeChainLabel} · ${store.distanceMiles} mi<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span><br/><span style="opacity:0.85">${safeRolloutNote}</span>`;
+  return `<strong>${safeName}</strong><br/>${safeChainLabel} · ${escapeHtml(formatStraightLineDistanceMiles(store.distanceMiles))}<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span><br/><span style="opacity:0.85">${safeRolloutNote}</span>`;
 }
 
 function formatAnchorSource(source: DiscoveryMapModel["anchor"]["source"]) {
