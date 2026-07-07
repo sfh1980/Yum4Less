@@ -39,8 +39,8 @@ export const fixtureStores: CatalogStore[] = [
     kind: "grocery",
     city: "Mechanicsville",
     state: "VA",
-    latitude: 37.6362,
-    longitude: -77.3606,
+    latitude: 37.611004,
+    longitude: -77.336853,
   },
   {
     id: "walmart-rocketts",
