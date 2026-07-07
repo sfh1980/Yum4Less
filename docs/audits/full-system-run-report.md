@@ -1,33 +1,36 @@
 # Yum4Less — Full-System Verification Run Report
 
-> **Correction (2026-07-04, post-run):** The **5 e2e failures** reported in this document's original run were caused by **port contention from a concurrent `npm run dev` on port 3000**, not application regressions. An isolated rerun with **no other dev server running** produced **22 passed / 1 skipped / 0 failed**. **P1-1 ("E2e CI regression this session")** should be considered **resolved / non-issue**, not an open finding. The original report text below is preserved for history — do not read it as current truth without this correction.
+> **Superseded:** Counts below predate pantry-check v2 (**848** unit tests as of `97d9ed0`); see [`PROJECT_CONTINUITY.md`](../../PROJECT_CONTINUITY.md) for current state.
 
-**Started:** 2026-07-04  
-**Completed:** 2026-07-04  
-**Branch:** `master` (large uncommitted working tree)  
-**Protocol:** Read-only audit — no application code changes
+**Started:** 2026-07-06  
+**Completed:** 2026-07-06  
+**Branch:** `master` @ `759eee1` (synced with `origin/master`)  
+**Working tree:** `M PROJECT_CONTINUITY.md` only  
+**Protocol:** Read-only audit — edits limited to `docs/audits/`
 
 ---
 
 ## Executive summary
 
-This session ran the v2 full-system verification prompt across all eight project agents (waves A–C), local gates, and five MCP servers. **Unit, build, and integration gates pass** in this session. **`npm run test:e2e:ci` failed** (17 passed / 5 failed / 1 skipped, exit 1) — materially worse than the 2026-07-03 continuity snapshot (21/1/1). Failures cluster on **Settings market-search → store picker** (`combobox` never appears) and **Tier C** copy assertion — consistent with the P0 finding that Settings does not surface market-search errors and Home can go blank.
+Full-repo verification ran all eight project agents (waves A–C), Bugbot + Security Review (diff-supplemental), local gates, and five MCP servers. **All local runtime gates pass this session:** lint, **809/809** unit, build, **27/27** integration, **22/1/0** e2e. **Remote `master` CI was green** on 2026-07-05 ([run 28759320503](https://github.com/sfh1980/Yum4Less/actions/runs/28759320503)).
 
 **Highest-risk items (fix first):**
 
 | # | Severity | Finding |
 |---|----------|---------|
-| 1 | **P0** | Settings does not render `marketSearchState` errors — failed ZIP/geolocation invisible on default tab; Home Ingredients can go blank |
-| 2 | **P0** | Multi-store “uncheck all” shows **unscoped** stores (violates store-selection contract) |
-| 3 | **P1** | E2e regression: 5 failures this session vs documented 21 pass |
-| 4 | **P1** | Debug pipeline unauthenticated, no rate limit in non-production |
-| 5 | **P1** | In-memory rate limits + `TRUST_PROXY_HEADERS` spoof risk at homelab scale |
-| 6 | **P1** | M128/M151 automation not shipped; `ingest-standards.md` agent doc drifts |
-| 7 | **P1** | Provider-sync persist failures do not fail cron exit code |
-| 8 | **P2** | README D7/theme status stale vs `PROJECT_CONTINUITY.md` |
-| 9 | **P2** | CI e2e job does not depend on integration job |
+| 1 | **P0 (trust)** | Weekly-ad **24h ranked reads vs 14-day promotion gate** mismatch — can suppress ranked pricing while ingest health looks fine |
+| 2 | **P1** | **Settings-first gate bypassable** via bottom nav (Home/Deals/Saved before setup complete) |
+| 3 | **P1** | **Home tab silent market-search failure** — Ingredients step renders nothing; errors only on Deals/Settings |
+| 4 | **P1** | **M128/M151 scrape automation not shipped**; `.cursor/agents/ingest-standards.md` still claims robots.txt / kill switches |
+| 5 | **P1** | **Homelab misconfig risk** — debug routes + API writes gated only on `NODE_ENV=production` |
+| 6 | **P1** | **Any weekly-ad chain `error` blocks entire cron** (provider-sync + TheMealDB skipped) |
+| 7 | **P1** | **Migration drift** — `015`/`016` not applied on existing DB volumes without reset |
+| 8 | **P2** | **`npx tsc --noEmit` — 64 errors** — not a CI merge gate |
+| 9 | **P2** | **Verification snapshot stale** — Resume still cites 808 unit / 24 integration; remote CI “not green” outdated |
 
-**Not claimed:** verified, production-ready, deploy-ready, CI green, beta v1 demo-complete.
+**Not claimed:** verified, production-ready, deploy-ready, beta v1 demo-complete, homelab deploy-ready.
+
+**Diff-supplemental (uncommitted):** Only `PROJECT_CONTINUITY.md` + this report changed. Bugbot: **no bugs**. Security Review: **no medium+** in diff.
 
 ---
 
@@ -35,13 +38,13 @@ This session ran the v2 full-system verification prompt across all eight project
 
 | Phase | Status | Outcome |
 |-------|--------|---------|
-| 0 Preflight | **done** | Node 22.18, npm 10.9.3, Docker 29.6.1, Semgrep 1.165.0, gh authenticated |
-| 1 Wave A | **done** | explore + senior-auditor + verifier |
-| 2 Wave B | **done** | frontend, backend, database, ingest agents |
-| 3 Wave C | **done** | qa-engineer, testing-cicd, Bugbot (retry), security-review |
-| 4 Parent review | **done** | Architecture pass appended below |
-| 5 Local gates | **done** | lint OK; test 785/785; build OK; integration 24/24; **e2e 17/5/1 FAIL** |
-| 6 MCP | **done** | Postgres, Semgrep, Context7, GitHub partial; Playwright **blocked** (Internal Server Error on :3000) |
+| 0 Preflight | **done** | Node 22.18, npm 10.9.3, Docker 29.6.1, Semgrep 1.165.0, gh OK |
+| 1 Wave A | **done** | explore + senior-auditor + verifier; explore handoff via Task return |
+| 2 Wave B | **done** | frontend, backend, database, ingest |
+| 3 Wave C | **done** | qa-engineer, testing-cicd, Bugbot (no findings), security-review (diff clean) |
+| 4 Parent review | **done** | Architecture pass below |
+| 5 Local gates | **done** | lint OK; **809/809** unit; build OK; **27/27** integration; **22/1/0** e2e |
+| 6 MCP | **done** | Postgres partial; Semgrep 0 findings; Context7 OK; GitHub via `gh`; Playwright **degraded** |
 | 7 Deliverables | **done** | This report |
 
 ---
@@ -51,20 +54,13 @@ This session ran the v2 full-system verification prompt across all eight project
 | Command | Exit | Result |
 |---------|------|--------|
 | `npm run lint` | 0 | OK |
-| `npm test` | 0 | **785 passed**, 148 files |
+| `npm test` | 0 | **809 passed**, 152 files |
 | `npm run build` | 0 | Next.js **15.5.19** OK |
 | `npm run db:up` | 0 | Postgres container running |
-| `npm run test:integration` | 0 | **24 passed**, 7 files |
-| `npm run test:e2e:ci` | **1** | **17 passed, 5 failed, 1 skipped** (12.9m) |
+| `npm run test:integration` | 0 | **27 passed**, 8 files |
+| `npm run test:e2e:ci` | 0 | **22 passed**, **1 skipped** (H12), **0 failed** (~3.6m) |
 
-### E2e failures (this session)
-
-1. `settings-stores.spec.ts` — store combobox not visible after Find stores
-2. `settings-stores.spec.ts` — ZIP validation error not visible
-3. `single-store-map-overlay.spec.ts` (×2) — store combobox / market-search timeout
-4. `tier-c.spec.ts` — limited-coverage copy assertion failed
-
-**Note:** Concurrent `npm run dev` on port 3000 showed Internal Server Error during Playwright MCP — possible port/resource contention during e2e (server on 3100). E2e failures appear substantive (Settings error surfacing), not only contention.
+**Not run:** `npx tsc --noEmit` (continuity baseline 64 errors documented).
 
 ---
 
@@ -72,11 +68,13 @@ This session ran the v2 full-system verification prompt across all eight project
 
 | Server | Status | Evidence |
 |--------|--------|----------|
-| **postgres** | **used** | 336 `price_observations`, 291 stores, 36 recipes, 155 ingredients; freshness newest 2026-07-03; sources: kroger-official-api (91), food-lion/publix/aldi weekly-ad |
+| **postgres** | **partial** | `price_observations`: **263** rows on `yum4less_dev` (single-query success; multi-statement query failed MCP schema once) |
 | **semgrep** | **used** | `semgrep_scan` on 5 API routes — **0 findings** (v1.165.0) |
 | **context7** | **used** | `/vercel/next.js/v15.1.11` route handler validation docs retrieved |
-| **github** | **partial** | `gh workflow list` — CI workflow active; remote run status not inspected (unpushed local changes per continuity) |
-| **playwright** | **blocked** | `localhost:3000` returned Internal Server Error; trust-label exploratory flow not completed |
+| **github** | **used** | `gh run list/view` — master CI **success** 2026-07-05; dependabot PR CI failed at `npm ci` |
+| **playwright** | **degraded** | `localhost:3000` — HTTP **500**, empty snapshot, webpack runtime error; stale `npm run dev` likely. Trust-label exploratory flow **not completed**. E2e CI on **:3100** is authoritative this session. |
+
+**GitHub MCP:** Only `SERVER_METADATA.json` in mcps folder — used `gh` CLI instead.
 
 ---
 
@@ -85,115 +83,99 @@ This session ran the v2 full-system verification prompt across all eight project
 | Layer | Triggered | Evidence |
 |-------|-----------|----------|
 | Workspace rules | Y | orchestration, testing-gates, product-trust, security, scale-awareness, governance |
-| sessionStart | Y | New Agent chat |
-| beforeSubmitPrompt | Y | Routing section in parent response |
 | beforeShellExecution | Y | Phase 5 npm commands |
-| beforeMCPExecution | Y | Phase 6 MCP calls |
+| beforeMCPExecution | Y | Postgres, Semgrep, Context7, Playwright calls |
 | afterFileEdit + Semgrep | Y | Checkpoint writes under `docs/audits/` |
-| subagentStop explore handoff | Y | explore agent completed (handoff via Task return) |
-| stop hooks | pending | End of parent turn |
+| subagentStop explore handoff | Y | explore agent completed (Task return) |
 | Project agents (8) | Y | All invoked via Task waves |
-| Bugbot | Y (retry) | 1 medium diff finding: CI bootstrap upsert metadata |
-| Security Review | Y | No medium+ in diff; hardening noted |
-| Local gates | Y | See commands table |
-| MCP servers (5) | 4/5 | Playwright blocked |
-
-### Agent summaries
-
-- **explore:** 7 API routes mapped; god modules `use-meal-planner.ts` (~912 LOC), `store-catalog-sync.ts` (~1082 LOC)
-- **senior-auditor:** Debug route, rate limits, feedback GET, M128 doc drift
-- **verifier:** Trust implementation sound; README D7 drift; stale TheMealDB opt-in help copy
-- **web-frontend-standards:** P0 Settings error hiding; coordinate-first copy inversion
-- **web-backend-standards:** Strong validation/sanitization; Q27/Q28 freshness metadata drift
-- **database-codegen-standards:** No migration ledger; ranked-price uniqueness app-only
-- **ingest-standards:** Partial chain failure exit 0; provider-sync persist not fatal
-- **qa-engineer:** P0 blank Home + uncheck-all scoping
-- **testing-cicd-standards:** E2e not gated on integration; Semgrep advisory
+| Bugbot | Y | No findings (docs-only diff) |
+| Security Review | Y | No medium+ in diff |
+| Local gates | Y | All pass — see commands table |
 
 ---
 
-## Severity-ordered findings
+## Severity-ordered findings (consolidated)
 
-### P0
+### P0 — trust / ranking correctness
 
-**P0-1 — Settings hides market-search failures (frontend + QA)**  
-`SettingsPanel` receives `marketSearchLoading` but not `marketSearchState`. Errors only visible on Deals tab. Home Ingredients step can render nothing.  
-Evidence: `src/components/meal-planner/index.tsx`, `settings-panel.tsx`; e2e `settings-stores.spec.ts` failures.
+**P0-1 — Weekly-ad freshness policy mismatch**  
+Ranked reads filter to **24h** (`ranked-price-cache-policy.ts`); promotion gates allow **14 days** (`weekly-ad-coverage.ts`); ingestion status is unfiltered. Symptom: ranked pricing suppressed while ingest dashboards still look healthy (data 24h–14d old). Documented in `PROJECT_CONTINUITY.md` deferred backlog 2026-07-06. **No automated test aligns the three policies.**  
+Evidence: `src/lib/ranked-price-cache-policy.ts`, `src/lib/weekly-ad-ingestion/weekly-ad-coverage.ts`, `weekly-ad-promotion-readiness.ts`.
 
-**P0-2 — Multi-store uncheck-all shows all stores**  
-`filterNearbyStoresBySelection` / `scopeMarketSummaryToSelectedStores` return unfiltered market when `selectedStoreIds.length === 0`.  
-Evidence: `src/lib/store-scope.ts` (per qa-engineer); violates redesign store-scoping contract.
+### P1 — user-facing / operational
 
-### P1
+**P1-1 — Settings-first gate bypassable**  
+`handleTabChange` allows Home/Deals/Saved before `setupComplete`. Only Cook is disabled.  
+Evidence: `use-meal-planner.ts`, `bottom-nav.tsx`, `app-tab.ts`.
 
-**P1-1 — E2e CI regression this session**  
-17/5/1 vs continuity 21/1/1. Settings and Tier C specs failed.
+**P1-2 — Home silent market-search failure**  
+Auto-load failure leaves `marketSearchState.status === "error"` but Home Ingredients renders nothing (no error panel). Deals tab shows errors.  
+Evidence: `use-meal-planner.ts` (~495–518), `index.tsx`, contrast `deals-panel.tsx`.
 
-**P1-2 — Debug pipeline exposure**  
-`GET /api/debug/pipeline` — no rate limit; rich internals when `NODE_ENV !== production`.  
-Evidence: `src/app/api/debug/pipeline/route.ts`.
+**P1-3 — Geolocation denial asymmetry**  
+First-visit “Use my location” denial: hard error, no ZIP fallback. Return visit auto-load falls back to saved ZIP.  
+Evidence: `handleBrowserLocationSearch` vs `runMarketSearchFromSavedPreferences`.
 
-**P1-3 — Rate limiting not production-safe**  
-In-memory per-process buckets; `TRUST_PROXY_HEADERS=1` without trusted proxy enables bypass.  
-Evidence: `src/lib/rate-limit.ts`.
+**P1-4 — M128/M151 manual pause only; agent doc drift**  
+No robots.txt, auto-pause, or `YUM4LESS_DISABLE_INGEST_*` in code. `.cursor/agents/ingest-standards.md` still describes automation as shipped.  
+Evidence: security rule vs `ingest-standards.md`; grep confirms zero kill-switch env vars.
 
-**P1-4 — Unauthenticated feedback GET**  
-When `YUM4LESS_FEEDBACK_ENABLED=1`, lists 20 recent submissions including notes.  
-Evidence: `src/app/api/feedback/route.ts`.
+**P1-5 — Homelab `NODE_ENV` misconfig exposes debug + optional API writes**  
+`isDebugRoutesEnabled()` and `isPublicApiDbWriteEnabled()` only hard-block when `NODE_ENV=production`.  
+Evidence: `debug-routes-policy.ts`, `public-api-db-write-policy.ts`.
 
-**P1-5 — M128/M151 manual pause only; agent doc drift**  
-`.cursor/agents/ingest-standards.md` claims robots.txt, auto-pause, `YUM4LESS_DISABLE_INGEST_*` — **not in code**.
+**P1-6 — Rate limits: in-memory + proxy spoof risk**  
+Per-process buckets; `TRUST_PROXY_HEADERS=1` honors `X-Forwarded-For` without requiring `YUM4LESS_TRUSTED_PROXY_VERIFIED=1`.  
+Evidence: `rate-limit.ts`, `api-rate-limit.ts`.
 
-**P1-6 — Provider-sync persist failures exit 0**  
-`sync-provider-prices.ts` logs `failedCount` but does not `process.exit(1)`.  
-Evidence: `scripts/sync-provider-prices.ts`, `provider-price-observation-sync.ts`.
+**P1-7 — Weekly-ad cron: any chain `error` fails entire run**  
+Blocks provider-sync + TheMealDB even when other chains succeeded. `docs/homelab-deploy.md` incorrectly says “all chains error”.  
+Evidence: `ingest-script-exit-policy.ts`, `run-scheduled-weekly-ad-ingest.mjs`.
 
-**P1-7 — Partial weekly-ad chain failure exits 0**  
-Only all-chain error triggers non-zero exit.  
-Evidence: `scripts/ingest-weekly-ads.ts`.
+**P1-8 — Provider-sync exits 0 when entirely skipped**  
+`failedCount === 0` on configuration skips (`not-production`, mapping failures).  
+Evidence: `provider-price-observation-sync.ts`, `sync-provider-prices.ts`.
 
-**P1-8 — Cook tab vs marketBlocked**  
-`marketBlocked` can hide valid session results on Cook after store scope change.  
-Evidence: `meal-results-panel.tsx`, `use-meal-planner.ts`.
+**P1-9 — Migration drift on existing DB volumes**  
+`applyPhaseCMigrationsIfMissing()` does not cover `015`/`016`; no `schema_migrations` ledger.  
+Evidence: `scripts/ensure-test-db.mjs`, `db/init/015_*.sql`, `db/init/016_*.sql`.
 
-**P1-9 — Store selection changes do not invalidate rank state**  
-Stale recommendations after Settings store change without re-rank.
+**P1-10 — Cook tab blank shell (deferred backlog)**  
+`activeTab === "cook" && !cookEnabled` renders empty main content.  
+Evidence: `index.tsx`, `PROJECT_CONTINUITY.md` P1-8.
 
-**P1-10 — No DB migration ledger**  
-Long-lived dev DBs can miss 005–009 tables; `applyPhaseCMigrationsIfMissing` partial.  
-Evidence: `scripts/ensure-test-db.mjs`, database-codegen agent.
+### P2 — hygiene / docs / CI
 
-### P2
+**P2-1 — `tsc --noEmit` 64 errors not gated in CI**  
+Weekly-ad test mock drift; CI runs lint + vitest + build only.
 
-**P2-1 — README D7 “not shipped” vs continuity “done”**  
-`README.md` vs `PROJECT_CONTINUITY.md` Resume.
+**P2-2 — Verification snapshot stale**  
+Resume claims 808 unit / 24 integration / remote CI not green — superseded by this session + 2026-07-05 green master run.
 
-**P2-2 — Stale TheMealDB “opt-in” help copy**  
-`src/lib/help-hint-content.ts` `recipeSourceHelp`.
+**P2-3 — M156 pattern gap: “save money” in expanded trust copy**  
+`pricing-trust-heads-up-expanded.ts` uses phrase not in `FORBIDDEN_TRUST_CLAIM_PATTERNS`.
 
-**P2-3 — CI e2e does not `need` integration**  
-`.github/workflows/ci.yml`.
+**P2-4 — Semgrep CI advisory without `SEMGREP_APP_TOKEN`**  
+Exits 0 when token unset (remote master had token — Semgrep ran ~4m, no blocking findings).
 
-**P2-4 — Semgrep CI advisory**  
-Exits 0 without `SEMGREP_APP_TOKEN`.
+**P2-5 — Q27/Q28 freshness metadata not on rank API**  
+Full sanitized `experience.market` still returned; no `marketFreshAt`/`marketStale`.
 
-**P2-5 — H12 map mount failure skipped in e2e**  
-`e2e/error-surfaces.spec.ts`.
+**P2-6 — Map overlays lack focus trap**  
+`store-map-overlay.tsx` does not reuse `use-modal-dialog.ts` pattern.
 
-**P2-6 — CI bootstrap upsert metadata (Bugbot diff)**  
-`db/ci/014_ci_bootstrap_stores.sql` ON CONFLICT updates coords only — stale name/city on re-apply.
+**P2-7 — H12 map mount failure skipped in e2e**  
+`error-surfaces.spec.ts` — Leaflet quirk intentional skip.
 
-**P2-7 — `e2e/README.md` drift**  
-Missing `coordinate-first-cold`, `single-store-map-overlay`; wrong DB name (`yum4less_dev` vs `yum4less_test`).
+**P2-8 — README Resume anchor drift**  
+Link text `as-of-2026-06-25` vs Resume header 2026-07-03.
 
-**P2-8 — M148 analytics notice missing**  
-No first-visit analytics transparency in app shell.
+**P2-9 — `ensure-snap-context.mjs` hardcodes `yum4less_dev`**  
+Ignores `DATABASE_URL` on homelab with alternate DB name.
 
-**P2-9 — Map overlay joins by store name**  
-`src/lib/meal-presentation.ts` TODO.
-
-**P2-10 — Q27/Q28 market freshness metadata not in rank API response**  
-Full `experience.market` still returned.
+**P2-10 — Geocodio global upstream bucket (20/min)**  
+All users share one quota key; API key in query string.  
+Evidence: `geocoding.ts`.
 
 ---
 
@@ -201,74 +183,104 @@ Full `experience.market` still returned.
 
 | Step | Status | Notes |
 |------|--------|-------|
-| Location (geo/ZIP) | **degraded** | Geolocation denial paths inconsistent; hero ZIP-first copy |
-| Store discovery | **degraded** | Settings errors hidden; e2e Find stores → no store picker |
-| Preferences / Settings | **working** | Unit tests pass; e2e Settings flows fail |
-| Rank | **working** | Unit + most e2e pass |
-| Results + trust labels | **working** | Vitest + mvp-flow e2e; verifier pass on code |
-| Map / Tier C | **degraded** | Tier C e2e failed this session; map overlays lack focus trap |
-| Ingest / DB | **working** | Fixture path OK; Postgres MCP shows 336 observations |
-| CI remote | **untested** | Local changes not pushed; last remote green 2026-06-11 per continuity |
+| Location (geo/ZIP) | **degraded** | Denial asymmetry; stale ZIP on geo save; hero ZIP-first copy |
+| Store discovery | **working** | E2e settings-stores pass; Settings error hints incomplete (title/hint) |
+| Preferences / Settings | **degraded** | Gate bypass; save/ZIP validation edge cases |
+| Rank | **working** | Unit + e2e pass; race guards solid |
+| Results + trust labels | **working** | Verifier partially verified; C1 contract tested |
+| Map / Tier C | **working** | E2e tier-c pass; overlay a11y gaps |
+| Ingest / DB | **working** | Fixture path OK; migration upgrade path weak |
+| CI remote | **green (master)** | 2026-07-05; dependabot PR failing `npm ci` |
 
 ---
 
 ## Parent code review (Phase 4)
 
-**Architecture strengths:** Two-route public API split; Zod contracts; `chain-rollout-policy.ts` canonical lists; market pass-through rehydration + trust field recompute; fixture-ingest DB guard; C1 notice+results contract tested.
+**Architecture strengths:** Two-route public API split; Zod contracts; `chain-rollout-policy.ts` canonical lists; market pass-through rehydration + trust field recompute; fixture-ingest DB guard; C1 notice+results contract; parameterized SQL in repositories.
 
-**Recurrence risks:** `use-meal-planner.ts` god hook; `store-catalog-sync.ts` god module; parallel chain config in `provider-rollout.ts`; duplicated SQL filter constants; type re-export indirection via `recommendation-service.ts`.
+**God modules (recurrence risk):** `weekly-ad-ingestion-service.ts` (~4.1k LOC), `market-search-service.ts` (~3.6k), `store-catalog-sync.ts` (~3.4k), `provider-price-observation-sync.ts` (~3.3k), `recommendation-service.ts` (~2.8k), `use-meal-planner.ts` (~900+).
 
-**Vibe-coder smells:** Large uncommitted tree includes many root-level PNG screenshots and `tsconfig.tsbuildinfo` — hygiene risk if accidentally committed.
+**Structural patterns:** Errors/recovery concentrated on Settings/Deals, not Home happy path; parallel chain config in `provider-rollout.ts` vs `chain-rollout-policy.ts`; three overlapping DB apply mechanisms without ledger.
 
-**Doc truth:** `PROJECT_CONTINUITY.md` Resume is internally consistent; `README.md` lags on D7 and theme status.
+**Vibe-coder smells:** Large `as` usage in weekly-ad test mocks (drives tsc baseline); no `dangerouslySetInnerHTML` in `src/**`.
+
+**Doc truth:** `e2e/README.md` accurate. `PROJECT_CONTINUITY.md` Resume internally consistent on product scope but **verification snapshot and gate counts need refresh**. `ingest-standards.md` agent file contradicts shipped M128 reality.
 
 ---
 
-## Refactor backlog (recommended only)
+## Agent summaries (one line each)
 
-1. Split `use-meal-planner.ts` into market-search, rank, and settings hooks with shared generation tokens.
-2. Extract ingest map-catalog vs ranked-chain concerns from `store-catalog-sync.ts`.
-3. Redis/platform rate limits before homelab multi-instance.
-4. `schema_migrations` table + full stale-DB detection.
-5. Partial unique index on `price_observations (store_id, ingredient_id)` for ranked sources.
-6. Unify `source_kind` vs `source_name` in read path.
-7. Slim rank API response (Q27/Q28 freshness metadata).
-8. Implement M128 homelab kill-switch env vars when deploy slice ships.
+| Agent | Headline |
+|-------|----------|
+| explore | 7 API routes; god modules; promotion-gate mismatch; ingest agent doc drift |
+| senior-auditor | Solid SQL/sanitization; highest risks operational (scrape, NODE_ENV, rate limits) |
+| verifier | **Partially verified** — trust UI/API strong; freshness mismatch + M156 gap |
+| web-frontend-standards | Gate bypass H1; M148 analytics missing; overlay a11y gaps |
+| web-backend-standards | Core trust paths pass; Q27/Q28 drift; unbounded ID arrays |
+| database-codegen-standards | Parameterized SQL sound; migration ledger + 015/016 upgrade gap |
+| ingest-standards | Pipeline order sound; doc drift C1; cron exit semantics H1/H2 |
+| qa-engineer | No new P0; Home silent failure + geo asymmetry + prefs desync |
+| testing-cicd-standards | Master CI green; snapshot stale; tsc ungated; freshness not tested |
+| Bugbot | No bugs in diff |
+| security-review (diff) | Docs-only diff — no new security issues |
+
+---
+
+## Refactor backlog (recommended only — not implemented)
+
+1. Align weekly-ad **24h read / 14d promotion / ingestion status** into one policy + fixture tests.
+2. Enforce Settings-first gate on all tabs; surface `marketSearchState` on Home Ingredients.
+3. `schema_migrations` table + apply-all-incremental on `db:up` / `ensure-test-db`.
+4. Align `.cursor/agents/ingest-standards.md` with manual-pause-only reality.
+5. Split `use-meal-planner.ts` into market-search, rank, settings hooks.
+6. Redis/platform rate limits + `YUM4LESS_PUBLIC_DEPLOY=1` hard deny debug/API writes.
+7. Add `tsc --noEmit` to CI after mock drift cleanup.
+8. Reuse `useModalDialog` on map overlays + rank loading overlay.
+9. M148 first-visit analytics notice component.
 
 ---
 
 ## Residual risk
 
-- **Remote CI** not re-run after local e2e regression — cannot claim CI green.
-- **Playwright MCP** trust-label browser pass incomplete (server error on :3000).
+- **Playwright MCP** trust-label pass incomplete — stale dev server 500 on `:3000`; use `npm run start` on `:3000` or fixture e2e for browser evidence.
+- **Postgres MCP** partial — only row count captured; freshness-by-chain not queried.
 - **Owner browser verify** both themes still pending per continuity.
-- **Homelab deploy** precursors not met.
-- **Live ingest** scrape compliance manual-only.
-- **5 e2e failures** need root-cause before merge-ready browser claims.
+- **Homelab deploy** precursors not met (M128 automation, TLS, multi-instance rate limits).
+- **Promotion gate mismatch** can cause Tier C more often than shoppers expect — trust-sensitive, not gated by CI.
 
 ---
 
 ## Preflight snapshot
 
-**Git:** `master` @ `d2b54d6`; massive uncommitted diff (redesign slices, e2e, agents, rules).  
-**Prior continuity gates (2026-07-03):** 785 unit, 24 integration, 21 e2e — **superseded for e2e by this session**.
+| Tool | Version / status |
+|------|------------------|
+| Node | v22.18.0 |
+| npm | 10.9.3 |
+| Docker | Client 29.6.1 |
+| Semgrep | 1.165.0 |
+| gh | authenticated (sfh1980) |
+
+**Git:** `master` @ `759eee1`; only `PROJECT_CONTINUITY.md` modified.
 
 ---
 
 ## Scale check (audit-only)
 
-- **Small scale:** Symptom-level risks documented with file evidence and this session's gate output.
-- **Large scale:** Recurring patterns are god modules, Settings-orchestration error surfacing, and store-scoping edge cases — fixes should target shared abstractions (`marketSearchState` wiring, `store-scope` empty-selection semantics), not one-off copy patches.
+- **Small scale:** This session’s gate output is recorded; diff is docs-only; e2e **22/1/0** confirms prior port-contention failures are not reproduced.
+- **Large scale:** Recurring patterns are **freshness-policy fragmentation**, **Settings-orchestration error surfacing on Home**, **migration discipline without ledger**, and **agent-doc drift on ingest compliance** — fixes should target shared abstractions, not one-off copy.
 
 ---
 
 ## Next steps (owner)
 
 ```
-Fix only P0/P1 from docs/audits/full-system-run-report.md; smallest safe fix only; run npm test.
+Refresh PROJECT_CONTINUITY.md verification snapshot from this report; fix P0-1 freshness alignment first.
 ```
 
-For e2e-specific regression:
 ```
-@testing-cicd-standards Investigate settings-stores + tier-c e2e failures from full-system-run-report.md
+@web-frontend-standards Settings gate bypass + Home market-search error surfacing from full-system-run-report.md
 ```
+
+---
+
+*Checkpoint updated: 2026-07-06 — all phases done*
