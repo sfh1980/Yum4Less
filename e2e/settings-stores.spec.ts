@@ -22,8 +22,8 @@ test.describe("Settings store selection", () => {
       .selectOption("Multiple stores allowed");
 
     // Multi-store defaults to all ranked v1 chains once Publix/Food Lion are in radius.
-    await page.getByRole("checkbox", { name: /Kroger — Mechanicsville/ }).check();
-    await page.getByRole("checkbox", { name: /Aldi — Mechanicsville/ }).check();
+    await page.locator("#settings-store-kroger-mechanicsville").check();
+    await page.locator("#settings-store-aldi-mechanicsville").check();
 
     const publixCheckboxes = page.getByRole("checkbox", { name: /Publix —/ });
     for (let index = 0; index < await publixCheckboxes.count(); index += 1) {
