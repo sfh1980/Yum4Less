@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 rule wording corrected to match manual-pause-only ingest reality. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene — now on `origin/master`. **2026-07-06:** Dependabot merges (#5 pg, #6 react-dom, #8 zod) + Publix locator/dedupe on master; **FRESH-1 weekly-ad promotion gate aligned to 24h ranked-read TTL** — **CLOSED** (`1304542` gate + `08f4bfb`/`aa884a1` fixture follow-up; CI [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318) green on `aa884a1`); **locator chain inference P1** — **CLOSED** (`0c73016`; CI [28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364) green). **Active queue:** Saved persistence + cuisine chips (R11) deferred.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 rule wording corrected to match manual-pause-only ingest reality. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene — now on `origin/master`. **2026-07-06:** Dependabot merges (#5 pg, #6 react-dom, #8 zod) + Publix locator/dedupe on master; **FRESH-1 weekly-ad promotion gate aligned to 24h ranked-read TTL** — **CLOSED** (`1304542` gate + `08f4bfb`/`aa884a1` fixture follow-up; CI [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318) green on `aa884a1`); **locator chain inference P1** — **CLOSED** (`0c73016`; CI [28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364) green). **Store-discovery quick patch (2026-07-06)** — display names, Aldi bootstrap coord, straight-line distance labels — **CLOSED locally** (see [Store-discovery bug status](#store-discovery-bug-status-2026-07-06); commit pending this session). **Active queue:** Saved persistence + cuisine chips (R11) deferred.
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -63,6 +63,17 @@
 - Fixture weekly-ad ingest for **CI/rehearsal and automated tests only** (not owner daily workflow)
 - **`npm run setup:local`:** provisions `yum4less_dev` + `yum4less_test`, runs post-setup `npm test` smoke, fixture `DATABASE_URL_TEST` guidance, geolocation-or-ZIP next-step copy; SNAP ensure stays non-fatal inside `ensureTestDatabase()` only
 - Public APIs read-only by default in production; response sanitization; route validation + rate limits
+
+### Store-discovery bug status (2026-07-06)
+
+| Item | Status | Evidence / notes |
+|------|--------|------------------|
+| **Bug 1 — Publix headline shows shopping-center label** (`publix-1626` / `Brandy Creek Commons`) | **CLOSED** | Display-layer only: `resolveStoreDisplayHeadline()` + optional locator subtitle via `formatStoreHeadlineWithOptionalSubtitle()` in `store-display-labels.ts`; wired in `buildNearbyStoresForSearch`. DB `stores.name` unchanged. |
+| **Bug 2 — `ALDI` vs `Aldi` casing** (`aldi-23111`, `osm-node-6531578976`, etc.) | **CLOSED** | `getCanonicalShopperChainDisplayName()` in `chain-rollout-policy.ts` routes ranked v1 chain headlines through one map (`aldi` → `Aldi`, etc.). |
+| **Bug 3 — Food Lion pin in neighborhood** (`osm-node-3103220732`, FL #601) | **CLOSED (prior)** | Not a coordinate write — stored pin matches SNAP within ~60 ft; Nominatim road-geometry false positive. Already in `COORDINATE_SANITY_EXCEPTIONS` (2026-07-03). |
+| **Bug 4 — Aldi pin in wrong neighborhood** (`aldi-mechanicsville` bootstrap) | **CLOSED** | Stale bootstrap coord corrected to OSM/SNAP storefront (`37.611004`, `-77.336853`) in `yum4less_dev`, `db/ci/014_ci_bootstrap_stores.sql`, and `src/lib/fixtures/market-catalog.fixtures.ts`. |
+| **Distance display (Food Lion #2575 / `osm-node-1654396096`)** | **CLOSED — not a bug** | Haversine straight-line was always correct; 0.8 mi vs ~1.9 mi driving traced to geolocation origin + straight-line semantics, not formula or store coord error (stored pin within ~390 ft of USPS/SNAP). UI now labels **`X mi straight-line`** on map/list/Settings. |
+| **OSRM driving distance in store discovery** | **DEFERRED** | See [Deferred backlog](#deferred-backlog-not-v1) — extend existing `multi-store-shopping-route.ts` OSRM path to map/list/Settings distances; smaller lift than greenfield routing. |
 
 ### Not working / deferred
 
@@ -226,6 +237,23 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), pantry affecting rank, and
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-06 — Store-discovery display patch + straight-line distance labels
+
+**Theme:** Close the four store-discovery bugs from the quick-patch pass (display names, Aldi bootstrap coord, distance semantics) without building the universal reconciliation engine.
+
+**Shipped (local — commit pending):**
+- **Bug 1 — Publix headline:** `store-display-labels.ts` — locator/weekly-ad Publix rows show **Publix** as headline; shopping-center label (e.g. Brandy Creek Commons) optional subtitle; DB unchanged
+- **Bug 2 — chain casing:** `getCanonicalShopperChainDisplayName()` in `chain-rollout-policy.ts`; `buildNearbyStoresForSearch` applies display headlines at assembly
+- **Bug 4 — Aldi bootstrap pin:** `aldi-mechanicsville` corrected to `37.611004`, `-77.336853` in dev DB + `db/ci/014_ci_bootstrap_stores.sql` + fixtures (aligns with `aldi-23111` / OSM node `6531578976`)
+- **Distance clarity:** `formatStraightLineDistanceMiles()` — map tooltips, store list, and Settings dropdown now say **`X mi straight-line`**; investigation confirmed haversine was never wrong for Food Lion #2575 (`osm-node-1654396096`) — mismatch was geolocation origin vs driving expectation
+- **Bug 3 (Food Lion #601):** no new write — prior `COORDINATE_SANITY_EXCEPTIONS` entry for `osm-node-3103220732` stands
+
+**Deferred:** OSRM driving distance for store-discovery surfaces — reuse `multi-store-shopping-route.ts` OSRM client (see Deferred backlog).
+
+**Tests:** `npm test` **816/816** pass (this session, post-relabel).
+
+**Honest limits:** Remote CI **not re-run** until commits land on `origin/master`. Driving-distance upgrade deferred; geolocation accuracy surfacing (e.g. `coords.accuracy`) still backlog.
 
 ### 2026-07-06 — Locator chain inference P1 closed
 
@@ -1792,7 +1820,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | Gate | Last verified | Result |
 |------|---------------|--------|
 | **Remote CI** (`0c73016`) | 2026-07-06 | **Green** — [run 28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364): verify (lint + **813/813** unit + build) + integration **27/27** + e2e **21+1 skip** |
-| `npm test` (local) | 2026-07-06 | **813/813** pass (chain-inference slice) |
+| `npm test` (local) | 2026-07-06 | **816/816** pass (store-discovery display + straight-line relabel slice) |
 | `npm run build` (local) | 2026-07-06 | **Pass** (chain-inference slice) |
 | `npm run lint` (local) | 2026-07-06 | **Not re-run** this slice; CI **pass** on `0c73016` |
 | `npx tsc --noEmit` (local) | 2026-07-06 | **Not re-run** — prior baseline **66 errors** (test mock drift) |
@@ -1855,6 +1883,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
 | **General locator-vs-OSM dedupe across all v1 chains (Option A)** | **DEFERRED** — prioritize before Aldi/Lidl locator rollout | Universal persist-time and/or read-time dedupe: any pair of catalog sources (locator, official API, OSM, SNAP) within proximity, matched by distance plus name/type similarity — **not** chain-specific rules. Option B (2026-07-05) was a narrow Publix tombstone; repeating that pattern per chain is explicitly out of scope. Needs cross-chain policy (`isMapContextCatalogStore`, ranked-chain anchor rules) and fixture + integration + e2e coverage. |
 | **Weekly-ad promotion gate freshness policy mismatch (FRESH-1)** | **CLOSED** on `origin/master` (`1304542` + `08f4bfb`/`aa884a1`; CI green [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318)). |
+| **OSRM driving distance in store discovery (map/list/Settings)** | Wire the **existing** OSRM driving-distance capability from `multi-store-shopping-route.ts` (today used only for the multi-store shopping-route planner) into nearby-store discovery distances. **Smaller lift than initially assumed** — routing infrastructure already exists; this extends an existing capability rather than building new infrastructure. Straight-line haversine remains acceptable fallback when OSRM is unavailable. |
 
 ### New findings for triage (2026-07-06)
 
