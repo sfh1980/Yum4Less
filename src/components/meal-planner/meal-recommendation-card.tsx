@@ -68,7 +68,10 @@ export function MealRecommendationCard({
   hideTitle = false,
 }: MealRecommendationCardProps) {
   const priceSource = buildMealPriceSourceSummary({ meal, market });
-  const mealPriceAgeLabel = formatMealPriceAgeFromShoppingPlan(meal.shoppingPlan);
+  const mealPriceAgeLabel = formatMealPriceAgeFromShoppingPlan(
+    meal.shoppingPlan.filter((item) => !item.sourcedFromPantry),
+  );
+  const hasPantryLines = meal.shoppingPlan.some((item) => item.sourcedFromPantry);
   const nearbyStores = market.nearbyStores;
 
   return (
@@ -197,19 +200,37 @@ export function MealRecommendationCard({
 
       <div className="card-section">
         <h4>Shopping plan</h4>
+        {hasPantryLines ? (
+          <p className="field-hint">
+            Pantry items are listed for context and are not included in the
+            estimated total above.
+          </p>
+        ) : null}
         <ul className="detail-list">
-          {meal.shoppingPlan.map((item) => (
-            <li key={`${meal.title}-${item.storeName}-${item.ingredient}`}>
-              <strong>{item.ingredient}</strong> from {item.storeName} for{" "}
-              {formatEstimatedCurrency(item.price)} ({item.quantityNote})
-              {item.saleLabel ? ` · ${item.saleLabel}` : ""}
-              <div>
-                <span className="sale-confidence-label">
-                  {item.saleConfidence.label}
-                </span>
-              </div>
-            </li>
-          ))}
+          {meal.shoppingPlan.map((item) =>
+            item.sourcedFromPantry ? (
+              <li key={`${meal.title}-${item.ingredientId}-pantry`}>
+                <strong>{item.ingredient}</strong> — from your pantry, not
+                included in total. ({item.quantityNote})
+                <div>
+                  <span className="sale-confidence-label badge-trust">
+                    {item.pantryNote ?? item.saleConfidence.note}
+                  </span>
+                </div>
+              </li>
+            ) : (
+              <li key={`${meal.title}-${item.ingredientId}-${item.storeName}`}>
+                <strong>{item.ingredient}</strong> from {item.storeName} for{" "}
+                {formatEstimatedCurrency(item.price)} ({item.quantityNote})
+                {item.saleLabel ? ` · ${item.saleLabel}` : ""}
+                <div>
+                  <span className="sale-confidence-label">
+                    {item.saleConfidence.label}
+                  </span>
+                </div>
+              </li>
+            ),
+          )}
         </ul>
       </div>
 

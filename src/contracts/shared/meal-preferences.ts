@@ -78,6 +78,16 @@ export function parseSelectedIngredientIds(
   return ids;
 }
 
+/** Parses optional pantry ingredient IDs for rank and coverage APIs. */
+export function parsePantryIngredientIds(value: unknown): string[] | undefined {
+  const parsed = parseSelectedIngredientIds(value);
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return parsed ?? [];
+}
+
 export function parseSelectedStoreIds(value: unknown): string[] | undefined {
   if (value === undefined || value === null) {
     return undefined;

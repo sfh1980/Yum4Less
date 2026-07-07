@@ -7,6 +7,10 @@ import type {
   ShoppingPlanItem,
 } from "@/lib/recommendation-types";
 
+export function getStorePricedPlanItems(plan: ShoppingPlanItem[]): ShoppingPlanItem[] {
+  return plan.filter((item) => !item.sourcedFromPantry);
+}
+
 export function scoreCandidate({
   recipe,
   shoppingPlan,
@@ -18,18 +22,22 @@ export function scoreCandidate({
   preferences: MealPreferenceForm;
   estimatedTotal: number;
 }): ScoreBreakdown {
-  const storeCount = new Set(shoppingPlan.map((item) => item.storeName)).size;
+  const storePricedPlan = getStorePricedPlanItems(shoppingPlan);
+  const scoringPlan = storePricedPlan.length > 0 ? storePricedPlan : shoppingPlan;
+  const storeCount = new Set(
+    scoringPlan.map((item) => item.storeName).filter((name): name is string => Boolean(name)),
+  ).size;
   const averageFreshnessHours =
-    shoppingPlan.reduce(
-      (sum, item) => sum + (item.freshnessHoursAgo ?? item.freshnessDaysAgo * 24),
+    scoringPlan.reduce(
+      (sum, item) => sum + (item.freshnessHoursAgo ?? (item.freshnessDaysAgo ?? 0) * 24),
       0,
-    ) / shoppingPlan.length;
+    ) / scoringPlan.length;
   const averageSourceTier =
-    shoppingPlan.reduce(
+    scoringPlan.reduce(
       (sum, item) => sum + (item.priceSourceTier ?? getRankedPriceSourceTier(item.priceSource)),
       0,
-    ) / shoppingPlan.length;
-  const weakMatchPenalty = shoppingPlan.some(
+    ) / scoringPlan.length;
+  const weakMatchPenalty = scoringPlan.some(
     (item) => item.matchConfidence !== undefined && item.matchConfidence < 0.7,
   )
     ? 3
@@ -88,19 +96,22 @@ export function comparePlanQuality(left: ShoppingPlanItem[], right: ShoppingPlan
 }
 
 export function getPlanQuality(plan: ShoppingPlanItem[]) {
+  const storePricedPlan = getStorePricedPlanItems(plan);
+  const scoringPlan = storePricedPlan.length > 0 ? storePricedPlan : plan;
+
   return {
     averageTier:
-      plan.reduce((sum, item) => sum + (item.priceSourceTier ?? 99), 0) /
-      plan.length,
+      scoringPlan.reduce((sum, item) => sum + (item.priceSourceTier ?? 99), 0) /
+      scoringPlan.length,
     averageFreshnessHours:
-      plan.reduce(
-        (sum, item) => sum + (item.freshnessHoursAgo ?? item.freshnessDaysAgo * 24),
+      scoringPlan.reduce(
+        (sum, item) => sum + (item.freshnessHoursAgo ?? (item.freshnessDaysAgo ?? 0) * 24),
         0,
-      ) / plan.length,
+      ) / scoringPlan.length,
     averageConfidence:
-      plan.reduce((sum, item) => sum + (item.matchConfidence ?? 0.7), 0) /
-      plan.length,
-    total: plan.reduce((sum, item) => sum + item.price, 0),
+      scoringPlan.reduce((sum, item) => sum + (item.matchConfidence ?? 0.7), 0) /
+      scoringPlan.length,
+    total: storePricedPlan.reduce((sum, item) => sum + item.price, 0),
   };
 }
 
@@ -124,16 +135,19 @@ export function compareObservationQuality(
 }
 
 export function getFreshnessLabel(shoppingPlan: ShoppingPlanItem[]) {
-  const averageHours =
-    shoppingPlan.reduce(
-      (sum, item) => sum + (item.freshnessHoursAgo ?? item.freshnessDaysAgo * 24),
-      0,
-    ) / shoppingPlan.length;
-  const averageDays =
-    shoppingPlan.reduce((sum, item) => sum + item.freshnessDaysAgo, 0) /
-    shoppingPlan.length;
+  const storePricedPlan = getStorePricedPlanItems(shoppingPlan);
+  const scoringPlan = storePricedPlan.length > 0 ? storePricedPlan : shoppingPlan;
 
-  const hasOnline = shoppingPlan.some(
+  const averageHours =
+    scoringPlan.reduce(
+      (sum, item) => sum + (item.freshnessHoursAgo ?? (item.freshnessDaysAgo ?? 0) * 24),
+      0,
+    ) / scoringPlan.length;
+  const averageDays =
+    scoringPlan.reduce((sum, item) => sum + (item.freshnessDaysAgo ?? 0), 0) /
+    scoringPlan.length;
+
+  const hasOnline = scoringPlan.some(
     (item) => item.priceSourceKind === "official-online",
   );
 
@@ -150,7 +164,11 @@ export function getFreshnessLabel(shoppingPlan: ShoppingPlanItem[]) {
 }
 
 export function getConfidenceLabel(shoppingPlan: ShoppingPlanItem[]) {
-  const storeCount = new Set(shoppingPlan.map((item) => item.storeName)).size;
+  const storeCount = new Set(
+    getStorePricedPlanItems(shoppingPlan)
+      .map((item) => item.storeName)
+      .filter((name): name is string => Boolean(name)),
+  ).size;
   if (storeCount === 1) {
     return "Single-store estimate";
   }

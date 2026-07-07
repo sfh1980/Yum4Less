@@ -8,6 +8,7 @@ import { DealsPanel } from "@/components/meal-planner/deals-panel";
 import { InternalDetailsDevTrigger } from "@/components/meal-planner/internal-details-dev-trigger";
 import { IngredientsStepPanel } from "@/components/meal-planner/ingredients-step-panel";
 import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
+import { PantryStepPanel } from "@/components/meal-planner/pantry-step-panel";
 import { RankLoadingOverlay } from "@/components/meal-planner/rank-loading-overlay";
 import { RankStepPanel } from "@/components/meal-planner/rank-step-panel";
 import { SavedPlaceholderPanel } from "@/components/meal-planner/saved-placeholder-panel";
@@ -30,10 +31,6 @@ export function MealPlanner() {
       market={demo.scopedMarket}
       marketBlocked={demo.marketBlocked}
       marketSearchState={demo.marketSearchState}
-      pantryItems={demo.pantryItems}
-      onAddPantryItem={demo.handleAddPantryItem}
-      onRemovePantryItem={demo.handleRemovePantryItem}
-      onClearPantryItems={demo.handleClearPantryItems}
       recommendationState={demo.recommendationState}
       recommendations={demo.recommendations}
       shopperNotice={demo.shopperNotice}
@@ -66,7 +63,7 @@ export function MealPlanner() {
                 ingredientPickMode={demo.ingredientPickMode}
                 selectedIngredientIds={demo.selectedIngredientIds}
                 onClearIngredientSelection={demo.handleClearIngredientSelection}
-                onContinueToRank={demo.handleContinueToRank}
+                onContinueToPantry={demo.handleContinueToPantry}
                 onPickManually={demo.handlePickIngredientsManually}
                 onSelectAllIngredients={demo.handleSelectAllIngredients}
                 onToggleIngredient={demo.handleToggleIngredient}
@@ -83,6 +80,23 @@ export function MealPlanner() {
                   Loading sale ingredients from your saved Settings…
                 </p>
               </div>
+            ) : null}
+
+            {demo.flowStep === "pantry" ? (
+              <PantryStepPanel
+                loading={demo.pantryCoverageState.status === "loading"}
+                error={demo.pantryCoverageState.error}
+                fullyCoveredRecipeCount={demo.pantryCoverageState.fullyCoveredRecipeCount}
+                eligibleRecipeCount={demo.pantryCoverageState.eligibleRecipeCount}
+                suggestedChecklist={demo.pantryCoverageState.suggestedChecklist}
+                pantryRows={demo.pantryRows}
+                ingredientCatalog={demo.ingredientCatalog}
+                selectedPantryIngredientIds={demo.pantryIngredientIds}
+                onToggleChecklistItem={demo.handleTogglePantryChecklistItem}
+                onAddPantryIngredient={demo.handleAddPantryIngredient}
+                onRemovePantryIngredient={demo.handleRemovePantryIngredient}
+                onContinueToRank={demo.handleContinueToRank}
+              />
             ) : null}
 
             {demo.flowStep === "rank" ? (

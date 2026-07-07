@@ -17,7 +17,7 @@ type IngredientsStepPanelProps = {
   onToggleIngredient: (ingredientId: string, checked: boolean) => void;
   onSelectAllIngredients: () => void;
   onClearIngredientSelection: () => void;
-  onContinueToRank: () => void;
+  onContinueToPantry: () => void;
   onPickManually: () => void;
   onUseAllIngredients: () => void;
 };
@@ -32,7 +32,7 @@ export function IngredientsStepPanel({
   onToggleIngredient,
   onSelectAllIngredients,
   onClearIngredientSelection,
-  onContinueToRank,
+  onContinueToPantry,
   onPickManually,
   onUseAllIngredients,
 }: IngredientsStepPanelProps) {
@@ -105,10 +105,10 @@ export function IngredientsStepPanel({
           <button
             className="primary-button"
             type="button"
-            onClick={onContinueToRank}
+            onClick={onContinueToPantry}
             disabled={continueDisabled}
           >
-            Continue to rank
+            Continue to pantry check
           </button>
         </div>
       ) : null}

@@ -86,4 +86,49 @@ describe("MealRecommendationCard", () => {
       expect.objectContaining({ id: "kroger-mechanicsville", name: "Kroger" }),
     );
   });
+
+  it("renders pantry lines without store price claims", () => {
+    renderCard({
+      meal: buildTestMeal({
+        shoppingPlan: [
+          {
+            ingredientId: "olive-oil",
+            ingredient: "Olive oil",
+            quantityNote: "1 bottle",
+            sourcedFromPantry: true,
+            price: 0,
+            pantryNote: "From your pantry — not included in total",
+            saleConfidence: {
+              level: "no-sale-data",
+              label: "From your pantry",
+              note: "Not included in store total",
+            },
+          },
+          {
+            ingredientId: "chicken-thighs",
+            ingredient: "Chicken thighs",
+            quantityNote: "1.5 lb",
+            sourcedFromPantry: false,
+            storeName: "Kroger",
+            price: 6.49,
+            freshnessDaysAgo: 1,
+            freshnessHoursAgo: 12,
+            priceSource: "kroger-weekly-ad-scrape",
+            priceSourceKind: "weekly-ad",
+            priceSourceTier: 2,
+            matchConfidence: 0.85,
+            saleConfidence: {
+              level: "advertised-recent",
+              label: "Sale price — estimate only",
+              note: "Fixture note.",
+            },
+          },
+        ],
+      }),
+    });
+
+    expect(screen.getByText(/from your pantry, not included in total/i)).toBeInTheDocument();
+    expect(screen.getByText(/not included in the estimated total above/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Olive oil from Kroger/i)).not.toBeInTheDocument();
+  });
 });

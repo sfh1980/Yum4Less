@@ -96,4 +96,22 @@ describe("parseRecommendationRequest", () => {
       }),
     ).toBeUndefined();
   });
+
+  it("accepts pantryIngredientIds on rank requests", () => {
+    expect(
+      parseRecommendationRequest({
+        ...validPayload,
+        pantryIngredientIds: ["olive-oil", "lime"],
+      })?.pantryIngredientIds,
+    ).toEqual(["olive-oil", "lime"]);
+  });
+
+  it("rejects invalid pantryIngredientIds on rank requests", () => {
+    expect(
+      parseRecommendationRequest({
+        ...validPayload,
+        pantryIngredientIds: ["INVALID"],
+      }),
+    ).toBeUndefined();
+  });
 });

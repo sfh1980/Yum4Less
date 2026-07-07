@@ -38,8 +38,10 @@ export function buildPlanItem(
   overrides: Partial<ShoppingPlanItem> = {},
 ): ShoppingPlanItem {
   const base = {
+    ingredientId: "black-beans",
     ingredient: "Black beans",
     quantityNote: "1 can",
+    sourcedFromPantry: false,
     storeName: "Kroger",
     price: 1.09,
     freshnessDaysAgo: 1,

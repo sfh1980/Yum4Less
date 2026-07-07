@@ -17,6 +17,7 @@ Committed browser tests (`@playwright/test`) gate merge via `npm run test:e2e:ci
 | `api-errors.spec.ts` | Market-search and recommendations 400/500 UI copy |
 | `market-pass-through.spec.ts` | Trimmed market snapshot on rank + post-rank Deals |
 | `navigation-theme.spec.ts` | Bottom nav, Cook gating, light/dark theme |
+| `pantry-step.spec.ts` | Pantry check step — always visible, catalog add, continue to rank |
 | `error-surfaces.spec.ts` | H11 `error.tsx` (H12 skipped — bundled Leaflet) |
 | `mobile-smoke.spec.ts` | Narrow viewport smoke (`mobile-chrome` project only) |
 

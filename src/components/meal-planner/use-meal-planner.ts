@@ -33,6 +33,7 @@ import {
 import type { IngredientPickMode } from "@/components/meal-planner/ingredient-pick-mode";
 import type { FlowStep } from "@/components/meal-planner/flow-step";
 import { getInitialFlowStep } from "@/components/meal-planner/flow-step";
+import type { PantryItemSource } from "@/components/meal-planner/pantry-step-panel";
 import type {
   ActiveLocationRequest,
   FieldErrors,
@@ -40,10 +41,13 @@ import type {
   MarketSearchRequest,
   MarketSearchResponse,
   MarketSearchState,
+  PantryCoverageResponse,
+  PantryCoverageState,
   RecommendationRequest,
   RecommendationResponse,
   RecommendationState,
 } from "@/components/meal-planner/types";
+import type { CatalogIngredient } from "@/lib/ingredient-category";
 
 const defaultForm: MealPreferenceForm = {
   zipCode: "23111",
@@ -70,6 +74,12 @@ const defaultFormState: FormState = {
 
 const initialMarketSearchState: MarketSearchState = { status: "idle" };
 const initialRecommendationState: RecommendationState = { status: "idle" };
+const initialPantryCoverageState: PantryCoverageState = {
+  status: "idle",
+  suggestedChecklist: [],
+  fullyCoveredRecipeCount: 0,
+  eligibleRecipeCount: 0,
+};
 
 function hydrateFormFromSettings(): FormState {
   const saved = readSettingsPreferences();
@@ -147,12 +157,21 @@ export function useMealPlanner() {
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
   const [ingredientPickMode, setIngredientPickMode] = useState<IngredientPickMode>("unset");
   const [isMapOverlayOpen, setIsMapOverlayOpen] = useState(false);
-  const [pantryItems, setPantryItems] = useState<string[]>([]);
+  const [pantryIngredientIds, setPantryIngredientIds] = useState<string[]>([]);
+  const [pantryItemSources, setPantryItemSources] = useState<
+    Record<string, PantryItemSource>
+  >({});
+  const [ingredientCatalog, setIngredientCatalog] = useState<CatalogIngredient[]>([]);
+  const [pantryCoverageState, setPantryCoverageState] = useState<PantryCoverageState>(
+    initialPantryCoverageState,
+  );
   const marketSearchRequestRef = useRef(0);
   const rankRequestRef = useRef(0);
+  const pantryCoverageRequestRef = useRef(0);
   const geolocationRequestRef = useRef(0);
   const autoMarketSearchAttemptedRef = useRef(false);
   const rankedStoreScopeRef = useRef<string[] | null>(null);
+  const pantryCatalogLoadedRef = useRef(false);
 
   const marketSearchLoading = marketSearchState.status === "loading";
   const rankLoading = recommendationState.status === "loading";
@@ -218,6 +237,29 @@ export function useMealPlanner() {
       rankLoading ||
       recommendationState.status === "error");
 
+  const pantryRows = useMemo(() => {
+    const nameById = new Map(
+      ingredientCatalog.map((ingredient) => [ingredient.id, ingredient.name]),
+    );
+    for (const item of pantryCoverageState.suggestedChecklist) {
+      nameById.set(item.ingredientId, item.ingredientName);
+    }
+
+    return pantryIngredientIds.map((ingredientId) => ({
+      ingredientId,
+      ingredientName: nameById.get(ingredientId) ?? ingredientId,
+      source: pantryItemSources[ingredientId] ?? "manual",
+      recipeCount: pantryCoverageState.suggestedChecklist.find(
+        (item) => item.ingredientId === ingredientId,
+      )?.recipeCount,
+    }));
+  }, [
+    ingredientCatalog,
+    pantryCoverageState.suggestedChecklist,
+    pantryIngredientIds,
+    pantryItemSources,
+  ]);
+
   useEffect(() => {
     if (!preferencesHydratedRef.current) {
       return;
@@ -270,7 +312,11 @@ export function useMealPlanner() {
     setSelectedStoreId(undefined);
     setSelectedIngredientIds([]);
     setIngredientPickMode("unset");
-    setPantryItems([]);
+    setPantryIngredientIds([]);
+    setPantryItemSources({});
+    setIngredientCatalog([]);
+    setPantryCoverageState(initialPantryCoverageState);
+    pantryCatalogLoadedRef.current = false;
     setIsMapOverlayOpen(false);
     setForm((current) => ({ ...current, selectedStoreIds: [] }));
   }
@@ -678,6 +724,128 @@ export function useMealPlanner() {
     setSelectedIngredientIds([]);
   }
 
+  useEffect(() => {
+    if (flowStep !== "pantry") {
+      return;
+    }
+
+    const delay = pantryCoverageState.status === "idle" ? 0 : 300;
+    const timer = window.setTimeout(() => {
+      void runPantryCoverageAssess(pantryIngredientIds, {
+        includeIngredientCatalog: !pantryCatalogLoadedRef.current,
+      });
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    flowStep,
+    pantryIngredientIds,
+    form,
+    selectedIngredientIds,
+    scopedMarket,
+    activeLocationRequest,
+    market,
+    pantryCoverageState.status,
+  ]);
+
+  async function runPantryCoverageAssess(
+    pantryIds: string[],
+    options?: { includeIngredientCatalog?: boolean; skipLoadingState?: boolean },
+  ) {
+    if (!market || !activeLocationRequest) {
+      return;
+    }
+
+    const preferences = buildMealPreferencePayload(form);
+    if (!preferences) {
+      return;
+    }
+
+    const requestId = ++pantryCoverageRequestRef.current;
+    if (!options?.skipLoadingState) {
+      setPantryCoverageState((current) => ({
+        ...current,
+        status: "loading",
+        error: undefined,
+      }));
+    }
+
+    const payload: RecommendationRequest & { includeIngredientCatalog?: boolean } = {
+      ...preferences,
+      recipeSource: getDefaultRecipeSource(),
+      selectedStoreIds: preferences.selectedStoreIds,
+      ...(selectedIngredientIds.length > 0 ? { selectedIngredientIds } : {}),
+      ...(pantryIds.length > 0 ? { pantryIngredientIds: pantryIds } : {}),
+      ...(options?.includeIngredientCatalog ? { includeIngredientCatalog: true } : {}),
+      market: trimMarketForRankingPassThrough(scopedMarket ?? market),
+      ...(activeLocationRequest.mode === "zip"
+        ? { zipCode: activeLocationRequest.zipCode }
+        : {
+            zipCode: "",
+            latitude: activeLocationRequest.latitude,
+            longitude: activeLocationRequest.longitude,
+          }),
+    };
+
+    try {
+      const response = await fetch("/api/pantry-coverage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+      const result = (await response.json()) as PantryCoverageResponse;
+
+      if (requestId !== pantryCoverageRequestRef.current) {
+        return;
+      }
+
+      if (!result.ok) {
+        setPantryCoverageState({
+          status: "error",
+          suggestedChecklist: [],
+          fullyCoveredRecipeCount: 0,
+          eligibleRecipeCount: 0,
+          error: result.error,
+        });
+        return;
+      }
+
+      if (result.ingredientCatalog) {
+        setIngredientCatalog(result.ingredientCatalog);
+        pantryCatalogLoadedRef.current = true;
+      }
+
+      setPantryCoverageState({
+        status: "ready",
+        suggestedChecklist: result.suggestedChecklist,
+        fullyCoveredRecipeCount: result.fullyCoveredRecipeCount,
+        eligibleRecipeCount: result.eligibleRecipeCount,
+      });
+    } catch {
+      if (requestId !== pantryCoverageRequestRef.current) {
+        return;
+      }
+
+      setPantryCoverageState({
+        status: "error",
+        suggestedChecklist: [],
+        fullyCoveredRecipeCount: 0,
+        eligibleRecipeCount: 0,
+        error: "Pantry coverage is temporarily unavailable.",
+      });
+    }
+  }
+
+  function handleContinueToPantry() {
+    rankedStoreScopeRef.current = null;
+    setRecommendationState(initialRecommendationState);
+    setPantryIngredientIds([]);
+    setPantryItemSources({});
+    setPantryCoverageState(initialPantryCoverageState);
+    setFlowStep("pantry");
+  }
+
   function handleContinueToRank() {
     rankedStoreScopeRef.current = null;
     setRecommendationState(initialRecommendationState);
@@ -722,6 +890,7 @@ export function useMealPlanner() {
       recipeSource: getDefaultRecipeSource(),
       selectedStoreIds: preferences.selectedStoreIds,
       ...(selectedIngredientIds.length > 0 ? { selectedIngredientIds } : {}),
+      ...(pantryIngredientIds.length > 0 ? { pantryIngredientIds } : {}),
       market: trimMarketForRankingPassThrough(scopedMarket ?? market),
       ...(activeLocationRequest.mode === "zip"
         ? { zipCode: activeLocationRequest.zipCode }
@@ -843,23 +1012,37 @@ export function useMealPlanner() {
     setIngredientPickMode("manual");
   }
 
-  function handleAddPantryItem(item: string) {
-    const trimmed = item.trim();
-    if (!trimmed) {
+  function handleTogglePantryChecklistItem(ingredientId: string, checked: boolean) {
+    if (checked) {
+      setPantryIngredientIds((current) =>
+        current.includes(ingredientId) ? current : [...current, ingredientId],
+      );
+      setPantryItemSources((current) => ({ ...current, [ingredientId]: "suggested" }));
       return;
     }
 
-    setPantryItems((current) =>
-      current.includes(trimmed) ? current : [...current, trimmed],
+    setPantryIngredientIds((current) => current.filter((id) => id !== ingredientId));
+    setPantryItemSources((current) => {
+      const next = { ...current };
+      delete next[ingredientId];
+      return next;
+    });
+  }
+
+  function handleAddPantryIngredient(ingredientId: string) {
+    setPantryIngredientIds((current) =>
+      current.includes(ingredientId) ? current : [...current, ingredientId],
     );
+    setPantryItemSources((current) => ({ ...current, [ingredientId]: "manual" }));
   }
 
-  function handleRemovePantryItem(item: string) {
-    setPantryItems((current) => current.filter((entry) => entry !== item));
-  }
-
-  function handleClearPantryItems() {
-    setPantryItems([]);
+  function handleRemovePantryIngredient(ingredientId: string) {
+    setPantryIngredientIds((current) => current.filter((id) => id !== ingredientId));
+    setPantryItemSources((current) => {
+      const next = { ...current };
+      delete next[ingredientId];
+      return next;
+    });
   }
 
   function handleOpenMapOverlay() {
@@ -895,7 +1078,10 @@ export function useMealPlanner() {
     isMapOverlayOpen,
     showResultsInHomeFlow,
     ingredientPickMode,
-    pantryItems,
+    pantryIngredientIds,
+    pantryCoverageState,
+    pantryRows,
+    ingredientCatalog,
     settingsSaveError,
     isInternalDetailsOpen,
     setIsInternalDetailsOpen,
@@ -906,6 +1092,7 @@ export function useMealPlanner() {
     handleSaveSettings,
     handleFactoryReset,
     handleCompleteWelcome,
+    handleContinueToPantry,
     handleContinueToRank,
     handleRankMeals,
     selectedIngredientIds,
@@ -914,9 +1101,9 @@ export function useMealPlanner() {
     handleClearIngredientSelection,
     handleUseAllIngredients,
     handlePickIngredientsManually,
-    handleAddPantryItem,
-    handleRemovePantryItem,
-    handleClearPantryItems,
+    handleTogglePantryChecklistItem,
+    handleAddPantryIngredient,
+    handleRemovePantryIngredient,
     handleOpenMapOverlay,
     handleCloseMapOverlay,
   };

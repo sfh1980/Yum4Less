@@ -57,6 +57,7 @@ export const RATE_LIMITS = {
   apiFeedback: { windowMs: 60_000, maxRequests: 10 },
   apiMarketSearch: { windowMs: 60_000, maxRequests: 30 },
   apiRecommendations: { windowMs: 60_000, maxRequests: 20 },
+  apiPantryCoverage: { windowMs: 60_000, maxRequests: 40 },
   apiShoppingRoute: { windowMs: 60_000, maxRequests: 15 },
   apiGeocodeZip: { windowMs: 60_000, maxRequests: 30 },
   geocodioUpstream: { windowMs: 60_000, maxRequests: 20 },

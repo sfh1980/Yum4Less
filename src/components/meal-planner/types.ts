@@ -5,6 +5,7 @@ import type {
 } from "@/lib/recommendation-service";
 import type { RecipeSourceSelection } from "@/lib/recipe-sources/recipe-source-types";
 import type { ThemePreference } from "@/lib/settings-preferences";
+import type { CatalogIngredient } from "@/lib/ingredient-category";
 
 export type FormState = {
   zipCode: string;
@@ -83,5 +84,35 @@ export type RecommendationRequest = MealPreferenceForm & {
   latitude?: number;
   longitude?: number;
   selectedIngredientIds?: string[];
+  pantryIngredientIds?: string[];
   market?: RecommendationExperience["market"];
+};
+
+export type PantryCoverageResponse =
+  | {
+      ok: true;
+      suggestedChecklist: Array<{
+        ingredientId: string;
+        ingredientName: string;
+        category?: string;
+        recipeCount: number;
+      }>;
+      fullyCoveredRecipeCount: number;
+      eligibleRecipeCount: number;
+      ingredientCatalog?: CatalogIngredient[];
+    }
+  | {
+      ok: false;
+      error: string;
+      providerConfigured?: boolean;
+    };
+
+export type PantryCoverageState = {
+  status: "idle" | "loading" | "ready" | "error";
+  suggestedChecklist: NonNullable<
+    Extract<PantryCoverageResponse, { ok: true }>["suggestedChecklist"]
+  >;
+  fullyCoveredRecipeCount: number;
+  eligibleRecipeCount: number;
+  error?: string;
 };

@@ -8,7 +8,6 @@ import type {
 } from "@/lib/recommendation-service";
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 import { SingleStoreMapOverlay } from "@/components/single-store-map-overlay";
-import { PantryPromptCard } from "@/components/meal-planner/pantry-prompt-card";
 import { MealResultsAccordion } from "@/components/meal-planner/meal-results-accordion";
 import { HelpHint } from "@/components/help-hint";
 import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
@@ -34,10 +33,6 @@ type MealResultsPanelProps = {
   activeLocationRequest?: ActiveLocationRequest;
   /** Full-screen overlay owns loading copy during rank (slice 5). */
   suppressInlineLoading?: boolean;
-  pantryItems?: string[];
-  onAddPantryItem?: (item: string) => void;
-  onRemovePantryItem?: (item: string) => void;
-  onClearPantryItems?: () => void;
 };
 
 export function MealResultsPanel({
@@ -51,10 +46,6 @@ export function MealResultsPanel({
   marketBlocked,
   activeLocationRequest,
   suppressInlineLoading = false,
-  pantryItems = [],
-  onAddPantryItem,
-  onRemovePantryItem,
-  onClearPantryItems,
 }: MealResultsPanelProps) {
   const [storeMapTarget, setStoreMapTarget] = useState<NearbyStoreSummary | null>(null);
   const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
@@ -180,14 +171,6 @@ export function MealResultsPanel({
               )
             ) : (
               <>
-                {onAddPantryItem && onRemovePantryItem && onClearPantryItems ? (
-                  <PantryPromptCard
-                    items={pantryItems}
-                    onAddItem={onAddPantryItem}
-                    onRemoveItem={onRemovePantryItem}
-                    onClearItems={onClearPantryItems}
-                  />
-                ) : null}
                 <MealResultsAccordion
                   activeLocationRequest={activeLocationRequest}
                   ariaLabel="Suggested dinner recipes"

@@ -110,8 +110,10 @@ export function buildTestMeal(
     instructions: ["Roast until done."],
     shoppingPlan: [
       {
+        ingredientId: "chicken-thighs",
         ingredient: "Chicken thighs",
         quantityNote: "1.5 lb",
+        sourcedFromPantry: false,
         storeName: "Kroger",
         price: 6.49,
         freshnessDaysAgo: 1,

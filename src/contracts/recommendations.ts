@@ -39,6 +39,7 @@ import {
   dietaryFocusSchema,
   maxIngredientsSchema,
   mealPlanningModeSchema,
+  parsePantryIngredientIds,
   parseSelectedIngredientIds,
   parseSelectedStoreIds,
   shoppingStyleSchema,
@@ -58,6 +59,7 @@ export type MealPreferenceForm = {
   planningMode?: MealPlanningMode;
   selectedStoreIds: string[];
   selectedIngredientIds?: string[];
+  pantryIngredientIds?: string[];
 };
 
 export type RecipeDifficulty = "easy" | "medium";
@@ -122,18 +124,21 @@ export type ShopperNotice = {
 };
 
 export type ShoppingPlanItem = {
+  ingredientId: string;
   ingredient: string;
   quantityNote: string;
-  storeName: string;
+  sourcedFromPantry: boolean;
+  storeName?: string;
   price: number;
-  freshnessDaysAgo: number;
+  pantryNote?: string;
+  freshnessDaysAgo?: number;
   freshnessHoursAgo?: number;
   saleLabel?: string;
   priceSource?: string;
   priceSourceKind?: "official-online" | "weekly-ad" | "sample" | "unknown";
   priceSourceTier?: number;
   matchConfidence?: number;
-  saleConfidence: SaleConfidence;
+  saleConfidence: import("@/lib/sale-confidence").SaleConfidence;
 };
 
 export type StorePlan = {
@@ -278,6 +283,14 @@ export function parseRecommendationRequest(
   const selectedIngredientIds = parseSelectedIngredientIds(
     record.selectedIngredientIds,
   );
+  let pantryIngredientIds: string[] | undefined;
+  if (record.pantryIngredientIds !== undefined && record.pantryIngredientIds !== null) {
+    const parsedPantryIngredientIds = parsePantryIngredientIds(record.pantryIngredientIds);
+    if (parsedPantryIngredientIds === undefined) {
+      return undefined;
+    }
+    pantryIngredientIds = parsedPantryIngredientIds;
+  }
   const selectedStoreIds = parseSelectedStoreIds(record.selectedStoreIds);
 
   if (
@@ -310,6 +323,9 @@ export function parseRecommendationRequest(
     planningMode: resolvedPlanningMode,
     ...(selectedIngredientIds && selectedIngredientIds.length > 0
       ? { selectedIngredientIds }
+      : {}),
+    ...(pantryIngredientIds && pantryIngredientIds.length > 0
+      ? { pantryIngredientIds }
       : {}),
   };
 

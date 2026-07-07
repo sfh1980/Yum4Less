@@ -208,13 +208,16 @@ Under **Shopping style**:
 
 - **No “Notify me”** — explain limited coverage, try different ZIP, check back later.
 
-### Pantry (shipped D6 — session only)
+### Pantry check (shipped v2 — 2026-07-07)
 
-- Session-only add/remove on results via `pantry-prompt-card.tsx`; **not persisted**; does **not** affect ranking yet.
+- Pre-rank **Pantry check** step between Ingredients and Rank — always shown; **Continue to rank** never blocked.
+- `POST /api/pantry-coverage` — near-miss checklist (1–4 missing lines), debounced full-pool reassess, `ingredientCatalog` on initial response.
+- `pantryIngredientIds` pass-through on rank; plan builder emits `sourcedFromPantry` rows excluded from `estimatedTotal`.
+- Session-only — not persisted. Retired post-rank `pantry-prompt-card.tsx`.
 
 ### Deferred after D7
 
-Saved tab **persistence**, cuisine DB/tags (**R11**), pantry affecting rank, and mockup layout polish (top-bar toggle, Cook FAB styling) remain deferred.
+Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (top-bar toggle, Cook FAB styling) remain deferred.
 
 ---
 
@@ -237,6 +240,21 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), pantry affecting rank, and
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-07 — Pantry check v2 (pre-rank step + rank integration)
+
+**Theme:** Replace session-only post-rank free-text pantry with structured pre-rank pantry check affecting plan build and results display.
+
+**Shipped (local):**
+- `recipe-plan-coverage.ts` + `POST /api/pantry-coverage` + `ranking-recipe-pool.ts` shared eligible-pool helper
+- Plan builder `sourcedFromPantry` rows; `pantryIngredientIds` on rank contract
+- `PantryStepPanel` + catalog autocomplete; flow `ingredients → pantry → rank → results`
+- Visible pantry rows on meal cards with trust copy; retired `pantry-prompt-card.tsx`
+- `e2e/pantry-step.spec.ts`; updated `e2e/helpers.ts`
+
+**Tests (this session):** `npm test` **848/848** pass; `npm run build` pass; `npm run test:e2e:ci` **23 passed / 1 skipped / 1 flaky** (includes `pantry-step.spec.ts`). `@verifier` **PASS** on pantry row trust copy.
+
+**Honest limits:** Remote CI not re-run this session. Pantry still session-only (not Saved tab persistence).
 
 ### 2026-07-06 — Store-discovery display patch + straight-line distance labels
 

@@ -94,10 +94,16 @@ export async function completeWelcomeFlow(page: Page) {
   await expect(page.getByRole("heading", { name: "Ingredients" })).toBeVisible();
 }
 
-export async function pickAllIngredientsAndContinue(page: Page) {
-  await page.getByRole("button", { name: /Use all \d+ sale ingredient/i }).click();
+export async function completePantryStepAndContinue(page: Page) {
+  await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
   await page.getByRole("button", { name: "Continue to rank" }).click();
   await expect(page.getByRole("heading", { name: "Rank dinners" })).toBeVisible();
+}
+
+export async function pickAllIngredientsAndContinue(page: Page) {
+  await page.getByRole("button", { name: /Use all \d+ sale ingredient/i }).click();
+  await page.getByRole("button", { name: "Continue to pantry check" }).click();
+  await completePantryStepAndContinue(page);
 }
 
 export async function goToRankStep(page: Page) {
@@ -105,8 +111,8 @@ export async function goToRankStep(page: Page) {
   if (await useAllButton.isVisible()) {
     await useAllButton.click();
   }
-  await page.getByRole("button", { name: "Continue to rank" }).click();
-  await expect(page.getByRole("heading", { name: "Rank dinners" })).toBeVisible();
+  await page.getByRole("button", { name: "Continue to pantry check" }).click();
+  await completePantryStepAndContinue(page);
 }
 
 export async function openMapOverlay(page: Page) {

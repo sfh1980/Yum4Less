@@ -28,7 +28,16 @@ export function attachMealPresentation(
     providerPreviewComparisons: buildRecipeProviderPreviewComparisons({
       recipe: candidate.recipe,
       seedEstimatedTotal: candidate.estimatedTotal,
-      shoppingPlan: recommendation.shoppingPlan,
+      shoppingPlan: recommendation.shoppingPlan
+        .filter((item) => !item.sourcedFromPantry && item.storeName)
+        .map((item) => ({
+          ingredient: item.ingredient,
+          quantityNote: item.quantityNote,
+          storeName: item.storeName!,
+          price: item.price,
+          freshnessDaysAgo: item.freshnessDaysAgo ?? 0,
+          saleLabel: item.saleLabel,
+        })),
       providerPricingPreviews,
     }),
   };
@@ -43,17 +52,20 @@ export function toRecommendation(
   // uses ID rather than name — avoids ambiguity when two same-chain
   // branches are in radius. See 2026-06-30 store-map-overlay session.
   const storePlan = Array.from(
-    candidate.shoppingPlan.reduce((map, item) => {
-      const entry = map.get(item.storeName) ?? {
-        storeName: item.storeName,
-        subtotal: 0,
-        itemCount: 0,
-      };
-      entry.subtotal += item.price;
-      entry.itemCount += 1;
-      map.set(item.storeName, entry);
-      return map;
-    }, new Map<string, StorePlan>()),
+    candidate.shoppingPlan
+      .filter((item) => !item.sourcedFromPantry && item.storeName)
+      .reduce((map, item) => {
+        const storeName = item.storeName!;
+        const entry = map.get(storeName) ?? {
+          storeName,
+          subtotal: 0,
+          itemCount: 0,
+        };
+        entry.subtotal += item.price;
+        entry.itemCount += 1;
+        map.set(storeName, entry);
+        return map;
+      }, new Map<string, StorePlan>()),
   )
     .map(([, plan]) => ({
       ...plan,
@@ -76,14 +88,18 @@ export function toRecommendation(
     instructions: candidate.recipe.steps,
     shoppingPlan: candidate.shoppingPlan.map((item) => ({
       ...item,
-      saleConfidence: getSaleConfidence({
-        saleLabel: item.saleLabel,
-        freshnessDaysAgo: item.freshnessDaysAgo,
-        freshnessHoursAgo: item.freshnessHoursAgo,
-        dataSource,
-        priceSource: item.priceSource,
-        matchConfidence: item.matchConfidence,
-      }),
+      ...(item.sourcedFromPantry
+        ? {}
+        : {
+            saleConfidence: getSaleConfidence({
+              saleLabel: item.saleLabel,
+              freshnessDaysAgo: item.freshnessDaysAgo ?? 0,
+              freshnessHoursAgo: item.freshnessHoursAgo,
+              dataSource,
+              priceSource: item.priceSource,
+              matchConfidence: item.matchConfidence,
+            }),
+          }),
     })),
     storePlan,
     score: candidate.score,

@@ -480,8 +480,115 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.45rem 0;
-  border-top: 1px solid var(--panel-border);
+  padding: 0.5rem 0;
+}
+
+.pantry-step-summary {
+  margin: 1rem 0;
+}
+
+.pantry-checklist-block,
+.pantry-combined-list-block {
+  margin-top: 1.25rem;
+}
+
+.pantry-checklist,
+.pantry-combined-list {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pantry-checklist-item label,
+.pantry-combined-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pantry-checklist-item label {
+  width: 100%;
+  cursor: pointer;
+}
+
+.pantry-checklist-meta {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pantry-combined-list-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pantry-source-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pantry-source-badge--suggested {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.pantry-source-badge--manual {
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  color: var(--muted);
+}
+
+.ingredient-catalog-combobox {
+  margin-top: 1.25rem;
+  position: relative;
+}
+
+.ingredient-catalog-suggestions {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  margin: 0.35rem 0 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.ingredient-catalog-suggestion {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ingredient-catalog-suggestion--active,
+.ingredient-catalog-suggestion:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.ingredient-catalog-suggestion-category {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: capitalize;
 }
 
 @media (min-width: 900px) and (max-width: 1099px) {

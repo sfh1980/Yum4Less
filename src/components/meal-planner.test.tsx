@@ -34,9 +34,19 @@ async function completeIngredientGate(user: ReturnType<typeof userEvent.setup>) 
 
 async function goToRankStep(user: ReturnType<typeof userEvent.setup>) {
   await completeIngredientGate(user);
+  await user.click(screen.getByRole("button", { name: "Continue to pantry check" }));
+  await screen.findByRole("heading", { name: "Pantry check" });
   await user.click(screen.getByRole("button", { name: "Continue to rank" }));
   await screen.findByRole("heading", { name: "Rank dinners" });
 }
+
+const pantryCoveragePayload = {
+  ok: true,
+  suggestedChecklist: [],
+  fullyCoveredRecipeCount: 0,
+  eligibleRecipeCount: 3,
+  ingredientCatalog: [{ id: "olive-oil", name: "Olive oil", category: "pantry" }],
+};
 
 describe("MealPlanner", () => {
   beforeEach(() => {
@@ -56,6 +66,14 @@ describe("MealPlanner", () => {
     fetchMock
       .mockResolvedValueOnce(
         new Response(JSON.stringify(marketSearchPayload), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(pantryCoveragePayload), {
           status: 200,
           headers: {
             "Content-Type": "application/json",
@@ -624,8 +642,10 @@ const recommendationPayload = {
         instructions: ["Roast the chicken and vegetables until tender."],
         shoppingPlan: [
           {
+            ingredientId: "chicken-thighs",
             ingredient: "Chicken thighs",
             quantityNote: "2 lb family pack",
+            sourcedFromPantry: false,
             storeName: "Kroger Mechanicsville",
             price: 6.49,
             freshnessDaysAgo: 1,

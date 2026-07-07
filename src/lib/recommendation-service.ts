@@ -23,16 +23,14 @@ import {
 } from "@/lib/recipe-import/ensure-themealdb-recipes-for-search";
 import {
   collectSaleIngredientIdsFromObservations,
-  filterRecipesForRanking,
 } from "@/lib/recipe-import/recipe-ranking-eligibility";
-import { selectRecipesForRanking } from "@/lib/recipe-filter-by-source";
-import { filterRecipesBySelectedIngredientIds } from "@/lib/sale-ingredient-offers";
 import {
   filterPriceObservationsByStoreIds,
   filterNearbyStoresBySelection,
   resolveEffectiveSelectedIngredientIds,
   scopeMarketSummaryToSelectedStores,
 } from "@/lib/store-scope";
+import { buildEligibleRecipePool } from "@/lib/ranking-recipe-pool";
 import {
   getConfidenceLabel,
   getFreshnessLabel,
@@ -41,7 +39,9 @@ import {
 import {
   buildMultiStorePlan,
   buildSingleStorePlan,
+  sumStorePricedPlanTotal,
 } from "@/lib/shopping-plan-builder";
+import { filterValidPantryIngredientIds } from "@/lib/recipe-plan-coverage";
 import {
   attachMealPresentation,
   buildThemealdbEmptyShopperNotice,
@@ -236,24 +236,14 @@ export async function getRecommendationExperience(
     };
   }
 
-  const saleIngredientIds = collectSaleIngredientIdsFromObservations(
-    scopedObservations,
-  );
-  const sourceFilteredRecipes = selectRecipesForRanking(
-    snapshot.recipes,
-    preferences.recipeSource,
-  );
-  const rankableRecipes = filterRecipesForRanking({
-    recipes: sourceFilteredRecipes,
-    saleIngredientIds,
+  const ingredientScopedRecipes = buildEligibleRecipePool({
+    recipes: snapshot.recipes,
+    preferences,
+    priceObservations: scopedObservations,
+    selectedStoreIds: preferences.selectedStoreIds,
   });
-  const ingredientScopedRecipes = filterRecipesBySelectedIngredientIds(
-    rankableRecipes,
-    effectiveSelectedIngredientIds,
-  );
 
   const candidates = ingredientScopedRecipes
-    .filter((recipe) => byDietaryFocus(recipe, preferences.dietaryFocus))
     .map((recipe) =>
       buildCandidate(
         recipe,
@@ -336,17 +326,6 @@ function buildRankEmptyShopperNotices(input: {
   };
 }
 
-function byDietaryFocus(
-  recipe: CatalogRecipeRecord,
-  dietaryFocus: MealPreferenceForm["dietaryFocus"],
-) {
-  if (dietaryFocus === "anything") {
-    return true;
-  }
-
-  return recipe.dietaryTags.includes(dietaryFocus);
-}
-
 function buildCandidate(
   recipe: CatalogRecipeRecord,
   nearbyStores: NearbyStoreSummary[],
@@ -354,18 +333,33 @@ function buildCandidate(
   priceObservations: CatalogPriceObservation[],
   dataSource: MarketDataSource,
 ): RecommendationCandidate | null {
+  const pantryIngredientIds = new Set(
+    filterValidPantryIngredientIds(preferences.pantryIngredientIds ?? []),
+  );
+  const planOptions =
+    pantryIngredientIds.size > 0 ? { pantryIngredientIds } : undefined;
   const shoppingPlan =
     preferences.shoppingStyle === "single-store"
-      ? buildSingleStorePlan(recipe, nearbyStores, priceObservations, dataSource)
-      : buildMultiStorePlan(recipe, nearbyStores, priceObservations, dataSource);
+      ? buildSingleStorePlan(
+          recipe,
+          nearbyStores,
+          priceObservations,
+          dataSource,
+          planOptions,
+        )
+      : buildMultiStorePlan(
+          recipe,
+          nearbyStores,
+          priceObservations,
+          dataSource,
+          planOptions,
+        );
 
   if (shoppingPlan.length === 0) {
     return null;
   }
 
-  const estimatedTotal = roundCurrency(
-    shoppingPlan.reduce((sum, item) => sum + item.price, 0),
-  );
+  const estimatedTotal = roundCurrency(sumStorePricedPlanTotal(shoppingPlan));
 
   return {
     recipe,

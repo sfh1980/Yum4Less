@@ -20,7 +20,7 @@ describe("IngredientsStepPanel", () => {
     onToggleIngredient: vi.fn(),
     onSelectAllIngredients: vi.fn(),
     onClearIngredientSelection: vi.fn(),
-    onContinueToRank: vi.fn(),
+    onContinueToPantry: vi.fn(),
     onPickManually: vi.fn(),
     onUseAllIngredients: vi.fn(),
   };
@@ -60,12 +60,12 @@ describe("IngredientsStepPanel", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: "Continue to rank" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Continue to pantry check" })).toBeDisabled();
     expect(screen.getByText(/No sale ingredients are available/i)).toBeInTheDocument();
   });
 
-  it("continues to rank after all-ingredient confirmation", async () => {
-    const onContinueToRank = vi.fn();
+  it("continues to pantry after all-ingredient confirmation", async () => {
+    const onContinueToPantry = vi.fn();
     const user = userEvent.setup();
 
     render(
@@ -73,12 +73,12 @@ describe("IngredientsStepPanel", () => {
         ...baseProps,
         market: buildTestMarket(),
         ingredientPickMode: "all",
-        onContinueToRank,
+        onContinueToPantry,
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Continue to rank" }));
-    expect(onContinueToRank).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "Continue to pantry check" }));
+    expect(onContinueToPantry).toHaveBeenCalledOnce();
   });
 
   it("disables continue in manual mode until at least one ingredient is selected", () => {
@@ -91,6 +91,6 @@ describe("IngredientsStepPanel", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: "Continue to rank" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Continue to pantry check" })).toBeDisabled();
   });
 });

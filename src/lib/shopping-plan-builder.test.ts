@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMultiStorePlan, buildSingleStorePlan } from "@/lib/shopping-plan-builder";
+import { buildMultiStorePlan, buildSingleStorePlan, sumStorePricedPlanTotal } from "@/lib/shopping-plan-builder";
 import {
   aldiStore,
   blackBeanTacoRecipe,
@@ -103,12 +103,36 @@ describe("buildSingleStorePlan", () => {
     );
 
     expect(plan[0]).toMatchObject({
+      ingredientId: "black-beans",
       ingredient: "Black beans",
+      sourcedFromPantry: false,
       storeName: "Kroger",
       price: 1.09,
       priceSource: "kroger-weekly-ad-scrape",
       saleLabel: "Weekly ad promo",
     });
+  });
+
+  it("emits pantry-satisfied lines and excludes them from store totals", () => {
+    const plan = buildSingleStorePlan(
+      blackBeanTacoRecipe,
+      [krogerStore],
+      buildFullKrogerBlackBeanObservations().filter(
+        (observation) => observation.ingredientId !== "cumin",
+      ),
+      "database",
+      {
+        pantryIngredientIds: new Set(["cumin"]),
+      },
+    );
+
+    expect(plan).toHaveLength(blackBeanTacoRecipe.ingredients.length);
+    expect(plan.find((item) => item.ingredientId === "cumin")).toMatchObject({
+      sourcedFromPantry: true,
+      price: 0,
+      pantryNote: "From your pantry — not included in total",
+    });
+    expect(sumStorePricedPlanTotal(plan)).toBeCloseTo(6.54, 2);
   });
 });
 
@@ -215,5 +239,25 @@ describe("buildMultiStorePlan", () => {
     );
 
     expect(plan[0]?.storeName).toBe("Aldi");
+  });
+
+  it("can satisfy missing lines from pantry in multi-store plans", () => {
+    const plan = buildMultiStorePlan(
+      blackBeanTacoRecipe,
+      splitStoreNearbyStores,
+      splitStoreSnapshot.priceObservations.filter(
+        (observation) => observation.ingredientId !== "cumin",
+      ),
+      "database",
+      {
+        pantryIngredientIds: new Set(["cumin"]),
+      },
+    );
+
+    expect(plan.find((item) => item.ingredientId === "cumin")).toMatchObject({
+      sourcedFromPantry: true,
+      price: 0,
+    });
+    expect(plan).toHaveLength(blackBeanTacoRecipe.ingredients.length);
   });
 });

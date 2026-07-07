@@ -239,11 +239,34 @@ flowchart TD
   I -->|0| J[Continue DISABLED]
   I -->|>0| K[Continue ENABLED]
 
-  H --> L[flowStep = rank]
+  H --> L[flowStep = pantry]
   K --> L
 ```
 
 **Key files:** `src/components/meal-planner/ingredients-step-panel.tsx`
+
+---
+
+## Tree 7b — Pantry check step (`POST /api/pantry-coverage`)
+
+```mermaid
+flowchart TD
+  A[Pantry step — always shown] --> B[Initial assess: suggestedChecklist + ingredientCatalog]
+  B --> C[Shopper toggles checklist / adds catalog items]
+  C --> D[Debounced full-pool reassess on pantryIngredientIds]
+  D --> E[Live summary: fullyCoveredRecipeCount / eligibleRecipeCount]
+  E --> F[Continue to rank — always enabled]
+  F --> G[flowStep = rank + pantryIngredientIds pass-through]
+```
+
+| Rule | Behavior |
+|------|----------|
+| Near-miss checklist | Distinct missing ingredients from recipes missing 1–4 plan lines (empty OK) |
+| Open-ended add | Catalog autocomplete only — no free-text IDs |
+| Totals | Pantry lines excluded from `estimatedTotal`; visible on results with trust copy |
+| Session | `pantryIngredientIds` not persisted |
+
+**Key files:** `src/components/meal-planner/pantry-step-panel.tsx`, `src/app/api/pantry-coverage/route.ts`, `src/lib/recipe-plan-coverage.ts`
 
 ---
 
@@ -275,6 +298,11 @@ flowchart TD
   M --> N{candidates.length}
   N -->|0| O[ok:true, recs:[], notice: No recipe ideas]
   N -->|>0| P[ok:true, sorted meals + trust labels]
+
+  M --> M1{pantryIngredientIds?}
+  M1 -->|Yes| M2[Plan builder emits sourcedFromPantry rows — excluded from total]
+  M1 -->|No| M
+  M2 --> N
 ```
 
 | HTTP / response | Meaning |
