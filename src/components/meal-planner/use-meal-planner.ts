@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildDiscoveryMapModel } from "@/lib/nearby-stores-map-model";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 import { DEFAULT_MAX_INGREDIENTS } from "@/lib/meal-preference-defaults";
@@ -724,6 +724,98 @@ export function useMealPlanner() {
     setSelectedIngredientIds([]);
   }
 
+  const runPantryCoverageAssess = useCallback(
+    async (
+      pantryIds: string[],
+      options?: { includeIngredientCatalog?: boolean; skipLoadingState?: boolean },
+    ) => {
+      if (!market || !activeLocationRequest) {
+        return;
+      }
+
+      const preferences = buildMealPreferencePayload(form);
+      if (!preferences) {
+        return;
+      }
+
+      const requestId = ++pantryCoverageRequestRef.current;
+      if (!options?.skipLoadingState) {
+        setPantryCoverageState((current) => ({
+          ...current,
+          status: "loading",
+          error: undefined,
+        }));
+      }
+
+      const payload: RecommendationRequest & { includeIngredientCatalog?: boolean } = {
+        ...preferences,
+        recipeSource: getDefaultRecipeSource(),
+        selectedStoreIds: preferences.selectedStoreIds,
+        ...(selectedIngredientIds.length > 0 ? { selectedIngredientIds } : {}),
+        ...(pantryIds.length > 0 ? { pantryIngredientIds: pantryIds } : {}),
+        ...(options?.includeIngredientCatalog ? { includeIngredientCatalog: true } : {}),
+        market: trimMarketForRankingPassThrough(scopedMarket ?? market),
+        ...(activeLocationRequest.mode === "zip"
+          ? { zipCode: activeLocationRequest.zipCode }
+          : {
+              zipCode: "",
+              latitude: activeLocationRequest.latitude,
+              longitude: activeLocationRequest.longitude,
+            }),
+      };
+
+      try {
+        const response = await fetch("/api/pantry-coverage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+        });
+        const result = (await response.json()) as PantryCoverageResponse;
+
+        if (requestId !== pantryCoverageRequestRef.current) {
+          return;
+        }
+
+        if (!result.ok) {
+          setPantryCoverageState({
+            status: "error",
+            suggestedChecklist: [],
+            fullyCoveredRecipeCount: 0,
+            eligibleRecipeCount: 0,
+            error: result.error,
+          });
+          return;
+        }
+
+        if (result.ingredientCatalog) {
+          setIngredientCatalog(result.ingredientCatalog);
+          pantryCatalogLoadedRef.current = true;
+        }
+
+        setPantryCoverageState({
+          status: "ready",
+          suggestedChecklist: result.suggestedChecklist,
+          fullyCoveredRecipeCount: result.fullyCoveredRecipeCount,
+          eligibleRecipeCount: result.eligibleRecipeCount,
+        });
+      } catch {
+        if (requestId !== pantryCoverageRequestRef.current) {
+          return;
+        }
+
+        setPantryCoverageState({
+          status: "error",
+          suggestedChecklist: [],
+          fullyCoveredRecipeCount: 0,
+          eligibleRecipeCount: 0,
+          error: "Pantry coverage is temporarily unavailable.",
+        });
+      }
+    },
+    [market, activeLocationRequest, form, selectedIngredientIds, scopedMarket],
+  );
+
   useEffect(() => {
     if (flowStep !== "pantry") {
       return;
@@ -737,105 +829,7 @@ export function useMealPlanner() {
     }, delay);
 
     return () => window.clearTimeout(timer);
-  }, [
-    flowStep,
-    pantryIngredientIds,
-    form,
-    selectedIngredientIds,
-    scopedMarket,
-    activeLocationRequest,
-    market,
-    pantryCoverageState.status,
-  ]);
-
-  async function runPantryCoverageAssess(
-    pantryIds: string[],
-    options?: { includeIngredientCatalog?: boolean; skipLoadingState?: boolean },
-  ) {
-    if (!market || !activeLocationRequest) {
-      return;
-    }
-
-    const preferences = buildMealPreferencePayload(form);
-    if (!preferences) {
-      return;
-    }
-
-    const requestId = ++pantryCoverageRequestRef.current;
-    if (!options?.skipLoadingState) {
-      setPantryCoverageState((current) => ({
-        ...current,
-        status: "loading",
-        error: undefined,
-      }));
-    }
-
-    const payload: RecommendationRequest & { includeIngredientCatalog?: boolean } = {
-      ...preferences,
-      recipeSource: getDefaultRecipeSource(),
-      selectedStoreIds: preferences.selectedStoreIds,
-      ...(selectedIngredientIds.length > 0 ? { selectedIngredientIds } : {}),
-      ...(pantryIds.length > 0 ? { pantryIngredientIds: pantryIds } : {}),
-      ...(options?.includeIngredientCatalog ? { includeIngredientCatalog: true } : {}),
-      market: trimMarketForRankingPassThrough(scopedMarket ?? market),
-      ...(activeLocationRequest.mode === "zip"
-        ? { zipCode: activeLocationRequest.zipCode }
-        : {
-            zipCode: "",
-            latitude: activeLocationRequest.latitude,
-            longitude: activeLocationRequest.longitude,
-          }),
-    };
-
-    try {
-      const response = await fetch("/api/pantry-coverage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        cache: "no-store",
-      });
-      const result = (await response.json()) as PantryCoverageResponse;
-
-      if (requestId !== pantryCoverageRequestRef.current) {
-        return;
-      }
-
-      if (!result.ok) {
-        setPantryCoverageState({
-          status: "error",
-          suggestedChecklist: [],
-          fullyCoveredRecipeCount: 0,
-          eligibleRecipeCount: 0,
-          error: result.error,
-        });
-        return;
-      }
-
-      if (result.ingredientCatalog) {
-        setIngredientCatalog(result.ingredientCatalog);
-        pantryCatalogLoadedRef.current = true;
-      }
-
-      setPantryCoverageState({
-        status: "ready",
-        suggestedChecklist: result.suggestedChecklist,
-        fullyCoveredRecipeCount: result.fullyCoveredRecipeCount,
-        eligibleRecipeCount: result.eligibleRecipeCount,
-      });
-    } catch {
-      if (requestId !== pantryCoverageRequestRef.current) {
-        return;
-      }
-
-      setPantryCoverageState({
-        status: "error",
-        suggestedChecklist: [],
-        fullyCoveredRecipeCount: 0,
-        eligibleRecipeCount: 0,
-        error: "Pantry coverage is temporarily unavailable.",
-      });
-    }
-  }
+  }, [flowStep, pantryIngredientIds, pantryCoverageState.status, runPantryCoverageAssess]);
 
   function handleContinueToPantry() {
     rankedStoreScopeRef.current = null;
