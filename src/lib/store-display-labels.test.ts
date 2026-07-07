@@ -3,7 +3,11 @@ import {
   APPROXIMATE_LOCATION_LABEL,
   formatSettingsStoreOptionLabel,
   formatStoreCityState,
+  formatStoreHeadlineWithOptionalSubtitle,
   formatStoreNameWithLocation,
+  formatStraightLineDistanceMiles,
+  resolveStoreDisplayHeadline,
+  resolveStoreLocatorSubtitle,
 } from "@/lib/store-display-labels";
 
 describe("store display labels", () => {
@@ -56,6 +60,59 @@ describe("store display labels", () => {
     ).toBe(`Food Lion — ${APPROXIMATE_LOCATION_LABEL}`);
   });
 
+  it("uses Publix as the headline for locator-backed rows with shopping-center subtitle", () => {
+    expect(
+      resolveStoreDisplayHeadline({
+        name: "Brandy Creek Commons",
+        chain: "publix",
+        sourceName: "publix-store-locator",
+      }),
+    ).toBe("Publix");
+    expect(
+      resolveStoreLocatorSubtitle({
+        name: "Brandy Creek Commons",
+        chain: "publix",
+        sourceName: "publix-weekly-ad-scrape",
+      }),
+    ).toBe("Brandy Creek Commons");
+    expect(
+      formatStoreHeadlineWithOptionalSubtitle({
+        name: "Brandy Creek Commons",
+        chain: "publix",
+        sourceName: "publix-store-locator",
+      }),
+    ).toBe("Publix (Brandy Creek Commons)");
+  });
+
+  it("normalizes ranked v1 chain casing from OSM brand tags", () => {
+    expect(
+      resolveStoreDisplayHeadline({
+        name: "ALDI",
+        chain: "aldi",
+        sourceName: "yum4less-market-catalog",
+      }),
+    ).toBe("Aldi");
+    expect(
+      formatStoreHeadlineWithOptionalSubtitle({
+        name: "ALDI",
+        chain: "aldi",
+        sourceName: "yum4less-market-catalog",
+      }),
+    ).toBe("Aldi");
+  });
+
+  it("labels nearby distances as straight-line miles", () => {
+    expect(formatStraightLineDistanceMiles(2.1)).toBe("2.1 mi straight-line");
+    expect(
+      formatSettingsStoreOptionLabel({
+        name: "Aldi",
+        city: "Mechanicsville",
+        state: "VA",
+        distanceMiles: 2.4,
+      }),
+    ).toBe("Aldi — Mechanicsville, VA (2.4 mi straight-line)");
+  });
+
   it("keeps the settings label honest for approximate locations", () => {
     expect(
       formatSettingsStoreOptionLabel({
@@ -64,6 +121,6 @@ describe("store display labels", () => {
         state: "Unknown",
         distanceMiles: 2.4,
       }),
-    ).toBe(`Food Lion — ${APPROXIMATE_LOCATION_LABEL} (2.4 mi)`);
+    ).toBe(`Food Lion — ${APPROXIMATE_LOCATION_LABEL} (2.4 mi straight-line)`);
   });
 });

@@ -100,6 +100,34 @@ export function buildDirectionalRolloutNote(chainLabel: string): string {
   return `${chainLabel} dinner estimates use saved sale prices when available near you. Totals are estimates — verify in store.`;
 }
 
+/** Shopper-facing chain headlines — keep aligned with `PROVIDER_ROLLOUT` labels. */
+const CANONICAL_SHOPPER_CHAIN_DISPLAY_NAMES: Partial<Record<StoreChain, string>> = {
+  kroger: "Kroger",
+  aldi: "Aldi",
+  publix: "Publix",
+  "food-lion": "Food Lion",
+  walmart: "Walmart",
+  bjs: "BJ's",
+  lidl: "Lidl",
+  "trader-joes": "Trader Joe's",
+  "dollar-general": "Dollar General",
+};
+
+export function getCanonicalShopperChainDisplayName(
+  chain: StoreChain,
+): string | undefined {
+  return CANONICAL_SHOPPER_CHAIN_DISPLAY_NAMES[chain];
+}
+
+export function isPublixCatalogSourceName(
+  sourceName?: string | null,
+): boolean {
+  return (
+    sourceName === "publix-store-locator" ||
+    sourceName === "publix-weekly-ad-scrape"
+  );
+}
+
 export function inferStoreChainFromName(storeName: string): StoreChain {
   const normalized = storeName.trim().toLowerCase();
 

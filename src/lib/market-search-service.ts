@@ -73,6 +73,9 @@ import {
   buildStoreMapLocationNote,
   resolveStoreMapLocationProvenance,
 } from "@/lib/store-map-location-copy";
+import {
+  formatStoreHeadlineWithOptionalSubtitle,
+} from "@/lib/store-display-labels";
 import type { MarketSummary, NearbyStoreSummary } from "@/lib/recommendation-types";
 
 export async function getMarketSearchExperience(
@@ -302,7 +305,11 @@ export function buildNearbyStoresForSearch(
       });
       return {
         id: store.id,
-        name: store.name,
+        name: formatStoreHeadlineWithOptionalSubtitle({
+          name: store.name,
+          chain: rollout.chain,
+          sourceName: store.sourceName,
+        }),
         city: store.city,
         state: store.state,
         kind: store.kind,

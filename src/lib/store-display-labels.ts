@@ -1,6 +1,15 @@
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
+import {
+  getCanonicalShopperChainDisplayName,
+  isPublixCatalogSourceName,
+} from "@/lib/chain-rollout-policy";
 
 export const APPROXIMATE_LOCATION_LABEL = "Approximate location";
+
+export type StoreDisplayNameInput = Pick<
+  NearbyStoreSummary,
+  "name" | "chain" | "sourceName"
+>;
 
 function isUnknownLocationValue(value?: string): boolean {
   return value?.trim().toLowerCase() === "unknown";
@@ -31,12 +40,58 @@ export function formatStoreCityState(
   return undefined;
 }
 
-/** Primary line: store name plus city/state when known. */
+/** Shopper-facing store headline (DB/catalog raw names unchanged at rest). */
+export function resolveStoreDisplayHeadline(store: StoreDisplayNameInput): string {
+  if (isPublixCatalogSourceName(store.sourceName)) {
+    return getCanonicalShopperChainDisplayName("publix") ?? "Publix";
+  }
+
+  if (store.chain && store.chain !== "unknown") {
+    const canonical = getCanonicalShopperChainDisplayName(store.chain);
+    if (canonical) {
+      return canonical;
+    }
+  }
+
+  return store.name;
+}
+
+/** Optional locator shopping-center label for Publix rows (not the headline). */
+export function resolveStoreLocatorSubtitle(
+  store: StoreDisplayNameInput,
+): string | undefined {
+  if (!isPublixCatalogSourceName(store.sourceName)) {
+    return undefined;
+  }
+
+  const headline = resolveStoreDisplayHeadline(store);
+  const rawName = store.name.trim();
+  if (!rawName || rawName.toLowerCase() === headline.toLowerCase()) {
+    return undefined;
+  }
+
+  return rawName;
+}
+
+export function formatStoreHeadlineWithOptionalSubtitle(
+  store: StoreDisplayNameInput,
+): string {
+  const headline = resolveStoreDisplayHeadline(store);
+  const subtitle = resolveStoreLocatorSubtitle(store);
+  return subtitle ? `${headline} (${subtitle})` : headline;
+}
+
+/** Primary line: display name plus city/state when known. */
 export function formatStoreNameWithLocation(
   store: Pick<NearbyStoreSummary, "name"> & { city?: string; state?: string },
 ): string {
   const location = formatStoreCityState(store);
   return location ? `${store.name} — ${location}` : store.name;
+}
+
+/** Nearby-store distance copy — haversine miles, labeled honestly. */
+export function formatStraightLineDistanceMiles(distanceMiles: number): string {
+  return `${distanceMiles} mi straight-line`;
 }
 
 /** Settings dropdown / multi-select option text. */
@@ -46,5 +101,5 @@ export function formatSettingsStoreOptionLabel(
     state?: string;
   },
 ): string {
-  return `${formatStoreNameWithLocation(store)} (${store.distanceMiles} mi)`;
+  return `${formatStoreNameWithLocation(store)} (${formatStraightLineDistanceMiles(store.distanceMiles)})`;
 }
