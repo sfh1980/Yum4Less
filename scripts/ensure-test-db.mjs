@@ -164,6 +164,20 @@ function applyPhaseCMigrationsIfMissing() {
       applyInitSqlFile("013_kroger_search_terms_full.sql");
     }
   }
+
+  // One-shot store retirements (idempotent) for volumes that already ran older init only.
+  if (tableExists("stores")) {
+    const fakeAldiFixturePin = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from stores where id = 'osm-node-900007'",
+    );
+    if (Number(fakeAldiFixturePin) > 0) {
+      console.log(
+        "Applying db/init/017_retire_fake_aldi_osm_fixture_pin.sql to local Postgres...",
+      );
+      applyInitSqlFile("017_retire_fake_aldi_osm_fixture_pin.sql");
+    }
+  }
 }
 
 function applyCiBootstrapStoresIfNeeded() {

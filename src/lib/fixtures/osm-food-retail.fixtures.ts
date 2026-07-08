@@ -59,13 +59,15 @@ export const fixtureOsmFoodRetailStores23111: OsmDiscoveredFoodRetailStore[] = [
   },
   {
     osmType: "node",
+    // Synthetic fixture id (not live OSM). Coords match verified Mechanicsville
+    // Aldi storefront / real OSM node 6531578976 / aldi-mechanicsville bootstrap.
     osmId: 900007,
     name: "Aldi",
     kind: "grocery",
     city: "Mechanicsville",
     state: "VA",
-    latitude: 37.6365,
-    longitude: -77.3608,
+    latitude: 37.611004,
+    longitude: -77.336853,
     shopTag: "supermarket",
   },
   {

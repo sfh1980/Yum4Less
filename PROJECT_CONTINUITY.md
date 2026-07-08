@@ -72,6 +72,7 @@
 | **Bug 2 — `ALDI` vs `Aldi` casing** (`aldi-23111`, `osm-node-6531578976`, etc.) | **CLOSED** | `getCanonicalShopperChainDisplayName()` in `chain-rollout-policy.ts` routes ranked v1 chain headlines through one map (`aldi` → `Aldi`, etc.). |
 | **Bug 3 — Food Lion pin in neighborhood** (`osm-node-3103220732`, FL #601) | **CLOSED (prior)** | Not a coordinate write — stored pin matches SNAP within ~60 ft; Nominatim road-geometry false positive. Already in `COORDINATE_SANITY_EXCEPTIONS` (2026-07-03). |
 | **Bug 4 — Aldi pin in wrong neighborhood** (`aldi-mechanicsville` bootstrap) | **CLOSED** | Stale bootstrap coord corrected to OSM/SNAP storefront (`37.611004`, `-77.336853`) in `yum4less_dev`, `db/ci/014_ci_bootstrap_stores.sql`, and `src/lib/fixtures/market-catalog.fixtures.ts`. |
+| **Bug 4b — Fake fixture Aldi in Settings** (`osm-node-900007` at `37.6365`, `-77.3608`) | **CLOSED** | Synthetic fixture OSM Aldi had wrong neighborhood coords (~2.2 mi from real storefront), so Settings 1.5 mi OSM/catalog suppress did not hide it. Fixture coords corrected to verified storefront; `017_retire_fake_aldi_osm_fixture_pin.sql` migrates prices onto `aldi-mechanicsville` and deletes the bad row. |
 | **Distance display (Food Lion #2575 / `osm-node-1654396096`)** | **CLOSED — not a bug** | Haversine straight-line was always correct; 0.8 mi vs ~1.9 mi driving traced to geolocation origin + straight-line semantics, not formula or store coord error (stored pin within ~390 ft of USPS/SNAP). UI now labels **`X mi straight-line`** on map/list/Settings. |
 | **OSRM driving distance in store discovery** | **DEFERRED** | See [Deferred backlog](#deferred-backlog-not-v1) — extend existing `multi-store-shopping-route.ts` OSRM path to map/list/Settings distances; smaller lift than greenfield routing. |
 
@@ -240,6 +241,13 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-08 — Retire fake fixture Aldi pin `osm-node-900007`
+
+- **Theme:** Settings “Multiple stores” listed a map-context Aldi at `0.9 mi` that is not a real storefront.
+- **Shipped:** Corrected synthetic OSM fixture Aldi coords to verified Mechanicsville storefront (`37.611004`, `-77.336853`); added `db/init/017_retire_fake_aldi_osm_fixture_pin.sql` (migrate observations → `aldi-mechanicsville`, delete bad row); `ensure-test-db` applies 017 when the row still exists; integration expectations updated.
+- **Honest limits:** Live Overpass can still surface real OSM Aldi pins; Settings already suppresses OSM Aldi within 1.5 mi of catalog Aldi after the fixture/DB fix.
+- **Evidence:** focused unit **23/23**; `store-catalog-sync` integration passed this session; `yum4less_dev` no longer has `osm-node-900007`.
 
 ### 2026-07-07 — Pantry check v2 (pre-rank step + rank integration)
 

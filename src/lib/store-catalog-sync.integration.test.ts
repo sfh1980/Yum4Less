@@ -301,8 +301,8 @@ describe("store catalog sync (integration)", () => {
     `);
 
     expect(after.rows.length).toBe(1);
-    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.6365, 3);
-    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.3608, 3);
+    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.611004, 3);
+    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.336853, 3);
     expect(after.rows[0]?.source_name).toBe("yum4less-market-catalog");
     expect(Number(after.rows[0]?.latitude)).not.toBeCloseTo(37.628179, 3);
   });
@@ -489,8 +489,8 @@ describe("store catalog sync (integration)", () => {
       where id = 'aldi-23111'
     `);
 
-    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.6365, 3);
-    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.3608, 3);
+    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.611004, 3);
+    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.336853, 3);
     expect(after.rows[0]?.source_name).toBe("yum4less-market-catalog");
     expect(Number(after.rows[0]?.latitude)).not.toBeCloseTo(37.628179, 3);
   });
