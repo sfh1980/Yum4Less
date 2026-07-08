@@ -129,6 +129,37 @@ function recommendationPayload(title: string) {
   };
 }
 
+function pantryCoveragePayload() {
+  return {
+    ok: true,
+    suggestedChecklist: [],
+    fullyCoveredRecipeCount: 0,
+    eligibleRecipeCount: 3,
+    ingredientCatalog: [{ id: "olive-oil", name: "Olive oil", category: "pantry" as const }],
+  };
+}
+
+function isPantryCoverageCall(call: unknown[]) {
+  return String(call[0]).includes("/api/pantry-coverage");
+}
+
+async function loadMarketAndOpenPantry(
+  result: { current: ReturnType<typeof useMealPlanner> },
+) {
+  await act(async () => {
+    result.current.handleFindStores();
+  });
+
+  await waitFor(() => {
+    expect(result.current.market).toBeTruthy();
+  });
+
+  await act(async () => {
+    result.current.handleCompleteWelcome();
+    result.current.handleContinueToPantry();
+  });
+}
+
 describe("useMealPlanner request generation (C2, H4)", () => {
   beforeEach(() => {
     clearSettingsPreferences();
@@ -362,5 +393,134 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(requestBody.longitude).toBeCloseTo(-77.37, 2);
     expect(requestBody.zipCode).toBe("");
     expect(result.current.activeLocationRequest?.mode).toBe("browser");
+  });
+});
+
+describe("useMealPlanner pantry coverage debounce", () => {
+  beforeEach(() => {
+    clearSettingsPreferences();
+  });
+
+  afterEach(() => {
+    clearSettingsPreferences();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("does not schedule a second pantry coverage request when assess resolves", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(marketPayload("Pantry market", "23111")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValue(
+        new Response(JSON.stringify(pantryCoveragePayload()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner());
+    await loadMarketAndOpenPantry(result);
+
+    await waitFor(() => {
+      expect(result.current.pantryCoverageState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+    });
+
+    expect(fetchMock.mock.calls.filter(isPantryCoverageCall)).toHaveLength(1);
+  });
+
+  it("debounces pantry ingredient changes into one follow-up request", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(marketPayload("Pantry market", "23111")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValue(
+        new Response(JSON.stringify(pantryCoveragePayload()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner());
+    await loadMarketAndOpenPantry(result);
+
+    await waitFor(() => {
+      expect(result.current.pantryCoverageState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.handleAddPantryIngredient("olive-oil");
+    });
+
+    await waitFor(
+      () => {
+        expect(fetchMock.mock.calls.filter(isPantryCoverageCall)).toHaveLength(2);
+      },
+      { timeout: 2_000 },
+    );
+  });
+
+  it("does not auto-retry pantry coverage in a tight loop after 429", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(marketPayload("Pantry market", "23111")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error: "Too many requests. Please wait and try again.",
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              "Retry-After": "60",
+            },
+          },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner());
+    await loadMarketAndOpenPantry(result);
+
+    await waitFor(() => {
+      expect(result.current.pantryCoverageState.status).toBe("rate-limited");
+    });
+
+    const requestTimes: number[] = [];
+    for (const call of fetchMock.mock.calls.filter(isPantryCoverageCall)) {
+      requestTimes.push(Date.now());
+    }
+    expect(requestTimes).toHaveLength(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    expect(fetchMock.mock.calls.filter(isPantryCoverageCall)).toHaveLength(1);
+    expect(result.current.pantryCoverageState.error).toMatch(/too many requests/i);
   });
 });

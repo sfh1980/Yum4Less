@@ -108,7 +108,7 @@ export type PantryCoverageResponse =
     };
 
 export type PantryCoverageState = {
-  status: "idle" | "loading" | "ready" | "error";
+  status: "idle" | "loading" | "ready" | "error" | "rate-limited";
   suggestedChecklist: NonNullable<
     Extract<PantryCoverageResponse, { ok: true }>["suggestedChecklist"]
   >;

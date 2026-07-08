@@ -172,6 +172,10 @@ export function useMealPlanner() {
   const autoMarketSearchAttemptedRef = useRef(false);
   const rankedStoreScopeRef = useRef<string[] | null>(null);
   const pantryCatalogLoadedRef = useRef(false);
+  const pantryCoverageStatusRef = useRef<PantryCoverageState["status"]>(
+    initialPantryCoverageState.status,
+  );
+  const pantryCoverageRateLimitedUntilRef = useRef<number | null>(null);
 
   const marketSearchLoading = marketSearchState.status === "loading";
   const rankLoading = recommendationState.status === "loading";
@@ -236,6 +240,10 @@ export function useMealPlanner() {
       flowStep === "rank" ||
       rankLoading ||
       recommendationState.status === "error");
+
+  useEffect(() => {
+    pantryCoverageStatusRef.current = pantryCoverageState.status;
+  }, [pantryCoverageState.status]);
 
   const pantryRows = useMemo(() => {
     const nameById = new Map(
@@ -316,6 +324,8 @@ export function useMealPlanner() {
     setPantryItemSources({});
     setIngredientCatalog([]);
     setPantryCoverageState(initialPantryCoverageState);
+    pantryCoverageStatusRef.current = initialPantryCoverageState.status;
+    pantryCoverageRateLimitedUntilRef.current = null;
     pantryCatalogLoadedRef.current = false;
     setIsMapOverlayOpen(false);
     setForm((current) => ({ ...current, selectedStoreIds: [] }));
@@ -771,19 +781,52 @@ export function useMealPlanner() {
           body: JSON.stringify(payload),
           cache: "no-store",
         });
+
+        if (requestId !== pantryCoverageRequestRef.current) {
+          return;
+        }
+
+        if (response.status === 429) {
+          let errorMessage = "Too many requests. Please wait and try again.";
+          try {
+            const rateLimitBody = (await response.json()) as PantryCoverageResponse;
+            if (!rateLimitBody.ok && rateLimitBody.error) {
+              errorMessage = rateLimitBody.error;
+            }
+          } catch {
+            // Keep default rate-limit copy when the body is not JSON.
+          }
+
+          const retryAfterHeader = response.headers.get("Retry-After");
+          const retryAfterSeconds = retryAfterHeader
+            ? Math.max(1, Number.parseInt(retryAfterHeader, 10) || 60)
+            : 60;
+          pantryCoverageRateLimitedUntilRef.current =
+            Date.now() + retryAfterSeconds * 1000;
+
+          setPantryCoverageState({
+            status: "rate-limited",
+            suggestedChecklist: [],
+            fullyCoveredRecipeCount: 0,
+            eligibleRecipeCount: 0,
+            error: errorMessage,
+          });
+          return;
+        }
+
         const result = (await response.json()) as PantryCoverageResponse;
 
         if (requestId !== pantryCoverageRequestRef.current) {
           return;
         }
 
-        if (!result.ok) {
+        if (!response.ok || !result.ok) {
           setPantryCoverageState({
             status: "error",
             suggestedChecklist: [],
             fullyCoveredRecipeCount: 0,
             eligibleRecipeCount: 0,
-            error: result.error,
+            error: result.ok ? "Pantry coverage is temporarily unavailable." : result.error,
           });
           return;
         }
@@ -821,7 +864,7 @@ export function useMealPlanner() {
       return;
     }
 
-    const delay = pantryCoverageState.status === "idle" ? 0 : 300;
+    const delay = pantryCoverageStatusRef.current === "idle" ? 0 : 300;
     const timer = window.setTimeout(() => {
       void runPantryCoverageAssess(pantryIngredientIds, {
         includeIngredientCatalog: !pantryCatalogLoadedRef.current,
@@ -829,7 +872,7 @@ export function useMealPlanner() {
     }, delay);
 
     return () => window.clearTimeout(timer);
-  }, [flowStep, pantryIngredientIds, pantryCoverageState.status, runPantryCoverageAssess]);
+  }, [flowStep, pantryIngredientIds, runPantryCoverageAssess]);
 
   function handleContinueToPantry() {
     rankedStoreScopeRef.current = null;
@@ -837,6 +880,8 @@ export function useMealPlanner() {
     setPantryIngredientIds([]);
     setPantryItemSources({});
     setPantryCoverageState(initialPantryCoverageState);
+    pantryCoverageStatusRef.current = initialPantryCoverageState.status;
+    pantryCoverageRateLimitedUntilRef.current = null;
     setFlowStep("pantry");
   }
 
