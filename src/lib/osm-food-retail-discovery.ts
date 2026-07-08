@@ -21,7 +21,19 @@ export type OsmFoodRetailDiscoveryResult = {
 
 /** Minimum spacing between Overpass requests (cron ingest and search-time discovery). */
 export const OSM_OVERPASS_MIN_INTERVAL_MS = 1_000;
+/** Live Overpass catalog provenance — never used for synthetic map fixtures. */
 export const OSM_MAP_CATALOG_SOURCE = "openstreetmap-overpass";
+/** Rehearsal map-fixture provenance — never written as live Overpass. */
+export const OSM_MAP_FIXTURE_SOURCE = "yum4less-map-fixture";
+/** Catalog id prefix for synthetic fixture OSM rows (distinct from live `osm-`). */
+export const OSM_MAP_FIXTURE_ID_PREFIX = "fixture-osm-";
+/** Legacy synthetic osmId band previously upserted as live-looking `osm-node-90000*`. */
+const LEGACY_SYNTHETIC_OSM_ID_RE = /^osm-(node|way)-90000\d+$/;
+
+/** True for the rehearsal numeric osmId band (90000x), whether live or fixture prefixed. */
+export function isSyntheticFixtureOsmNumericId(osmId: number): boolean {
+  return osmId >= 900000 && osmId < 901000;
+}
 
 const DEFAULT_OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
 const FALLBACK_OVERPASS_ENDPOINT = "https://overpass.kumi.systems/api/interpreter";
@@ -145,8 +157,58 @@ export async function discoverFoodRetailStoresNearLocation(input: {
   }
 }
 
-export function buildOsmCatalogStoreId(store: OsmDiscoveredFoodRetailStore): string {
+export type OsmCatalogIdentityMode = {
+  /** When true, emit fixture-osm-* ids and yum4less-map-fixture provenance. */
+  fixture?: boolean;
+};
+
+export function buildOsmCatalogStoreId(
+  store: OsmDiscoveredFoodRetailStore,
+  options?: OsmCatalogIdentityMode,
+): string {
+  if (options?.fixture) {
+    return `${OSM_MAP_FIXTURE_ID_PREFIX}${store.osmType}-${store.osmId}`;
+  }
+
   return `osm-${store.osmType}-${store.osmId}`;
+}
+
+export function isFixtureOsmStoreId(storeId: string): boolean {
+  return storeId.startsWith(OSM_MAP_FIXTURE_ID_PREFIX);
+}
+
+/** Live Overpass catalog ids only — excludes fixture-osm-* and legacy synthetic osm-node-90000*. */
+export function isLiveOsmStoreId(storeId: string): boolean {
+  if (isFixtureOsmStoreId(storeId) || LEGACY_SYNTHETIC_OSM_ID_RE.test(storeId)) {
+    return false;
+  }
+
+  return storeId.startsWith("osm-");
+}
+
+/** Any OSM-style map pin id (live, fixture, or legacy synthetic). */
+export function isOsmStyleStoreId(storeId: string): boolean {
+  return (
+    isFixtureOsmStoreId(storeId) ||
+    storeId.startsWith("osm-") ||
+    LEGACY_SYNTHETIC_OSM_ID_RE.test(storeId)
+  );
+}
+
+export function isFixtureOsmCatalogSource(sourceName: string | null | undefined): boolean {
+  return sourceName === OSM_MAP_FIXTURE_SOURCE;
+}
+
+/** True when a row must never be treated as live Overpass storefront truth. */
+export function isNonLiveOsmCatalogIdentity(input: {
+  id: string;
+  sourceName?: string | null;
+}): boolean {
+  return (
+    isFixtureOsmStoreId(input.id) ||
+    isFixtureOsmCatalogSource(input.sourceName) ||
+    LEGACY_SYNTHETIC_OSM_ID_RE.test(input.id)
+  );
 }
 
 function filterFixtureStoresByRadius(input: {

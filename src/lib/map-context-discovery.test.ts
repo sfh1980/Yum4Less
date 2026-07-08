@@ -22,7 +22,19 @@ describe("discoverMapContextStores", () => {
       zipCode: "23111",
     });
 
-    expect(result.stores.some((store) => store.id.startsWith("osm-"))).toBe(true);
+    expect(result.stores.some((store) => store.id.startsWith("fixture-osm-"))).toBe(
+      true,
+    );
+    expect(
+      result.stores.every((store) => !store.id.startsWith("osm-") || store.id.startsWith("fixture-osm-")),
+    ).toBe(true);
+    expect(
+      result.stores.some(
+        (store) =>
+          store.id.startsWith("fixture-osm-") &&
+          store.sourceName === "yum4less-map-fixture",
+      ),
+    ).toBe(true);
     expect(result.stores.some((store) => store.id.startsWith("snap-"))).toBe(true);
     expect(result.sources.some((source) => source.source === "fixture")).toBe(true);
     expect(

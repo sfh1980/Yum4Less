@@ -3,6 +3,7 @@ import type { CatalogStore } from "@/lib/market-catalog-types";
 import type { StoreChain } from "@/lib/provider-rollout";
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 import { getProviderRolloutForCatalogStore } from "@/lib/provider-rollout";
+import { isOsmStyleStoreId } from "@/lib/osm-food-retail-discovery";
 
 /** Same-building Kroger slug ↔ numeric locationId merge radius. */
 export const KROGER_SAME_STORE_MERGE_PROXIMITY_MILES = 0.15;
@@ -54,7 +55,7 @@ export function scoreKrogerCatalogStorePriority(input: {
     return 3;
   }
 
-  if (input.id.startsWith("osm-")) {
+  if (isOsmStyleStoreId(input.id)) {
     return 1;
   }
 
@@ -257,7 +258,7 @@ export function filterSupersededOsmKrogerFixturePins<T extends KrogerDedupeStore
       return true;
     }
 
-    if (!store.id.startsWith("osm-")) {
+    if (!isOsmStyleStoreId(store.id)) {
       return true;
     }
 

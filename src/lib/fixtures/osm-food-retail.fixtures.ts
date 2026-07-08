@@ -1,6 +1,10 @@
 import type { OsmDiscoveredFoodRetailStore } from "@/lib/osm-food-retail-discovery";
 
-/** Deterministic OSM-style map-context stores near ZIP 23111 for local dev, CI, and fixture ingest. */
+/** Deterministic OSM-style map-context stores near ZIP 23111 for local CI / yum4less_test.
+ * Catalog identity is fixture-osm-{type}-{osmId} + source_name yum4less-map-fixture
+ * (never live osm-* / openstreetmap-overpass). Numeric osmIds stay in the 90000x
+ * synthetic band so they cannot collide with real Overpass ids.
+ */
 export const fixtureOsmFoodRetailStores23111: OsmDiscoveredFoodRetailStore[] = [
   {
     osmType: "node",

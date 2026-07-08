@@ -1,4 +1,7 @@
-import type { OsmDiscoveredFoodRetailStore } from "@/lib/osm-food-retail-discovery";
+import {
+  isSyntheticFixtureOsmNumericId,
+  type OsmDiscoveredFoodRetailStore,
+} from "@/lib/osm-food-retail-discovery";
 import { getDistanceMiles } from "@/lib/geo-distance";
 import { getProviderRolloutForStore } from "@/lib/provider-rollout";
 
@@ -6,11 +9,20 @@ export function isOsmAldiFoodRetailStore(store: OsmDiscoveredFoodRetailStore): b
   return getProviderRolloutForStore(store.name).chain === "aldi";
 }
 
+/** Live OSM Aldi only — synthetic fixture numeric ids are never ranked-catalog truth. */
+export function isLiveOsmAldiFoodRetailStore(
+  store: OsmDiscoveredFoodRetailStore,
+): boolean {
+  return (
+    isOsmAldiFoodRetailStore(store) && !isSyntheticFixtureOsmNumericId(store.osmId)
+  );
+}
+
 export function findNearestOsmAldiStore(
   stores: OsmDiscoveredFoodRetailStore[],
   location: { latitude: number; longitude: number },
 ): OsmDiscoveredFoodRetailStore | undefined {
-  const aldiStores = stores.filter(isOsmAldiFoodRetailStore);
+  const aldiStores = stores.filter(isLiveOsmAldiFoodRetailStore);
   if (aldiStores.length === 0) {
     return undefined;
   }

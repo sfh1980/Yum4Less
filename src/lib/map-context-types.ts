@@ -1,4 +1,10 @@
 import type { CatalogStore } from "@/lib/market-catalog-types";
+import {
+  isFixtureOsmCatalogSource,
+  isOsmStyleStoreId,
+  OSM_MAP_CATALOG_SOURCE,
+  OSM_MAP_FIXTURE_SOURCE,
+} from "@/lib/osm-food-retail-discovery";
 
 export const USDA_SNAP_CONTEXT_SOURCE = "usda-snap-retailer-locator";
 
@@ -23,8 +29,10 @@ export type MapContextDiscoverySourceResult = {
 
 export function isMapContextCatalogStore(store: CatalogStore): boolean {
   return (
-    store.id.startsWith("osm-") ||
-    store.sourceName === "openstreetmap-overpass" ||
+    isOsmStyleStoreId(store.id) ||
+    store.sourceName === OSM_MAP_CATALOG_SOURCE ||
+    isFixtureOsmCatalogSource(store.sourceName) ||
+    store.sourceName === OSM_MAP_FIXTURE_SOURCE ||
     store.id.startsWith("snap-") ||
     store.sourceName === USDA_SNAP_CONTEXT_SOURCE ||
     (store.id.startsWith("publix-") && store.sourceName === "publix-store-locator")

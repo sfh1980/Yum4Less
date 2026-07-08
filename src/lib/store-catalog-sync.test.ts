@@ -18,7 +18,23 @@ import {
 import { getProviderRolloutForCatalogStore } from "@/lib/provider-rollout";
 import type { ProviderDiscoveredStore } from "@/lib/providers/provider-types";
 import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.fixtures";
-import { OSM_MAP_CATALOG_SOURCE } from "@/lib/osm-food-retail-discovery";
+import {
+  OSM_MAP_CATALOG_SOURCE,
+  OSM_MAP_FIXTURE_SOURCE,
+} from "@/lib/osm-food-retail-discovery";
+import type { OsmDiscoveredFoodRetailStore } from "@/lib/osm-food-retail-discovery";
+
+const liveOsmAldiAtlanta: OsmDiscoveredFoodRetailStore = {
+  osmType: "node",
+  osmId: 6531578976,
+  name: "Aldi",
+  kind: "grocery",
+  city: "Atlanta",
+  state: "GA",
+  latitude: 33.75,
+  longitude: -84.39,
+  shopTag: "supermarket",
+};
 
 describe("store-catalog-sync", () => {
   it("builds stable Kroger catalog ids from provider store ids", () => {
@@ -45,7 +61,24 @@ describe("store-catalog-sync", () => {
     });
   });
 
-  it("builds one Aldi catalog row per ZIP market when OSM Aldi is present", () => {
+  it("builds one Aldi catalog row per ZIP market when live OSM Aldi is present", () => {
+    const catalog = buildAldiCatalogStoreForMarket({
+      location: {
+        city: "Atlanta",
+        state: "GA",
+        latitude: 33.75,
+        longitude: -84.39,
+        source: "geocodio",
+        zipCode: "30301",
+      },
+      zipCode: "30301",
+      osmAldiStore: liveOsmAldiAtlanta,
+    });
+    expect(catalog?.id).toBe("aldi-30301");
+    expect(catalog?.sourceStoreId).toBe("osm-node-6531578976");
+  });
+
+  it("refuses synthetic fixture Aldi osmIds for ranked Aldi catalog rows", () => {
     const aldiOsm = fixtureOsmFoodRetailStores23111.find((store) => store.name === "Aldi");
     expect(
       buildAldiCatalogStoreForMarket({
@@ -59,8 +92,8 @@ describe("store-catalog-sync", () => {
         },
         zipCode: "30301",
         osmAldiStore: aldiOsm,
-      })?.id,
-    ).toBe("aldi-30301");
+      }),
+    ).toBeNull();
   });
 
   it("returns null for Aldi catalog when OSM Aldi is absent", () => {
@@ -116,12 +149,20 @@ describe("store-catalog-sync", () => {
     expect(getCatalogStoreRole("yum4less-internal-catalog")).toBe("map-context");
   });
 
-  it("builds stable OSM catalog ids and map-context source names", () => {
-    const store = buildOsmCatalogStore(fixtureOsmFoodRetailStores23111[0]!);
+  it("builds fixture OSM catalog ids under yum4less-map-fixture provenance", () => {
+    const store = buildOsmCatalogStore(fixtureOsmFoodRetailStores23111[0]!, {
+      fixture: true,
+    });
 
-    expect(store.id).toBe("osm-node-900001");
-    expect(store.sourceName).toBe(OSM_MAP_CATALOG_SOURCE);
+    expect(store.id).toBe("fixture-osm-node-900001");
+    expect(store.sourceName).toBe(OSM_MAP_FIXTURE_SOURCE);
     expect(isMapContextOnlyCatalogSource(store.sourceName)).toBe(true);
+  });
+
+  it("auto-labels synthetic numeric fixture osmIds even without an explicit fixture flag", () => {
+    const store = buildOsmCatalogStore(fixtureOsmFoodRetailStores23111[0]!);
+    expect(store.id).toBe("fixture-osm-node-900001");
+    expect(store.sourceName).toBe(OSM_MAP_FIXTURE_SOURCE);
   });
 
   it("prefers ingest-backed Kroger rows when multiple Kroger rows exist", () => {

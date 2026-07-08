@@ -74,6 +74,33 @@ describe("filterSettingsSelectableStores", () => {
     expect(filtered.map((entry) => entry.id)).toEqual(["kroger-mechanicsville"]);
   });
 
+  it("excludes fixture and legacy synthetic OSM pins from Settings selection", () => {
+    const filtered = filterSettingsSelectableStores([
+      store({
+        id: "fixture-osm-node-900007",
+        name: "Aldi",
+        chain: "aldi",
+        sourceName: "yum4less-map-fixture",
+        distanceMiles: 0.4,
+      }),
+      store({
+        id: "osm-node-900007",
+        name: "Aldi",
+        chain: "aldi",
+        sourceName: "openstreetmap-overpass",
+        distanceMiles: 0.5,
+      }),
+      store({
+        id: "aldi-mechanicsville",
+        name: "Aldi",
+        chain: "aldi",
+        distanceMiles: 1.2,
+      }),
+    ]);
+
+    expect(filtered.map((entry) => entry.id)).toEqual(["aldi-mechanicsville"]);
+  });
+
   it("keeps nearby OSM ranked-chain stores when catalog rows exist for other chains", () => {
     const filtered = filterSettingsSelectableStores([
       store({
@@ -118,11 +145,131 @@ describe("filterSettingsSelectableStores", () => {
         distanceMiles: 2.5,
         latitude: 37.61546,
         longitude: -77.32939,
+        sourceName: "kroger-official-api",
+        sourceStoreId: "02900529",
       }),
-      store({ id: "aldi-23111", name: "ALDI", chain: "aldi", distanceMiles: 2 }),
+      store({
+        id: "aldi-mechanicsville",
+        name: "Aldi",
+        chain: "aldi",
+        distanceMiles: 2,
+        latitude: 37.611,
+        longitude: -77.336,
+      }),
     ]);
 
-    expect(filtered.map((entry) => entry.id)).toEqual(["aldi-23111", "kroger-02900529"]);
+    expect(filtered.map((entry) => entry.id)).toEqual([
+      "aldi-mechanicsville",
+      "kroger-02900529",
+    ]);
+  });
+
+  it("collapses collocated Aldi slug + ZIP-market twins to the slug winner", () => {
+    const filtered = filterSettingsSelectableStores([
+      store({
+        id: "aldi-mechanicsville",
+        name: "Aldi",
+        chain: "aldi",
+        distanceMiles: 1.1,
+        latitude: 37.611004,
+        longitude: -77.336853,
+        sourceName: "aldi-weekly-ad-scrape",
+      }),
+      store({
+        id: "aldi-23111",
+        name: "Aldi",
+        chain: "aldi",
+        distanceMiles: 1.2,
+        latitude: 37.611004,
+        longitude: -77.336853,
+        sourceName: "yum4less-market-catalog",
+        sourceStoreId: "osm-node-6531578976",
+      }),
+    ]);
+
+    expect(filtered.map((entry) => entry.id)).toEqual(["aldi-mechanicsville"]);
+  });
+
+  it("collapses collocated Food Lion catalog twins", () => {
+    const filtered = filterSettingsSelectableStores([
+      store({
+        id: "food-lion-mechanicsville",
+        name: "Food Lion",
+        chain: "food-lion",
+        distanceMiles: 1.4,
+        latitude: 37.61,
+        longitude: -77.34,
+        sourceName: "food-lion-weekly-ad-scrape",
+      }),
+      store({
+        id: "food-lion-23111",
+        name: "Food Lion",
+        chain: "food-lion",
+        distanceMiles: 1.5,
+        latitude: 37.61,
+        longitude: -77.34,
+        sourceName: "yum4less-market-catalog",
+      }),
+    ]);
+
+    expect(filtered.map((entry) => entry.id)).toEqual([
+      "food-lion-mechanicsville",
+    ]);
+  });
+
+  it("keeps non-Kroger catalog twins when they sit between 0.05 and 0.15 mi", () => {
+    // Same constructed ~0.10 mi band pinned in catalog-store-colocated-identity.test.ts
+    const filtered = filterSettingsSelectableStores([
+      store({
+        id: "aldi-slug",
+        name: "Aldi",
+        chain: "aldi",
+        distanceMiles: 1,
+        latitude: 37.61546,
+        longitude: -77.32939,
+        sourceName: "aldi-weekly-ad-scrape",
+      }),
+      store({
+        id: "aldi-near",
+        name: "Aldi",
+        chain: "aldi",
+        distanceMiles: 1.1,
+        latitude: 37.61546 + 0.00145,
+        longitude: -77.32939,
+        sourceName: "yum4less-market-catalog",
+      }),
+    ]);
+
+    expect(filtered.map((entry) => entry.id).sort()).toEqual([
+      "aldi-near",
+      "aldi-slug",
+    ]);
+  });
+
+  it("collapses Kroger twins at ~0.10 mi under the 0.15 mi exception", () => {
+    const filtered = filterSettingsSelectableStores([
+      store({
+        id: "kroger-slug",
+        name: "Kroger",
+        chain: "kroger",
+        distanceMiles: 1,
+        latitude: 37.61546,
+        longitude: -77.32939,
+        sourceName: "kroger-weekly-ad-scrape",
+      }),
+      store({
+        id: "kroger-02900999",
+        name: "Kroger",
+        chain: "kroger",
+        distanceMiles: 1.1,
+        latitude: 37.61546 + 0.00145,
+        longitude: -77.32939,
+        sourceName: "kroger-official-api",
+        sourceStoreId: "02900999",
+      }),
+    ]);
+
+    expect(filtered.map((entry) => entry.id)).toEqual(["kroger-02900999"]);
   });
 
   it("keeps multiple distinct Kroger stores within the selected radius", () => {

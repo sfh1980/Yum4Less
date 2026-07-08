@@ -177,6 +177,91 @@ function applyPhaseCMigrationsIfMissing() {
       );
       applyInitSqlFile("017_retire_fake_aldi_osm_fixture_pin.sql");
     }
+
+    const syntheticOsmFixtureBand = psqlQueryScalar(
+      activeDatabaseName,
+      `select count(*) from stores
+       where id ~ '^osm-(node|way)-90000[0-9]+$'
+          or id like 'fixture-osm-%'
+          or source_name = 'yum4less-map-fixture'
+          or (
+            id ~ '^osm-(node|way)-[0-9]+$'
+            and id !~ '^osm-(node|way)-90000[0-9]+$'
+            and (source_name like '%-weekly-ad-scrape' or source_name is null)
+          )`,
+    );
+    if (Number(syntheticOsmFixtureBand) > 0) {
+      console.log(
+        "Applying db/init/018_retire_synthetic_osm_fixture_pins.sql to local Postgres...",
+      );
+      applyInitSqlFile("018_retire_synthetic_osm_fixture_pins.sql");
+    }
+
+    const aldiZipCatalogTwin = psqlQueryScalar(
+      activeDatabaseName,
+      "select count(*) from stores where id = 'aldi-23111'",
+    );
+    if (Number(aldiZipCatalogTwin) > 0) {
+      console.log(
+        "Applying db/init/019_retire_aldi_zip_catalog_twin.sql to local Postgres...",
+      );
+      applyInitSqlFile("019_retire_aldi_zip_catalog_twin.sql");
+    }
+
+    // Residual probe: non-Kroger same-chain ranked/catalog twins closer than the
+    // shared CATALOG_COLLOCATED_MERGE_MILES (0.05). Kroger is excluded because
+    // slug↔API twins may remain as separate DB rows by design (Settings collapses
+    // them at KROGER_COLLOCATED_MERGE_MILES=0.15; reconcile keeps distinct
+    // source_store_id rows). Query is chain-prefix based — not Aldi-hardcoded.
+    const collocatedCatalogTwins = psqlQueryScalar(
+      activeDatabaseName,
+      `
+      with catalog as (
+        select
+          id,
+          latitude::float8 as lat,
+          longitude::float8 as lng,
+          case
+            when id like 'aldi-%' then 'aldi'
+            when id like 'publix-%' then 'publix'
+            when id like 'food-lion-%' then 'food-lion'
+            when id like 'lidl-%' then 'lidl'
+            else null
+          end as chain
+        from stores
+        where id not like 'osm-%'
+          and id not like 'fixture-osm-%'
+          and id not like 'snap-%'
+          and id not like 'kroger-%'
+          and coalesce(source_name, '') not in (
+            'openstreetmap-overpass',
+            'yum4less-map-fixture',
+            'usda-snap-retailer-locator'
+          )
+      ),
+      pairs as (
+        select a.id as left_id, b.id as right_id
+        from catalog a
+        join catalog b
+          on a.chain is not null
+         and a.chain = b.chain
+         and a.id < b.id
+         and (
+           3959 * 2 * asin(sqrt(
+             power(sin(radians(b.lat - a.lat) / 2), 2) +
+             cos(radians(a.lat)) * cos(radians(b.lat)) *
+             power(sin(radians(b.lng - a.lng) / 2), 2)
+           ))
+         ) < 0.05
+      )
+      select count(*) from pairs
+      `,
+    );
+    if (Number(collocatedCatalogTwins) > 0) {
+      throw new Error(
+        `Residual same-chain collocated catalog twins within 0.05 mi after migrations: count=${collocatedCatalogTwins}. Apply/verify 019 and ingest prefer-colocate before tests.`,
+      );
+    }
   }
 }
 

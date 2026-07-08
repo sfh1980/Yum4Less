@@ -139,10 +139,15 @@ describe("getMarketSearchExperience map merge", () => {
 
     const krogerPins = market.nearbyStores.filter((store) => store.chain === "kroger");
     expect(krogerPins.some((store) => store.id === "kroger-mechanicsville")).toBe(true);
-    expect(krogerPins.some((store) => store.id.startsWith("osm-"))).toBe(false);
-    expect(market.nearbyStores.some((store) => store.id.startsWith("osm-"))).toBe(
-      true,
-    );
+    expect(
+      krogerPins.some(
+        (store) =>
+          store.id.startsWith("osm-") || store.id.startsWith("fixture-osm-"),
+      ),
+    ).toBe(false);
+    expect(
+      market.nearbyStores.some((store) => store.id.startsWith("fixture-osm-")),
+    ).toBe(true);
   });
 
   it("merges SNAP context pins when enabled and DB pins are sparse", async () => {
@@ -185,11 +190,13 @@ describe("getMarketSearchExperience map merge", () => {
       false,
     );
 
-    expect(market.nearbyStores.some((store) => store.id.startsWith("osm-"))).toBe(
-      true,
-    );
+    expect(
+      market.nearbyStores.some((store) => store.id.startsWith("fixture-osm-")),
+    ).toBe(true);
     expect(market.usesEphemeralOsmDiscovery).toBe(true);
-    expect(market.mapDiscoveryNotice).toMatch(/map context pins/i);
+    expect(market.mapDiscoveryNotice).toMatch(
+      /rehearsal map fixture pins \(not live OpenStreetMap\)/i,
+    );
   });
 
   it("returns the initial market quickly when map-context discovery exceeds the budget", async () => {

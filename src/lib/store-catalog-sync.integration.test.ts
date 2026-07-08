@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
 import {
@@ -13,7 +13,8 @@ import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.
 describe("store catalog sync (integration)", () => {
   beforeEach(async () => {
     const pool = getDbPool();
-    await pool.query(`delete from stores where id like 'osm-%'`);
+    await pool.query(`delete from stores where id like 'osm-%' or id like 'fixture-osm-%'`);
+    await pool.query(`delete from stores where source_name = 'yum4less-map-fixture'`);
     await pool.query(
       `delete from stores where source_name = 'kroger-official-api' and id <> 'kroger-mechanicsville'`,
     );
@@ -69,17 +70,39 @@ describe("store catalog sync (integration)", () => {
         name = excluded.name,
         last_verified_at = excluded.last_verified_at
     `);
-    await pool.query(`delete from stores where id like 'osm-%'`);
+    await pool.query(`delete from stores where id like 'osm-%' or id like 'fixture-osm-%'`);
+    await pool.query(`delete from stores where source_name = 'yum4less-map-fixture'`);
     await pool.query(
       `delete from stores where source_name = 'kroger-official-api' and id <> 'kroger-mechanicsville'`,
     );
     await pool.query(
       `delete from stores where source_name = 'yum4less-market-catalog' and id <> 'aldi-mechanicsville'`,
     );
+    await pool.query(`
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values (
+        'aldi-mechanicsville',
+        'Aldi',
+        'grocery',
+        'Mechanicsville',
+        'VA',
+        37.611004,
+        -77.336853,
+        'yum4less-internal-catalog',
+        'aldi-mechanicsville',
+        now()
+      )
+      on conflict (id) do update set
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        last_verified_at = now()
+    `);
     await resetDbPoolForTests();
   });
 
-  it("upserts OSM map-context stores without overwriting seeded ranked rows", async () => {
+  it("upserts fixture OSM map-context stores with distinct fixture identity", async () => {
     const before = await getMarketDataSnapshot();
     const seededKroger = before.snapshot.stores.find(
       (store) => store.id === "kroger-mechanicsville",
@@ -96,19 +119,22 @@ describe("store catalog sync (integration)", () => {
     const after = await getMarketDataSnapshot();
     expect(after.snapshot.stores.length).toBeGreaterThan(before.snapshot.stores.length);
     expect(
-      after.snapshot.stores.some((store) => store.id.startsWith("osm-")),
+      after.snapshot.stores.some((store) => store.id.startsWith("fixture-osm-")),
     ).toBe(true);
+    expect(
+      after.snapshot.stores.some((store) => store.id.startsWith("osm-")),
+    ).toBe(false);
     expect(
       after.snapshot.stores.some((store) => store.id === "kroger-mechanicsville"),
     ).toBe(true);
 
     const pool = getDbPool();
-    const osmSourceRows = await pool.query<{ id: string; source_name: string | null }>(
-      `select id, source_name from stores where id like 'osm-%'`,
+    const fixtureSourceRows = await pool.query<{ id: string; source_name: string | null }>(
+      `select id, source_name from stores where id like 'fixture-osm-%'`,
     );
-    expect(osmSourceRows.rows.length).toBeGreaterThan(0);
+    expect(fixtureSourceRows.rows.length).toBeGreaterThan(0);
     expect(
-      osmSourceRows.rows.every((row) => row.source_name === "openstreetmap-overpass"),
+      fixtureSourceRows.rows.every((row) => row.source_name === "yum4less-map-fixture"),
     ).toBe(true);
   });
 
@@ -127,8 +153,11 @@ describe("store catalog sync (integration)", () => {
   });
 
   it("marks ingested OSM rows as map-context catalog sources in Postgres", async () => {
-    const sample = buildOsmCatalogStore(fixtureOsmFoodRetailStores23111[0]!);
+    const sample = buildOsmCatalogStore(fixtureOsmFoodRetailStores23111[0]!, {
+      fixture: true,
+    });
     expect(isMapContextOnlyCatalogSource(sample.sourceName)).toBe(true);
+    expect(sample.sourceName).toBe("yum4less-map-fixture");
   });
 
   it("overwrites linked Kroger coordinates when provider discovery matches source_store_id", async () => {
@@ -271,7 +300,7 @@ describe("store catalog sync (integration)", () => {
     expect(after.rows[0]?.source_name).toBe("kroger-official-api");
   });
 
-  it("upserts Aldi from nearest OSM during ranked catalog sync without ZIP-centroid fallback", async () => {
+  it("does not refresh ranked Aldi coords from synthetic fixture OSM", async () => {
     const pool = getDbPool();
 
     const merged = await syncV1ChainStoresToCatalog({
@@ -288,23 +317,143 @@ describe("store catalog sync (integration)", () => {
       osmFoodRetailStores: fixtureOsmFoodRetailStores23111,
     });
 
+    expect(merged).toBe(0);
+
+    const zipTwin = await pool.query<{ id: string }>(
+      `select id from stores where id = 'aldi-23111'`,
+    );
+    expect(zipTwin.rows.length).toBe(0);
+  });
+
+  it("updates collocated Aldi slug instead of creating aldi-{zip} on live OSM sync", async () => {
+    const pool = getDbPool();
+    await pool.query(`
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values (
+        'aldi-mechanicsville',
+        'Aldi',
+        'grocery',
+        'Mechanicsville',
+        'VA',
+        37.611004,
+        -77.336853,
+        'aldi-weekly-ad-scrape',
+        null,
+        now()
+      )
+      on conflict (id) do update set
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        source_name = excluded.source_name,
+        source_store_id = excluded.source_store_id,
+        last_verified_at = now()
+    `);
+
+    const liveOsmAldi = {
+      osmType: "node" as const,
+      osmId: 6531578976,
+      name: "Aldi",
+      kind: "grocery" as const,
+      city: "Mechanicsville",
+      state: "VA",
+      latitude: 37.611004,
+      longitude: -77.336853,
+      shopTag: "supermarket",
+    };
+
+    const merged = await syncV1ChainStoresToCatalog({
+      location: {
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.628179,
+        longitude: -77.281955,
+        source: "geocodio",
+        zipCode: "23111",
+      },
+      zipCode: "23111",
+      providerStoreSearches: [],
+      osmFoodRetailStores: [...fixtureOsmFoodRetailStores23111, liveOsmAldi],
+    });
+
     expect(merged).toBeGreaterThan(0);
 
-    const after = await pool.query<{
+    const zipTwin = await pool.query<{ id: string }>(
+      `select id from stores where id = 'aldi-23111'`,
+    );
+    expect(zipTwin.rows.length).toBe(0);
+
+    const slug = await pool.query<{
       latitude: string;
       longitude: string;
       source_name: string | null;
+      source_store_id: string | null;
     }>(`
-      select latitude, longitude, source_name
+      select latitude, longitude, source_name, source_store_id
       from stores
-      where id = 'aldi-23111'
+      where id = 'aldi-mechanicsville'
     `);
 
-    expect(after.rows.length).toBe(1);
+    expect(slug.rows.length).toBe(1);
+    expect(Number(slug.rows[0]?.latitude)).toBeCloseTo(37.611004, 3);
+    expect(Number(slug.rows[0]?.longitude)).toBeCloseTo(-77.336853, 3);
+    // Prefer-colocate must not clobber weekly-ad provenance.
+    expect(slug.rows[0]?.source_name).toBe("aldi-weekly-ad-scrape");
+    expect(slug.rows[0]?.source_store_id).toBe("osm-node-6531578976");
+  });
+
+  it("creates aldi-{zip} only when no collocated slug exists", async () => {
+    const pool = getDbPool();
+    await pool.query(`delete from price_observations where store_id like 'aldi-%'`);
+    await pool.query(`delete from stores where id like 'aldi-%'`);
+
+    const liveOsmAldi = {
+      osmType: "node" as const,
+      osmId: 6531578976,
+      name: "Aldi",
+      kind: "grocery" as const,
+      city: "Mechanicsville",
+      state: "VA",
+      latitude: 37.611004,
+      longitude: -77.336853,
+      shopTag: "supermarket",
+    };
+
+    const merged = await syncV1ChainStoresToCatalog({
+      location: {
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.628179,
+        longitude: -77.281955,
+        source: "geocodio",
+        zipCode: "23111",
+      },
+      zipCode: "23111",
+      providerStoreSearches: [],
+      osmFoodRetailStores: [...fixtureOsmFoodRetailStores23111, liveOsmAldi],
+    });
+
+    expect(merged).toBeGreaterThan(0);
+
+    const after = await pool.query<{
+      id: string;
+      latitude: string;
+      longitude: string;
+      source_name: string | null;
+      source_store_id: string | null;
+    }>(`
+      select id, latitude, longitude, source_name, source_store_id
+      from stores
+      where id like 'aldi-%'
+      order by id
+    `);
+
+    expect(after.rows.map((row) => row.id)).toEqual(["aldi-23111"]);
     expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.611004, 3);
     expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.336853, 3);
     expect(after.rows[0]?.source_name).toBe("yum4less-market-catalog");
-    expect(Number(after.rows[0]?.latitude)).not.toBeCloseTo(37.628179, 3);
+    expect(after.rows[0]?.source_store_id).toBe("osm-node-6531578976");
   });
 
   it("keeps separate Kroger API rows when source_store_id does not match legacy slug rows", async () => {
@@ -437,22 +586,37 @@ describe("store catalog sync (integration)", () => {
     expect(migratedObservation.rows[0]?.store_id).toBe("kroger-02900529");
   });
 
-  it("refreshes Aldi coordinates from the nearest OSM Aldi store", async () => {
+  it("refreshes collocated Aldi slug coords from nearest live OSM (no ZIP twin)", async () => {
     const pool = getDbPool();
+    const liveOsmAldi = {
+      osmType: "node" as const,
+      osmId: 6531578976,
+      name: "Aldi",
+      kind: "grocery" as const,
+      city: "Mechanicsville",
+      state: "VA",
+      latitude: 37.611004,
+      longitude: -77.336853,
+      shopTag: "supermarket",
+    };
+    await pool.query(`delete from price_observations where store_id = 'aldi-23111'`);
+    await pool.query(`delete from stores where id = 'aldi-23111'`);
+    // Start within collocated radius but with stale/missing OSM link so refresh
+    // can prove prefer-colocate updates the slug instead of inventing aldi-23111.
     await pool.query(`
       insert into stores (
         id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
       )
       values (
-        'aldi-23111',
+        'aldi-mechanicsville',
         'Aldi',
         'grocery',
         'Mechanicsville',
         'VA',
-        37.628179,
-        -77.281955,
+        37.611100,
+        -77.336900,
         'yum4less-market-catalog',
-        'osm-node-900007',
+        null,
         now()
       )
       on conflict (id) do update set
@@ -473,25 +637,31 @@ describe("store catalog sync (integration)", () => {
         zipCode: "23111",
       },
       zipCode: "23111",
-      osmFoodRetailStores: fixtureOsmFoodRetailStores23111,
+      osmFoodRetailStores: [...fixtureOsmFoodRetailStores23111, liveOsmAldi],
       providerStoreSearches: [],
     });
 
     expect(updated).toBeGreaterThan(0);
 
+    const zipTwin = await pool.query<{ id: string }>(
+      `select id from stores where id = 'aldi-23111'`,
+    );
+    expect(zipTwin.rows.length).toBe(0);
+
     const after = await pool.query<{
       latitude: string;
       longitude: string;
       source_name: string | null;
+      source_store_id: string | null;
     }>(`
-      select latitude, longitude, source_name
+      select latitude, longitude, source_name, source_store_id
       from stores
-      where id = 'aldi-23111'
+      where id = 'aldi-mechanicsville'
     `);
 
     expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.611004, 3);
     expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.336853, 3);
     expect(after.rows[0]?.source_name).toBe("yum4less-market-catalog");
-    expect(Number(after.rows[0]?.latitude)).not.toBeCloseTo(37.628179, 3);
+    expect(after.rows[0]?.source_store_id).toBe("osm-node-6531578976");
   });
 });

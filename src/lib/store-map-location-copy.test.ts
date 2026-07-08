@@ -8,21 +8,38 @@ import {
 } from "@/lib/store-map-location-copy";
 
 describe("store map location copy", () => {
-  it("labels OSM catalog pins with map source", () => {
+  it("labels live OSM catalog pins with OpenStreetMap source", () => {
     expect(
       buildStoreMapLocationNote({
-        storeId: "osm-node-900003",
+        storeId: "osm-node-6531578976",
         sourceName: "openstreetmap-overpass",
         lastVerifiedAt: new Date(Date.now() - 2 * 3_600_000).toISOString(),
       }),
     ).toContain("OpenStreetMap");
     expect(
-      buildStoreMapLocationNote({
-        storeId: "osm-node-900003",
+      resolveStoreMapLocationProvenance({
+        storeId: "osm-node-6531578976",
         sourceName: "openstreetmap-overpass",
-        lastVerifiedAt: new Date(Date.now() - 2 * 3_600_000).toISOString(),
       }),
-    ).toContain("last verified");
+    ).toBe("osm-context");
+  });
+
+  it("labels fixture OSM pins as rehearsal (not live OpenStreetMap)", () => {
+    expect(
+      resolveStoreMapLocationProvenance({
+        storeId: "fixture-osm-node-900003",
+        sourceName: "yum4less-map-fixture",
+      }),
+    ).toBe("map-fixture");
+    expect(
+      buildStoreMapLocationNote({
+        storeId: "fixture-osm-node-900003",
+        sourceName: "yum4less-map-fixture",
+      }),
+    ).toContain("Rehearsal map fixture");
+    expect(formatIngestSourceLabel("yum4less-map-fixture")).toBe(
+      "map fixture rehearsal",
+    );
   });
 
   it("labels seed catalog pins honestly", () => {

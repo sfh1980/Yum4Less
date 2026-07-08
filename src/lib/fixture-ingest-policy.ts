@@ -1,3 +1,10 @@
+import {
+  isFixtureOsmCatalogSource,
+  isFixtureOsmStoreId,
+  OSM_MAP_FIXTURE_ID_PREFIX,
+  OSM_MAP_FIXTURE_SOURCE,
+} from "@/lib/osm-food-retail-discovery";
+
 const FIXTURE_WEEKLY_AD_FLAG = "YUM4LESS_WEEKLY_AD_FIXTURE";
 const FIXTURE_MAP_CATALOG_FLAG = "YUM4LESS_MAP_CATALOG_FIXTURE";
 
@@ -76,4 +83,50 @@ export function enforceFixtureIngestDatabasePolicy(
   }
 
   return validation.databaseUrl;
+}
+
+/** Assert a single map-catalog fixture row uses the distinct id/source contract. */
+export function assertFixtureOsmCatalogIdentity(input: {
+  id: string;
+  sourceName: string;
+}): void {
+  if (!isFixtureOsmStoreId(input.id)) {
+    throw new Error(
+      `Fixture map-catalog write refused: store id must use ${OSM_MAP_FIXTURE_ID_PREFIX}* (got ${input.id}).`,
+    );
+  }
+
+  if (!isFixtureOsmCatalogSource(input.sourceName)) {
+    throw new Error(
+      `Fixture map-catalog write refused: source_name must be ${OSM_MAP_FIXTURE_SOURCE} (got ${input.sourceName}).`,
+    );
+  }
+}
+
+/**
+ * When map-catalog fixture mode is on, reject any OSM-style write that still
+ * uses the live Overpass id/source namespace.
+ */
+export function enforceFixtureOsmCatalogWrites(
+  stores: Array<{ id: string; sourceName: string }>,
+  env: NodeJS.ProcessEnv = process.env,
+  options?: { force?: boolean },
+): void {
+  if (!options?.force && env[FIXTURE_MAP_CATALOG_FLAG] !== "1") {
+    return;
+  }
+
+  for (const store of stores) {
+    const looksLikeOsmOrFixture =
+      store.id.startsWith("osm-") ||
+      store.id.startsWith(OSM_MAP_FIXTURE_ID_PREFIX) ||
+      store.sourceName === "openstreetmap-overpass" ||
+      isFixtureOsmCatalogSource(store.sourceName);
+
+    if (!looksLikeOsmOrFixture) {
+      continue;
+    }
+
+    assertFixtureOsmCatalogIdentity(store);
+  }
 }

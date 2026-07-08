@@ -11,8 +11,38 @@ vi.mock("@/lib/db", () => ({
 import {
   insertPriceObservationIfChanged,
   priceObservationsMateriallyMatch,
+  shouldPreserveStoreLocationProvenance,
 } from "@/lib/price-observation-writes";
 import { KROGER_OFFICIAL_PRICE_SOURCE } from "@/lib/price-source-policy";
+
+describe("shouldPreserveStoreLocationProvenance", () => {
+  it("preserves live OSM, fixture OSM, and locator provenance sources", () => {
+    expect(
+      shouldPreserveStoreLocationProvenance({
+        storeId: "osm-node-6531578976",
+        currentSourceName: "openstreetmap-overpass",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPreserveStoreLocationProvenance({
+        storeId: "fixture-osm-node-900007",
+        currentSourceName: "yum4less-map-fixture",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPreserveStoreLocationProvenance({
+        storeId: "publix-1626",
+        currentSourceName: "publix-store-locator",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPreserveStoreLocationProvenance({
+        storeId: "kroger-02900529",
+        currentSourceName: "kroger-official-api",
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("price observation change-aware sync", () => {
   function mockDbPool(query: ReturnType<typeof vi.fn>) {

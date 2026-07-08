@@ -67,8 +67,9 @@ export function buildCatalogStoresFromProviderSearches(
 
 export function buildCatalogStoresFromOsmDiscovery(
   stores: OsmDiscoveredFoodRetailStore[],
+  options?: { fixture?: boolean },
 ): CatalogStoreRecord[] {
-  return stores.map(buildOsmCatalogStore);
+  return stores.map((store) => buildOsmCatalogStore(store, options));
 }
 
 export function catalogStoreRecordToCatalogStore(record: CatalogStoreRecord): CatalogStore {

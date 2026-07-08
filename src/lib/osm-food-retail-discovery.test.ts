@@ -24,6 +24,9 @@ describe("osm food retail discovery", () => {
     expect(result.stores.length).toBeGreaterThan(0);
     expect(result.stores.some((store) => store.name.includes("Costco"))).toBe(true);
     expect(buildOsmCatalogStoreId(result.stores[0]!)).toMatch(/^osm-(node|way)-\d+$/);
+    expect(buildOsmCatalogStoreId(result.stores[0]!, { fixture: true })).toMatch(
+      /^fixture-osm-(node|way)-\d+$/,
+    );
   });
 
   it("returns no fixture stores outside the known fixture ZIP", async () => {

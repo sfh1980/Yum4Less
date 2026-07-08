@@ -18,9 +18,10 @@ export type MapContextDiscoveryResult = {
 
 function osmStoresToCandidates(
   stores: OsmDiscoveredFoodRetailStore[],
+  options?: { fixture?: boolean },
 ): MapContextStoreCandidate[] {
   return stores.map((store) => {
-    const catalog = buildOsmCatalogStore(store);
+    const catalog = buildOsmCatalogStore(store, options);
     return {
       id: catalog.id,
       name: catalog.name,
@@ -54,7 +55,9 @@ export async function discoverMapContextStores(input: {
       zipCode: input.zipCode,
     });
 
-    const osmStores = osmStoresToCandidates(osmDiscovery.stores);
+    const osmStores = osmStoresToCandidates(osmDiscovery.stores, {
+      fixture: osmDiscovery.source === "fixture",
+    });
     stores.push(...osmStores);
     sources.push({
       source: osmDiscovery.source,

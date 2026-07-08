@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertFixtureOsmCatalogIdentity,
   enforceFixtureIngestDatabasePolicy,
+  enforceFixtureOsmCatalogWrites,
   isFixtureIngestMode,
   validateFixtureIngestDatabasePolicy,
 } from "@/lib/fixture-ingest-policy";
@@ -89,5 +91,45 @@ describe("fixture-ingest-policy", () => {
       databaseUrl: testUrl,
     });
     expect(() => enforceFixtureIngestDatabasePolicy(env)).not.toThrow();
+  });
+
+  it("asserts fixture OSM catalog identity uses fixture-osm-* + yum4less-map-fixture", () => {
+    expect(() =>
+      assertFixtureOsmCatalogIdentity({
+        id: "fixture-osm-node-900001",
+        sourceName: "yum4less-map-fixture",
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      assertFixtureOsmCatalogIdentity({
+        id: "osm-node-900001",
+        sourceName: "openstreetmap-overpass",
+      }),
+    ).toThrow(/fixture-osm-/);
+
+    expect(() =>
+      enforceFixtureOsmCatalogWrites(
+        [
+          {
+            id: "osm-node-900001",
+            sourceName: "openstreetmap-overpass",
+          },
+        ],
+        baseEnv({ YUM4LESS_MAP_CATALOG_FIXTURE: "1" }),
+      ),
+    ).toThrow(/fixture-osm-/);
+
+    expect(() =>
+      enforceFixtureOsmCatalogWrites(
+        [
+          {
+            id: "fixture-osm-node-900001",
+            sourceName: "yum4less-map-fixture",
+          },
+        ],
+        baseEnv({ YUM4LESS_MAP_CATALOG_FIXTURE: "1" }),
+      ),
+    ).not.toThrow();
   });
 });

@@ -68,6 +68,8 @@ import {
   MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES,
   mergeCatalogStoresForMap,
 } from "@/lib/market-store-catalog-merge";
+import { isNonLiveOsmCatalogIdentity } from "@/lib/osm-food-retail-discovery";
+import { shouldUseMapSearchOsmFixture } from "@/lib/map-search-osm-cache";
 import {
   buildStoreMapLocationBadge,
   buildStoreMapLocationNote,
@@ -167,11 +169,19 @@ export async function getMarketSearchExperience(
         } else if (contextCatalogStores.length > 0) {
           const parts: string[] = [];
           if (osmSource && osmSource.stores.length > 0) {
-            parts.push(
-              osmSource.cacheHit
-                ? "cached map context pins"
-                : "map context pins",
-            );
+            if (osmSource.source === "fixture") {
+              parts.push(
+                osmSource.cacheHit
+                  ? "cached rehearsal map fixture pins (not live OpenStreetMap)"
+                  : "rehearsal map fixture pins (not live OpenStreetMap)",
+              );
+            } else {
+              parts.push(
+                osmSource.cacheHit
+                  ? "cached map context pins"
+                  : "map context pins",
+              );
+            }
           }
           if (snapSource && snapSource.stores.length > 0) {
             parts.push("directory context pins (verify in store)");
@@ -191,6 +201,16 @@ export async function getMarketSearchExperience(
     location,
     radiusMiles,
   );
+  // Outside CI/test/fixture mode, never surface rehearsal OSM as shopper pins.
+  if (!shouldUseMapSearchOsmFixture()) {
+    mergedCatalogStores = mergedCatalogStores.filter(
+      (store) =>
+        !isNonLiveOsmCatalogIdentity({
+          id: store.id,
+          sourceName: store.sourceName,
+        }),
+    );
+  }
 
   let nearbyStores = buildNearbyStoresForSearch(
     mergedCatalogStores,

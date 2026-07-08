@@ -12,6 +12,12 @@ import {
   reconcileRankedStoreCoordinates,
   type LocationWitness,
 } from "@/lib/store-location-reconciliation";
+import {
+  isMapContextLikeCatalogStore,
+  resolveCollocatedCatalogUpsertTarget,
+  resolveSelectableCatalogChain,
+  type CollocatedCatalogStoreLike,
+} from "@/lib/catalog-store-colocated-identity";
 import { getDistanceMiles } from "@/lib/geo-distance";
 import {
   findProximityLinkedKrogerStore,
@@ -22,7 +28,9 @@ import {
 import {
   buildOsmCatalogStoreId,
   discoverFoodRetailStoresNearLocation,
+  isSyntheticFixtureOsmNumericId,
   OSM_MAP_CATALOG_SOURCE,
+  OSM_MAP_FIXTURE_SOURCE,
   type OsmDiscoveredFoodRetailStore,
 } from "@/lib/osm-food-retail-discovery";
 import type { ProviderStoreSearchResult } from "@/lib/providers/provider-types";
@@ -174,6 +182,7 @@ export const BOOTSTRAP_STORE_MERGE_RADIUS_MILES = 0.1;
 
 export const MAP_CONTEXT_CATALOG_SOURCES = new Set<string>([
   OSM_MAP_CATALOG_SOURCE,
+  OSM_MAP_FIXTURE_SOURCE,
   USDA_SNAP_CONTEXT_SOURCE,
   PUBLIX_STORE_LOCATOR_SOURCE,
 ]);
@@ -229,12 +238,20 @@ export function buildKrogerCatalogStore(
   };
 }
 
+/**
+ * Build ranked Aldi catalog coords from live OSM only.
+ * Fixture / synthetic osmIds must never become aldi-{zip} source_store_id truth.
+ */
 export function buildAldiCatalogStoreForMarket(input: {
   location: ResolvedSearchLocation;
   zipCode?: string;
   osmAldiStore?: OsmDiscoveredFoodRetailStore;
 }): CatalogStoreRecord | null {
   if (!input.osmAldiStore) {
+    return null;
+  }
+
+  if (isSyntheticFixtureOsmNumericId(input.osmAldiStore.osmId)) {
     return null;
   }
 
@@ -259,8 +276,11 @@ export function buildAldiCatalogStoreForMarket(input: {
 
 export function buildOsmCatalogStore(
   discovered: OsmDiscoveredFoodRetailStore,
+  options?: { fixture?: boolean },
 ): CatalogStoreRecord {
-  const id = buildOsmCatalogStoreId(discovered);
+  const fixture =
+    options?.fixture === true || isSyntheticFixtureOsmNumericId(discovered.osmId);
+  const id = buildOsmCatalogStoreId(discovered, { fixture });
 
   return {
     id,
@@ -270,7 +290,7 @@ export function buildOsmCatalogStore(
     state: discovered.state,
     latitude: discovered.latitude,
     longitude: discovered.longitude,
-    sourceName: OSM_MAP_CATALOG_SOURCE,
+    sourceName: fixture ? OSM_MAP_FIXTURE_SOURCE : OSM_MAP_CATALOG_SOURCE,
     sourceStoreId: id,
   };
 }
@@ -289,7 +309,66 @@ export async function upsertCatalogStores(
     const preserveRankedSources = options?.preserveRankedSources ?? false;
     const rankedSources = [...RANKED_CATALOG_SOURCES];
 
+    const existingResult = await pool.query<{
+      id: string;
+      name: string;
+      source_name: string | null;
+      source_store_id: string | null;
+      latitude: string;
+      longitude: string;
+    }>(`
+      select id, name, source_name, source_store_id, latitude, longitude
+      from stores
+    `);
+    const existingCollocated: CollocatedCatalogStoreLike[] = existingResult.rows.map(
+      (row) => ({
+        id: row.id,
+        name: row.name,
+        latitude: Number(row.latitude),
+        longitude: Number(row.longitude),
+        sourceName: row.source_name,
+        sourceStoreId: row.source_store_id,
+      }),
+    );
+
     for (const store of stores) {
+      const candidate: CollocatedCatalogStoreLike = {
+        id: store.id,
+        name: store.name,
+        latitude: store.latitude,
+        longitude: store.longitude,
+        sourceName: store.sourceName,
+        sourceStoreId: store.sourceStoreId,
+      };
+
+      let writeId = store.id;
+      const candidateChain = resolveSelectableCatalogChain(candidate);
+      // Kroger keeps dedicated findCanonical / proximity-reconcile paths that may
+      // retain distinct slug vs API rows (different source_store_id). Do not
+      // silently collapse those at generic upsert time.
+      if (
+        candidateChain &&
+        candidateChain !== "kroger" &&
+        !isMapContextLikeCatalogStore(candidate)
+      ) {
+        const target = resolveCollocatedCatalogUpsertTarget(
+          candidate,
+          existingCollocated,
+        );
+        writeId = target.storeId;
+      }
+
+      const existingRow = existingCollocated.find((row) => row.id === writeId);
+      const existingSource = existingRow?.sourceName ?? null;
+      const preserveSourceName =
+        writeId !== store.id &&
+        store.sourceName === ALDI_CATALOG_SOURCE &&
+        (Boolean(existingSource?.endsWith("-weekly-ad-scrape")) ||
+          existingSource === INTERNAL_CATALOG_SOURCE);
+      const writeSourceName = preserveSourceName
+        ? existingSource!
+        : store.sourceName;
+
       const result = await pool.query(
         preserveRankedSources
           ? `
@@ -318,6 +397,7 @@ export async function upsertCatalogStores(
               where stores.source_name is null
                 or stores.source_name = any($10::text[])
                 or stores.source_name = excluded.source_name
+                or strpos(stores.source_name, '-weekly-ad-scrape') > 0
             `
           : `
               insert into stores (
@@ -345,30 +425,46 @@ export async function upsertCatalogStores(
             `,
         preserveRankedSources
           ? [
-              store.id,
+              writeId,
               store.name,
               store.kind,
               store.city,
               store.state,
               store.latitude,
               store.longitude,
-              store.sourceName,
+              writeSourceName,
               store.sourceStoreId,
               rankedSources,
             ]
           : [
-              store.id,
+              writeId,
               store.name,
               store.kind,
               store.city,
               store.state,
               store.latitude,
               store.longitude,
-              store.sourceName,
+              writeSourceName,
               store.sourceStoreId,
             ],
       );
       upserted += result.rowCount ?? 0;
+
+      // Keep in-memory collocated snapshot current for subsequent inserts in this batch.
+      const snapshotIndex = existingCollocated.findIndex((row) => row.id === writeId);
+      const snapshotRow: CollocatedCatalogStoreLike = {
+        id: writeId,
+        name: store.name,
+        latitude: store.latitude,
+        longitude: store.longitude,
+        sourceName: writeSourceName,
+        sourceStoreId: store.sourceStoreId,
+      };
+      if (snapshotIndex >= 0) {
+        existingCollocated[snapshotIndex] = snapshotRow;
+      } else {
+        existingCollocated.push(snapshotRow);
+      }
     }
 
     return upserted;
@@ -448,7 +544,34 @@ export async function syncV1ChainStoresToCatalog(input: {
     osmAldiStore,
   });
   if (aldiCatalog) {
-    catalogStores.push(aldiCatalog);
+    const existingCollocated = existingStores.map((store) =>
+      existingCatalogRowToCollocatedLike(store),
+    );
+    const target = resolveCollocatedCatalogUpsertTarget(
+      {
+        id: aldiCatalog.id,
+        name: aldiCatalog.name,
+        chain: "aldi",
+        latitude: aldiCatalog.latitude,
+        longitude: aldiCatalog.longitude,
+        sourceName: aldiCatalog.sourceName,
+        sourceStoreId: aldiCatalog.sourceStoreId,
+      },
+      existingCollocated,
+    );
+
+    if (target.shouldCreateCandidateId) {
+      catalogStores.push(aldiCatalog);
+    } else {
+      // Prefer existing slug/API twin: refresh its coordinates, do not upsert aldi-{zip}.
+      mergedCount += await updateIngestedRankedStoreCoordinates(
+        target.storeId,
+        {
+          ...aldiCatalog,
+          id: target.storeId,
+        },
+      );
+    }
   }
 
   const uniqueById = new Map(catalogStores.map((store) => [store.id, store]));
@@ -462,6 +585,19 @@ export async function syncV1ChainStoresToCatalog(input: {
   const proximityReconciledCount = await reconcileProximityDuplicateKrogerSlugStores();
 
   return providerUpserted + mergedCount + refreshed + reconciledCount + proximityReconciledCount;
+}
+
+function existingCatalogRowToCollocatedLike(
+  store: ExistingCatalogStoreRow,
+): CollocatedCatalogStoreLike {
+  return {
+    id: store.id,
+    name: store.name,
+    latitude: store.latitude,
+    longitude: store.longitude,
+    sourceName: store.source_name,
+    sourceStoreId: store.source_store_id,
+  };
 }
 
 function mapExistingCatalogStoreRows(
@@ -756,13 +892,51 @@ export async function refreshIngestedRankedStoreCoordinates(input: {
       : null;
 
   if (aldiCatalog) {
-    const linkedAldi = existing.find(
-      (store) =>
-        getProviderRolloutForCatalogStore(store).chain === "aldi" &&
-        store.id === aldiCatalog.id,
+    const aldiRows = await getDbPool().query<{
+      id: string;
+      name: string;
+      source_name: string | null;
+      source_store_id: string | null;
+      latitude: string;
+      longitude: string;
+    }>(`
+      select id, name, source_name, source_store_id, latitude, longitude
+      from stores
+      where id like 'aldi-%'
+         or source_name = 'yum4less-market-catalog'
+         or source_name = 'aldi-weekly-ad-scrape'
+         or source_name = 'yum4less-internal-catalog'
+    `);
+
+    const existingAldi = aldiRows.rows
+      .filter((row) => getProviderRolloutForCatalogStore(row).chain === "aldi")
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        chain: "aldi" as const,
+        latitude: Number(row.latitude),
+        longitude: Number(row.longitude),
+        sourceName: row.source_name,
+        sourceStoreId: row.source_store_id,
+      }));
+
+    const target = resolveCollocatedCatalogUpsertTarget(
+      {
+        id: aldiCatalog.id,
+        name: aldiCatalog.name,
+        chain: "aldi",
+        latitude: aldiCatalog.latitude,
+        longitude: aldiCatalog.longitude,
+        sourceName: aldiCatalog.sourceName,
+        sourceStoreId: aldiCatalog.sourceStoreId,
+      },
+      existingAldi,
     );
-    const aldiStoreId = linkedAldi?.id ?? aldiCatalog.id;
-    updated += await updateIngestedRankedStoreCoordinates(aldiStoreId, aldiCatalog);
+
+    updated += await updateIngestedRankedStoreCoordinates(target.storeId, {
+      ...aldiCatalog,
+      id: target.storeId,
+    });
   }
 
   return updated;
@@ -882,6 +1056,18 @@ async function updateIngestedRankedStoreCoordinates(
       longitude = reconciliation.longitude;
     }
 
+    // Prefer OSM/market coords on collocated slug redirects, but do not clobber
+    // weekly-ad / internal provenance when market-catalog is the weaker writer.
+    // Official Kroger API refresh must still be allowed to overwrite weekly-ad.
+    const existingSource = currentRow?.source_name ?? null;
+    const preserveSourceName =
+      catalog.sourceName === ALDI_CATALOG_SOURCE &&
+      (Boolean(existingSource?.endsWith("-weekly-ad-scrape")) ||
+        existingSource === INTERNAL_CATALOG_SOURCE);
+    const writeSourceName = preserveSourceName
+      ? existingSource!
+      : catalog.sourceName;
+
     const result = await pool.query(
       `
         update stores
@@ -910,7 +1096,7 @@ async function updateIngestedRankedStoreCoordinates(
         storeId,
         latitude,
         longitude,
-        catalog.sourceName,
+        writeSourceName,
         catalog.sourceStoreId,
         catalog.name,
         catalog.city,
@@ -1046,7 +1232,17 @@ export async function syncUniversalMapCatalogForZip(input: {
     useFixture: input.useFixture,
   });
 
-  const osmStores = discovery.stores.map(buildOsmCatalogStore);
+  const useFixtureIdentity =
+    input.useFixture === true || discovery.source === "fixture";
+  const osmStores = discovery.stores.map((store) =>
+    buildOsmCatalogStore(store, { fixture: useFixtureIdentity }),
+  );
+  if (useFixtureIdentity) {
+    const { enforceFixtureOsmCatalogWrites } = await import(
+      "@/lib/fixture-ingest-policy"
+    );
+    enforceFixtureOsmCatalogWrites(osmStores, process.env, { force: true });
+  }
   const osmUpserted = await upsertCatalogStores(osmStores, {
     preserveRankedSources: true,
   });
@@ -1054,7 +1250,9 @@ export async function syncUniversalMapCatalogForZip(input: {
   let rankedUpserted = 0;
   let publixUpserted = 0;
   let publixMessage = "";
-  if (!input.useFixture) {
+  // Fixture map-catalog rehearsals upsert labeled fixture OSM only — never
+  // refresh ranked Aldi/Kroger coords from synthetic Overpass stand-ins.
+  if (!useFixtureIdentity) {
     const providerStoreSearches = await searchOfficialProviderStores({
       location: locationResult.location,
       radiusMiles,

@@ -1,12 +1,70 @@
 import type { PoolClient } from "pg";
 import { getDbPool } from "@/lib/db";
 import {
+  isFixtureOsmCatalogSource,
+  isLiveOsmStoreId,
+  isNonLiveOsmCatalogIdentity,
+  isOsmStyleStoreId,
+  OSM_MAP_CATALOG_SOURCE,
+  OSM_MAP_FIXTURE_SOURCE,
+} from "@/lib/osm-food-retail-discovery";
+import {
   getRankedPriceSourceKind,
   getRankedPriceSourceTier,
   RANKED_PRICE_SOURCE_SQL_FILTER,
   RANKED_PRICE_SOURCE_TIER_SQL,
 } from "@/lib/price-source-policy";
 import { RANKED_PRICE_CACHE_AGE_SQL_FILTER } from "@/lib/ranked-price-cache-policy";
+import { USDA_SNAP_CONTEXT_SOURCE } from "@/lib/map-context-types";
+
+/** Keep inline to avoid circular imports with publix-catalog-sync. */
+const PUBLIX_STORE_LOCATOR_SOURCE = "publix-store-locator";
+
+/** Location-provenance rows — pricing touch must not rewrite stores.source_name. */
+const LOCATION_PROVENANCE_SOURCE_NAMES = new Set<string>([
+  OSM_MAP_CATALOG_SOURCE,
+  OSM_MAP_FIXTURE_SOURCE,
+  USDA_SNAP_CONTEXT_SOURCE,
+  PUBLIX_STORE_LOCATOR_SOURCE,
+]);
+
+export function shouldPreserveStoreLocationProvenance(input: {
+  storeId: string;
+  currentSourceName?: string | null;
+}): boolean {
+  if (
+    isOsmStyleStoreId(input.storeId) ||
+    isNonLiveOsmCatalogIdentity({
+      id: input.storeId,
+      sourceName: input.currentSourceName,
+    }) ||
+    isLiveOsmStoreId(input.storeId)
+  ) {
+    return true;
+  }
+
+  if (
+    input.currentSourceName &&
+    LOCATION_PROVENANCE_SOURCE_NAMES.has(input.currentSourceName)
+  ) {
+    return true;
+  }
+
+  if (isFixtureOsmCatalogSource(input.currentSourceName)) {
+    return true;
+  }
+
+  // Locator-style ids that are not weekly-ad / ranked pricing identity.
+  if (
+    input.storeId.startsWith("snap-") ||
+    (input.storeId.startsWith("publix-") &&
+      input.currentSourceName === PUBLIX_STORE_LOCATOR_SOURCE)
+  ) {
+    return true;
+  }
+
+  return false;
+}
 
 export type PriceObservationInsert = {
   storeId: string;
@@ -79,6 +137,29 @@ export async function touchStoreVerification(input: {
   sourceStoreId?: string;
 }) {
   const pool = getDbPool();
+  const existing = await pool.query<{ source_name: string | null }>(
+    `select source_name from stores where id = $1`,
+    [input.storeId],
+  );
+  const currentSourceName = existing.rows[0]?.source_name ?? null;
+  const preserveLocationProvenance = shouldPreserveStoreLocationProvenance({
+    storeId: input.storeId,
+    currentSourceName,
+  });
+
+  if (preserveLocationProvenance) {
+    // Pricing / weekly-ad verification bumps last_verified_at only — never
+    // overwrite OSM, fixture, SNAP, or locator location provenance.
+    await pool.query(
+      `
+        update stores
+        set last_verified_at = now()
+        where id = $1
+      `,
+      [input.storeId],
+    );
+    return;
+  }
 
   if (input.sourceStoreId) {
     await pool.query(

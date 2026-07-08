@@ -1,10 +1,20 @@
 /** User-facing copy for map pin location provenance (ingest-backed, not live on search). */
 
+import {
+  isFixtureOsmCatalogSource,
+  isFixtureOsmStoreId,
+  isLiveOsmStoreId,
+  isNonLiveOsmCatalogIdentity,
+  OSM_MAP_CATALOG_SOURCE,
+  OSM_MAP_FIXTURE_SOURCE,
+} from "@/lib/osm-food-retail-discovery";
+
 export type StoreMapLocationProvenance =
   | "bootstrap"
   | "api-verified"
   | "weekly-ad-ingest"
   | "osm-context"
+  | "map-fixture"
   | "snap-context"
   | "indicative";
 
@@ -19,8 +29,12 @@ export function formatIngestSourceLabel(sourceName?: string | null): string {
     return "retailer store directory";
   }
 
-  if (sourceName === "openstreetmap-overpass") {
+  if (sourceName === OSM_MAP_CATALOG_SOURCE) {
     return "OpenStreetMap";
+  }
+
+  if (isFixtureOsmCatalogSource(sourceName) || sourceName === OSM_MAP_FIXTURE_SOURCE) {
+    return "map fixture rehearsal";
   }
 
   if (sourceName === "usda-snap-retailer-locator") {
@@ -98,8 +112,19 @@ export function resolveStoreMapLocationProvenance(input: {
   lastVerifiedAt?: Date | string | null;
 }): StoreMapLocationProvenance {
   if (
-    input.storeId.startsWith("osm-") ||
-    input.sourceName === "openstreetmap-overpass"
+    isFixtureOsmStoreId(input.storeId) ||
+    isFixtureOsmCatalogSource(input.sourceName) ||
+    isNonLiveOsmCatalogIdentity({
+      id: input.storeId,
+      sourceName: input.sourceName,
+    })
+  ) {
+    return "map-fixture";
+  }
+
+  if (
+    isLiveOsmStoreId(input.storeId) ||
+    input.sourceName === OSM_MAP_CATALOG_SOURCE
   ) {
     return "osm-context";
   }
@@ -151,6 +176,8 @@ export function buildStoreMapLocationBadge(input: {
       return "Saved store pin";
     case "osm-context":
       return "Map context pin";
+    case "map-fixture":
+      return "Rehearsal map pin";
     case "snap-context":
       return "Map context pin";
     default:
@@ -169,6 +196,10 @@ export function buildStoreMapLocationNote(input: {
 
   if (provenance === "osm-context") {
     return `Map context pin from OpenStreetMap${verifiedPart}. Confirm the address before visiting.`;
+  }
+
+  if (provenance === "map-fixture") {
+    return `Rehearsal map fixture pin${verifiedPart} — not a live OpenStreetMap storefront. Confirm before visiting.`;
   }
 
   if (provenance === "snap-context") {
