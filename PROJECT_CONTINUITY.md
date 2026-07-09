@@ -54,7 +54,7 @@
 - **Recipe ranking:** internal library + sale-matched TheMealDB imports in **one merged list** (default path); shopper opt-in UI **deleted (slice 5)**
 - **TheMealDB on search:** merged ranking reads Postgres imports cache-first; **search-time refresh removed** — cron/script only (`npm run ingest:themealdb:from-sales`); scheduled-refresh notice when imports stale/empty; attribution + meal link on cards when saved imports rank
 - **Ingredient row trust (D/E):** `Est.` / directional labels; `Prices from ~N hours ago` on ingredient rows **and meal cards** when metadata present; honest empty state (daily scheduled refresh, not live on search)
-- **Redesign UX (slices 1–5 + D1–D7):** Settings-first gate (localStorage `setupComplete`); **5-tab shell** (Home, Deals, Cook, Saved, Settings); welcome budget/dietary → ingredients → tap rank → **stacked accordion** results; **merged** internal + TheMealDB ranking (no shopper opt-in); no `dinnersWanted` cap; store scope from Settings dropdown; ingredient gate (all vs manual) + category chips; map **link + overlay** on ingredients step; session **pantry** prompt on results; light/dark/**system** theme with **mockup Theme C/D tokens** (warm pantry light default on first visit)
+- **Redesign UX (slices 1–5 + D1–D7):** Settings-first gate (localStorage `setupComplete`); **5-tab shell** (Home, Deals, Cook, Saved, Settings); welcome budget/dietary → ingredients → **pantry → suggest recipes** → **stacked accordion** results (rank intermediate screen removed 2026-07-09); **merged** internal + TheMealDB ranking (no shopper opt-in); no `dinnersWanted` cap; store scope from Settings dropdown; ingredient gate (all vs manual) + category chips; map **link + overlay** on ingredients step; session **pantry** prompt on results; light/dark/**system** theme with **mockup Theme C/D tokens** (warm pantry light default on first visit)
 - **Settings store dropdown:** `settings-store-selection.ts` — Kroger, Aldi, Publix, and Food Lion always listed for selection (not gated on `recommendationEnabled`); prefers non-OSM catalog rows; **excludes `fixture-osm-*` / legacy `osm-node-90000*`**; live OSM kept only when no same-chain catalog pin within 1.5 mi; **same-chain collocated catalog twins collapsed** via `collapseSameChainCollocatedCatalogStores` (0.05 mi default; Kroger 0.15 mi exception); auto market search on Settings when setup incomplete
 - **SSR tab hydration:** `SSR_DEFAULT_APP_TAB` + post-mount `resolveAppTabFromPreferences()` — fixes React hydration mismatch when saved Settings route to Home
 - Continental US ZIP + browser geolocation; dev seed ZIPs when `GEOCODIO_API_KEY` unset
@@ -243,6 +243,12 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-09 — Meal-planner flow: skip rank intermediate screen — CLOSED
+
+- **Theme:** Rank dinners intermediate screen added friction; pantry **Continue to rank** + separate rank panel duplicated trust copy already on Dinner recommendations. Composes with prior UX slice **#7** (**Use all ingredients and check pantry** → skip Ingredients confirmation) — **two stacked screen-skip changes** on the same Home path: Ingredients gate → Pantry (skip #7) → Dinner recommendations (this slice).
+- **Shipped:** Removed `RankStepPanel` and `flowStep: "rank"`. Pantry primary **Suggest recipes for my store(s)** calls `handleRankMeals()` directly, transitions to results view, `RankLoadingOverlay` unchanged. **Gating:** pantry button respects `rankingPaused` / `rankLoading` (same as former rank button). Idle results copy pantry-centric.
+- **Evidence:** `npm test` **898/898**; `npm run test:integration` **29/29**; `npm run test:e2e:ci` **23 passed**, 1 skipped, 1 flaky (`navigation-theme` Kroger map card — pre-existing). Remote CI on commit SHA — see Resume after push.
 
 ### 2026-07-09 — Publix weekly-ad ingest exclusion bug (0/97) — CLOSED
 
