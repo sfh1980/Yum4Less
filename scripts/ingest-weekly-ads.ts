@@ -1,6 +1,6 @@
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
-import { getProviderRolloutForStore } from "@/lib/provider-rollout";
+import { buildWeeklyAdIngestStoreCandidates } from "@/lib/ingest/weekly-ad-ingest-store-selection";
 import {
   filterCatalogStoresNearLocation,
   parseIngestZipCodesFromEnv,
@@ -10,7 +10,6 @@ import {
   isWeeklyAdChain,
   runWeeklyAdIngestionForStores,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
-import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import { shouldFailWeeklyAdIngestExit } from "@/lib/ingest/ingest-script-exit-policy";
@@ -29,28 +28,7 @@ async function main() {
   const radiusMiles = resolveIngestRadiusMiles();
   const { snapshot } = await getMarketDataSnapshot();
 
-  const weeklyAdCandidates = snapshot.stores
-    .map((store) => {
-      const rollout = getProviderRolloutForStore(store.name);
-      return {
-        id: store.id,
-        name: store.name,
-        chain: rollout.chain,
-        latitude: store.latitude,
-        longitude: store.longitude,
-      };
-    })
-    .filter(
-      (
-        store,
-      ): store is {
-        id: string;
-        name: string;
-        chain: WeeklyAdChain;
-        latitude: number;
-        longitude: number;
-      } => isWeeklyAdChain(store.chain),
-    );
+  const weeklyAdCandidates = buildWeeklyAdIngestStoreCandidates(snapshot.stores);
 
   const allResults: Awaited<
     ReturnType<typeof runWeeklyAdIngestionForStores>
