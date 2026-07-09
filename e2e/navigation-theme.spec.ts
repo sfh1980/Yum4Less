@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import {
+  completePantryAndSuggestRecipes,
   completeSettingsZipFlow,
   completeWelcomeFlow,
   resetAppPreferences,
-  runCoreMvpFlow,
   switchMainTab,
 } from "./helpers";
 
@@ -33,7 +33,9 @@ test.describe("Bottom navigation and theme", () => {
   });
 
   test("enables Cook tab after ranked recipes are ready", async ({ page }) => {
-    await runCoreMvpFlow(page);
+    await completeSettingsZipFlow(page);
+    await completeWelcomeFlow(page);
+    await completePantryAndSuggestRecipes(page);
     const cookButton = page
       .getByRole("navigation", { name: "Main" })
       .getByRole("button", { name: "Cook" });
