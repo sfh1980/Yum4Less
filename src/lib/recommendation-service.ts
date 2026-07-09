@@ -251,6 +251,7 @@ export async function getRecommendationExperience(
         preferences,
         scopedObservations,
         market.dataSource,
+        buildValidPantryIngredientIdsFromSnapshot(snapshot),
       ),
     )
     .filter((candidate): candidate is RecommendationCandidate => candidate !== null)
@@ -326,15 +327,37 @@ function buildRankEmptyShopperNotices(input: {
   };
 }
 
+function buildValidPantryIngredientIdsFromSnapshot(
+  snapshot: MarketDataSnapshot,
+): ReadonlySet<string> {
+  const ids = new Set<string>();
+
+  for (const ingredient of snapshot.ingredients ?? []) {
+    ids.add(ingredient.id);
+  }
+
+  for (const recipe of snapshot.recipes) {
+    for (const line of recipe.ingredients) {
+      ids.add(line.ingredientId);
+    }
+  }
+
+  return ids;
+}
+
 function buildCandidate(
   recipe: CatalogRecipeRecord,
   nearbyStores: NearbyStoreSummary[],
   preferences: MealPreferenceForm,
   priceObservations: CatalogPriceObservation[],
   dataSource: MarketDataSource,
+  validPantryIngredientIds: ReadonlySet<string>,
 ): RecommendationCandidate | null {
   const pantryIngredientIds = new Set(
-    filterValidPantryIngredientIds(preferences.pantryIngredientIds ?? []),
+    filterValidPantryIngredientIds(
+      preferences.pantryIngredientIds ?? [],
+      validPantryIngredientIds,
+    ),
   );
   const planOptions =
     pantryIngredientIds.size > 0 ? { pantryIngredientIds } : undefined;

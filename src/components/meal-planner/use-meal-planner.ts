@@ -52,7 +52,7 @@ import type { CatalogIngredient } from "@/lib/ingredient-category";
 const defaultForm: MealPreferenceForm = {
   zipCode: "23111",
   radiusMiles: 5,
-  budget: 16,
+  budget: 20,
   maxIngredients: DEFAULT_MAX_INGREDIENTS,
   shoppingStyle: "single-store",
   dietaryFocus: "anything",
@@ -1068,11 +1068,20 @@ export function useMealPlanner() {
     });
   }
 
-  function handleAddPantryIngredient(ingredientId: string) {
+  function handleAddPantryIngredient(result: {
+    ingredientId: string;
+    ingredientName: string;
+    nearMissRecipeCount: number;
+  }) {
     setPantryIngredientIds((current) =>
-      current.includes(ingredientId) ? current : [...current, ingredientId],
+      current.includes(result.ingredientId)
+        ? current
+        : [...current, result.ingredientId],
     );
-    setPantryItemSources((current) => ({ ...current, [ingredientId]: "manual" }));
+    setPantryItemSources((current) => ({
+      ...current,
+      [result.ingredientId]: "manual",
+    }));
   }
 
   function handleRemovePantryIngredient(ingredientId: string) {

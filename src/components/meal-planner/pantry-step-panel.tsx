@@ -1,7 +1,10 @@
 "use client";
 
 import type { CatalogIngredient } from "@/lib/ingredient-category";
-import { IngredientCatalogCombobox } from "@/components/meal-planner/ingredient-catalog-combobox";
+import {
+  IngredientCatalogCombobox,
+  type PantryIngredientAddResult,
+} from "@/components/meal-planner/ingredient-catalog-combobox";
 import type { PantryCoverageChecklistItem } from "@/contracts/pantry-coverage";
 
 export type PantryItemSource = "suggested" | "manual";
@@ -23,7 +26,7 @@ type PantryStepPanelProps = {
   ingredientCatalog: CatalogIngredient[];
   selectedPantryIngredientIds: string[];
   onToggleChecklistItem: (ingredientId: string, checked: boolean) => void;
-  onAddPantryIngredient: (ingredientId: string) => void;
+  onAddPantryIngredient: (result: PantryIngredientAddResult) => void;
   onRemovePantryIngredient: (ingredientId: string) => void;
   onContinueToRank: () => void;
 };
@@ -51,6 +54,9 @@ export function PantryStepPanel({
   onContinueToRank,
 }: PantryStepPanelProps) {
   const checklistNameById = buildChecklistNameMap(suggestedChecklist);
+  const nearMissRecipeCountByIngredientId = new Map(
+    suggestedChecklist.map((item) => [item.ingredientId, item.recipeCount]),
+  );
   const suggestedIds = new Set(suggestedChecklist.map((item) => item.ingredientId));
   const uncheckedSuggested = suggestedChecklist.filter(
     (item) => !selectedPantryIngredientIds.includes(item.ingredientId),
@@ -125,6 +131,7 @@ export function PantryStepPanel({
       <IngredientCatalogCombobox
         catalog={ingredientCatalog}
         selectedIngredientIds={selectedPantryIngredientIds}
+        nearMissRecipeCountByIngredientId={nearMissRecipeCountByIngredientId}
         onSelectIngredient={onAddPantryIngredient}
       />
 

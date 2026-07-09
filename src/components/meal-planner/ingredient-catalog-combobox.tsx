@@ -2,17 +2,32 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CatalogIngredient } from "@/lib/ingredient-category";
-import { filterIngredientCatalog } from "@/lib/ingredient-catalog-search";
+import {
+  filterIngredientCatalog,
+  resolveIngredientFromCatalogQuery,
+} from "@/lib/ingredient-catalog-search";
+
+export type PantryIngredientAddResult = {
+  ingredientId: string;
+  ingredientName: string;
+  nearMissRecipeCount: number;
+};
 
 type IngredientCatalogComboboxProps = {
   catalog: CatalogIngredient[];
   selectedIngredientIds: string[];
-  onSelectIngredient: (ingredientId: string) => void;
+  nearMissRecipeCountByIngredientId?: ReadonlyMap<string, number>;
+  onSelectIngredient: (result: PantryIngredientAddResult) => void;
 };
+
+function formatSuggestionList(suggestions: CatalogIngredient[]): string {
+  return suggestions.map((ingredient) => ingredient.name).join(", ");
+}
 
 export function IngredientCatalogCombobox({
   catalog,
   selectedIngredientIds,
+  nearMissRecipeCountByIngredientId,
   onSelectIngredient,
 }: IngredientCatalogComboboxProps) {
   const listboxId = useId();
@@ -20,6 +35,10 @@ export function IngredientCatalogCombobox({
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [feedback, setFeedback] = useState<{
+    tone: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const suggestions = useMemo(
     () =>
@@ -33,11 +52,78 @@ export function IngredientCatalogCombobox({
     setActiveIndex(0);
   }, [query, suggestions.length]);
 
-  function selectIngredient(ingredientId: string) {
-    onSelectIngredient(ingredientId);
+  function buildAddResult(ingredient: CatalogIngredient): PantryIngredientAddResult {
+    return {
+      ingredientId: ingredient.id,
+      ingredientName: ingredient.name,
+      nearMissRecipeCount:
+        nearMissRecipeCountByIngredientId?.get(ingredient.id) ?? 0,
+    };
+  }
+
+  function selectIngredient(ingredient: CatalogIngredient) {
+    if (selectedIngredientIds.includes(ingredient.id)) {
+      setFeedback({
+        tone: "error",
+        message: `${ingredient.name} is already in your pantry list.`,
+      });
+      return;
+    }
+
+    const result = buildAddResult(ingredient);
+    onSelectIngredient(result);
     setQuery("");
     setIsOpen(false);
+    setFeedback({
+      tone: "success",
+      message:
+        result.nearMissRecipeCount > 0
+          ? `Added ${ingredient.name} — helps ${result.nearMissRecipeCount} near-miss recipe${result.nearMissRecipeCount === 1 ? "" : "s"}.`
+          : `Added ${ingredient.name} to your pantry for this session.`,
+    });
     inputRef.current?.focus();
+  }
+
+  function attemptResolveQuery() {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setFeedback({
+        tone: "error",
+        message: "Type an ingredient name to search the catalog.",
+      });
+      return;
+    }
+
+    const resolution = resolveIngredientFromCatalogQuery(catalog, trimmed);
+    if (resolution.kind === "match") {
+      selectIngredient(resolution.ingredient);
+      return;
+    }
+
+    if (resolution.kind === "suggestions") {
+      const available = resolution.suggestions.filter(
+        (ingredient) => !selectedIngredientIds.includes(ingredient.id),
+      );
+      if (available.length === 1) {
+        selectIngredient(available[0]!);
+        return;
+      }
+
+      setFeedback({
+        tone: "error",
+        message:
+          available.length > 0
+            ? `We don't recognize "${trimmed}" — did you mean ${formatSuggestionList(available.slice(0, 3))}? Pick one from the list.`
+            : `We don't recognize "${trimmed}". Pick a catalog ingredient from the suggestions.`,
+      });
+      setIsOpen(true);
+      return;
+    }
+
+    setFeedback({
+      tone: "error",
+      message: `We don't recognize "${trimmed}". Try a different spelling or pick from the catalog suggestions.`,
+    });
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -58,9 +144,13 @@ export function IngredientCatalogCombobox({
       return;
     }
 
-    if (event.key === "Enter" && suggestions[activeIndex]) {
+    if (event.key === "Enter") {
       event.preventDefault();
-      selectIngredient(suggestions[activeIndex]!.id);
+      if (isOpen && suggestions[activeIndex]) {
+        selectIngredient(suggestions[activeIndex]!);
+        return;
+      }
+      attemptResolveQuery();
       return;
     }
 
@@ -74,27 +164,38 @@ export function IngredientCatalogCombobox({
       <label className="field-label" htmlFor={`${listboxId}-input`}>
         Add a pantry item
       </label>
-      <input
-        ref={inputRef}
-        id={`${listboxId}-input`}
-        className="text-input"
-        type="search"
-        role="combobox"
-        aria-expanded={isOpen && suggestions.length > 0}
-        aria-controls={listboxId}
-        aria-autocomplete="list"
-        placeholder="Search catalog ingredients"
-        value={query}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setIsOpen(true);
-        }}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => {
-          window.setTimeout(() => setIsOpen(false), 120);
-        }}
-        onKeyDown={handleKeyDown}
-      />
+      <div className="ingredient-catalog-input-row">
+        <input
+          ref={inputRef}
+          id={`${listboxId}-input`}
+          className="text-input"
+          type="search"
+          role="combobox"
+          aria-expanded={isOpen && suggestions.length > 0}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-describedby={`${listboxId}-feedback`}
+          placeholder="Search catalog ingredients"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setIsOpen(true);
+            setFeedback(null);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => {
+            window.setTimeout(() => setIsOpen(false), 120);
+          }}
+          onKeyDown={handleKeyDown}
+        />
+        <button
+          type="button"
+          className="secondary-button ingredient-catalog-add-button"
+          onClick={attemptResolveQuery}
+        >
+          Add
+        </button>
+      </div>
       {isOpen && suggestions.length > 0 ? (
         <ul className="ingredient-catalog-suggestions" id={listboxId} role="listbox">
           {suggestions.map((ingredient, index) => (
@@ -109,7 +210,7 @@ export function IngredientCatalogCombobox({
                     : "ingredient-catalog-suggestion"
                 }
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectIngredient(ingredient.id)}
+                onClick={() => selectIngredient(ingredient)}
               >
                 <span>{ingredient.name}</span>
                 <span className="ingredient-catalog-suggestion-category">
@@ -120,8 +221,20 @@ export function IngredientCatalogCombobox({
           ))}
         </ul>
       ) : null}
-      <p className="field-hint">
-        Pick a catalog ingredient — free text is not saved to your pantry list.
+      <p
+        id={`${listboxId}-feedback`}
+        className={
+          feedback?.tone === "error"
+            ? "field-error ingredient-catalog-feedback"
+            : feedback?.tone === "success"
+              ? "field-success ingredient-catalog-feedback"
+              : "field-hint"
+        }
+        role={feedback?.tone === "error" ? "alert" : "status"}
+        aria-live="polite"
+      >
+        {feedback?.message ??
+          "Pick a catalog ingredient — unknown entries are not saved to your pantry list."}
       </p>
     </div>
   );

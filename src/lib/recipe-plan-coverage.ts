@@ -35,9 +35,19 @@ export type SuggestedPantryChecklistItem = {
 const NEAR_MISS_MIN_MISSING = 1;
 const NEAR_MISS_MAX_MISSING = 4;
 
-const ingredientCatalogById = new Map(
+const internalCatalogById = new Map(
   INTERNAL_CATALOG_INGREDIENTS.map((ingredient) => [ingredient.id, ingredient]),
 );
+
+export function buildCatalogIdSet(catalog: CatalogIngredient[]): ReadonlySet<string> {
+  return new Set(catalog.map((ingredient) => ingredient.id));
+}
+
+export function buildCatalogById(
+  catalog: CatalogIngredient[],
+): ReadonlyMap<string, CatalogIngredient> {
+  return new Map(catalog.map((ingredient) => [ingredient.id, ingredient]));
+}
 
 function resolvePantrySet(pantryIngredientIds?: ReadonlySet<string>): ReadonlySet<string> {
   return pantryIngredientIds ?? new Set<string>();
@@ -173,8 +183,10 @@ export function isNearMissCoverage(assessment: RecipePlanCoverageResult): boolea
 
 export function buildSuggestedPantryChecklist(
   assessments: RecipePlanCoverageResult[],
+  catalogById: ReadonlyMap<string, CatalogIngredient> = internalCatalogById,
 ): SuggestedPantryChecklistItem[] {
   const recipeCountByIngredientId = new Map<string, number>();
+  const displayNameByIngredientId = new Map<string, string>();
 
   for (const assessment of assessments) {
     if (!isNearMissCoverage(assessment)) {
@@ -186,15 +198,21 @@ export function buildSuggestedPantryChecklist(
         line.ingredientId,
         (recipeCountByIngredientId.get(line.ingredientId) ?? 0) + 1,
       );
+      if (!displayNameByIngredientId.has(line.ingredientId)) {
+        displayNameByIngredientId.set(line.ingredientId, line.displayName);
+      }
     }
   }
 
   return [...recipeCountByIngredientId.entries()]
     .map(([ingredientId, recipeCount]) => {
-      const catalogRow = ingredientCatalogById.get(ingredientId);
+      const catalogRow = catalogById.get(ingredientId);
       return {
         ingredientId,
-        ingredientName: catalogRow?.name ?? ingredientId,
+        ingredientName:
+          catalogRow?.name ??
+          displayNameByIngredientId.get(ingredientId) ??
+          ingredientId,
         ...(catalogRow?.category ? { category: catalogRow.category } : {}),
         recipeCount,
       };
@@ -208,16 +226,21 @@ export function buildSuggestedPantryChecklist(
     });
 }
 
-export function buildIngredientCatalogForClient(): CatalogIngredient[] {
-  return INTERNAL_CATALOG_INGREDIENTS.map((ingredient) => ({ ...ingredient }));
+export function buildIngredientCatalogForClient(
+  catalog: CatalogIngredient[],
+): CatalogIngredient[] {
+  return catalog.map((ingredient) => ({ ...ingredient }));
 }
 
-export function filterValidPantryIngredientIds(ids: string[]): string[] {
+export function filterValidPantryIngredientIds(
+  ids: string[],
+  validIds: ReadonlySet<string>,
+): string[] {
   const seen = new Set<string>();
   const valid: string[] = [];
 
   for (const id of ids) {
-    if (!ingredientCatalogById.has(id) || seen.has(id)) {
+    if (!validIds.has(id) || seen.has(id)) {
       continue;
     }
     seen.add(id);

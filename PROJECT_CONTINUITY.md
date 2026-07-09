@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 rule wording corrected to match manual-pause-only ingest reality. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene — now on `origin/master`. **2026-07-06:** Dependabot merges (#5 pg, #6 react-dom, #8 zod) + Publix locator/dedupe on master; **FRESH-1 weekly-ad promotion gate aligned to 24h ranked-read TTL** — **CLOSED** (`1304542` gate + `08f4bfb`/`aa884a1` fixture follow-up; CI [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318) green on `aa884a1`); **locator chain inference P1** — **CLOSED** (`0c73016`; CI [28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364) green). **Store-discovery quick patch (2026-07-06)** — display names, Aldi bootstrap coord, straight-line distance labels — **CLOSED locally** (see [Store-discovery bug status](#store-discovery-bug-status-2026-07-06)). **2026-07-08:** Fixture OSM permanently separated from live Overpass + same-chain collocated catalog collapse (Decision A) — **CLOSED** on `e5b1285` (CI [28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879)). **Active queue:** Saved persistence + cuisine chips (R11) deferred; Phase D live-OSM geometry witnesses still deferred.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 rule wording corrected to match manual-pause-only ingest reality. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene — now on `origin/master`. **2026-07-06:** Dependabot merges (#5 pg, #6 react-dom, #8 zod) + Publix locator/dedupe on master; **FRESH-1 weekly-ad promotion gate aligned to 24h ranked-read TTL** — **CLOSED** (`1304542` gate + `08f4bfb`/`aa884a1` fixture follow-up; CI [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318) green on `aa884a1`); **locator chain inference P1** — **CLOSED** (`0c73016`; CI [28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364) green). **Store-discovery quick patch (2026-07-06)** — display names, Aldi bootstrap coord, straight-line distance labels — **CLOSED locally** (see [Store-discovery bug status](#store-discovery-bug-status-2026-07-06)). **2026-07-08:** Fixture OSM permanently separated from live Overpass + same-chain collocated catalog collapse (Decision A) — **CLOSED** on `e5b1285` (CI [28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879)). **Pantry Phase 2 (2026-07-08):** DB-backed pantry validation + full-catalog manual entry autocomplete — **shipped locally** (see changelog); **INTERNAL_CATALOG chain-neutrality audit** shows Kroger-heavy priced coverage — follow-up backlog, not fixed this slice. **Active queue:** Saved persistence + cuisine chips (R11) deferred; Phase D live-OSM geometry witnesses still deferred; INTERNAL_CATALOG content-bias vs weekly-ad non-Kroger chains.
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-08):** Local — `npm test` **865/865**, `npm run test:integration` **29/29**, `npm run build` **pass**. Remote CI on `e5b1285` — **green** [28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879) (verify + semgrep + integration + e2e). `yum4less_dev` after `019`: **no** `aldi-23111`; slug `aldi-mechanicsville` at `37.611004,-77.336853` with `source_store_id=osm-node-6531578976`; **0** non-Kroger same-chain catalog pairs &lt;0.05 mi. Not claiming beta v1 demo-complete or homelab deploy-ready.
+**Verified (2026-07-08):** Local — `npm test` **879/879**, `npm run test:integration` **29/29**, `npm run build` **pass**. Remote CI on prior slice `e5b1285` — **green** [28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879). Pantry Phase 2 remote CI pending this commit. Not claiming beta v1 demo-complete or homelab deploy-ready.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -243,6 +243,16 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-08 — Pantry Phase 2: DB validation, manual entry UX, chain-neutrality audit
+
+- **Theme:** Pantry checklist silently dropped TheMealDB-normalized ingredient IDs because validation used the 97-item `INTERNAL_CATALOG` list instead of the live `ingredients` table; manual pantry entry was limited to that same static list.
+- **Shipped (2b):** `filterValidPantryIngredientIds` validates against DB catalog (`loadCatalogIngredients` / snapshot ingredients); `/api/pantry-coverage` returns full 224+ row catalog; rank path uses snapshot ingredient ids; live fixture repro **+34 fully-covered** (8→42) on $30/multi-store/any-diet at `37.6085,-77.3739`.
+- **Shipped (2c):** `IngredientCatalogCombobox` — fuzzy autocomplete, explicit rejection + “did you mean” suggestions, Add button, success/near-miss confirmation copy; pinned in unit/component tests (no silent no-op).
+- **Shipped (side):** Welcome-step default budget **$16 → $20** (`use-meal-planner`).
+- **Phase 2a finding (investigation only):** `INTERNAL_CATALOG` priced coverage in `yum4less_dev` (90d, in-stock, official+weekly-ad) is **heavily Kroger-skewed** — Kroger **91/97**, Aldi **13/97**, Publix **0/97**, Food Lion **13/97**, Walmart **3/97**; **68/97** ingredients Kroger-only; **0/97** across all five chains. Architectural call sites are chain-agnostic; **content/ingest success is not**. Flagged for follow-up — not fixed this slice.
+- **Honest limits:** Did not rebalance the 97-item tracked list or non-Kroger weekly-ad match rates. `tsconfig` excludes `scripts/**` from Next typecheck so ad-hoc investigation scripts do not block `npm run build`.
+- **Evidence:** `npm test` **879/879**; `npm run build` **pass**; live `scripts/.verify-pantry-phase2-fix.ts` output; chain audit `scripts/.investigate-internal-catalog-chain-neutrality.ts`. Remote CI: pending commit push.
 
 ### 2026-07-08 — Same-chain collocated catalog identity (Aldi ZIP twin + Decision A)
 
@@ -1866,9 +1876,9 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` (local) | 2026-07-08 | **865/865** pass (catalog collocated identity + Settings fold) |
+| `npm test` (local) | 2026-07-08 | **879/879** pass (pantry DB validation + catalog combobox) |
 | `npm run test:integration` (local) | 2026-07-08 | **29/29** pass (Aldi prefer-colocate + ZIP twin prevention) |
-| `npm run build` (local) | 2026-07-08 | **Pass** |
+| `npm run build` (local) | 2026-07-08 | **Pass** (pantry Phase 2 slice) |
 | `yum4less_dev` after `019` | 2026-07-08 | **no** `aldi-23111`; `aldi-mechanicsville` @ `37.611004,-77.336853` + `osm-node-6531578976`; **0** non-Kroger same-chain catalog pairs &lt;0.05 mi |
 | Postgres MCP / `yum4less_dev` fixture purge | 2026-07-08 | After `018`: **0** `osm-node-90000*`, **0** `fixture-osm-*` / `yum4less-map-fixture`; live Aldi `osm-node-6531578976` → `openstreetmap-overpass` |
 | market-search spot-check (`37.6085,-77.3739`) | 2026-07-08 | Prior fixture-OSM slice: Aldi selectable pool catalog + live OSM; **fixture_or_synthetic=0** — not re-run after `019` |

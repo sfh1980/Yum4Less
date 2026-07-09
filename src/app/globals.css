@@ -804,6 +804,31 @@ select {
   font-size: 0.9rem;
 }
 
+.field-success {
+  margin: 0;
+  color: var(--success-text, #1a7f37);
+  font-size: 0.9rem;
+}
+
+.ingredient-catalog-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.ingredient-catalog-input-row .text-input {
+  flex: 1 1 auto;
+}
+
+.ingredient-catalog-add-button {
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.ingredient-catalog-feedback {
+  margin-top: 0.45rem;
+}
+
 .market-summary {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
