@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** Local — `npm test` **899/899**, `npm run test:integration` **29/29**, `npm run test:e2e:ci` **23 passed / 1 skipped / 1 flaky** (meal-planner UX slice). Not claiming beta v1 demo-complete or homelab deploy-ready.
+**Verified (2026-07-09):** Remote CI on `19dff42` — [run 29043588801](https://github.com/sfh1980/Yum4Less/actions/runs/29043588801) **green** (verify + semgrep + integration + e2e). Local — `npm test` **899/899**, `npm run test:integration` **29/29**. Not claiming beta v1 demo-complete or homelab deploy-ready.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -248,7 +248,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 - **Theme:** Reduce screen bloat on pantry/results; multi-store picks cheapest per-ingredient at session time; surface gate-failed stores in Settings; skip redundant Ingredients confirmation.
 - **Shipped:** Collapsible pantry session list (count header); nested Store plan / Shopping plan / Recipe steps accordions in meal cards; TheMealDB `▢` junk filtered + index-based step keys; **Use all ingredients and check pantry** jumps straight to pantry; Settings shows gate-failed stores greyed/unselectable with `rolloutNote`; `compareMultiStoreObservationQuality` (price-first) in multi-store plan builder; multi-store shopping-plan trust note on price change.
-- **Evidence:** `npm test` **899/899** (+6); `npm run build` pass; `npm run test:integration` **29/29**; `npm run test:e2e:ci` **23 passed**, 1 skipped, 1 flaky (`navigation-theme` map discovery timing).
+- **Evidence:** `npm test` **899/899** (+6); `npm run build` pass; `npm run test:integration` **29/29**; `npm run test:e2e:ci` **23 passed**, 1 skipped, 1 flaky locally (`navigation-theme`); remote CI **green** on `19dff42` — [run 29043588801](https://github.com/sfh1980/Yum4Less/actions/runs/29043588801) (verify + semgrep + integration + e2e all success).
 
 ### 2026-07-09 — Coverage slice 5: Aldi Flipp + direct scrape merge on low coverage
 
