@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { CatalogIngredient } from "@/lib/ingredient-category";
 import {
   IngredientCatalogCombobox,
@@ -61,6 +62,7 @@ export function PantryStepPanel({
   const uncheckedSuggested = suggestedChecklist.filter(
     (item) => !selectedPantryIngredientIds.includes(item.ingredientId),
   );
+  const [pantryListExpanded, setPantryListExpanded] = useState(false);
 
   return (
     <div className="panel panel-padding meal-planner-panel meal-planner-panel--inputs flow-panel flow-panel--pantry">
@@ -137,36 +139,48 @@ export function PantryStepPanel({
 
       {pantryRows.length > 0 ? (
         <section className="pantry-combined-list-block" aria-label="Your pantry selections">
-          <h3 className="card-title">Your pantry for this session</h3>
-          <ul className="pantry-combined-list">
-            {pantryRows.map((row) => (
-              <li key={row.ingredientId} className="pantry-combined-list-item">
-                <div className="pantry-combined-list-copy">
-                  <span className="pantry-combined-list-name">
-                    {row.ingredientName ||
-                      checklistNameById.get(row.ingredientId) ||
-                      row.ingredientId}
-                  </span>
-                  <span
-                    className={
-                      row.source === "suggested"
-                        ? "pantry-source-badge pantry-source-badge--suggested"
-                        : "pantry-source-badge pantry-source-badge--manual"
-                    }
+          <h3 className="card-title pantry-combined-list-heading">
+            <button
+              type="button"
+              className="pantry-combined-list-trigger"
+              aria-expanded={pantryListExpanded}
+              onClick={() => setPantryListExpanded((current) => !current)}
+            >
+              Your pantry for this session ({pantryRows.length}{" "}
+              {pantryRows.length === 1 ? "item" : "items"})
+            </button>
+          </h3>
+          {pantryListExpanded ? (
+            <ul className="pantry-combined-list">
+              {pantryRows.map((row) => (
+                <li key={row.ingredientId} className="pantry-combined-list-item">
+                  <div className="pantry-combined-list-copy">
+                    <span className="pantry-combined-list-name">
+                      {row.ingredientName ||
+                        checklistNameById.get(row.ingredientId) ||
+                        row.ingredientId}
+                    </span>
+                    <span
+                      className={
+                        row.source === "suggested"
+                          ? "pantry-source-badge pantry-source-badge--suggested"
+                          : "pantry-source-badge pantry-source-badge--manual"
+                      }
+                    >
+                      {row.source === "suggested" ? "Suggested" : "You added"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => onRemovePantryIngredient(row.ingredientId)}
                   >
-                    {row.source === "suggested" ? "Suggested" : "You added"}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => onRemovePantryIngredient(row.ingredientId)}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </section>
       ) : null}
 

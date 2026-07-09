@@ -59,11 +59,11 @@ describe("Themealdb parsing helpers", () => {
     ]);
   });
 
-  it("parses instructions into non-empty steps", () => {
+  it("parses instructions into non-empty steps and drops decorative bullets", () => {
     const meal = {
       idMeal: "1",
       strMeal: "Test",
-      strInstructions: "Step one\n\nStep two\r\n",
+      strInstructions: "Step one\n\n▢\nStep two\r\n",
     } as ThemealdbLookupMeal;
 
     expect(parseThemealdbInstructions(meal)).toEqual(["Step one", "Step two"]);

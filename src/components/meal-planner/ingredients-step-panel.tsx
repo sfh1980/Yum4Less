@@ -44,7 +44,6 @@ export function IngredientsStepPanel({
     (ingredientPickMode === "manual" && selectedIngredientIds.length === 0);
   const showManualPicker = ingredientPickMode === "manual";
   const showGate = ingredientPickMode === "unset" && ingredientCount > 0;
-  const showAllConfirmation = ingredientPickMode === "all";
   const blockedStatus = buildMarketShopperBlockedStatus(market);
 
   return (
@@ -57,13 +56,6 @@ export function IngredientsStepPanel({
           onPickManually={onPickManually}
           onUseAll={onUseAllIngredients}
         />
-      ) : null}
-
-      {showAllConfirmation ? (
-        <p className="panel-copy" role="status">
-          Ranking will use all {ingredientCount} sale ingredient
-          {ingredientCount === 1 ? "" : "s"} at your selected store(s).
-        </p>
       ) : null}
 
       {showManualPicker ? (
@@ -100,7 +92,7 @@ export function IngredientsStepPanel({
         </p>
       ) : null}
 
-      {ingredientPickMode !== "unset" ? (
+      {ingredientPickMode === "manual" ? (
         <div className="action-row">
           <button
             className="primary-button"

@@ -241,6 +241,40 @@ describe("buildMultiStorePlan", () => {
     expect(plan[0]?.storeName).toBe("Aldi");
   });
 
+  it("prefers cheaper weekly-ad price over higher-tier official API in multi-store plans", () => {
+    const observations = [
+      buildWeeklyAdObservation({
+        storeId: "kroger-mechanicsville",
+        ingredientId: "chicken-thighs",
+        price: 3.49,
+        priceSource: "kroger-official-api",
+        priceSourceTier: 1,
+      }),
+      buildWeeklyAdObservation({
+        storeId: "aldi-mechanicsville",
+        ingredientId: "chicken-thighs",
+        price: 2.99,
+        priceSource: "aldi-weekly-ad-scrape",
+        priceSourceTier: 2,
+      }),
+    ];
+
+    const plan = buildMultiStorePlan(
+      {
+        ...blackBeanTacoRecipe,
+        ingredients: [
+          { ingredientId: "chicken-thighs", displayName: "Chicken thighs", quantityNote: "1.5 lb" },
+        ],
+      },
+      splitStoreNearbyStores,
+      observations,
+      "database",
+    );
+
+    expect(plan[0]?.storeName).toBe("Aldi");
+    expect(plan[0]?.price).toBe(2.99);
+  });
+
   it("can satisfy missing lines from pantry in multi-store plans", () => {
     const plan = buildMultiStorePlan(
       blackBeanTacoRecipe,

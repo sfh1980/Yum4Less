@@ -21,8 +21,7 @@ test.describe("Pantry check step", () => {
   test("always shows pantry step with continue enabled even when checklist is empty", async ({
     page,
   }) => {
-    await page.getByRole("button", { name: /Use all \d+ sale ingredient/i }).click();
-    await page.getByRole("button", { name: "Continue to pantry check" }).click();
+    await page.getByRole("button", { name: "Use all ingredients and check pantry" }).click();
 
     await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
     await expect(page.getByText(/session only/i)).toBeVisible();
@@ -32,13 +31,15 @@ test.describe("Pantry check step", () => {
   });
 
   test("lets shoppers add a catalog pantry item and continue to rank", async ({ page }) => {
-    await page.getByRole("button", { name: /Use all \d+ sale ingredient/i }).click();
-    await page.getByRole("button", { name: "Continue to pantry check" }).click();
+    await page.getByRole("button", { name: "Use all ingredients and check pantry" }).click();
     await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
 
     await page.getByRole("combobox", { name: "Add a pantry item" }).fill("olive");
     await page.getByRole("option", { name: /Olive oil/i }).click();
 
+    await page
+      .getByRole("button", { name: /Your pantry for this session \(\d+ items?\)/i })
+      .click();
     await expect(page.getByText("You added")).toBeVisible();
     await page.getByRole("button", { name: "Continue to rank" }).click();
     await expect(page.getByRole("heading", { name: "Rank dinners" })).toBeVisible();

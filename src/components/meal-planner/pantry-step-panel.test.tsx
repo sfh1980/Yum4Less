@@ -48,7 +48,9 @@ describe("PantryStepPanel", () => {
     expect(onContinueToRank).toHaveBeenCalledOnce();
   });
 
-  it("renders combined pantry rows with source badges", () => {
+  it("renders combined pantry rows with source badges", async () => {
+    const user = userEvent.setup();
+
     render(
       createElement(PantryStepPanel, {
         ...baseProps,
@@ -67,6 +69,10 @@ describe("PantryStepPanel", () => {
         ],
         selectedPantryIngredientIds: ["cumin", "olive-oil"],
       }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /Your pantry for this session \(2 items\)/i }),
     );
 
     expect(screen.getByText("Suggested")).toBeInTheDocument();

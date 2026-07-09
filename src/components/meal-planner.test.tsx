@@ -28,14 +28,13 @@ async function completeWelcomeFlow(user: ReturnType<typeof userEvent.setup>) {
 
 async function completeIngredientGate(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    screen.getByRole("button", { name: /Use all \d+ sale ingredient/i }),
+    screen.getByRole("button", { name: "Use all ingredients and check pantry" }),
   );
+  await screen.findByRole("heading", { name: "Pantry check" });
 }
 
 async function goToRankStep(user: ReturnType<typeof userEvent.setup>) {
   await completeIngredientGate(user);
-  await user.click(screen.getByRole("button", { name: "Continue to pantry check" }));
-  await screen.findByRole("heading", { name: "Pantry check" });
   await user.click(screen.getByRole("button", { name: "Continue to rank" }));
   await screen.findByRole("heading", { name: "Rank dinners" });
 }
@@ -141,6 +140,7 @@ describe("MealPlanner", () => {
         "Saved sale prices at Kroger Mechanicsville — not live checkout; confirm in store.",
       ),
     ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Shopping plan" }));
     expect(screen.getAllByText(/Est\. \$6\.49/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(1);
     expect(screen.getAllByText(/Treat totals as estimates/i)).toHaveLength(1);

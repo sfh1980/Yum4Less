@@ -33,11 +33,13 @@ describe("IngredientGatePanel", () => {
       }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Use all 2 sale ingredients" }));
+    await user.click(
+      screen.getByRole("button", { name: "Use all ingredients and check pantry" }),
+    );
     expect(onUseAll).toHaveBeenCalledOnce();
   });
 
-  it("uses singular copy when only one ingredient is available", () => {
+  it("shows the unified use-all action label", () => {
     render(
       createElement(IngredientGatePanel, {
         ingredientCount: 1,
@@ -46,6 +48,8 @@ describe("IngredientGatePanel", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: "Use all 1 sale ingredient" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Use all ingredients and check pantry" }),
+    ).toBeInTheDocument();
   });
 });

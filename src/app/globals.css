@@ -420,6 +420,11 @@ select {
   background: var(--accent-soft);
 }
 
+.store-multi-select-option--disabled {
+  opacity: 0.72;
+  background: color-mix(in srgb, var(--surface) 92%, var(--text) 4%);
+}
+
 .store-multi-select-option input {
   margin: 0;
 }
@@ -430,6 +435,19 @@ select {
   font-weight: 600;
   line-height: 1.4;
   cursor: pointer;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.store-multi-select-option--disabled .store-multi-select-label {
+  cursor: not-allowed;
+}
+
+.store-multi-select-disabled-note {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .store-multi-select-label:focus-visible,
@@ -959,6 +977,72 @@ select {
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+
+.card-section--collapsible {
+  margin-top: 0.75rem;
+}
+
+.card-section-heading {
+  margin: 0;
+}
+
+.card-section-trigger {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card-section-trigger:hover {
+  color: var(--accent);
+}
+
+.card-section-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.card-section-panel {
+  margin-top: 0.65rem;
+}
+
+.meal-card-price-change-note {
+  margin-bottom: 0.65rem;
+}
+
+.pantry-combined-list-heading {
+  margin: 0;
+}
+
+.pantry-combined-list-trigger {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pantry-combined-list-trigger:hover {
+  color: var(--accent);
+}
+
+.pantry-combined-list-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .card-topline--title-hidden {

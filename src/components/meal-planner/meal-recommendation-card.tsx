@@ -1,5 +1,6 @@
 "use client";
 
+import { CollapsibleCardSection } from "@/components/meal-planner/collapsible-card-section";
 import { MapPinIcon } from "@/components/map-pin-icon";
 import type { MealRecommendation, RecommendationExperience } from "@/lib/recommendation-service";
 import { HelpHint } from "@/components/help-hint";
@@ -178,8 +179,7 @@ export function MealRecommendationCard({
         Key ingredients: {meal.ingredientHighlights.join(", ")}.
       </p>
 
-      <div className="card-section">
-        <h4>Store plan</h4>
+      <CollapsibleCardSection title="Store plan">
         <div className="store-summary-list">
           {meal.storePlan.map((store) => (
             <div className="store-summary-item" key={store.storeName}>
@@ -196,10 +196,15 @@ export function MealRecommendationCard({
             </div>
           ))}
         </div>
-      </div>
+      </CollapsibleCardSection>
 
-      <div className="card-section">
-        <h4>Shopping plan</h4>
+      <CollapsibleCardSection title="Shopping plan">
+        {form.shoppingStyle === "multi-store" ? (
+          <p className="field-hint badge-trust meal-card-price-change-note">
+            Estimated prices by store for this session — subject to change in
+            store.
+          </p>
+        ) : null}
         {hasPantryLines ? (
           <p className="field-hint">
             Pantry items are listed for context and are not included in the
@@ -232,7 +237,7 @@ export function MealRecommendationCard({
             ),
           )}
         </ul>
-      </div>
+      </CollapsibleCardSection>
 
       {form.shoppingStyle === "multi-store" &&
       activeLocationRequest?.mode === "browser" &&
@@ -248,14 +253,13 @@ export function MealRecommendationCard({
         />
       ) : null}
 
-      <div className="card-section">
-        <h4>Recipe steps</h4>
+      <CollapsibleCardSection title="Recipe steps">
         <ol className="detail-list detail-list-numbered">
-          {meal.instructions.map((step) => (
-            <li key={`${meal.title}-${step}`}>{step}</li>
+          {meal.instructions.map((step, index) => (
+            <li key={`${meal.title}-step-${index}`}>{step}</li>
           ))}
         </ol>
-      </div>
+      </CollapsibleCardSection>
     </article>
   );
 }

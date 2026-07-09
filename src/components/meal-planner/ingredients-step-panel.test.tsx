@@ -34,7 +34,7 @@ describe("IngredientsStepPanel", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: /Use all 2 sale ingredients/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use all ingredients and check pantry" })).toBeInTheDocument();
     expect(screen.getByText(/estimated/i)).toBeInTheDocument();
   });
 
@@ -51,12 +51,26 @@ describe("IngredientsStepPanel", () => {
     expect(screen.getByRole("checkbox", { name: /Chicken thighs/i })).toBeInTheDocument();
   });
 
-  it("disables continue when Tier C market has zero sale ingredients", () => {
+  it("does not show continue when pick mode is all (use-all skips to pantry in flow)", () => {
+    render(
+      createElement(IngredientsStepPanel, {
+        ...baseProps,
+        market: buildTestMarket(),
+        ingredientPickMode: "all",
+      }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Continue to pantry check" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("disables continue in manual mode when Tier C market has zero sale ingredients", () => {
     render(
       createElement(IngredientsStepPanel, {
         ...baseProps,
         market: buildTierCMarket(),
-        ingredientPickMode: "all",
+        ingredientPickMode: "manual",
       }),
     );
 
@@ -64,7 +78,7 @@ describe("IngredientsStepPanel", () => {
     expect(screen.getByText(/No sale ingredients are available/i)).toBeInTheDocument();
   });
 
-  it("continues to pantry after all-ingredient confirmation", async () => {
+  it("continues to pantry from manual mode", async () => {
     const onContinueToPantry = vi.fn();
     const user = userEvent.setup();
 
@@ -72,7 +86,8 @@ describe("IngredientsStepPanel", () => {
       createElement(IngredientsStepPanel, {
         ...baseProps,
         market: buildTestMarket(),
-        ingredientPickMode: "all",
+        ingredientPickMode: "manual",
+        selectedIngredientIds: ["chicken-thighs"],
         onContinueToPantry,
       }),
     );

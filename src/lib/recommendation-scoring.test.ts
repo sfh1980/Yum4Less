@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareMultiStoreObservationQuality,
   compareObservationQuality,
   comparePlanQuality,
   getConfidenceLabel,
@@ -306,6 +307,36 @@ describe("compareObservationQuality", () => {
     const observation = buildObservation();
 
     expect(compareObservationQuality(observation, observation)).toBe(0);
+  });
+});
+
+describe("compareMultiStoreObservationQuality", () => {
+  it("prefers lower price before source tier", () => {
+    const cheaperWeeklyAd = buildObservation({
+      price: 2.99,
+      priceSourceTier: 3,
+      priceSource: "publix-weekly-ad-scrape",
+    });
+    const pricierOfficialApi = buildObservation({
+      price: 3.49,
+      priceSourceTier: 1,
+      priceSource: "kroger-official-api",
+    });
+
+    expect(
+      compareMultiStoreObservationQuality(cheaperWeeklyAd, pricierOfficialApi),
+    ).toBeLessThan(0);
+  });
+
+  it("falls back to tier and freshness when prices tie", () => {
+    const left = buildObservation({ price: 0.55, matchConfidence: 0.72 });
+    const right = buildObservation({
+      price: 0.55,
+      priceSource: "aldi-weekly-ad-scrape",
+      matchConfidence: 0.95,
+    });
+
+    expect(compareMultiStoreObservationQuality(left, right)).toBeGreaterThan(0);
   });
 });
 

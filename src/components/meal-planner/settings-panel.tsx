@@ -72,6 +72,11 @@ export function SettingsPanel({
   }
 
   function handleSingleStoreChange(storeId: string) {
+    const store = selectableStores.find((candidate) => candidate.id === storeId);
+    if (storeId && !store?.recommendationEnabled) {
+      return;
+    }
+
     setForm((current) => ({
       ...current,
       selectedStoreIds: storeId ? [storeId] : [],
@@ -79,6 +84,11 @@ export function SettingsPanel({
   }
 
   function handleMultiStoreToggle(storeId: string, checked: boolean) {
+    const store = selectableStores.find((candidate) => candidate.id === storeId);
+    if (!store?.recommendationEnabled) {
+      return;
+    }
+
     setForm((current) => {
       if (checked) {
         return current.selectedStoreIds.includes(storeId)
@@ -185,8 +195,13 @@ export function SettingsPanel({
                 >
                   <option value="">Choose a store</option>
                   {selectableStores.map((store) => (
-                    <option key={store.id} value={store.id}>
+                    <option
+                      key={store.id}
+                      value={store.id}
+                      disabled={!store.recommendationEnabled}
+                    >
                       {formatSettingsStoreOptionLabel(store)}
+                      {!store.recommendationEnabled ? ` — ${store.rolloutNote}` : ""}
                     </option>
                   ))}
                 </select>
@@ -211,23 +226,32 @@ export function SettingsPanel({
                 {selectableStores.map((store) => {
                   const checkboxId = `settings-store-${store.id}`;
                   const selected = form.selectedStoreIds.includes(store.id);
+                  const storeSelectable = store.recommendationEnabled;
 
                   return (
                     <div
                       key={store.id}
-                      className={`store-multi-select-option${selected ? " store-multi-select-option--selected" : ""}`}
+                      className={`store-multi-select-option${selected ? " store-multi-select-option--selected" : ""}${!storeSelectable ? " store-multi-select-option--disabled" : ""}`}
                     >
                       <input
                         id={checkboxId}
                         aria-label={`Select ${formatSettingsStoreOptionLabel(store)}`}
-                        checked={selected}
+                        checked={selected && storeSelectable}
+                        disabled={!storeSelectable}
                         onChange={(event) =>
                           handleMultiStoreToggle(store.id, event.target.checked)
                         }
                         type="checkbox"
                       />
                       <label htmlFor={checkboxId} className="store-multi-select-label">
-                        {formatSettingsStoreOptionLabel(store)}
+                        <span className="store-multi-select-name">
+                          {formatSettingsStoreOptionLabel(store)}
+                        </span>
+                        {!storeSelectable ? (
+                          <span className="store-multi-select-disabled-note">
+                            {store.rolloutNote}
+                          </span>
+                        ) : null}
                       </label>
                       <button
                         type="button"

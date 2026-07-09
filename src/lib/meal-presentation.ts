@@ -6,6 +6,7 @@ import {
 } from "@/lib/seed-vs-provider-recipe-comparison";
 import type { ProviderPricingPreviewResult } from "@/lib/providers/provider-types";
 import { buildThemealdbAttribution } from "@/lib/recipe-import/recipe-ranking-eligibility";
+import { normalizeRecipeInstructionSteps } from "@/lib/recipe-instruction-steps";
 import type {
   MealPreferenceForm,
   MealRecommendation,
@@ -85,7 +86,7 @@ export function toRecommendation(
     ingredientHighlights: candidate.recipe.ingredients
       .slice(0, 3)
       .map((ingredient) => ingredient.displayName.toLowerCase()),
-    instructions: candidate.recipe.steps,
+    instructions: normalizeRecipeInstructionSteps(candidate.recipe.steps),
     shoppingPlan: candidate.shoppingPlan.map((item) => ({
       ...item,
       ...(item.sourcedFromPantry

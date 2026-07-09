@@ -101,15 +101,16 @@ export async function completePantryStepAndContinue(page: Page) {
 }
 
 export async function pickAllIngredientsAndContinue(page: Page) {
-  await page.getByRole("button", { name: /Use all \d+ sale ingredient/i }).click();
-  await page.getByRole("button", { name: "Continue to pantry check" }).click();
+  await page.getByRole("button", { name: "Use all ingredients and check pantry" }).click();
   await completePantryStepAndContinue(page);
 }
 
 export async function goToRankStep(page: Page) {
-  const useAllButton = page.getByRole("button", { name: /Use all \d+ sale ingredient/i });
+  const useAllButton = page.getByRole("button", { name: "Use all ingredients and check pantry" });
   if (await useAllButton.isVisible()) {
     await useAllButton.click();
+    await completePantryStepAndContinue(page);
+    return;
   }
   await page.getByRole("button", { name: "Continue to pantry check" }).click();
   await completePantryStepAndContinue(page);
@@ -251,7 +252,7 @@ export async function runCoreMvpFlow(page: Page) {
 
   await expect(page.getByText(/^Priced$/i)).toHaveCount(0);
 
-  const ingredientGate = page.getByRole("button", { name: /Use all \d+ sale ingredient/i });
+  const ingredientGate = page.getByRole("button", { name: "Use all ingredients and check pantry" });
   await expect(ingredientGate).toBeVisible({ timeout: 30_000 });
 
   await goToRankStep(page);
@@ -309,6 +310,7 @@ export async function runCoreMvpFlow(page: Page) {
       )
       .first(),
   ).toBeVisible();
+  await expandedPanel.getByRole("button", { name: "Shopping plan" }).click();
   await expect(
     expandedPanel
       .locator(".sale-confidence-label")

@@ -9,7 +9,7 @@ import {
 } from "@/lib/price-source-policy";
 import { getSaleConfidence } from "@/lib/sale-confidence";
 import {
-  compareObservationQuality,
+  compareMultiStoreObservationQuality,
   comparePlanQuality,
   getStorePricedPlanItems,
 } from "@/lib/recommendation-scoring";
@@ -111,7 +111,7 @@ export function buildMultiStorePlan(
           candidate.observation !== undefined,
       )
       .sort((left, right) =>
-        compareObservationQuality(left.observation, right.observation),
+        compareMultiStoreObservationQuality(left.observation, right.observation),
       )[0];
 
     if (!bestObservation) {

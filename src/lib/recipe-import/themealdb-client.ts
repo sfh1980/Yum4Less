@@ -4,6 +4,7 @@ import type {
   ThemealdbLookupResponse,
   ThemealdbParsedIngredientLine,
 } from "@/lib/recipe-import/themealdb-types";
+import { normalizeRecipeInstructionSteps } from "@/lib/recipe-instruction-steps";
 import { THEMEALDB_API_BASE } from "@/lib/recipe-import/themealdb-types";
 
 export type ThemealdbFetchFn = (
@@ -103,10 +104,7 @@ export function parseThemealdbInstructions(meal: ThemealdbLookupMeal): string[] 
     return [];
   }
 
-  return raw
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  return normalizeRecipeInstructionSteps(raw.split(/\r?\n/u));
 }
 
 export function parseThemealdbTags(meal: ThemealdbLookupMeal): string[] {

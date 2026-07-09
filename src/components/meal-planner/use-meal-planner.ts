@@ -504,9 +504,13 @@ export function useMealPlanner() {
       setSelectedIngredientIds([]);
       setForm((current) => {
         const selectable = filterSettingsSelectableStores(result.market.nearbyStores);
-        const selectableIds = new Set(selectable.map((store) => store.id));
+        const enabledSelectableIds = new Set(
+          selectable
+            .filter((store) => store.recommendationEnabled)
+            .map((store) => store.id),
+        );
         const persistedSelection = current.selectedStoreIds.filter((storeId) =>
-          selectableIds.has(storeId),
+          enabledSelectableIds.has(storeId),
         );
         const selectedStoreIds =
           persistedSelection.length > 0
@@ -874,7 +878,7 @@ export function useMealPlanner() {
     return () => window.clearTimeout(timer);
   }, [flowStep, pantryIngredientIds, runPantryCoverageAssess]);
 
-  function handleContinueToPantry() {
+  function transitionToPantryStep() {
     rankedStoreScopeRef.current = null;
     setRecommendationState(initialRecommendationState);
     setPantryIngredientIds([]);
@@ -883,6 +887,10 @@ export function useMealPlanner() {
     pantryCoverageStatusRef.current = initialPantryCoverageState.status;
     pantryCoverageRateLimitedUntilRef.current = null;
     setFlowStep("pantry");
+  }
+
+  function handleContinueToPantry() {
+    transitionToPantryStep();
   }
 
   function handleContinueToRank() {
@@ -1045,6 +1053,7 @@ export function useMealPlanner() {
   function handleUseAllIngredients() {
     setIngredientPickMode("all");
     setSelectedIngredientIds([]);
+    transitionToPantryStep();
   }
 
   function handlePickIngredientsManually() {

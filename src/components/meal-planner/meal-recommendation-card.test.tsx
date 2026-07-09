@@ -127,6 +127,8 @@ describe("MealRecommendationCard", () => {
       }),
     });
 
+    fireEvent.click(screen.getByRole("button", { name: "Shopping plan" }));
+
     expect(screen.getByText(/from your pantry, not included in total/i)).toBeInTheDocument();
     expect(screen.getByText(/not included in the estimated total above/i)).toBeInTheDocument();
     expect(screen.queryByText(/Olive oil from Kroger/i)).not.toBeInTheDocument();

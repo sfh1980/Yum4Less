@@ -22,7 +22,7 @@ export function IngredientGatePanel({
 
       <div className="ingredient-gate-actions action-row">
         <button className="primary-button" type="button" onClick={onUseAll}>
-          Use all {ingredientCount} sale ingredient{ingredientCount === 1 ? "" : "s"}
+          Use all ingredients and check pantry
         </button>
         <button className="secondary-button" type="button" onClick={onPickManually}>
           Pick ingredients manually

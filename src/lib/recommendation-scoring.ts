@@ -134,6 +134,19 @@ export function compareObservationQuality(
   );
 }
 
+/** Multi-store plans: cheapest observation at this moment wins; ties use quality signals. */
+export function compareMultiStoreObservationQuality(
+  left: CatalogPriceObservation,
+  right: CatalogPriceObservation,
+) {
+  const priceCompare = left.price - right.price;
+  if (priceCompare !== 0) {
+    return priceCompare;
+  }
+
+  return compareObservationQuality(left, right);
+}
+
 export function getFreshnessLabel(shoppingPlan: ShoppingPlanItem[]) {
   const storePricedPlan = getStorePricedPlanItems(shoppingPlan);
   const scoringPlan = storePricedPlan.length > 0 ? storePricedPlan : shoppingPlan;
