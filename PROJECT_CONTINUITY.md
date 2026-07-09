@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** Four quick-win slice — local `npm test` **903/903**, `npm run test:integration` **29/29**, `npm run build` **pass**, `npm run test:e2e:ci` **23 passed** / 1 skipped / 1 flaky (accordion timing on `navigation-theme`, passed retry); `navigation-theme.spec.ts` **15/15** with `--repeat-each=5 --retries=0`. Remote CI — **pending push** (see changelog). Prior remote CI on **`b18e647`** / **`4b511e9`** — [run 29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870) **green**. **Re-triage pass (same day, read-only):** `npx tsc --noEmit` **84 errors** (up from 64–66 baseline); Phase 2a chain coverage re-measured on `yum4less_dev` — see [Verification snapshot](#verification-snapshot). Not claiming beta v1 demo-complete or homelab deploy-ready.
+**Verified (2026-07-09):** Four quick-win slice — local `npm test` **903/903**, `npm run test:integration` **29/29**, `npm run build` **pass**, `npm run test:e2e:ci` **23 passed** / 1 skipped; `navigation-theme.spec.ts` **15/15** with `--repeat-each=5 --retries=0`. Remote CI [**29056852462**](https://github.com/sfh1980/Yum4Less/actions/runs/29056852462) **green** on **`72f6460`**. Prior remote CI on **`b18e647`** — [29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870). **Re-triage pass (same day, read-only):** `npx tsc --noEmit` **84 errors** (up from 64–66 baseline); Phase 2a chain coverage re-measured on `yum4less_dev` — see [Verification snapshot](#verification-snapshot). Not claiming beta v1 demo-complete or homelab deploy-ready.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -251,8 +251,8 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **2 — `ingest-standards.md` M128/M151 doc drift:** Agent file now matches manual-pause-only reality (no robots.txt automation, no auto-pause, no `YUM4LESS_DISABLE_INGEST_*` env vars in code).
 - **3 — M156 `save money`:** Rephrased trust expanded + confidence help copy; added `/\bsave(?:s|d)?\s+(?:you\s+)?money\b/i` to `FORBIDDEN_TRUST_CLAIM_PATTERNS`; new `help-hint-content.test.ts` covers help popovers (old copy **does** match forbidden pattern — verified before fix).
 - **4 — Map-overlay focus trap:** `useModalDialog` wired into `store-map-overlay.tsx`, `single-store-map-overlay.tsx`, `rank-loading-overlay.tsx`; `modal-overlay-focus-trap.test.tsx` asserts Tab stays in dialog + `.meal-planner-grid-col` inert.
-- **Evidence (local):** `npm test` **903/903**; `npm run test:integration` **29/29**; `npm run build` pass; `npm run test:e2e:ci` **23 passed**, 1 skipped, 1 flaky (`navigation-theme` accordion timing, passed retry); `npx playwright test e2e/navigation-theme.spec.ts --repeat-each=5 --retries=0` **15/15** pass.
-- **Remote CI:** **PLACEHOLDER_CI_RUN** on commit **PLACEHOLDER_SHA**.
+- **Evidence (local):** `npm test` **903/903**; `npm run test:integration` **29/29**; `npm run build` pass; `npm run test:e2e:ci` **23 passed**, 1 skipped (post Kroger-pinned cook test); `npx playwright test e2e/navigation-theme.spec.ts --repeat-each=5 --retries=0` **15/15** pass.
+- **Remote CI:** [**29056852462**](https://github.com/sfh1980/Yum4Less/actions/runs/29056852462) green on **`72f6460`** (stack: **`54a4cd6`** four fixes + **`b24bad7`**/**`72f6460`** navigation-theme CI stability).
 
 ### 2026-07-09 — Full backlog re-triage (read-only)
 
