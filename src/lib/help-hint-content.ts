@@ -23,7 +23,7 @@ export const confidenceLabelHelp = {
   tooltip: "How simple this shopping plan is.",
   popoverTitle: "Confidence label",
   popoverContent:
-    "Confidence labels explain how straightforward the shopping plan is. Single-store estimates are usually easier to follow; multi-store plans may save money but depend on visiting more than one stop.",
+    "Confidence labels explain how straightforward the shopping plan is. Single-store estimates are usually easier to follow; multi-store plans compare prices across your selected stores but depend on visiting more than one stop.",
 } as const;
 
 export const freshnessLabelHelp = {

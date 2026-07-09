@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Bug [pantry-ID-fix] CLOSED** (2026-07-09) — pantry Phase 2 on `648d745`. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**; live **0/97 → 31/97**; CI [29047864858](https://github.com/sfh1980/Yum4Less/actions/runs/29047864858). **Rank intermediate screen removal CLOSED** (2026-07-09) — **`08e8801`**; stacks with UX #7 pantry skip; CI [29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870). **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 rule wording corrected to match manual-pause-only ingest reality. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene — now on `origin/master`. **2026-07-06:** Dependabot merges (#5 pg, #6 react-dom, #8 zod) + Publix locator/dedupe on master; **FRESH-1 weekly-ad promotion gate aligned to 24h ranked-read TTL** — **CLOSED** (`1304542` gate + `08f4bfb`/`aa884a1` fixture follow-up; CI [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318) green on `aa884a1`); **locator chain inference P1** — **CLOSED** (`0c73016`; CI [28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364) green). **Store-discovery quick patch (2026-07-06)** — display names, Aldi bootstrap coord, straight-line distance labels — **CLOSED locally** (see [Store-discovery bug status](#store-discovery-bug-status-2026-07-06)). **2026-07-08:** Fixture OSM permanently separated from live Overpass + same-chain collocated catalog collapse (Decision A) — **CLOSED** on `e5b1285` (CI [28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879)). **Pantry Phase 2 (2026-07-08)** — DB-backed pantry validation + full-catalog manual entry autocomplete — **CLOSED** on `648d745` (CI [28987447695](https://github.com/sfh1980/Yum4Less/actions/runs/28987447695)); **INTERNAL_CATALOG chain-neutrality audit** shows Kroger-heavy priced coverage — follow-up backlog, not fixed this slice. **Active queue:** Saved persistence + cuisine chips (R11) deferred; Phase D live-OSM geometry witnesses still deferred; INTERNAL_CATALOG content-bias vs weekly-ad non-Kroger chains. **Next fix (queued):** e2e `assertMarketSearchStoreResults` scoped-store assertion — `navigation-theme.spec.ts` Kroger flake (**3rd recurrence**, meal-planner UX slice e2e 2026-07-09); see [Deferred backlog](#deferred-backlog-not-v1).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Four quick-win audit fixes CLOSED** (2026-07-09) — e2e scoped-store map assertion, `ingest-standards.md` M128 doc sync, M156 `save money` copy + guard, map-overlay `useModalDialog` focus trap (see changelog). **Bug [pantry-ID-fix] CLOSED** (2026-07-09) — pantry Phase 2 on `648d745`. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`** on `origin/master`; live **`yum4less_dev` re-measure 2026-07-09: **34/97** (35.1%) tracked-ingredient coverage (was 0/97 pre-fix, 31/97 immediately post-fix). CI [29047864858](https://github.com/sfh1980/Yum4Less/actions/runs/29047864858). **Rank intermediate screen removal CLOSED** (2026-07-09) — **`08e8801`**; stacks with UX #7 pantry skip; CI [29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870). **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 manual-pause-only ingest reality now aligned in rules **and** `@ingest-standards`. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene — now on `origin/master`. **2026-07-06:** Dependabot merges (#5 pg, #6 react-dom, #8 zod) + Publix locator/dedupe on master; **FRESH-1 weekly-ad promotion gate aligned to 24h ranked-read TTL** — **CLOSED** (`1304542` gate + `08f4bfb`/`aa884a1` fixture follow-up; CI [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318) green on `aa884a1`); **locator chain inference P1** — **CLOSED** (`0c73016`; CI [28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364) green). **Store-discovery quick patch (2026-07-06)** — display names, Aldi bootstrap coord, straight-line distance labels — **CLOSED locally** (see [Store-discovery bug status](#store-discovery-bug-status-2026-07-06)). **2026-07-08:** Fixture OSM permanently separated from live Overpass + same-chain collocated catalog collapse (Decision A) — **CLOSED** on `e5b1285` (CI [28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879)). **Pantry Phase 2 (2026-07-08)** — DB-backed pantry validation + full-catalog manual entry autocomplete — **CLOSED** on `648d745` (CI [28987447695](https://github.com/sfh1980/Yum4Less/actions/runs/28987447695)). **Coverage slices 2–5 (2026-07-09)** — Kroger p2 terms, Flipp supplemental, per-chain dedupe, Aldi direct-scrape merge — **implemented locally, not on `origin/master`** (uncommitted working tree; see changelog entries + [Verification snapshot](#verification-snapshot)). **Full backlog re-triage (2026-07-09)** — 17 audit items re-verified against live code/DB; see [Backlog re-triage 2026-07-09](#backlog-re-triage-2026-07-09). **Active queue:** store-ID integrity bundle (ranking collapse + stale `selectedStoreIds`); migration ledger. Saved persistence + cuisine chips (R11) deferred.
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** Remote CI on **`4b511e9`** — [run 29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870) **green** (rank-screen removal + Publix ingest docs). Prior **`c18f99e`** ingest fix — [run 29047864858](https://github.com/sfh1980/Yum4Less/actions/runs/29047864858). Local — `npm test` **898/898**, `npm run test:integration` **29/29**, `npm run test:e2e:ci` **23 passed** / 1 skipped / 1 flaky. Not claiming beta v1 demo-complete or homelab deploy-ready.
+**Verified (2026-07-09):** Four quick-win slice — local `npm test` **903/903**, `npm run test:integration` **29/29**, `npm run build` **pass**, `npm run test:e2e:ci` **23 passed** / 1 skipped / 1 flaky (accordion timing on `navigation-theme`, passed retry); `navigation-theme.spec.ts` **15/15** with `--repeat-each=5 --retries=0`. Remote CI — **pending push** (see changelog). Prior remote CI on **`b18e647`** / **`4b511e9`** — [run 29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870) **green**. **Re-triage pass (same day, read-only):** `npx tsc --noEmit` **84 errors** (up from 64–66 baseline); Phase 2a chain coverage re-measured on `yum4less_dev` — see [Verification snapshot](#verification-snapshot). Not claiming beta v1 demo-complete or homelab deploy-ready.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -244,6 +244,30 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 ## Changelog (newest first)
 
+### 2026-07-09 — Four audit quick wins: e2e scoped stores, ingest doc, M156 copy, overlay focus trap — CLOSED
+
+- **Theme:** Close four independent P1/P2 items from [Backlog re-triage 2026-07-09](#backlog-re-triage-2026-07-09) with no new product behavior beyond honest copy and accessibility.
+- **1 — e2e scoped-store assertion (P1):** `assertMarketSearchStoreResults` reads `selectedStoreIds` from Settings localStorage and asserts only those stores on the map overlay (not full `/api/market-search` body). Recommendations rollout gate in `runCoreMvpFlow` uses `{ requireKrogerInFixture: false }` because rank responses return scoped stores.
+- **2 — `ingest-standards.md` M128/M151 doc drift:** Agent file now matches manual-pause-only reality (no robots.txt automation, no auto-pause, no `YUM4LESS_DISABLE_INGEST_*` env vars in code).
+- **3 — M156 `save money`:** Rephrased trust expanded + confidence help copy; added `/\bsave(?:s|d)?\s+(?:you\s+)?money\b/i` to `FORBIDDEN_TRUST_CLAIM_PATTERNS`; new `help-hint-content.test.ts` covers help popovers (old copy **does** match forbidden pattern — verified before fix).
+- **4 — Map-overlay focus trap:** `useModalDialog` wired into `store-map-overlay.tsx`, `single-store-map-overlay.tsx`, `rank-loading-overlay.tsx`; `modal-overlay-focus-trap.test.tsx` asserts Tab stays in dialog + `.meal-planner-grid-col` inert.
+- **Evidence (local):** `npm test` **903/903**; `npm run test:integration` **29/29**; `npm run build` pass; `npm run test:e2e:ci` **23 passed**, 1 skipped, 1 flaky (`navigation-theme` accordion timing, passed retry); `npx playwright test e2e/navigation-theme.spec.ts --repeat-each=5 --retries=0` **15/15** pass.
+- **Remote CI:** **PLACEHOLDER_CI_RUN** on commit **PLACEHOLDER_SHA**.
+
+### 2026-07-09 — Full backlog re-triage (read-only)
+
+- **Theme:** Re-verified 17 audit/deferred backlog items against live codebase and `yum4less_dev` (not memory or prior descriptions).
+- **Key refreshed evidence:** `npx tsc --noEmit` **84 errors** (grown from 64–66); no `schema_migrations` table; `applyPhaseCMigrationsIfMissing()` still omits `015`/`016`; Phase 2a per-chain coverage on `yum4less_dev` (90d, in-stock, official+weekly-ad): Kroger **96/97**, Publix **34/97**, Food Lion **18/97**, Aldi **17/97**, Walmart **10/97**; Kroger-only **50/97** (was 68/97 on 2026-07-08).
+- **Quick-win queue (verified open):** e2e scoped-store assertion (**P1**); `ingest-standards.md` M128 doc drift; M156 `save money` in trust/help copy; map-overlay focus trap. **Accept/close:** OSRM for discovery (straight-line labeled); H12 e2e skip (UI shipped); Aldi Flipp at-ceiling (decision log); Walmart ranked path deferred.
+- **Bundle queue:** ranking-path collocated collapse + stale `selectedStoreIds`; migration ledger before more tombstones; geolocation denial handler + Settings gate bypass.
+- **Honest limits:** Read-only pass — no code changes, no `npm test` / e2e / Semgrep re-run. Full item-by-item table → [Backlog re-triage 2026-07-09](#backlog-re-triage-2026-07-09).
+
+### 2026-07-09 — Coverage slices 2–5: local working tree (not on master)
+
+- **Theme:** Changelog entries below document coverage slices 2–5 as implemented and tested locally; **`origin/master` HEAD `b18e647` includes slice 1 (`c18f99e`) only** — slices 2–5 remain **uncommitted** in the working tree as of re-triage.
+- **Uncommitted surface:** `db/init/020_kroger_search_terms_p2_gaps.sql`; `weekly-ad-ingest-store-priority.ts` (+ tests); `flipp-weekly-ad-resolver.ts`; `weekly-ad-ingestion-service.ts`; `aldi-weekly-ad-ingestion.ts`; `ensure-test-db.mjs` (020 probe); related tests.
+- **Owner action:** Commit + CI when ready; run `sync:provider-prices` after 020 lands to persist Kroger p2 term observations on `yum4less_dev`.
+
 ### 2026-07-09 — Meal-planner flow: skip rank intermediate screen — CLOSED
 
 - **Theme:** Rank dinners intermediate screen added friction; pantry **Continue to rank** + separate rank panel duplicated trust copy already on Dinner recommendations. Composes with prior UX slice **#7** (**Use all ingredients and check pantry** → skip Ingredients confirmation) — **two stacked screen-skip changes** on the same Home path: Ingredients gate → Pantry (skip #7) → Dinner recommendations (this slice).
@@ -428,13 +452,13 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | P1-2 Debug pipeline exposure | **CLOSED** | Not touched by 2026-07-06 merges |
 | P1-3 Rate limiting production-safe | **CLOSED** (partial) | Redis/multi-instance deferred |
 | P1-4 Unauthenticated feedback GET | **CLOSED** | Not touched |
-| P1-5 M128/M151 doc drift | **CLOSED** | Not touched |
+| P1-5 M128/M151 doc drift | **PARTIAL** | **Rules** corrected (`yum4less-security-and-dependencies.mdc`); **`.cursor/agents/ingest-standards.md` still open** (re-triage 2026-07-09) |
 | P1-6 Provider-sync exit 0 on failure | **CLOSED** | Not touched |
 | P1-7 Partial weekly-ad exit 0 | **CLOSED** | Not touched |
 | P1-8 Cook tab vs marketBlocked | **DEFERRED** | Not touched |
 | P1-9 Store selection invalidates rank | **CLOSED** | Not touched |
 | P1-10 No DB migration ledger | **DEFERRED** | Migrations `015`/`016` add SQL files without ledger |
-| tsc `--noEmit` | **STILL OPEN** | **66 errors** locally on working tree (was 64 on 2026-07-04) |
+| tsc `--noEmit` | **STILL OPEN** | **84 errors** (2026-07-09 re-triage; was 64–66) — not CI-gated |
 | M128/M151 automation | **DEFERRED** | Homelab slice |
 | Saved persistence | **DEFERRED** | Unchanged |
 | R11 — cuisine/ethnic filter chips | **DEFERRED** | Unchanged |
@@ -1933,10 +1957,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` (local) | 2026-07-09 | **898/898** pass (rank-screen removal slice) |
+| `npm test` (local) | 2026-07-09 | **903/903** pass (four quick-win slice) |
 | `npm run test:integration` (local) | 2026-07-09 | **29/29** pass |
-| `npm run build` (local) | 2026-07-09 | **Pass** (rank-screen removal slice) |
-| `npm run test:e2e:ci` (local) | 2026-07-09 | **23 passed**, 1 skipped, 1 flaky (`navigation-theme` Kroger map card) |
+| `npm run build` (local) | 2026-07-09 | **Pass** (four quick-win slice) |
+| `npm run test:e2e:ci` (local) | 2026-07-09 | **23 passed**, 1 skipped, 1 flaky (`navigation-theme` accordion timing, passed retry) |
+| `navigation-theme.spec.ts` ×5 (local) | 2026-07-09 | **15/15** pass (`--repeat-each=5 --retries=0`) — scoped-store map assertion stable |
+| **Remote CI** (four quick-win slice) | 2026-07-09 | **PLACEHOLDER_CI_RUN** on **PLACEHOLDER_SHA** |
 | **Remote CI** (rank-screen removal `08e8801` / `4b511e9`) | 2026-07-09 | **Green** — [run 29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870): verify + semgrep + integration + e2e all **success** |
 | **Remote CI** (Publix ingest fix `c18f99e`) | 2026-07-09 | **Green** — [run 29047864858](https://github.com/sfh1980/Yum4Less/actions/runs/29047864858): verify + semgrep + integration + e2e all **success** |
 | `yum4less_dev` after `019` | 2026-07-08 | **no** `aldi-23111`; `aldi-mechanicsville` @ `37.611004,-77.336853` + `osm-node-6531578976`; **0** non-Kroger same-chain catalog pairs &lt;0.05 mi |
@@ -1947,7 +1973,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Remote CI** (Bug 4c `e5b1285`) | 2026-07-08 | **Green** — [run 28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879): verify + semgrep + integration + e2e all **success** |
 | **Remote CI** (`0c73016`) | 2026-07-06 | **Green** — [run 28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364): verify (lint + **813/813** unit + build) + integration **27/27** + e2e **21+1 skip** — **not re-run** after fixture-OSM / collocated slices |
 | `npm run lint` (local) | 2026-07-06 | **Not re-run** this slice; build lint step passed 2026-07-08 |
-| `npx tsc --noEmit` (local) | 2026-07-06 | **Not re-run** — prior baseline **66 errors** (test mock drift) |
+| `npx tsc --noEmit` (local) | 2026-07-09 | **84 errors** (re-triage pass; grown from 64–66; top files: `shopping-plan-builder.test.ts`, weekly-ad test mocks) |
+| Phase 2a chain coverage (`yum4less_dev`) | 2026-07-09 | Kroger **96/97**, Publix **34/97**, Food Lion **18/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only — `scripts/.investigate-internal-catalog-chain-neutrality.ts` |
+| `schema_migrations` ledger | 2026-07-09 | **Absent** — Postgres MCP confirms no table; `015`/`016` not in `applyPhaseCMigrationsIfMissing()` |
+| Coverage slices 2–5 on `origin/master` | 2026-07-09 | **Not committed** — local working tree only; slice 1 (`c18f99e`) on master |
 | Locator chain inference regression | 2026-07-06 | `chain-rollout-policy.test.ts` + `provider-rollout.test.ts` on `0c73016` (CI unit job) |
 | `publix-1626` ranked path (`yum4less_dev`) | 2026-07-06 | **36** fresh obs; API `chain: publix`, `recommendationEnabled: true`, `weekly-ad-preview`; **0 meal cards** — no recipe with 100% ingredient coverage at store (not a chain gate failure) |
 | **Remote CI** (`aa884a1`) | 2026-07-06 | **Green** — [run 28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318): verify (lint + **811/811** unit + build) + integration **27/27** + e2e **21+1 skip** |
@@ -2005,16 +2034,48 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
 | **General locator-vs-OSM dedupe across all v1 chains (Option A)** | **DEFERRED** — prioritize before Aldi/Lidl locator rollout | Universal persist-time and/or read-time dedupe: any pair of catalog sources (locator, official API, OSM, SNAP) within proximity, matched by distance plus name/type similarity — **not** chain-specific rules. Option B (2026-07-05) was a narrow Publix tombstone; repeating that pattern per chain is explicitly out of scope. Needs cross-chain policy (`isMapContextCatalogStore`, ranked-chain anchor rules) and fixture + integration + e2e coverage. **Reusable primitive already shipped (2026-07-08):** same-chain catalog↔catalog collocated identity in `src/lib/catalog-store-colocated-identity.ts` (`storesAreCollocatedCatalogDuplicates`, `preferCollocatedCatalogStoreId`, `collapseSameChainCollocatedCatalogStores`, per-chain radii) — import/extend rather than rediscovering when Option A is scoped. **Collocated-collapse scope today:** Settings + ingest only — ranking path gap cross-ref → [**Ranking path: collocated-collapse + stale selectedStoreIds**](#ranking-path-collocated-collapse-and-stale-selectedstoreids-gap). |
 | **Weekly-ad promotion gate freshness policy mismatch (FRESH-1)** | **CLOSED** on `origin/master` (`1304542` + `08f4bfb`/`aa884a1`; CI green [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318)). |
-| **INTERNAL_CATALOG chain-content bias (Phase 2a)** | Phase 2a audit (2026-07-08): 97-item tracked list is architecturally chain-agnostic but **priced coverage is Kroger-heavy** in `yum4less_dev` (Kroger 91/97 vs Aldi 13/97, Publix 0/97, etc.; 68 Kroger-only). Rebalance tracked-ingredient list and/or improve non-Kroger weekly-ad match rates. Evidence: `scripts/.investigate-internal-catalog-chain-neutrality.ts`. |
+| **INTERNAL_CATALOG chain-content bias (Phase 2a)** | **Re-measured 2026-07-09** on `yum4less_dev` (90d, in-stock, official+weekly-ad): Kroger **96/97**, Publix **34/97**, Food Lion **18/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only (was 68/97 on 2026-07-08; Publix ingest fix + coverage slices shifted numbers). Architectural call sites chain-agnostic; **content/ingest success still Kroger-heavy**. Rebalance tracked list and/or non-Kroger weekly-ad match rates. Evidence: `scripts/.investigate-internal-catalog-chain-neutrality.ts`. |
 | **Ranking path: collocated-collapse + stale selectedStoreIds** | **DEFERRED** — scope with stale-`selectedStoreIds` server-side validation and/or collocated-collapse extension | See [Ranking path: collocated-collapse and stale selectedStoreIds gap](#ranking-path-collocated-collapse-and-stale-selectedstoreids-gap). |
-| **e2e `assertMarketSearchStoreResults` scoped-store assertion** | **P1 — next slice after meal-planner UX close** — Helper in `e2e/helpers.ts` requires Kroger card from **full** `/api/market-search` body while map overlay renders **scoped** `selectedStoreIds` (single-store default may select a closer non-Kroger chain). Fix: assert against selected/scoped stores, or gate Kroger on `selectedStoreIds`. **Third recurrence** of the same flake: pantry Phase 2 CI [28987447695](https://github.com/sfh1980/Yum4Less/actions/runs/28987447695) (first-run fail + rerun flaky); meal-planner UX local e2e 2026-07-09 (`navigation-theme.spec.ts:35`, passed on retry). Root cause unchanged — not a product regression. |
-| **OSRM driving distance in store discovery (map/list/Settings)** | Wire the **existing** OSRM driving-distance capability from `multi-store-shopping-route.ts` (today used only for the multi-store shopping-route planner) into nearby-store discovery distances. **Smaller lift than initially assumed** — routing infrastructure already exists; this extends an existing capability rather than building new infrastructure. Straight-line haversine remains acceptable fallback when OSRM is unavailable. |
+| **e2e `assertMarketSearchStoreResults` scoped-store assertion** | **CLOSED** (2026-07-09) — Helper asserts Settings `selectedStoreIds` on map overlay; recommendations gate no longer requires Kroger in scoped body. `navigation-theme.spec.ts` **15/15** with `--repeat-each=5 --retries=0`. |
+| **Settings-first gate bypass (P1-1)** | **OPEN** — `handleTabChange` allows Home/Deals/Saved before `setupComplete`; only Cook disabled (by recipe readiness). Re-triage 2026-07-09. |
+| **Geolocation denial asymmetry (P1-3)** | **OPEN** — first-visit "Use my location" hard-fails; return-visit auto-load falls back to saved ZIP. No `enableHighAccuracy`. Re-triage 2026-07-09. |
+| **M156 `save money` trust-copy gap (P2-3)** | **CLOSED** (2026-07-09) — Copy rephrased; pattern added; `help-hint-content.test.ts` guards help popovers. |
+| **Map-overlay focus trap (P2-6)** | **CLOSED** (2026-07-09) — All three overlays use `useModalDialog`; unit tests in `modal-overlay-focus-trap.test.tsx`. |
+| **`ingest-standards.md` M128 doc drift (P1-4 agent half)** | **CLOSED** (2026-07-09) — Agent file aligned with manual-pause-only shipped reality. |
+| **`schema_migrations` ledger (P1-9)** | **OPEN** — no ledger table; `applyPhaseCMigrationsIfMissing()` omits `015`/`016`. Re-triage 2026-07-09. |
+| **OSRM driving distance in store discovery (map/list/Settings)** | Wire the **existing** OSRM driving-distance capability from `multi-store-shopping-route.ts` (today used only for the multi-store shopping-route planner) into nearby-store discovery distances. **Smaller lift than initially assumed** — routing infrastructure already exists; this extends an existing capability rather than building new infrastructure. Straight-line haversine remains acceptable fallback when OSRM is unavailable. **Re-triage 2026-07-09: recommend accept for beta v1** — distances labeled straight-line. |
 
 #### Ranking path: collocated-collapse and stale selectedStoreIds gap
 
 Ranking path (`recommendation-service.ts`) does **not** apply `collapseSameChainCollocatedCatalogStores` — it trusts `selectedStoreIds` directly. Combined with the known **stale-`selectedStoreIds` gap** (rank API accepts any store-shaped id without server-side validation against current catalog state), a client holding two same-chain collocated store IDs (pre-collapse) could have **both compete** in `compareMultiStoreObservationQuality` multi-store price picking, not just appear as a Settings display duplicate. Confirmed **low-likelihood today** (DB is clean post-`019`), but the underlying mechanism is unresolved. Should be considered together when either the stale-`selectedStoreIds` fix or a future collocated-collapse extension is scoped.
 
 Cross-ref: [2026-07-08 fixture-OSM honest limits](#2026-07-08--separate-fixture-osm-from-live-overpass-identity--provenance) (stale `selectedStoreIds`); [Option A / collocated-collapse scope](#general-locator-vs-osm-dedupe-across-all-v1-chains-option-a) (Settings + ingest only today).
+
+### Backlog re-triage (2026-07-09)
+
+Read-only re-verification of 17 items from `docs/audits/full-system-run-report.md` + deferred backlog. Evidence: live code grep, Postgres MCP, `npx tsc --noEmit`, `scripts/.investigate-internal-catalog-chain-neutrality.ts`.
+
+| # | Item | Verified status | Scope | Risk (1 mo) | Group |
+|---|------|-----------------|-------|-------------|-------|
+| 1 | Mobile GPS/HTTPS | No `enableHighAccuracy`; no app HTTPS redirect; denial asymmetry confirmed (`use-meal-planner.ts`) | Med | Med mobile without TLS | Homelab + UX bundle |
+| 2 | Settings gate bypass | Home/Deals/Saved reachable before `setupComplete`; only Cook disabled (recipes) | Small | Low–Med UX | Bundle with #1 |
+| 3 | No migration ledger | No `schema_migrations`; `015`/`016` missing from incremental apply | Med | Med old volumes | Do before tombstones |
+| 4 | Universal store reconciliation | `catalog-store-colocated-identity.ts` scope accurate; Option A deferred | Design | Low–Med | Bundle with #14–15 |
+| 5 | `tsc` bucket | **84 errors** (grown); not CI-gated | Med | Low runtime / Med hygiene | Hygiene |
+| 6 | Ingest auto-pause doc drift | `ingest-standards.md` still claims robots.txt/auto-pause/kill switches | Small | Low ops / Med agent trust | Quick win |
+| 7 | OSRM in discovery | OSRM shopping-route only; discovery haversine + "straight-line" labels | Large if pursued | **Low** | **Accept** |
+| 8 | M156 `save money` | In trust/help copy; missing from `FORBIDDEN_TRUST_CLAIM_PATTERNS` | Small | Low–Med trust | Quick win |
+| 9 | Map-overlay focus trap | Overlays lack `useModalDialog` pattern | Small | Low–Med a11y | Quick win |
+| 10 | Geocodio quota/key | `geocodio:global` 20/min; key in server URL only | Med homelab | Low dev / Med scale | Homelab |
+| 11 | H12 e2e skip | Intentional Leaflet skip; H12 UI shipped | Small | **Low** | **Accept** |
+| 12 | `navigation-theme` flake | 3rd recurrence; helper asserts full API vs scoped stores | Small | Med CI noise | **Quick win P1** |
+| 13 | Chain-content bias | Live: Kroger 96/97, Publix 34/97, FL 18/97, Aldi 17/97, WM 10/97 | Med–Large | Med multi-chain demos | Bundle with #16 |
+| 14 | Ranking collocated collapse | `recommendation-service.ts` does not collapse | Small–Med | Low post-019 | Bundle #14–15 |
+| 15 | Stale `selectedStoreIds` | Shape validation only; silent filter at rank | Small–Med | Low | Bundle #14–15 |
+| 16 | Aldi/FL weekly-ad ceiling | Aldi **at-ceiling** (decision log); FL not hard ceiling; DB 17–18/97 weekly-ad | Accept Aldi / Med FL | Low Aldi | Aldi **accept** |
+| 17 | Walmart matching | Deprioritized; 10/97 obs; promotion hard-blocked | Large if v1 | **None v1** | **Won't-fix v1** |
+
+**Recommended order:** #12 → #6, #8, #9 (quick wins) → #14+#15 → #3 → #4 (planning) → #1+#2.
 
 ### New findings for triage (2026-07-06)
 

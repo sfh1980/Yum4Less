@@ -27,7 +27,7 @@ export const PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS: readonly PricingTrustHeadsU
     {
       heading: "Confidence labels",
       paragraphs: [
-        "Confidence labels explain how simple the shopping plan is. Single-store estimates are usually easier to follow; multi-store plans can save money but depend on more stops.",
+        "Confidence labels explain how simple the shopping plan is. Single-store estimates are usually easier to follow; multi-store plans compare prices across your selected stores but depend on more stops.",
       ],
     },
     {
@@ -79,6 +79,7 @@ export const FORBIDDEN_TRUST_CLAIM_PATTERNS: readonly RegExp[] = [
   /\bCI green\b/i,
   /\bbeta v1 demo-complete\b/i,
   /\bguaranteed\b(?!\s+(final|checkout))/i,
+  /\bsave(?:s|d)?\s+(?:you\s+)?money\b/i,
 ];
 
 export function collectPricingTrustHeadsUpDetailText(

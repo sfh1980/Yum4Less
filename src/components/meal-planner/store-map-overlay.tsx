@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { MarketDiscoveryPanel } from "@/components/meal-planner/market-discovery-panel";
+import { useModalDialog } from "@/components/use-modal-dialog";
 import type { RecommendationExperience } from "@/lib/recommendation-service";
 import type { DiscoveryMapModel } from "@/lib/nearby-stores-map-model";
 import type { MarketSearchState } from "@/components/meal-planner/types";
@@ -27,24 +27,7 @@ export function StoreMapOverlay({
   onClose,
   onStoreSelect,
 }: StoreMapOverlayProps) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    closeButtonRef.current?.focus();
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  const modal = useModalDialog({ open, onClose });
 
   if (!open) {
     return null;
@@ -63,11 +46,14 @@ export function StoreMapOverlay({
         role="dialog"
         aria-modal="true"
         aria-labelledby="store-map-overlay-title"
+        onKeyDown={modal.onKeyDown}
+        ref={modal.dialogRef}
+        tabIndex={-1}
       >
         <div className="map-overlay-header">
           <h2 id="store-map-overlay-title">Store locations</h2>
           <button
-            ref={closeButtonRef}
+            ref={modal.initialFocusRef}
             type="button"
             className="secondary-button"
             onClick={onClose}

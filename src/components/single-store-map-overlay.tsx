@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { NearbyStoresMap } from "@/components/nearby-stores-map";
+import { useModalDialog } from "@/components/use-modal-dialog";
 import { buildSingleStoreMapModel } from "@/lib/nearby-stores-map-model";
 import { hasValidStoreCoordinates } from "@/lib/resolve-nearby-store-by-name";
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
@@ -18,30 +19,13 @@ export function SingleStoreMapOverlay({
   isOpen,
   onClose,
 }: SingleStoreMapOverlayProps) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const modal = useModalDialog({ open: isOpen, onClose });
   const mapReady = Boolean(store && hasValidStoreCoordinates(store));
   const mapModel = useMemo(
     () =>
       isOpen && mapReady && store ? buildSingleStoreMapModel(store) : undefined,
     [isOpen, mapReady, store],
   );
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    closeButtonRef.current?.focus();
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, onClose]);
 
   if (!isOpen) {
     return null;
@@ -62,11 +46,14 @@ export function SingleStoreMapOverlay({
         role="dialog"
         aria-modal="true"
         aria-labelledby="single-store-map-overlay-title"
+        onKeyDown={modal.onKeyDown}
+        ref={modal.dialogRef}
+        tabIndex={-1}
       >
         <div className="map-overlay-header single-store-map-overlay-header">
           <h2 id="single-store-map-overlay-title">{title}</h2>
           <button
-            ref={closeButtonRef}
+            ref={modal.initialFocusRef}
             type="button"
             className="single-store-map-overlay-close"
             aria-label="Close"

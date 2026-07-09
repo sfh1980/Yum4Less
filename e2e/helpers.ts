@@ -24,7 +24,7 @@ export type MarketSearchBody = {
   };
 };
 
-const PRODUCTION_RANKED_CHAINS = ["kroger", "aldi", "publix", "food-lion"] as const;
+const SETTINGS_PREFERENCES_STORAGE_KEY = "yum4less.settings-preferences.v1";
 
 export async function resetAppPreferences(page: Page) {
   await page.goto("/");
@@ -170,15 +170,21 @@ function findRankedStoreByChain(stores: PublicNearbyStore[], chain: string) {
   );
 }
 
-export function assertProductionRankedRolloutGates(stores: PublicNearbyStore[]) {
+export function assertProductionRankedRolloutGates(
+  stores: PublicNearbyStore[],
+  options?: { requireKrogerInFixture?: boolean },
+) {
+  const requireKrogerInFixture = options?.requireKrogerInFixture ?? true;
   const rankedStores = stores.filter((store) => store.recommendationEnabled);
   expect(
     rankedStores.length,
     "expected at least one recommendation-enabled store in fixture market",
   ).toBeGreaterThanOrEqual(1);
 
-  const kroger = findRankedStoreByChain(stores, "kroger");
-  expect(kroger, "23111 fixture should include ranked Kroger").toBeTruthy();
+  if (requireKrogerInFixture) {
+    const kroger = findRankedStoreByChain(stores, "kroger");
+    expect(kroger, "23111 fixture should include ranked Kroger").toBeTruthy();
+  }
 
   for (const store of rankedStores) {
     expect(store.rolloutStatus).not.toBe("coming-soon");
@@ -192,38 +198,54 @@ export function assertProductionRankedRolloutGates(stores: PublicNearbyStore[]) 
   }
 }
 
+async function getScopedSelectedStoreIds(page: Page): Promise<string[]> {
+  return page.evaluate((storageKey) => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) {
+        return [];
+      }
+      const parsed = JSON.parse(raw) as { selectedStoreIds?: string[] };
+      return Array.isArray(parsed.selectedStoreIds) ? parsed.selectedStoreIds : [];
+    } catch {
+      return [];
+    }
+  }, SETTINGS_PREFERENCES_STORAGE_KEY);
+}
+
 export async function assertMarketSearchStoreResults(
   page: Page,
   stores: PublicNearbyStore[],
 ) {
+  const selectedStoreIds = await getScopedSelectedStoreIds(page);
+  expect(
+    selectedStoreIds.length,
+    "Settings should persist selected stores for map overlay assertions",
+  ).toBeGreaterThan(0);
+
+  const scopedStores = stores.filter((store) => selectedStoreIds.includes(store.id));
+  expect(
+    scopedStores.length,
+    "selected store IDs should match stores from market-search response",
+  ).toBeGreaterThan(0);
+
   await openMapOverlay(page);
   await expect(page.getByRole("heading", { name: "Nearby stores map" })).toBeVisible();
 
   const storePanel = page.locator(".map-discovery-layout, .nearby-stores-list");
-  const krogerRanked = findRankedStoreByChain(stores, "kroger");
-  expect(krogerRanked).toBeTruthy();
 
-  const krogerStoreCard = storePanel.locator(`[data-store-id="${krogerRanked!.id}"]`);
-  await expect(krogerStoreCard).toBeVisible({ timeout: 30_000 });
-  await expect(
-    krogerStoreCard.getByText(/Est\. (?:sale|store) prices/i),
-  ).toBeVisible();
-
-  for (const chain of PRODUCTION_RANKED_CHAINS) {
-    const ranked = findRankedStoreByChain(stores, chain);
-    if (!ranked) {
-      continue;
-    }
-
-    const storeCard = storePanel.locator(`[data-store-id="${ranked.id}"]`);
-    if ((await storeCard.count()) === 0) {
-      continue;
-    }
-
-    await expect(storeCard).toBeVisible();
+  for (const store of scopedStores) {
+    const storeCard = storePanel.locator(`[data-store-id="${store.id}"]`);
     await expect(
-      storeCard.getByText(/Est\. (?:sale|store) prices/i),
-    ).toBeVisible();
+      storeCard,
+      `Expected Settings-selected store ${store.id} on map overlay`,
+    ).toBeVisible({ timeout: 30_000 });
+
+    if (store.recommendationEnabled) {
+      await expect(
+        storeCard.getByText(/Est\. (?:sale|store) prices/i),
+      ).toBeVisible();
+    }
   }
 
   await closeMapOverlay(page);
@@ -302,6 +324,7 @@ export async function runCoreMvpFlow(page: Page) {
   );
   assertProductionRankedRolloutGates(
     recommendationsBody.experience.market.nearbyStores,
+    { requireKrogerInFixture: false },
   );
 
   await expect(

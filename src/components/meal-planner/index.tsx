@@ -134,7 +134,7 @@ export function MealPlanner() {
           />
         ) : null}
 
-        {demo.rankLoading ? <RankLoadingOverlay /> : null}
+        <RankLoadingOverlay open={demo.rankLoading} />
 
         {showInternalDetails ? (
           <>

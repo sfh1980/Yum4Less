@@ -71,7 +71,7 @@ describe("SingleStoreMapOverlay", () => {
       }),
     );
 
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
