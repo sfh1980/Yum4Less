@@ -3,6 +3,7 @@ import {
   completePantryAndSuggestRecipes,
   completeSettingsZipFlow,
   completeWelcomeFlow,
+  E2E_ZIP_FALLBACK,
   resetAppPreferences,
   switchMainTab,
 } from "./helpers";
@@ -33,13 +34,37 @@ test.describe("Bottom navigation and theme", () => {
   });
 
   test("enables Cook tab after ranked recipes are ready", async ({ page }) => {
-    await completeSettingsZipFlow(page);
+    await resetAppPreferences(page);
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (res) =>
+          res.url().includes("/api/market-search") &&
+          res.request().method() === "POST",
+        { timeout: 120_000 },
+      ),
+      page.getByRole("button", { name: "Find stores for this area" }).click(),
+    ]);
+    expect(response.status()).toBe(200);
+    const marketBody = (await response.json()) as {
+      market: { nearbyStores: Array<{ id: string; chain: string; recommendationEnabled: boolean }> };
+    };
+    const kroger = marketBody.market.nearbyStores.find(
+      (store) => store.chain === "kroger" && store.recommendationEnabled,
+    );
+    expect(kroger, "23111 fixture should include ranked Kroger for Cook tab gate").toBeTruthy();
+    await page.getByRole("combobox", { name: "Store" }).selectOption(kroger!.id);
+    await page.getByRole("button", { name: "Save settings and continue" }).click();
+    await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
+
     await completeWelcomeFlow(page);
     await completePantryAndSuggestRecipes(page);
+
     const cookButton = page
       .getByRole("navigation", { name: "Main" })
       .getByRole("button", { name: "Cook" });
-    await expect(cookButton).toBeEnabled();
+    await expect(cookButton).toBeEnabled({ timeout: 30_000 });
     await cookButton.click();
     await expect(page.getByRole("heading", { name: "Dinner recommendations" })).toBeVisible();
   });
