@@ -3,7 +3,7 @@ import {
   completeSettingsZipFlow,
   completeWelcomeFlow,
   E2E_ZIP_FALLBACK,
-  goToRankStep,
+  goToPantryStep,
   resetAppPreferences,
 } from "./helpers";
 
@@ -42,7 +42,7 @@ test.describe("Single-store map overlay", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await completeSettingsZipFlow(page);
     await completeWelcomeFlow(page);
-    await goToRankStep(page);
+    await goToPantryStep(page);
     await page.getByRole("button", { name: "Suggest recipes for my store(s)" }).click();
     await expect(page.getByRole("heading", { name: "Dinner recommendations" })).toBeVisible({
       timeout: 30_000,

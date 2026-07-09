@@ -7,7 +7,7 @@ import {
   completeSettingsZipFlow,
   completeWelcomeFlow,
   E2E_ZIP_FALLBACK,
-  goToRankStep,
+  goToPantryStep,
   resetAppPreferences,
   switchMainTab,
 } from "./helpers";
@@ -65,7 +65,7 @@ test.describe("API error surfaces in the UI", () => {
   test("shows recommendations 500 copy after rank request", async ({ page }) => {
     await completeSettingsZipFlow(page);
     await completeWelcomeFlow(page);
-    await goToRankStep(page);
+    await goToPantryStep(page);
 
     const error = buildRecommendationsErrorResponse(
       500,
@@ -92,7 +92,7 @@ test.describe("API error surfaces in the UI", () => {
   test("shows recommendations 400 body-too-large copy", async ({ page }) => {
     await completeSettingsZipFlow(page);
     await completeWelcomeFlow(page);
-    await goToRankStep(page);
+    await goToPantryStep(page);
 
     const error = buildRecommendationsErrorResponse(400, "Request body is too large.");
     await page.route("**/api/recommendations", async (route) => {

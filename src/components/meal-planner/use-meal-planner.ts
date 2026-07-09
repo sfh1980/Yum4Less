@@ -237,7 +237,6 @@ export function useMealPlanner() {
   const showResultsInHomeFlow =
     activeTab === "home" &&
     (flowStep === "results" ||
-      flowStep === "rank" ||
       rankLoading ||
       recommendationState.status === "error");
 
@@ -893,10 +892,11 @@ export function useMealPlanner() {
     transitionToPantryStep();
   }
 
-  function handleContinueToRank() {
+  function handleSuggestRecipesFromPantry() {
     rankedStoreScopeRef.current = null;
     setRecommendationState(initialRecommendationState);
-    setFlowStep("rank");
+    setFlowStep("results");
+    void handleRankMeals();
   }
 
   async function handleRankMeals() {
@@ -1150,7 +1150,7 @@ export function useMealPlanner() {
     handleFactoryReset,
     handleCompleteWelcome,
     handleContinueToPantry,
-    handleContinueToRank,
+    handleSuggestRecipesFromPantry,
     handleRankMeals,
     selectedIngredientIds,
     handleToggleIngredient,

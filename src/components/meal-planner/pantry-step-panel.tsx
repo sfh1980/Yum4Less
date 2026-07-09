@@ -29,7 +29,9 @@ type PantryStepPanelProps = {
   onToggleChecklistItem: (ingredientId: string, checked: boolean) => void;
   onAddPantryIngredient: (result: PantryIngredientAddResult) => void;
   onRemovePantryIngredient: (ingredientId: string) => void;
-  onContinueToRank: () => void;
+  rankingPaused: boolean;
+  rankLoading: boolean;
+  onSuggestRecipes: () => void;
 };
 
 function buildChecklistNameMap(
@@ -52,8 +54,11 @@ export function PantryStepPanel({
   onToggleChecklistItem,
   onAddPantryIngredient,
   onRemovePantryIngredient,
-  onContinueToRank,
+  rankingPaused,
+  rankLoading,
+  onSuggestRecipes,
 }: PantryStepPanelProps) {
+  const suggestDisabled = rankingPaused || rankLoading;
   const checklistNameById = buildChecklistNameMap(suggestedChecklist);
   const nearMissRecipeCountByIngredientId = new Map(
     suggestedChecklist.map((item) => [item.ingredientId, item.recipeCount]),
@@ -188,9 +193,10 @@ export function PantryStepPanel({
         <button
           className="primary-button"
           type="button"
-          onClick={onContinueToRank}
+          onClick={onSuggestRecipes}
+          disabled={suggestDisabled}
         >
-          Continue to rank
+          Suggest recipes for my store(s)
         </button>
       </div>
     </div>

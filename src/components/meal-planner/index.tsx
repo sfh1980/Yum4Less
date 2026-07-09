@@ -10,7 +10,6 @@ import { IngredientsStepPanel } from "@/components/meal-planner/ingredients-step
 import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
 import { PantryStepPanel } from "@/components/meal-planner/pantry-step-panel";
 import { RankLoadingOverlay } from "@/components/meal-planner/rank-loading-overlay";
-import { RankStepPanel } from "@/components/meal-planner/rank-step-panel";
 import { SavedPlaceholderPanel } from "@/components/meal-planner/saved-placeholder-panel";
 import { SettingsPanel } from "@/components/meal-planner/settings-panel";
 import { StoreMapOverlay } from "@/components/meal-planner/store-map-overlay";
@@ -95,15 +94,9 @@ export function MealPlanner() {
                 onToggleChecklistItem={demo.handleTogglePantryChecklistItem}
                 onAddPantryIngredient={demo.handleAddPantryIngredient}
                 onRemovePantryIngredient={demo.handleRemovePantryIngredient}
-                onContinueToRank={demo.handleContinueToRank}
-              />
-            ) : null}
-
-            {demo.flowStep === "rank" ? (
-              <RankStepPanel
-                rankLoading={demo.rankLoading}
                 rankingPaused={demo.marketBlocked}
-                onRankMeals={demo.handleRankMeals}
+                rankLoading={demo.rankLoading}
+                onSuggestRecipes={demo.handleSuggestRecipesFromPantry}
               />
             ) : null}
 

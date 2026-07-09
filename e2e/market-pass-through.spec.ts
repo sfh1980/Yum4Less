@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   completeSettingsZipFlow,
   completeWelcomeFlow,
-  goToRankStep,
+  goToPantryStep,
   resetAppPreferences,
   switchMainTab,
 } from "./helpers";
@@ -19,7 +19,7 @@ test.describe("Market pass-through (Q123 / M123)", () => {
     const storeIdsBefore = marketBody.market.nearbyStores.map((store) => store.id);
 
     await completeWelcomeFlow(page);
-    await goToRankStep(page);
+    await goToPantryStep(page);
 
     let recommendationsPayload: { market?: { nearbyStores?: { id: string }[] } } | null =
       null;

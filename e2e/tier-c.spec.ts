@@ -40,7 +40,7 @@ test.describe("Tier C — map context without ranked meals", () => {
     await expect(
       page.getByText(/No sale ingredients are available for your selected store\(s\) yet/i),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Continue to rank" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Suggest recipes for my store(s)" })).toHaveCount(0);
 
     await openMapOverlay(page);
     await expect(

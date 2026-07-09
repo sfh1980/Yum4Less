@@ -25,27 +25,57 @@ describe("PantryStepPanel", () => {
     onToggleChecklistItem: vi.fn(),
     onAddPantryIngredient: vi.fn(),
     onRemovePantryIngredient: vi.fn(),
-    onContinueToRank: vi.fn(),
+    rankingPaused: false,
+    rankLoading: false,
+    onSuggestRecipes: vi.fn(),
   };
 
-  it("always shows continue to rank enabled", async () => {
+  it("shows suggest recipes enabled when ranking is available", async () => {
     const user = userEvent.setup();
-    const onContinueToRank = vi.fn();
+    const onSuggestRecipes = vi.fn();
 
     render(
       createElement(PantryStepPanel, {
         ...baseProps,
         suggestedChecklist: [],
         fullyCoveredRecipeCount: 0,
-        onContinueToRank,
+        onSuggestRecipes,
       }),
     );
 
     expect(screen.getByText(/No meals are 1–4 items away/i)).toBeInTheDocument();
-    const continueButton = screen.getByRole("button", { name: "Continue to rank" });
-    expect(continueButton).toBeEnabled();
-    await user.click(continueButton);
-    expect(onContinueToRank).toHaveBeenCalledOnce();
+    const suggestButton = screen.getByRole("button", {
+      name: "Suggest recipes for my store(s)",
+    });
+    expect(suggestButton).toBeEnabled();
+    await user.click(suggestButton);
+    expect(onSuggestRecipes).toHaveBeenCalledOnce();
+  });
+
+  it("disables suggest recipes when ranking is paused", () => {
+    render(
+      createElement(PantryStepPanel, {
+        ...baseProps,
+        rankingPaused: true,
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Suggest recipes for my store(s)" }),
+    ).toBeDisabled();
+  });
+
+  it("disables suggest recipes while rank request is loading", () => {
+    render(
+      createElement(PantryStepPanel, {
+        ...baseProps,
+        rankLoading: true,
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Suggest recipes for my store(s)" }),
+    ).toBeDisabled();
   });
 
   it("renders combined pantry rows with source badges", async () => {

@@ -44,7 +44,7 @@ export const recipeSourceHelp = {
   tooltip: "Merged internal library + TheMealDB ranking.",
   popoverTitle: "Recipe source",
   popoverContent:
-    "Rank dinners from Yum4Less's internal recipe library merged with TheMealDB imports that overlap sale ingredients at your stores. TheMealDB meals include attribution and still require verify-in-store pricing.",
+    "Suggest dinners from Yum4Less's internal recipe library merged with TheMealDB imports that overlap sale ingredients at your stores. TheMealDB meals include attribution and still require verify-in-store pricing.",
 } as const;
 
 export const nearbyStoresMapHelp = {

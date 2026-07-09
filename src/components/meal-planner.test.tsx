@@ -33,10 +33,16 @@ async function completeIngredientGate(user: ReturnType<typeof userEvent.setup>) 
   await screen.findByRole("heading", { name: "Pantry check" });
 }
 
-async function goToRankStep(user: ReturnType<typeof userEvent.setup>) {
+async function goToPantryStep(user: ReturnType<typeof userEvent.setup>) {
   await completeIngredientGate(user);
-  await user.click(screen.getByRole("button", { name: "Continue to rank" }));
-  await screen.findByRole("heading", { name: "Rank dinners" });
+}
+
+async function suggestRecipesFromPantry(user: ReturnType<typeof userEvent.setup>) {
+  const suggestButton = screen.getByRole("button", {
+    name: "Suggest recipes for my store(s)",
+  });
+  expect(suggestButton).not.toBeDisabled();
+  await user.click(suggestButton);
 }
 
 const pantryCoveragePayload = {
@@ -95,21 +101,17 @@ describe("MealPlanner", () => {
 
     await completeSettingsFlow(user);
     await completeWelcomeFlow(user);
-    await goToRankStep(user);
+    await goToPantryStep(user);
 
     expect(await screen.findByRole("navigation", { name: "Main" })).toBeInTheDocument();
     expect(screen.queryByText("Seed preview pricing")).not.toBeInTheDocument();
-    expect(await screen.findAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(1);
     expect(
       screen.queryByRole("button", { name: "Project & data details (internal)" }),
     ).not.toBeInTheDocument();
 
-    const suggestButton = screen.getByRole("button", {
-      name: "Suggest recipes for my store(s)",
-    });
-    expect(suggestButton).not.toBeDisabled();
+    await suggestRecipesFromPantry(user);
 
-    await user.click(suggestButton);
+    expect(await screen.findAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(1);
 
     expect(await screen.findByText("Weeknight Lemon Chicken")).toBeInTheDocument();
     expect(

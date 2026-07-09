@@ -94,26 +94,49 @@ export async function completeWelcomeFlow(page: Page) {
   await expect(page.getByRole("heading", { name: "Ingredients" })).toBeVisible();
 }
 
-export async function completePantryStepAndContinue(page: Page) {
-  await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
-  await page.getByRole("button", { name: "Continue to rank" }).click();
-  await expect(page.getByRole("heading", { name: "Rank dinners" })).toBeVisible();
-}
-
-export async function pickAllIngredientsAndContinue(page: Page) {
-  await page.getByRole("button", { name: "Use all ingredients and check pantry" }).click();
-  await completePantryStepAndContinue(page);
-}
-
-export async function goToRankStep(page: Page) {
+export async function goToPantryStep(page: Page) {
   const useAllButton = page.getByRole("button", { name: "Use all ingredients and check pantry" });
   if (await useAllButton.isVisible()) {
     await useAllButton.click();
-    await completePantryStepAndContinue(page);
+    await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
     return;
   }
   await page.getByRole("button", { name: "Continue to pantry check" }).click();
-  await completePantryStepAndContinue(page);
+  await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
+}
+
+export async function completePantryAndSuggestRecipes(page: Page) {
+  await goToPantryStep(page);
+
+  const suggestButton = page.getByRole("button", {
+    name: "Suggest recipes for my store(s)",
+  });
+  await expect(suggestButton).not.toBeDisabled();
+
+  const recommendationsResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes("/api/recommendations") &&
+      res.request().method() === "POST" &&
+      res.status() === 200,
+  );
+  await suggestButton.click();
+  await recommendationsResponse;
+  await expect(page.getByRole("heading", { name: "Dinner recommendations" })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+/** @deprecated Use goToPantryStep — rank intermediate screen removed. */
+export async function goToRankStep(page: Page) {
+  await goToPantryStep(page);
+}
+
+export async function completePantryStepAndContinue(page: Page) {
+  await completePantryAndSuggestRecipes(page);
+}
+
+export async function pickAllIngredientsAndContinue(page: Page) {
+  await completePantryAndSuggestRecipes(page);
 }
 
 export async function openMapOverlay(page: Page) {
@@ -255,7 +278,7 @@ export async function runCoreMvpFlow(page: Page) {
   const ingredientGate = page.getByRole("button", { name: "Use all ingredients and check pantry" });
   await expect(ingredientGate).toBeVisible({ timeout: 30_000 });
 
-  await goToRankStep(page);
+  await goToPantryStep(page);
 
   const suggestButton = page.getByRole("button", {
     name: "Suggest recipes for my store(s)",

@@ -288,7 +288,7 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
     );
 
     expect(
-      screen.getByText(/Suggest recipes for my store\(s\)/i),
+      screen.getByText(/Finish pantry check on the Home tab/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Step 3/i)).not.toBeInTheDocument();
     expect(

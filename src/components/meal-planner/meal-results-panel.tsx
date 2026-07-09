@@ -143,7 +143,7 @@ export function MealResultsPanel({
         ) : recommendationState.status !== "ready" ? (
           <StatusCard
             title="Ready when you are"
-            body="Choose sale ingredients on the Home tab, continue to rank, then tap Suggest recipes for my store(s)."
+            body="Finish pantry check on the Home tab, then tap Suggest recipes for my store(s)."
           />
         ) : (
           <>
