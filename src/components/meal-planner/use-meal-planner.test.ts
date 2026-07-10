@@ -53,7 +53,7 @@ function marketPayload(locationLabel: string, zipCode: string) {
       providerPriceObservationSync: [],
       weeklyAdIngestionStatus: [],
       weeklyAdPromotionReadiness: [],
-      lookupSource: "seed-zip",
+      lookupSource: "seed",
       lookupProviderConfigured: false,
       dataSource: "database",
       saleIngredientChoices: [
@@ -464,7 +464,15 @@ describe("useMealPlanner pantry coverage debounce", () => {
     });
 
     await act(async () => {
-      result.current.handleAddPantryIngredient("olive-oil");
+      result.current.handleAddPantryIngredient({
+        ingredientId: "olive-oil",
+        ingredientName: "Olive oil",
+        nearMissRecipeCount: 0,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.pantryIngredientIds).toContain("olive-oil");
     });
 
     await waitFor(

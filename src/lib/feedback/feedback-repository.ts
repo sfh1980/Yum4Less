@@ -33,7 +33,7 @@ export async function insertCustomerFeedback(feedback: FeedbackInput) {
 }
 
 export async function listRecentCustomerFeedback(
-  limit = FEEDBACK_LIMITS.recentFeedLimit,
+  limit: number = FEEDBACK_LIMITS.recentFeedLimit,
 ): Promise<PublicFeedbackRow[]> {
   const pool = getDbPool();
   const result = await pool.query<{
