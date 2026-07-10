@@ -986,13 +986,35 @@ export function useMealPlanner() {
         return;
       }
 
+      const syncedSelectedStoreIds =
+        result.experience.effectiveSelectedStoreIds ?? preferences.selectedStoreIds;
+
+      if (result.experience.effectiveSelectedStoreIds) {
+        setForm((current) => ({
+          ...current,
+          selectedStoreIds: result.experience.effectiveSelectedStoreIds!,
+        }));
+        const radiusMiles = Number(form.radiusMiles);
+        if (Number.isFinite(radiusMiles)) {
+          writeSettingsPreferences(
+            buildSettingsPreferencesPatch({
+              zipCode: preferences.zipCode.trim(),
+              radiusMiles,
+              shoppingStyle: preferences.shoppingStyle,
+              selectedStoreIds: result.experience.effectiveSelectedStoreIds,
+              theme: form.theme,
+            }),
+          );
+        }
+      }
+
       setRecommendationState({
         status: "ready",
         recommendations: result.experience.recommendations,
         shopperNotice: result.experience.shopperNotice,
         supplementaryShopperNotices: result.experience.supplementaryShopperNotices,
       });
-      rankedStoreScopeRef.current = [...preferences.selectedStoreIds];
+      rankedStoreScopeRef.current = [...syncedSelectedStoreIds];
       trackClientEvent("rank_meals_completed", {
         shopping_style: preferences.shoppingStyle,
         dietary_focus: preferences.dietaryFocus,

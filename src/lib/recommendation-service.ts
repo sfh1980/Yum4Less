@@ -25,9 +25,12 @@ import {
   collectSaleIngredientIdsFromObservations,
 } from "@/lib/recipe-import/recipe-ranking-eligibility";
 import {
+  buildStoreSelectionSyncNotices,
   filterPriceObservationsByStoreIds,
   filterNearbyStoresBySelection,
+  mergeRankingShopperNotices,
   resolveEffectiveSelectedIngredientIds,
+  resolveSelectedStoreIdsForRanking,
   scopeMarketSummaryToSelectedStores,
 } from "@/lib/store-scope";
 import { buildEligibleRecipePool } from "@/lib/ranking-recipe-pool";
@@ -142,6 +145,20 @@ export async function getRecommendationExperience(
     throw new RecommendationDependencyUnavailableError();
   }
 
+  const storeSelection =
+    preferences.selectedStoreIds && preferences.selectedStoreIds.length > 0
+      ? resolveSelectedStoreIdsForRanking({
+          selectedStoreIds: preferences.selectedStoreIds,
+          marketNearbyStores: market.nearbyStores,
+        })
+      : undefined;
+  const effectiveSelectedStoreIds =
+    storeSelection?.effectiveSelectedStoreIds ?? preferences.selectedStoreIds ?? [];
+
+  if (storeSelection && storeSelection.droppedStoreIds.length > 0) {
+    logDroppedStoreSelectionIds(storeSelection.droppedStoreIds);
+  }
+
   let themealdbEnsureNotice: ShopperNotice | undefined;
 
   if (
@@ -150,10 +167,10 @@ export async function getRecommendationExperience(
   ) {
     // BOUNDARY: recipe catalog refresh is cron/script-only — never on recommendation request
     const refreshObservations =
-      preferences.selectedStoreIds && preferences.selectedStoreIds.length > 0
+      effectiveSelectedStoreIds.length > 0
         ? filterPriceObservationsByStoreIds(
             snapshot.priceObservations,
-            preferences.selectedStoreIds,
+            effectiveSelectedStoreIds,
           )
         : snapshot.priceObservations;
     const saleIngredientIds = collectSaleIngredientIdsFromObservations(
@@ -196,51 +213,69 @@ export async function getRecommendationExperience(
     };
   }
 
-  market = scopeMarketSummaryToSelectedStores(market, preferences.selectedStoreIds);
+  market = scopeMarketSummaryToSelectedStores(market, effectiveSelectedStoreIds);
   const scopedObservations = filterPriceObservationsByStoreIds(
     snapshot.priceObservations,
-    preferences.selectedStoreIds,
+    effectiveSelectedStoreIds,
   );
 
   const recommendationStores = filterNearbyStoresBySelection(
     market.nearbyStores,
-    preferences.selectedStoreIds,
+    effectiveSelectedStoreIds,
   ).filter((store) => store.recommendationEnabled);
 
+  const selectionSyncNotices = storeSelection
+    ? buildStoreSelectionSyncNotices(storeSelection)
+    : {};
+
   if (recommendationStores.length === 0) {
-    return {
-      market,
-      recommendations: [],
-      shopperNotice: {
-        title: "No ranked stores near this search",
-        body:
-          "Yum4Less found nearby stores for map context, but none have enough sale prices for dinner estimates in this area yet.",
+    return finalizeRecommendationExperience(
+      {
+        market,
+        recommendations: [],
+        ...(storeSelection &&
+        storeSelection.effectiveSelectedStoreIds.length === 0 &&
+        storeSelection.droppedStoreIds.length > 0
+          ? selectionSyncNotices
+          : mergeRankingShopperNotices(selectionSyncNotices, {
+              shopperNotice: {
+                title: "No ranked stores near this search",
+                body:
+                  "Yum4Less found nearby stores for map context, but none have enough sale prices for dinner estimates in this area yet.",
+              },
+            })),
       },
-    };
+      storeSelection,
+    );
   }
 
   const effectiveSelectedIngredientIds = resolveEffectiveSelectedIngredientIds({
     selectedIngredientIds: preferences.selectedIngredientIds,
     priceObservations: scopedObservations,
-    selectedStoreIds: preferences.selectedStoreIds,
+    selectedStoreIds: effectiveSelectedStoreIds,
   });
 
   if (effectiveSelectedIngredientIds.length === 0) {
-    return {
-      market,
-      recommendations: [],
-      shopperNotice: {
-        title: "No sale ingredients at selected store(s)",
-        body: "Try different stores, widen your search radius, or check back later — prices refresh daily.",
+    return finalizeRecommendationExperience(
+      {
+        market,
+        recommendations: [],
+        ...mergeRankingShopperNotices(selectionSyncNotices, {
+          shopperNotice: {
+            title: "No sale ingredients at selected store(s)",
+            body: "Try different stores, widen your search radius, or check back later — prices refresh daily.",
+          },
+        }),
       },
-    };
+      storeSelection,
+    );
   }
 
   const ingredientScopedRecipes = buildEligibleRecipePool({
     recipes: snapshot.recipes,
     preferences,
     priceObservations: scopedObservations,
-    selectedStoreIds: preferences.selectedStoreIds,
+    selectedStoreIds: effectiveSelectedStoreIds,
   });
 
   const candidates = ingredientScopedRecipes
@@ -273,20 +308,28 @@ export async function getRecommendationExperience(
             }
           : undefined;
 
-    return {
-      market,
-      recommendations: [],
-      ...buildRankEmptyShopperNotices({
-        emptyNotice,
-        themealdbEnsureNotice,
-      }),
-    };
+    return finalizeRecommendationExperience(
+      {
+        market,
+        recommendations: [],
+        ...buildRankEmptyShopperNotices({
+          emptyNotice,
+          themealdbEnsureNotice,
+          selectionSyncNotices,
+        }),
+      },
+      storeSelection,
+    );
   }
 
-  return {
-    market,
-    ...(themealdbEnsureNotice ? { shopperNotice: themealdbEnsureNotice } : {}),
-    recommendations: candidates.map((candidate) =>
+  return finalizeRecommendationExperience(
+    {
+      market,
+      ...mergeRankingShopperNotices(
+        themealdbEnsureNotice ? { shopperNotice: themealdbEnsureNotice } : undefined,
+        selectionSyncNotices,
+      ),
+      recommendations: candidates.map((candidate) =>
         attachMealPresentation(
           candidate,
           market.providerPricingPreviews,
@@ -294,6 +337,32 @@ export async function getRecommendationExperience(
           recommendationStores,
         ),
       ),
+    },
+    storeSelection,
+  );
+}
+
+function logDroppedStoreSelectionIds(droppedStoreIds: string[]): void {
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) {
+    return;
+  }
+
+  console.info("[yum4less] rank store selection dropped stale ids", {
+    droppedStoreIds,
+  });
+}
+
+function finalizeRecommendationExperience(
+  experience: RecommendationExperience,
+  storeSelection?: ReturnType<typeof resolveSelectedStoreIdsForRanking>,
+): RecommendationExperience {
+  if (!storeSelection?.selectionChanged) {
+    return experience;
+  }
+
+  return {
+    ...experience,
+    effectiveSelectedStoreIds: storeSelection.effectiveSelectedStoreIds,
   };
 }
 
@@ -304,27 +373,19 @@ function includesThemealdbInRankingPool(preferences: MealPreferenceForm): boolea
   );
 }
 
-/** Empty rank: honest no-meals copy first; TheMealDB schedule info is additive (C1). */
 function buildRankEmptyShopperNotices(input: {
   emptyNotice?: ShopperNotice;
   themealdbEnsureNotice?: ShopperNotice;
+  selectionSyncNotices?: Pick<
+    RecommendationExperience,
+    "shopperNotice" | "supplementaryShopperNotices"
+  >;
 }): Pick<RecommendationExperience, "shopperNotice" | "supplementaryShopperNotices"> {
-  const ordered = [input.emptyNotice, input.themealdbEnsureNotice].filter(
-    (notice): notice is ShopperNotice => notice !== undefined,
+  return mergeRankingShopperNotices(
+    input.emptyNotice ? { shopperNotice: input.emptyNotice } : undefined,
+    input.selectionSyncNotices,
+    input.themealdbEnsureNotice ? { shopperNotice: input.themealdbEnsureNotice } : undefined,
   );
-
-  if (ordered.length === 0) {
-    return {};
-  }
-
-  if (ordered.length === 1) {
-    return { shopperNotice: ordered[0] };
-  }
-
-  return {
-    shopperNotice: ordered[0],
-    supplementaryShopperNotices: ordered.slice(1),
-  };
 }
 
 function buildValidPantryIngredientIdsFromSnapshot(

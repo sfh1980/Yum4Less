@@ -185,6 +185,8 @@ export type RecommendationExperience = {
   shopperNotice?: ShopperNotice;
   /** Additional notices shown alongside the primary (C1 — never replace empty-meal copy). */
   supplementaryShopperNotices?: ShopperNotice[];
+  /** Server-normalized store IDs when client selection was stale or collocated twins collapsed. */
+  effectiveSelectedStoreIds?: string[];
 };
 
 /** Internal ranking candidate before presentation formatting. */

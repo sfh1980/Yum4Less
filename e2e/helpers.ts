@@ -26,6 +26,36 @@ export type MarketSearchBody = {
 
 const SETTINGS_PREFERENCES_STORAGE_KEY = "yum4less.settings-preferences.v1";
 
+export { SETTINGS_PREFERENCES_STORAGE_KEY };
+
+export async function injectStaleSelectedStoreIds(page: Page, staleStoreIds: string[]) {
+  await page.evaluate(
+    ({ storageKey, storeIds }) => {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) {
+        throw new Error("missing settings preferences");
+      }
+
+      const prefs = JSON.parse(raw) as { selectedStoreIds?: string[] };
+      prefs.selectedStoreIds = [...(prefs.selectedStoreIds ?? []), ...storeIds];
+      window.localStorage.setItem(storageKey, JSON.stringify(prefs));
+    },
+    { storageKey: SETTINGS_PREFERENCES_STORAGE_KEY, storeIds: staleStoreIds },
+  );
+}
+
+export async function readPersistedSelectedStoreIds(page: Page): Promise<string[]> {
+  return page.evaluate((storageKey) => {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      return [];
+    }
+
+    const prefs = JSON.parse(raw) as { selectedStoreIds?: string[] };
+    return prefs.selectedStoreIds ?? [];
+  }, SETTINGS_PREFERENCES_STORAGE_KEY);
+}
+
 export async function resetAppPreferences(page: Page) {
   await page.goto("/");
   const factoryReset = page.getByRole("button", { name: "Factory reset preferences" });

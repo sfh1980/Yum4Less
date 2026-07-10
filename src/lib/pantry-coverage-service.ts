@@ -7,6 +7,7 @@ import {
 import {
   filterNearbyStoresBySelection,
   filterPriceObservationsByStoreIds,
+  resolveSelectedStoreIdsForRanking,
   scopeMarketSummaryToSelectedStores,
 } from "@/lib/store-scope";
 import type { PantryCoverageExperience } from "@/contracts/pantry-coverage";
@@ -85,15 +86,21 @@ export async function getPantryCoverageExperience(
     };
   }
 
-  market = scopeMarketSummaryToSelectedStores(market, preferences.selectedStoreIds);
+  const storeSelection = resolveSelectedStoreIdsForRanking({
+    selectedStoreIds: preferences.selectedStoreIds,
+    marketNearbyStores: market.nearbyStores,
+  });
+  const effectiveSelectedStoreIds = storeSelection.effectiveSelectedStoreIds;
+
+  market = scopeMarketSummaryToSelectedStores(market, effectiveSelectedStoreIds);
   const scopedObservations = filterPriceObservationsByStoreIds(
     snapshot.priceObservations,
-    preferences.selectedStoreIds,
+    effectiveSelectedStoreIds,
   );
 
   const recommendationStores = filterNearbyStoresBySelection(
     market.nearbyStores,
-    preferences.selectedStoreIds,
+    effectiveSelectedStoreIds,
   ).filter((store) => store.recommendationEnabled);
 
   if (recommendationStores.length === 0) {
@@ -111,7 +118,7 @@ export async function getPantryCoverageExperience(
     recipes: snapshot.recipes,
     preferences,
     priceObservations: scopedObservations,
-    selectedStoreIds: preferences.selectedStoreIds,
+    selectedStoreIds: effectiveSelectedStoreIds,
   });
 
   const pantryIngredientIds = filterValidPantryIngredientIds(
