@@ -129,6 +129,36 @@ export function psqlQueryScalar(databaseName, sql) {
   ).trim();
 }
 
+export function psqlQueryRows(databaseName, sql) {
+  assertSafeSqlIdentifier(databaseName, "database name");
+  const raw = dockerExecFile(
+    [
+      "exec",
+      YUM4LESS_POSTGRES_CONTAINER,
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      databaseName,
+      "-tA",
+      "-F",
+      "\t",
+      "-c",
+      sql,
+    ],
+    { encoding: "utf8" },
+  ).trim();
+
+  if (!raw) {
+    return [];
+  }
+
+  return raw.split("\n").map((line) => {
+    const [version, filename, checksum, applied_at] = line.split("\t");
+    return { version, filename, checksum, applied_at };
+  });
+}
+
 export function psqlApplySqlContent(databaseName, sqlContent) {
   assertSafeSqlIdentifier(databaseName, "database name");
   dockerExecFile(
@@ -164,4 +194,33 @@ export function createDatabase(databaseName) {
 export function dropDatabaseIfExists(databaseName) {
   assertSafeSqlIdentifier(databaseName, "database name");
   psqlAdminCommand(`DROP DATABASE IF EXISTS ${databaseName};`);
+}
+
+export function tableExists(tableName, databaseName) {
+  assertSafeSqlIdentifier(databaseName, "database name");
+  assertSafeSqlIdentifier(tableName, "table name");
+  try {
+    const count = psqlQueryScalar(
+      databaseName,
+      `select count(*) from information_schema.tables where table_schema = 'public' and table_name = '${tableName}';`,
+    );
+    return count === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function columnExists(tableName, columnName, databaseName) {
+  assertSafeSqlIdentifier(databaseName, "database name");
+  assertSafeSqlIdentifier(tableName, "table name");
+  assertSafeSqlIdentifier(columnName, "column name");
+  try {
+    const count = psqlQueryScalar(
+      databaseName,
+      `select count(*) from information_schema.columns where table_schema = 'public' and table_name = '${tableName}' and column_name = '${columnName}';`,
+    );
+    return count === "1";
+  } catch {
+    return false;
+  }
 }

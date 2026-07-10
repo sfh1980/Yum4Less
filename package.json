@@ -35,6 +35,8 @@
     "ingest:themealdb:from-sales": "node scripts/run-themealdb-import.mjs",
     "setup:local": "node scripts/setup-local.mjs",
     "db:up": "docker compose up -d db",
+    "db:migrate": "node scripts/run-db-migrations.mjs",
+    "db:probe:migration-ledger": "node scripts/probe-migration-ledger-evidence.mjs",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d db",
     "db:logs": "docker compose logs -f db"

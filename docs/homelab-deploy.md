@@ -81,7 +81,16 @@ npm run db:up
 docker ps --filter name=yum4less-postgres
 ```
 
-Schema is applied from `db/init/` on first container start. `ensure-test-db.mjs` also applies missing migration files on later runs.
+Schema is applied from `db/init/` on first container start (physical SQL only — the ledger table is created but **not populated** until the first migration pass). **`schema_migrations` is the source of truth** for which init files have been applied; `npm run db:migrate` or any path that runs `ensure-test-db.mjs` reconciles the ledger (backfill on existing volumes, apply missing files such as `015`/`016` on long-lived dev DBs).
+
+After each deploy that adds or changes files under `db/init/`, run:
+
+```bash
+npm run db:up
+npm run db:migrate
+```
+
+Verify ledger rows: `docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "select version, filename, applied_at from schema_migrations order by version;"`
 
 **Decision:** This runbook assumes **Docker Compose Postgres** on the same box. A standalone Postgres install works if `DATABASE_URL` points at it, but `ensure-test-db.mjs` still tries to manage the Docker container — see [Pre-go-live gaps](#pre-go-live-gaps-flag-dont-fix-in-this-pass) below.
 
@@ -350,7 +359,7 @@ Issues to resolve **before** relying on unattended cron:
 | Gap | Risk under cron | Mitigation until code changes |
 |-----|-----------------|-------------------------------|
 | **`ensure-test-db.mjs` requires Docker** | Cron fails if Docker stopped or user lacks permission | `restart: unless-stopped` on compose; add cron user to `docker` group; consider a second cron line `*/5 * * * * cd /opt/yum4less && docker compose up -d db` |
-| **Stale schema detection throws** (no auto-reset without `YUM4LESS_ALLOW_DB_RESET=1`) | After pulling migrations, cron may exit until manual `db:reset` or migrate | After each deploy with `db/init` changes, run `npm run db:up` and verify schema once |
+| **Stale schema detection throws** (no auto-reset without `YUM4LESS_ALLOW_DB_RESET=1`) | After pulling migrations, cron may exit until manual `db:reset` or migrate | After each deploy with `db/init` changes, run `npm run db:up` && `npm run db:migrate` and verify `schema_migrations` |
 | **`assert-live-ingest-env` does not require `KROGER_API_ENV=production`** | Cron exits 0 but Kroger official API sync no-ops | Set `KROGER_API_ENV=production` explicitly in `.env.local` |
 | **`YUM4LESS_INGEST_ZIPS` defaults to 23111** | Ingest warms wrong market silently | Set real ZIPs in `.env.local`; verify stores in §4.2 SQL |
 | **Map catalog failure is non-fatal** | Cron exit 0 with degraded OSM/catalog | Read warnings in log; rerun `npm run ingest:map-catalog` manually |
