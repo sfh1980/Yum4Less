@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** E2e overlay Settings test pin fix — local `npm test` **916/916**, `npm run test:e2e:ci` **25 passed** / 1 skipped; isolated `:15` **5/5** (`--retries=0`). Remote CI — link after push. Prior migration ledger — [**29062082986**](https://github.com/sfh1980/Yum4Less/actions/runs/29062082986) on **`d72465b`** (verify + integration green; e2e failed before this fix).
+**Verified (2026-07-09):** E2e overlay Settings test pin fix — local `npm test` **916/916**, `npm run test:e2e:ci` **25 passed** / 1 skipped; isolated `:15` **5/5** (`--retries=0`). Remote CI [**29063232861**](https://github.com/sfh1980/Yum4Less/actions/runs/29063232861) **green** on **`9591428`** (verify + integration + e2e). Prior migration ledger — [**29062082986**](https://github.com/sfh1980/Yum4Less/actions/runs/29062082986) on **`d72465b`** (verify + integration green; e2e failed before overlay fix).
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -249,7 +249,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Theme:** Second instance this session of **index-based Settings store selection** against a **distance-sorted** dropdown (first: `navigation-theme` Kroger pin on `72f6460`). `:15` used `selectOption({ index: 1 })` + hard-coded `/Kroger —/` heading — failed in CI when closest store was not Kroger ([`d72465b` run 29062082986](https://github.com/sfh1980/Yum4Less/actions/runs/29062082986); same failure class `×±` on prior green runs).
 - **Shipped:** `e2e/single-store-map-overlay.spec.ts:15` — wait for `/api/market-search`, `selectOption(kroger.id)` (ranked Kroger from response), assert dialog heading from **selected option label** (strip distance suffix), not positional index.
 - **Pattern watch:** If a third e2e hits this class, consider a shared helper or lint/review pass on `selectOption({ index:` in `e2e/`.
-- **Evidence:** isolated `:15` **5/5** (`--retries=0`, CI env); `npm test` **916/916**; `npm run test:e2e:ci` **25 passed** / 1 skipped. Remote CI — link after push.
+- **Evidence:** isolated `:15` **5/5** (`--retries=0`, CI env); `npm test` **916/916**; `npm run test:e2e:ci` **25 passed** / 1 skipped. Remote CI [**29063232861**](https://github.com/sfh1980/Yum4Less/actions/runs/29063232861) **green** on **`9591428`** (verify + integration + e2e).
 
 ### 2026-07-09 — DB migration ledger (backlog #3) — CLOSED
 
