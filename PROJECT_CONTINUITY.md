@@ -4,11 +4,11 @@
 
 ---
 
-## Resume (as of 2026-07-09)
+## Resume (as of 2026-07-10)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09) — Kroger p2 terms (`020`), Flipp supplemental for unmatched ingredients, per-chain weekly-ad dedupe, Aldi Flipp+direct-scrape merge on `b9c4a46`; live re-ingest + `sync:provider-prices` on `yum4less_dev` (see [Phase 2a](#verification-snapshot)). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09) — Track B UI (trust banner depth, Settings multi-store live summary, results skew heads-up); architectural asymmetry documented; **not** a coverage-gap fix. Aldi weekly-ad ceiling **re-confirmed** with shopper-facing explanation. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Active queue:** geolocation denial handler + Settings gate bypass; **new backlog #18** — Dollar Tree / Dollar General onboarding investigation (separate from coverage honesty). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09) — 0 errors + CI `npm run typecheck`.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09) — Kroger p2 terms (`020`), Flipp supplemental for unmatched ingredients, per-chain weekly-ad dedupe, Aldi Flipp+direct-scrape merge on `b9c4a46`; live re-ingest + `sync:provider-prices` on `yum4less_dev` (see [Phase 2a](#verification-snapshot)). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09) — Track B UI (trust banner depth, Settings multi-store live summary, results skew heads-up); architectural asymmetry documented; **not** a coverage-gap fix. Aldi weekly-ad ceiling **re-confirmed** with shopper-facing explanation. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Active queue:** Settings gate bypass (P1-1); **backlog #18** — Dollar Tree / Dollar General onboarding investigation. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09) — 0 errors + CI `npm run typecheck`.
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** Chain coverage honesty slice — local `npm test` **922/922**, `npm run test:integration` **31/31**, `npm run build` **pass**, `npm run test:e2e:ci` **25 passed** / 1 skipped. Live re-ingest + provider sync on `yum4less_dev`; Phase 2a post-ingest: Kroger **96/97**, Publix **34/97**, Food Lion **17/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only. Remote CI [**29064540982**](https://github.com/sfh1980/Yum4Less/actions/runs/29064540982) **green** on **`5781348`** (verify + integration + e2e). Ingest commit [**29063845905**](https://github.com/sfh1980/Yum4Less/actions/runs/29063845905) on **`b9c4a46`**.
+**Verified (2026-07-10):** Geolocation denial ZIP fallback — local `npm test` **925/925**, `npm run test:integration` **31/31**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 1 skipped (H12 map-mount; no new skips). Remote CI [**29108969234**](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234) **green** on **`295daee`**.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -244,6 +244,22 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 ## Changelog (newest first)
 
+### 2026-07-10 — Geolocation denial asymmetry (P1-3) — CLOSED
+
+**Theme:** First-visit “Use my location” denial hard-failed; return-visit auto-load already fell back to saved ZIP. Unify both paths.
+
+**Shipped (behavioral fix, not mechanical-only):**
+- `handleBrowserLocationSearch` denial callback now calls `runMarketSearchWithZipFallback` with notice `"Location access was denied — using your ZIP instead."` (same helper as Site A auto-load)
+- **Side effect fixed:** denial no longer leaves `locationValidationMode` stuck on `"browser"` (ZIP field errors stayed suppressed); helper flips mode to `"zip"`
+- Unit tests: Site B valid ZIP → ZIP body + notice; Site B invalid ZIP → error notice, no fetch; Site A denial regression (saved-ZIP notice)
+- **Proof-of-catch:** restored hard-fail callback → Site B test failed (`expected 'error' to be 'ready'`); re-applied fix → pass
+
+**Out of scope (unchanged):** `enableHighAccuracy` / PositionOptions; HTTPS/HSTS; Settings gate bypass (P1-1)
+
+**Evidence (local):** `npm test` **925/925**; `npm run test:integration` **31/31**; `npm run build` **pass**; `npm run typecheck` **0 errors**; `npm run test:e2e:ci` **25 passed** / 1 skipped (baseline H12; no new skips)
+
+**Remote CI:** [**29108969234**](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234) **green** on **`295daee`**
+
 ### 2026-07-09 — TypeScript cleanup + CI typecheck gate (backlog #5) — CLOSED
 
 **Theme:** `tsc --noEmit` hygiene from **102 errors → 0**; CI gate so drift cannot grow silently.
@@ -309,7 +325,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Theme:** Re-verified 17 audit/deferred backlog items against live codebase and `yum4less_dev` (not memory or prior descriptions).
 - **Key refreshed evidence:** `npx tsc --noEmit` **84 errors** (grown from 64–66); no `schema_migrations` table; `applyPhaseCMigrationsIfMissing()` still omits `015`/`016`; Phase 2a per-chain coverage on `yum4less_dev` (90d, in-stock, official+weekly-ad): Kroger **96/97**, Publix **34/97**, Food Lion **18/97**, Aldi **17/97**, Walmart **10/97**; Kroger-only **50/97** (was 68/97 on 2026-07-08).
 - **Quick-win queue (verified open):** e2e scoped-store assertion (**P1**); `ingest-standards.md` M128 doc drift; M156 `save money` in trust/help copy; map-overlay focus trap. **Accept/close:** OSRM for discovery (straight-line labeled); H12 e2e skip (UI shipped); Aldi Flipp at-ceiling (decision log); Walmart ranked path deferred.
-- **Bundle queue:** ranking-path collocated collapse + stale `selectedStoreIds`; migration ledger before more tombstones; geolocation denial handler + Settings gate bypass.
+- **Bundle queue:** ranking-path collocated collapse + stale `selectedStoreIds`; migration ledger before more tombstones; Settings gate bypass (geolocation denial P1-3 closed 2026-07-10).
 - **Honest limits:** Read-only pass — no code changes, no `npm test` / e2e / Semgrep re-run. Full item-by-item table → [Backlog re-triage 2026-07-09](#backlog-re-triage-2026-07-09).
 
 ### 2026-07-09 — Coverage slices 2–5: local working tree (not on master)
@@ -2010,6 +2026,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (local) | 2026-07-10 | **925/925** pass (geolocation denial ZIP fallback P1-3) |
+| `npm run test:integration` (local) | 2026-07-10 | **31/31** pass |
+| `npm run build` (local) | 2026-07-10 | **Pass** |
+| `npm run typecheck` (local) | 2026-07-10 | **0 errors** |
+| `npm run test:e2e:ci` (local) | 2026-07-10 | **25 passed**, 1 skipped (H12 baseline; no new skips) |
+| **Remote CI** (geolocation denial P1-3 `295daee`) | 2026-07-10 | **Green** — [29108969234](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234) |
 | `npm test` (local) | 2026-07-09 | **922/922** pass (chain coverage honesty + ingest slices) |
 | `npm run test:integration` (local) | 2026-07-09 | **31/31** pass |
 | `npm run build` (local) | 2026-07-09 | **Pass** |
@@ -2108,7 +2130,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **INTERNAL_CATALOG chain-content bias (Phase 2a)** | **Re-measured 2026-07-09** on `yum4less_dev` (90d, in-stock, official+weekly-ad): Kroger **96/97**, Publix **34/97**, Food Lion **18/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only (was 68/97 on 2026-07-08; Publix ingest fix + coverage slices shifted numbers). Architectural call sites chain-agnostic; **content/ingest success still Kroger-heavy**. Rebalance tracked list and/or non-Kroger weekly-ad match rates. Evidence: `scripts/.investigate-internal-catalog-chain-neutrality.ts`. |
 | **e2e `assertMarketSearchStoreResults` scoped-store assertion** | **CLOSED** (2026-07-09) — Helper asserts Settings `selectedStoreIds` on map overlay; recommendations gate no longer requires Kroger in scoped body. `navigation-theme.spec.ts` **15/15** with `--repeat-each=5 --retries=0`. |
 | **Settings-first gate bypass (P1-1)** | **OPEN** — `handleTabChange` allows Home/Deals/Saved before `setupComplete`; only Cook disabled (by recipe readiness). Re-triage 2026-07-09. |
-| **Geolocation denial asymmetry (P1-3)** | **OPEN** — first-visit "Use my location" hard-fails; return-visit auto-load falls back to saved ZIP. No `enableHighAccuracy`. Re-triage 2026-07-09. |
+| **Geolocation denial asymmetry (P1-3)** | **CLOSED** (2026-07-10) — **`295daee`**; CI [29108969234](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234). Behavioral: Site B denial → `runMarketSearchWithZipFallback` (unifies with Site A). Also clears stuck `locationValidationMode === "browser"` after denial. `enableHighAccuracy` still deferred. |
 | **M156 `save money` trust-copy gap (P2-3)** | **CLOSED** (2026-07-09) — Copy rephrased; pattern added; `help-hint-content.test.ts` guards help popovers. |
 | **Map-overlay focus trap (P2-6)** | **CLOSED** (2026-07-09) — All three overlays use `useModalDialog`; unit tests in `modal-overlay-focus-trap.test.tsx`. |
 | **`ingest-standards.md` M128 doc drift (P1-4 agent half)** | **CLOSED** (2026-07-09) — Agent file aligned with manual-pause-only shipped reality. |
@@ -2125,7 +2147,7 @@ Read-only re-verification of 17 items from `docs/audits/full-system-run-report.m
 
 | # | Item | Verified status | Scope | Risk (1 mo) | Group |
 |---|------|-----------------|-------|-------------|-------|
-| 1 | Mobile GPS/HTTPS | No `enableHighAccuracy`; no app HTTPS redirect; denial asymmetry confirmed (`use-meal-planner.ts`) | Med | Med mobile without TLS | Homelab + UX bundle |
+| 1 | Mobile GPS/HTTPS | **Denial asymmetry CLOSED** (`295daee` / [29108969234](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234)); still no `enableHighAccuracy`; no app HTTPS redirect | Med | Med mobile without TLS | Homelab + UX (`enableHighAccuracy` / HTTPS remain) |
 | 2 | Settings gate bypass | Home/Deals/Saved reachable before `setupComplete`; only Cook disabled (recipes) | Small | Low–Med UX | Bundle with #1 |
 | 3 | No migration ledger | **CLOSED** (2026-07-09) — `schema_migrations` + `applyPendingMigrations()` | Med | — | Was prerequisite for tombstones / #4 |
 | 4 | Universal store reconciliation | `catalog-store-colocated-identity.ts` scope accurate; Option A deferred | Design | Low–Med | Bundle with #14–15 |
