@@ -394,6 +394,159 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(requestBody.zipCode).toBe("");
     expect(result.current.activeLocationRequest?.mode).toBe("browser");
   });
+
+  it("falls back to form ZIP when Use my location is denied (Site B)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(marketPayload("ZIP fallback market", "23111")), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const geolocationMock = vi.fn((_success: PositionCallback, error?: PositionErrorCallback) => {
+      error?.({
+        code: 1,
+        message: "User denied Geolocation",
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      } as GeolocationPositionError);
+    });
+    vi.stubGlobal("navigator", {
+      ...globalThis.navigator,
+      geolocation: { getCurrentPosition: geolocationMock },
+    });
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.setForm((current) => ({ ...current, zipCode: "23111" }));
+      result.current.handleBrowserLocationSearch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("ready");
+    });
+
+    expect(geolocationMock).toHaveBeenCalled();
+    expect(result.current.marketSearchState.notice).toBe(
+      "Location access was denied — using your ZIP instead.",
+    );
+    expect(result.current.activeLocationRequest).toEqual({
+      mode: "zip",
+      zipCode: "23111",
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string) as {
+      zipCode?: string;
+      latitude?: number;
+      longitude?: number;
+    };
+    expect(requestBody.zipCode).toBe("23111");
+    expect(requestBody.latitude).toBeUndefined();
+    expect(requestBody.longitude).toBeUndefined();
+  });
+
+  it("surfaces denial notice as error when Use my location is denied and ZIP is invalid (Site B)", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const geolocationMock = vi.fn((_success: PositionCallback, error?: PositionErrorCallback) => {
+      error?.({
+        code: 1,
+        message: "User denied Geolocation",
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      } as GeolocationPositionError);
+    });
+    vi.stubGlobal("navigator", {
+      ...globalThis.navigator,
+      geolocation: { getCurrentPosition: geolocationMock },
+    });
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.setForm((current) => ({ ...current, zipCode: "12" }));
+    });
+
+    await act(async () => {
+      result.current.handleBrowserLocationSearch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("error");
+    });
+
+    expect(geolocationMock).toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.marketSearchState.error).toBe(
+      "Location access was denied — using your ZIP instead.",
+    );
+    expect(result.current.market).toBeUndefined();
+    expect(result.current.activeLocationRequest).toBeUndefined();
+  });
+
+  it("falls back to saved ZIP when return-visit geolocation auto-load is denied (Site A)", async () => {
+    writeSettingsPreferences({
+      zipCode: "23111",
+      radiusMiles: 5,
+      shoppingStyle: "single-store",
+      selectedStoreIds: ["kroger-1"],
+      locationMode: "geolocation",
+      latitude: 37.6085,
+      longitude: -77.3739,
+      setupComplete: true,
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(marketPayload("Saved ZIP fallback", "23111")), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const geolocationMock = vi.fn((_success: PositionCallback, error?: PositionErrorCallback) => {
+      error?.({
+        code: 1,
+        message: "User denied Geolocation",
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      } as GeolocationPositionError);
+    });
+    vi.stubGlobal("navigator", {
+      ...globalThis.navigator,
+      geolocation: { getCurrentPosition: geolocationMock },
+    });
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("ready");
+    });
+
+    expect(geolocationMock).toHaveBeenCalled();
+    expect(result.current.marketSearchState.notice).toBe(
+      "Location access was denied — using your saved ZIP instead.",
+    );
+    expect(result.current.activeLocationRequest).toEqual({
+      mode: "zip",
+      zipCode: "23111",
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string) as {
+      zipCode?: string;
+      latitude?: number;
+      longitude?: number;
+    };
+    expect(requestBody.zipCode).toBe("23111");
+    expect(requestBody.latitude).toBeUndefined();
+    expect(requestBody.longitude).toBeUndefined();
+  });
 });
 
 describe("useMealPlanner pantry coverage debounce", () => {

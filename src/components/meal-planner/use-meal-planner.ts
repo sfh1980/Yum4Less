@@ -655,11 +655,10 @@ export function useMealPlanner() {
           return;
         }
 
-        setMarketSearchState({
-          status: "error",
-          error:
-            "We could not access your browser location. Check location permissions or use ZIP search instead.",
-        });
+        void runMarketSearchWithZipFallback(
+          "Location access was denied — using your ZIP instead.",
+          Number(form.radiusMiles),
+        );
       },
     );
   }
