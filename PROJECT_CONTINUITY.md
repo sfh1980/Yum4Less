@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** Store-ID integrity bundle (#14–15) — local `npm test` **911/911**, `npm run test:integration` **29/29**, `npm run build` **pass**, `npm run test:e2e:ci` **25 passed** / 1 skipped (`e2e/stale-store-selection.spec.ts` added). Remote CI pending push (this slice). Prior four quick-win slice — local **903/903**; remote [**29056852462**](https://github.com/sfh1980/Yum4Less/actions/runs/29056852462) green on **`72f6460`**. **Re-triage pass (same day, read-only):** `npx tsc --noEmit` **84 errors** (up from 64–66 baseline); Phase 2a chain coverage re-measured on `yum4less_dev` — see [Verification snapshot](#verification-snapshot). Not claiming beta v1 demo-complete or homelab deploy-ready.
+**Verified (2026-07-09):** Store-ID integrity bundle (#14–15) — local `npm test` **911/911**, `npm run test:integration` **29/29**, `npm run build` **pass**, `npm run test:e2e:ci` **25 passed** / 1 skipped (`e2e/stale-store-selection.spec.ts` added). Remote CI [**29060088692**](https://github.com/sfh1980/Yum4Less/actions/runs/29060088692) **green** on **`debddf0`**. Prior four quick-win slice — local **903/903**; remote [**29056852462**](https://github.com/sfh1980/Yum4Less/actions/runs/29056852462) green on **`72f6460`**. **Re-triage pass (same day, read-only):** `npx tsc --noEmit` **84 errors** (up from 64–66 baseline); Phase 2a chain coverage re-measured on `yum4less_dev` — see [Verification snapshot](#verification-snapshot). Not claiming beta v1 demo-complete or homelab deploy-ready.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -250,6 +250,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Shipped:** `resolveSelectedStoreIdsForRanking()` in `store-scope.ts` — **stale-filter against passed/rehydrated `market.nearbyStores` first**, then `collapseSameChainCollocatedCatalogStores` (0.05 mi default; Kroger 0.15 mi). Wired in `recommendation-service.ts` + `pantry-coverage-service.ts`. Option (c): drop invalid ids + `supplementaryShopperNotice` when partial survivors; primary **Selected stores unavailable** when all dropped. `RecommendationExperience.effectiveSelectedStoreIds` returned when normalization occurred; client **always** writes back on rank success (`use-meal-planner.ts`). `e2e/stale-store-selection.spec.ts` — notice + localStorage re-sync + no repeat notice on clean second rank.
 - **Honest limits / scope boundary:** **Not** Option A / item 4 universal reconciliation (no locator↔OSM↔SNAP name similarity, no market-search merge changes, no new tombstones). Reuses existing `catalog-store-colocated-identity.ts` only. E2e uses route intercept to append stale id to rank POST when market-search prune would clear form state before rank — server + re-sync path still load-bearing.
 - **Evidence (local):** `npm test` **911/911**; `npm run test:integration` **29/29**; `npm run build` **pass**; `npm run test:e2e:ci` **25 passed**, 1 skipped.
+- **Remote CI:** [**29060088692**](https://github.com/sfh1980/Yum4Less/actions/runs/29060088692) **green** on **`debddf0`**.
 
 ### 2026-07-09 — Four audit quick wins: e2e scoped stores, ingest doc, M156 copy, overlay focus trap — CLOSED
 
@@ -1969,6 +1970,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npm run build` (local) | 2026-07-09 | **Pass** (store-ID integrity #14–15) |
 | `npm run test:e2e:ci` (local) | 2026-07-09 | **25 passed**, 1 skipped (`stale-store-selection.spec.ts` added) |
 | `navigation-theme.spec.ts` ×5 (local) | 2026-07-09 | **15/15** pass (`--repeat-each=5 --retries=0`) — scoped-store map assertion stable |
+| **Remote CI** (store-ID integrity #14–15 `debddf0`) | 2026-07-09 | **Green** — [29060088692](https://github.com/sfh1980/Yum4Less/actions/runs/29060088692): verify + semgrep + integration + e2e all **success** |
 | **Remote CI** (four quick-win stack `72f6460`) | 2026-07-09 | **Green** — [29056852462](https://github.com/sfh1980/Yum4Less/actions/runs/29056852462): verify + semgrep + integration + e2e all **success** |
 | **Remote CI** (rank-screen removal `08e8801` / `4b511e9`) | 2026-07-09 | **Green** — [run 29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870): verify + semgrep + integration + e2e all **success** |
 | **Remote CI** (Publix ingest fix `c18f99e`) | 2026-07-09 | **Green** — [run 29047864858](https://github.com/sfh1980/Yum4Less/actions/runs/29047864858): verify + semgrep + integration + e2e all **success** |
