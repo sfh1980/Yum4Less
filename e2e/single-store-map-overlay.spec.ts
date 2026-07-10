@@ -17,17 +17,41 @@ test.describe("Single-store map overlay", () => {
   }) => {
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
     await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-    await page.getByRole("button", { name: "Find stores for this area" }).click();
-    await expect(page.getByRole("combobox", { name: "Store" })).toBeVisible({
-      timeout: 120_000,
-    });
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (res) =>
+          res.url().includes("/api/market-search") &&
+          res.request().method() === "POST",
+        { timeout: 120_000 },
+      ),
+      page.getByRole("button", { name: "Find stores for this area" }).click(),
+    ]);
+    expect(response.status()).toBe(200);
+    const marketBody = (await response.json()) as {
+      market: {
+        nearbyStores: Array<{ id: string; chain: string; recommendationEnabled: boolean }>;
+      };
+    };
+    const kroger = marketBody.market.nearbyStores.find(
+      (store) => store.chain === "kroger" && store.recommendationEnabled,
+    );
+    expect(kroger, "23111 fixture should include ranked Kroger for map overlay").toBeTruthy();
 
-    await page.getByRole("combobox", { name: "Store" }).selectOption({ index: 1 });
+    const storeCombobox = page.getByRole("combobox", { name: "Store" });
+    await expect(storeCombobox).toBeVisible({ timeout: 120_000 });
+    await storeCombobox.selectOption(kroger!.id);
+    const selectedOptionLabel = (await storeCombobox.locator("option:checked").textContent())?.trim();
+    const expectedHeading = selectedOptionLabel?.replace(/\s*\([^)]*\)\s*$/, "").trim();
+    expect(
+      expectedHeading,
+      "selected store option label should include the map overlay title",
+    ).toBeTruthy();
+
     await page.getByRole("button", { name: "📍 Show on map" }).click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("heading", { name: /Kroger —/ })).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: expectedHeading! })).toBeVisible();
     await expect(page.locator(".single-store-map-overlay .nearby-stores-map")).toBeVisible();
 
     // Click the dimmed backdrop outside the panel — not the viewport center (panel/map).
