@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { deleteProcessEnvKey } from "@/lib/test-only/process-env-test-helpers";
 import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 import {
   assertTestDbWipeAllowed,
@@ -10,7 +11,7 @@ const originalNodeEnv = process.env.NODE_ENV;
 describe("test db wipe policy", () => {
   afterEach(() => {
     if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
+      deleteProcessEnvKey("NODE_ENV");
     } else {
       stubTestNodeEnv(originalNodeEnv);
     }

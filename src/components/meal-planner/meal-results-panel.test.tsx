@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
 import { buildTestMarket } from "@/components/meal-planner/test-fixtures";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 import type { MealRecommendation } from "@/lib/recommendation-service";
 import type {
   FormState,
@@ -224,10 +225,9 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
       recommendationReadyStoreCount: 0,
       saleIngredientChoices: [],
       nearbyStores: [
-        {
+        buildTestNearbyStoreSummary({
           id: "context-1",
           name: "Context Store",
-          kind: "grocery",
           latitude: 37.6,
           longitude: -77.3,
           distanceMiles: 1,
@@ -239,7 +239,7 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
           locationProvenance: "osm-context",
           locationBadge: "Map context pin",
           locationNote: "Fixture.",
-        },
+        }),
       ],
       message: "Map context only — ranked meal estimates are limited coverage here.",
     });

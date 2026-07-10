@@ -9,22 +9,24 @@ import {
   buildSingleStoreMapModel,
   getMapBounds,
 } from "@/lib/nearby-stores-map-model";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
+import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 
-function withLocationFields<
-  T extends { id: string; sourceName?: string; lastVerifiedAt?: string },
->(store: T) {
+function withLocationFields(
+  store: Partial<NearbyStoreSummary> & Pick<NearbyStoreSummary, "id" | "name">,
+): NearbyStoreSummary {
   const locationInput = {
     storeId: store.id,
     sourceName: store.sourceName,
     lastVerifiedAt: store.lastVerifiedAt,
   };
 
-  return {
+  return buildTestNearbyStoreSummary({
     ...store,
     locationProvenance: resolveStoreMapLocationProvenance(locationInput),
     locationBadge: buildStoreMapLocationBadge(locationInput),
     locationNote: buildStoreMapLocationNote(locationInput),
-  };
+  });
 }
 
 describe("nearby stores map model", () => {
@@ -35,7 +37,6 @@ describe("nearby stores map model", () => {
       searchLongitude: -77.3321,
       lookupSource: "geocodio",
       radiusMiles: 5,
-      dataSource: "database",
       nearbyStores: [
         withLocationFields({
           id: "kroger-mechanicsville",
@@ -70,7 +71,6 @@ describe("nearby stores map model", () => {
       searchLongitude: -77.3321,
       lookupSource: "geocodio",
       radiusMiles: 12,
-      dataSource: "database",
       nearbyStores: [
         withLocationFields({
           id: "osm-node-900001",

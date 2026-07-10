@@ -35,7 +35,7 @@ describe("buildNearbySaleIngredientChoices", () => {
   it("surfaces freshness hours from observation metadata", () => {
     const choices = buildNearbySaleIngredientChoices({
       nearbyStores: [{ id: "store-a", name: "Kroger A" }],
-      ingredients: [{ id: "rice", name: "Rice", category: "grain" }],
+      ingredients: [{ id: "rice", name: "Rice", category: "pantry" }],
       priceObservations: [
         {
           storeId: "store-a",
@@ -75,7 +75,7 @@ describe("buildNearbySaleIngredientChoices", () => {
   it("only includes observations for stores passed in the nearby set", () => {
     const choices = buildNearbySaleIngredientChoices({
       nearbyStores: [{ id: "store-a", name: "Kroger A" }],
-      ingredients: [{ id: "rice", name: "Rice", category: "grain" }],
+      ingredients: [{ id: "rice", name: "Rice", category: "pantry" }],
       priceObservations: [
         {
           storeId: "store-b",

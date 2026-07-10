@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/recommendations/route";
 import { resetDbPoolForTests } from "@/lib/db";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 import {
   buildZip23111RankingSnapshot,
   zip23111MechanicsvilleLocation,
@@ -67,22 +68,17 @@ function fatMarketFromSnapshot(
     searchLongitude: zip23111MechanicsvilleLocation.longitude,
     radiusMiles: zip23111RankingPreferences.radiusMiles,
     nearbyStores: [
-      {
+      buildTestNearbyStoreSummary({
         id: "kroger-mechanicsville",
         name: "Kroger",
-        kind: "grocery",
         latitude: 37.6153,
         longitude: -77.3491,
         distanceMiles: 2.4,
-        chain: "kroger",
-        chainLabel: "Kroger",
-        rolloutStatus: "weekly-ad-preview",
-        recommendationEnabled: true,
         rolloutNote: "Fixture rollout note.",
         locationProvenance: "api-verified",
         locationBadge: "Verified store pin",
         locationNote: "Fixture location note.",
-      },
+      }),
     ],
     recommendationReadyStoreCount: 1,
     providerRollout: [

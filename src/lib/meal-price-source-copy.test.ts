@@ -12,10 +12,12 @@ const baseMeal = {
   shoppingPlan: [
     {
       ingredient: "Chicken thighs",
+      ingredientId: "chicken-thighs",
       quantityNote: "2 lb",
       storeName: "Kroger Mechanicsville",
       price: 6.49,
       freshnessDaysAgo: 1,
+      sourcedFromPantry: false,
       saleConfidence: {
         level: "advertised-recent" as const,
         label: "Sale price — estimate only",
@@ -75,7 +77,9 @@ describe("buildMealPriceSourceSummary", () => {
           {
             ...baseMeal.shoppingPlan[0],
             ingredient: "Broccoli",
+            ingredientId: "broccoli",
             storeName: "Publix Midlothian",
+            sourcedFromPantry: false,
           },
         ],
       },

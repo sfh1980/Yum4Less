@@ -96,7 +96,7 @@ describe("weekly ad ingestion service", () => {
         syncedCount: 1,
         skippedCount: 0,
         failedCount: 0,
-        retrievalMode: "fixture",
+        retrievalMode: "cached",
         message: "synced",
       });
 
@@ -132,7 +132,7 @@ describe("weekly ad ingestion service", () => {
         syncedCount: 1,
         skippedCount: 0,
         failedCount: 0,
-        retrievalMode: "fixture",
+        retrievalMode: "cached",
         message: "synced",
       });
 
@@ -168,7 +168,7 @@ describe("weekly ad ingestion service", () => {
         syncedCount: 1,
         skippedCount: 0,
         failedCount: 0,
-        retrievalMode: "fixture",
+        retrievalMode: "cached",
         message: "synced",
       });
 

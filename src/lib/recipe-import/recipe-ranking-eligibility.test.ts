@@ -8,6 +8,7 @@ import {
   passesThemealdbSaleOverlap,
 } from "@/lib/recipe-import/recipe-ranking-eligibility";
 import { THEMEALDB_SOURCE_NAME } from "@/lib/recipe-import/themealdb-types";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
 const internalRecipe: CatalogRecipeRecord = {
   id: "sheet-pan-lemon-chicken",
@@ -97,19 +98,14 @@ describe("recipe ranking eligibility", () => {
     const attribution = buildThemealdbAttribution({
       recipe: themealdbRecipe,
       nearbyStores: [
-        {
+        buildTestNearbyStoreSummary({
           id: "kroger-mechanicsville",
           name: "Kroger Mechanicsville",
-          kind: "grocery",
           latitude: 37.6,
           longitude: -77.3,
           distanceMiles: 1,
-          chain: "kroger",
-          chainLabel: "Kroger",
-          rolloutStatus: "ranked",
-          recommendationEnabled: true,
           rolloutNote: "Weekly-ad ranked",
-        },
+        }),
       ],
     });
 

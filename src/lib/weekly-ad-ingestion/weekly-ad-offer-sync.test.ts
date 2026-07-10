@@ -33,6 +33,8 @@ describe("syncWeeklyAdOffersToPriceObservations persist failures (H5)", () => {
       configured: true,
       fallbackUsed: false,
       message: "Fixture ingest",
+      fetchedAt: "2026-06-19T12:00:00.000Z",
+      termsNote: "Fixture weekly-ad terms.",
       offers: [
         {
           chain: "kroger",
@@ -81,6 +83,8 @@ describe("syncWeeklyAdOffersToPriceObservations persist failures (H5)", () => {
       configured: true,
       fallbackUsed: false,
       message: "Fixture ingest",
+      fetchedAt: "2026-06-19T12:00:00.000Z",
+      termsNote: "Fixture weekly-ad terms.",
       offers: [
         {
           chain: "kroger",

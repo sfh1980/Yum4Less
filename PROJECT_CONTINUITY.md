@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09) — Kroger p2 terms (`020`), Flipp supplemental for unmatched ingredients, per-chain weekly-ad dedupe, Aldi Flipp+direct-scrape merge on `b9c4a46`; live re-ingest + `sync:provider-prices` on `yum4less_dev` (see [Phase 2a](#verification-snapshot)). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09) — Track B UI (trust banner depth, Settings multi-store live summary, results skew heads-up); architectural asymmetry documented; **not** a coverage-gap fix. Aldi weekly-ad ceiling **re-confirmed** with shopper-facing explanation. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Active queue:** geolocation denial handler + Settings gate bypass; **new backlog #18** — Dollar Tree / Dollar General onboarding investigation (separate from coverage honesty).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09) — Kroger p2 terms (`020`), Flipp supplemental for unmatched ingredients, per-chain weekly-ad dedupe, Aldi Flipp+direct-scrape merge on `b9c4a46`; live re-ingest + `sync:provider-prices` on `yum4less_dev` (see [Phase 2a](#verification-snapshot)). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09) — Track B UI (trust banner depth, Settings multi-store live summary, results skew heads-up); architectural asymmetry documented; **not** a coverage-gap fix. Aldi weekly-ad ceiling **re-confirmed** with shopper-facing explanation. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Active queue:** geolocation denial handler + Settings gate bypass; **new backlog #18** — Dollar Tree / Dollar General onboarding investigation (separate from coverage honesty). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09) — 0 errors + CI `npm run typecheck`.
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -243,6 +243,20 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-09 — TypeScript cleanup + CI typecheck gate (backlog #5) — CLOSED
+
+**Theme:** `tsc --noEmit` hygiene from **102 errors → 0**; CI gate so drift cannot grow silently.
+
+**Shipped:**
+- **`npm run typecheck`** (`tsc --noEmit`) added to `package.json` and **verify** job in `.github/workflows/ci.yml`
+- **B1 (behavioral, not noise):** `use-meal-planner.test.ts` pantry debounce test called `handleAddPantryIngredient("olive-oil")` after API changed to object shape — silently stored `[undefined]` in `pantryIngredientIds`. Fixed call + `toContain("olive-oil")` assertion; proof-of-catch: old shape fails with `expected [ undefined ] to include 'olive-oil'`
+- **B3:** `listRecentCustomerFeedback(limit: number)` — widened from literal-`20` inference artifact
+- Bulk mock/fixture drift: `NearbyStoreSummary` fields, stale `locationProvenance`, weekly-ad mocks, `ProcessEnv` test helpers, `@scripts-lib/*` ambient types for migration-ledger tests only
+
+**Evidence (local):** `npx tsc --noEmit` **0 errors**; `npm test` **922/922**; `npm run test:integration` **31/31**; `npm run build` **pass**; `npm run test:e2e:ci` **25 passed** / 1 skipped
+
+**Limits:** No production pantry logic changed — test + type-narrowness fix only.
 
 ### 2026-07-09 — Chain coverage honesty (#13 + #16) + ingest slices 2–5 shipped — CLOSED
 
@@ -492,7 +506,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | P1-8 Cook tab vs marketBlocked | **DEFERRED** | Not touched |
 | P1-9 Store selection invalidates rank | **CLOSED** | Not touched |
 | P1-10 No DB migration ledger | **DEFERRED** | Migrations `015`/`016` add SQL files without ledger |
-| tsc `--noEmit` | **STILL OPEN** | **84 errors** (2026-07-09 re-triage; was 64–66) — not CI-gated |
+| tsc `--noEmit` | **CLOSED** | **0 errors** (2026-07-09); CI-gated via `npm run typecheck` in verify job; B1 pantry-add test bug found during cleanup |
 | M128/M151 automation | **DEFERRED** | Homelab slice |
 | Saved persistence | **DEFERRED** | Unchanged |
 | R11 — cuisine/ethnic filter chips | **DEFERRED** | Unchanged |
@@ -2019,7 +2033,11 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Remote CI** (Bug 4c `e5b1285`) | 2026-07-08 | **Green** — [run 28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879): verify + semgrep + integration + e2e all **success** |
 | **Remote CI** (`0c73016`) | 2026-07-06 | **Green** — [run 28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364): verify (lint + **813/813** unit + build) + integration **27/27** + e2e **21+1 skip** — **not re-run** after fixture-OSM / collocated slices |
 | `npm run lint` (local) | 2026-07-06 | **Not re-run** this slice; build lint step passed 2026-07-08 |
-| `npx tsc --noEmit` (local) | 2026-07-09 | **84 errors** (re-triage pass; grown from 64–66; top files: `shopping-plan-builder.test.ts`, weekly-ad test mocks) |
+| `npx tsc --noEmit` / `npm run typecheck` (local) | 2026-07-09 | **0 errors** (was 102 at slice start; CI-gated); B1 pantry-add test bug fixed |
+| `npm test` (local) | 2026-07-09 | **922/922** pass (tsc cleanup slice) |
+| `npm run test:integration` (local) | 2026-07-09 | **31/31** pass (tsc cleanup slice) |
+| `npm run build` (local) | 2026-07-09 | **Pass** (tsc cleanup slice) |
+| `npm run test:e2e:ci` (local) | 2026-07-09 | **25 passed** / 1 skipped (tsc cleanup slice) |
 | Phase 2a chain coverage (`yum4less_dev`) | 2026-07-09 | Superseded by post-ingest row above |
 | `schema_migrations` ledger | 2026-07-09 | **Shipped** — `000_schema_migrations.sql` + `applyPendingMigrations()`; simulated partial/fresh volume evidence via `npm run db:probe:migration-ledger` |
 | `npm test` (local) | 2026-07-09 | **916/916** (+5 migration ledger unit tests) |
@@ -2109,7 +2127,7 @@ Read-only re-verification of 17 items from `docs/audits/full-system-run-report.m
 | 2 | Settings gate bypass | Home/Deals/Saved reachable before `setupComplete`; only Cook disabled (recipes) | Small | Low–Med UX | Bundle with #1 |
 | 3 | No migration ledger | **CLOSED** (2026-07-09) — `schema_migrations` + `applyPendingMigrations()` | Med | — | Was prerequisite for tombstones / #4 |
 | 4 | Universal store reconciliation | `catalog-store-colocated-identity.ts` scope accurate; Option A deferred | Design | Low–Med | Bundle with #14–15 |
-| 5 | `tsc` bucket | **84 errors** (grown); not CI-gated | Med | Low runtime / Med hygiene | Hygiene |
+| 5 | `tsc` bucket | **CLOSED** (2026-07-09) — **0 errors** + `npm run typecheck` in CI; B1 pantry-add test fix found via cleanup | — | — | Hygiene |
 | 6 | Ingest auto-pause doc drift | `ingest-standards.md` still claims robots.txt/auto-pause/kill switches | Small | Low ops / Med agent trust | Quick win |
 | 7 | OSRM in discovery | OSRM shopping-route only; discovery haversine + "straight-line" labels | Large if pursued | **Low** | **Accept** |
 | 8 | M156 `save money` | In trust/help copy; missing from `FORBIDDEN_TRUST_CLAIM_PATTERNS` | Small | Low–Med trust | Quick win |

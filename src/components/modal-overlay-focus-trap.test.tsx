@@ -57,7 +57,7 @@ function expectModalFocusTrap(input: {
 }) {
   expect(document.body.classList.contains("modal-open")).toBe(true);
   expect(
-    document.querySelector(".meal-planner-grid-col")?.inert,
+    (document.querySelector(".meal-planner-grid-col") as HTMLElement | null)?.inert,
     "background content should be inert while modal is open",
   ).toBe(true);
 
@@ -84,7 +84,7 @@ describe("useModalDialog wiring on overlays", () => {
     );
 
     const dialog = screen.getByRole("dialog", { name: "Store locations" });
-    const closeButton = screen.getByRole("button", { name: "Close", exact: true });
+    const closeButton = screen.getByRole("button", { name: /^Close$/ });
 
     expectModalFocusTrap({ dialog, initialFocus: closeButton });
 
@@ -138,7 +138,7 @@ describe("useModalDialog wiring on overlays", () => {
     const dialog = screen.getByRole("dialog", {
       name: "Project & data details (internal)",
     });
-    const closeButton = screen.getByRole("button", { name: "Close", exact: true });
+    const closeButton = screen.getByRole("button", { name: /^Close$/ });
 
     expectModalFocusTrap({ dialog, initialFocus: closeButton });
   });

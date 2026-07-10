@@ -1,5 +1,6 @@
+/// <reference path="./test-only/scripts-migrations.d.ts" />
 import { describe, expect, it } from "vitest";
-import { assertSafeSqlIdentifier } from "../../scripts/lib/spawn-safe.mjs";
+import { assertSafeSqlIdentifier } from "@scripts-lib/spawn-safe";
 
 describe("spawn-safe", () => {
   it("accepts valid postgres identifiers", () => {

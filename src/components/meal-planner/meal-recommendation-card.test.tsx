@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MealRecommendationCard } from "@/components/meal-planner/meal-recommendation-card";
 import { buildTestMarket, buildTestMeal, testForm } from "@/components/meal-planner/test-fixtures";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
 vi.mock("@/components/meal-planner/multi-store-route-panel", () => ({
   MultiStoreRoutePanel: () => null,
@@ -21,24 +22,15 @@ function renderCard(
       form: testForm,
       market: buildTestMarket({
         nearbyStores: [
-          {
+          buildTestNearbyStoreSummary({
             id: "kroger-mechanicsville",
             name: "Kroger",
             city: "Mechanicsville",
             state: "VA",
-            kind: "grocery",
             latitude: 37.6153,
             longitude: -77.3491,
             distanceMiles: 1.2,
-            chain: "kroger",
-            chainLabel: "Kroger",
-            rolloutStatus: "weekly-ad-preview",
-            recommendationEnabled: true,
-            rolloutNote: "Fixture.",
-            locationProvenance: "bootstrap",
-            locationBadge: "Catalog coordinates",
-            locationNote: "Seed.",
-          },
+          }),
         ],
       }),
       onOpenStoreMap: noopOpenStoreMap,

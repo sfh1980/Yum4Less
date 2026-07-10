@@ -4,9 +4,10 @@ import {
   buildMealRankingPausedStatus,
   isMarketDatabaseUnavailable,
 } from "@/lib/market-shopper-status";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
 const baseMarket = {
-  nearbyStores: [] as { id: string }[],
+  nearbyStores: [buildTestNearbyStoreSummary({ id: "store-a", name: "Store A" })],
   recommendationReadyStoreCount: 0,
   dataSource: "database" as const,
 };

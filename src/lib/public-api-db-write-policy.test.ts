@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { deleteProcessEnvKey } from "@/lib/test-only/process-env-test-helpers";
 import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 import { isPublicApiDbWriteEnabled } from "@/lib/public-api-db-write-policy";
 
@@ -14,7 +15,7 @@ describe("isPublicApiDbWriteEnabled", () => {
     }
 
     if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
+      deleteProcessEnvKey("NODE_ENV");
     } else {
       stubTestNodeEnv(originalNodeEnv);
     }

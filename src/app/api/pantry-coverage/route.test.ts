@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { deleteProcessEnvKey } from "@/lib/test-only/process-env-test-helpers";
 import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 
 const { resolveLocationInput, getPantryCoverageExperience } = vi.hoisted(() => ({
@@ -72,7 +73,7 @@ describe("POST /api/pantry-coverage", () => {
     resetRateLimitsForTests();
 
     if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
+      deleteProcessEnvKey("NODE_ENV");
     } else {
       restoreTestNodeEnv(originalNodeEnv);
     }

@@ -8,6 +8,7 @@ import {
   zip23111RankingPreferences,
 } from "@/lib/recommendation-service-ranking.fixture";
 import type { MarketSummary, NearbyStoreSummary } from "@/lib/recommendation-types";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 import { buildNearbyStoresForSearch } from "@/lib/market-search-service";
 
 const { buildProviderPricingPreviews } = vi.hoisted(() => ({
@@ -200,22 +201,16 @@ describe("getRecommendationExperience store selection integrity (#14–15)", () 
       searchLongitude: zip23111MechanicsvilleLocation.longitude,
       radiusMiles: 6,
       nearbyStores: [
-        {
+        buildTestNearbyStoreSummary({
           id: "kroger-mechanicsville",
           name: "Kroger",
-          kind: "grocery",
           latitude: 37.6153,
           longitude: -77.3491,
           distanceMiles: 2.4,
-          chain: "kroger",
-          chainLabel: "Kroger",
-          rolloutStatus: "weekly-ad-preview",
-          recommendationEnabled: true,
           rolloutNote: "Fixture",
-          locationProvenance: "bootstrap",
           locationBadge: "Seed",
           locationNote: "Fixture",
-        },
+        }),
       ],
       recommendationReadyStoreCount: 1,
       providerRollout: [],

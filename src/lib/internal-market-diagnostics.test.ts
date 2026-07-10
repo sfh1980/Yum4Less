@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildInternalMarketDiagnosticLines } from "@/lib/internal-market-diagnostics";
 import type { MarketSummary } from "@/lib/recommendation-service";
+import { buildTestProviderCoverageRollup } from "@/lib/test-fixtures/contract-fixtures";
 
 function minimalMarket(overrides: Partial<MarketSummary> = {}): MarketSummary {
   return {
@@ -13,8 +14,7 @@ function minimalMarket(overrides: Partial<MarketSummary> = {}): MarketSummary {
     providerRollout: [],
     providerStoreSearches: [],
     providerPricingPreviews: [],
-    providerCoverageRollup: {
-      providers: [],
+    providerCoverageRollup: buildTestProviderCoverageRollup({
       averageMatchConfidence: null,
       matchedIngredientCount: 0,
       unmatchedIngredientCount: 0,
@@ -23,9 +23,8 @@ function minimalMarket(overrides: Partial<MarketSummary> = {}): MarketSummary {
       rankedPricingSource: "none",
       trustGate: "not-available",
       usesCachedPreview: false,
-      ingredientSummaries: [],
       message: "No preview.",
-    },
+    }),
     providerPromotionReadiness: [],
     providerPriceObservationSync: [],
     weeklyAdIngestionStatus: [],
@@ -33,6 +32,7 @@ function minimalMarket(overrides: Partial<MarketSummary> = {}): MarketSummary {
     lookupSource: "seed",
     lookupProviderConfigured: false,
     dataSource: "database",
+    saleIngredientChoices: [],
     ...overrides,
   };
 }

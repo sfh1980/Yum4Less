@@ -101,6 +101,7 @@ describe("kroger weekly ad ingestion", () => {
       attempts: 1,
       networkJsonBodies: [],
       browserFailed: false,
+      waitSelectorMatched: true,
     });
     const apiSpy = vi.spyOn(apiFallback, "fetchKrogerOffersFromOfficialApi");
 
@@ -131,6 +132,7 @@ describe("kroger weekly ad ingestion", () => {
       attempts: 1,
       networkJsonBodies: [],
       browserFailed: true,
+      waitSelectorMatched: false,
     });
     vi.spyOn(apiFallback, "fetchKrogerOffersFromOfficialApi").mockResolvedValue([
       {
@@ -166,6 +168,7 @@ describe("kroger weekly ad ingestion", () => {
       attempts: 1,
       networkJsonBodies: [],
       browserFailed: true,
+      waitSelectorMatched: false,
     });
     vi.spyOn(apiFallback, "fetchKrogerOffersFromOfficialApi").mockResolvedValue([]);
 

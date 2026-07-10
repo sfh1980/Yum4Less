@@ -8,6 +8,7 @@ import {
   zip23111RankingPreferences,
 } from "@/lib/recommendation-service-ranking.fixture";
 import type { MarketSummary } from "@/lib/recommendation-service";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
 const { buildProviderPricingPreviews } = vi.hoisted(() => ({
   buildProviderPricingPreviews: vi.fn(),
@@ -53,25 +54,17 @@ function passedMarketFromSnapshot(
     searchLongitude: zip23111MechanicsvilleLocation.longitude,
     radiusMiles: zip23111RankingPreferences.radiusMiles,
     nearbyStores: [
-      {
+      buildTestNearbyStoreSummary({
         id: "kroger-mechanicsville",
         name: "Kroger",
-        kind: "grocery",
         latitude: 37.6153,
         longitude: -77.3491,
         distanceMiles: 2.4,
-        chain: "kroger",
-        chainLabel: "Kroger",
-        rolloutStatus: "weekly-ad-preview",
-        recommendationEnabled: true,
         rolloutNote: "Fixture rollout note.",
-        pricingStatus: "weekly-ad-preview",
-        pricingLabel: "Est. sale prices",
-        pricingNote: "Fixture pricing note.",
-        locationProvenance: "postgres-catalog",
+        locationProvenance: "bootstrap",
         locationBadge: "Catalog pin",
         locationNote: "Fixture location note.",
-      },
+      }),
     ],
     recommendationReadyStoreCount: 1,
     providerRollout: [],
@@ -176,8 +169,8 @@ describe("getRecommendationExperience market pass-through (H1–H3)", () => {
       dataSource: "database" as const,
       providerCoverageRollup: {
         ...passedMarketFromSnapshot(snapshot).providerCoverageRollup,
-        rankedPricingSource: "official-api-live" as const,
-        trustGate: "promotion-ready" as const,
+        rankedPricingSource: "official-api-cache" as const,
+        trustGate: "monitoring" as const,
       },
     };
 

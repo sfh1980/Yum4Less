@@ -3,7 +3,7 @@
 import { createElement } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/components/nearby-stores-map", () => ({
   NearbyStoresMap: () => createElement("div", { "data-testid": "nearby-stores-map-stub" }),

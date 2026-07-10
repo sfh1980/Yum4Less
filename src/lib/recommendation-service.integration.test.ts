@@ -212,12 +212,12 @@ describe("recommendation path through Postgres (CI-06)", () => {
     const topMeal = experience.recommendations[0];
     expect(topMeal?.title).toBe("Sheet Pan Lemon Chicken and Vegetables");
     expect(topMeal?.storeCount).toBe(1);
-    expect(topMeal?.shoppingPlan.every((item) => item.storeName === "Kroger")).toBe(
+    expect(topMeal?.shoppingPlan.every((item) => item.storeName! === "Kroger")).toBe(
       true,
     );
     expect(
       experience.recommendations.every((meal) =>
-        meal.shoppingPlan.every((item) => !item.storeName.includes("Walmart")),
+        meal.shoppingPlan.every((item) => !item.storeName!.includes("Walmart")),
       ),
     ).toBe(true);
     expect(CONFIDENCE_LABELS).toContain(topMeal?.confidenceLabel);

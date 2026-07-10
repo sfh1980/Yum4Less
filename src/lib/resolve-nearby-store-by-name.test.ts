@@ -1,25 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { resolveNearbyStoreByName } from "@/lib/resolve-nearby-store-by-name";
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
 function buildStore(
   partial: Partial<NearbyStoreSummary> & Pick<NearbyStoreSummary, "id" | "name">,
 ): NearbyStoreSummary {
-  return {
-    kind: "grocery",
-    latitude: 37.6,
-    longitude: -77.3,
-    distanceMiles: 1,
-    chain: "kroger",
-    chainLabel: "Kroger",
-    rolloutStatus: "weekly-ad-preview",
-    recommendationEnabled: true,
-    rolloutNote: "Fixture.",
-    locationProvenance: "bootstrap",
-    locationBadge: "Catalog coordinates",
-    locationNote: "Seed.",
-    ...partial,
-  };
+  return buildTestNearbyStoreSummary(partial);
 }
 
 describe("resolveNearbyStoreByName", () => {

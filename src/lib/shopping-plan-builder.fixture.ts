@@ -75,7 +75,7 @@ export function buildFullKrogerBlackBeanObservations(): CatalogPriceObservation[
 
 export const splitStoreSnapshot = buildZip23111SplitStoreBlackBeanSnapshot();
 
-export const splitStoreNearbyStores = fixtureStores
+export const splitStoreNearbyStores: NearbyStoreSummary[] = fixtureStores
   .filter((store) =>
     ["kroger-mechanicsville", "aldi-mechanicsville"].includes(store.id),
   )
@@ -98,7 +98,7 @@ export const splitStoreNearbyStores = fixtureStores
       store.id === "kroger-mechanicsville"
         ? "kroger-weekly-ad-scrape"
         : "aldi-weekly-ad-scrape",
-    locationProvenance: "ingested-catalog" as const,
+    locationProvenance: "bootstrap" as const,
     locationBadge: "Catalog coordinates",
     locationNote: "Seed catalog row.",
   }));

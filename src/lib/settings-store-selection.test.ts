@@ -5,11 +5,12 @@ import {
 } from "@/lib/settings-store-selection";
 import { formatSettingsStoreOptionLabel } from "@/lib/store-display-labels";
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
 function store(
   partial: Partial<NearbyStoreSummary> & Pick<NearbyStoreSummary, "id" | "name" | "chain">,
 ): NearbyStoreSummary {
-  return {
+  return buildTestNearbyStoreSummary({
     city: partial.city ?? "Mechanicsville",
     state: partial.state ?? "VA",
     kind: "grocery",
@@ -20,11 +21,11 @@ function store(
     rolloutStatus: "coming-soon",
     recommendationEnabled: partial.recommendationEnabled ?? false,
     rolloutNote: "Fixture note.",
-    locationProvenance: "bootstrap-seed",
+    locationProvenance: "bootstrap",
     locationBadge: "Seed",
     locationNote: "Fixture.",
     ...partial,
-  };
+  });
 }
 
 describe("filterSettingsSelectableStores", () => {

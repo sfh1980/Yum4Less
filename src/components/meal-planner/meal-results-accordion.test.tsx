@@ -55,7 +55,7 @@ const market = {
   providerPriceObservationSync: [],
   weeklyAdIngestionStatus: [],
   weeklyAdPromotionReadiness: [],
-  lookupSource: "seed-zip" as const,
+  lookupSource: "seed" as const,
   lookupProviderConfigured: false,
   dataSource: "database" as const,
   saleIngredientChoices: [],
@@ -86,6 +86,8 @@ function buildMeal(title: string): MealRecommendation {
 }
 
 describe("MealResultsAccordion", () => {
+  const onOpenStoreMap = vi.fn();
+
   it("starts collapsed with title-only triggers", () => {
     render(
       createElement(MealResultsAccordion, {
@@ -93,6 +95,7 @@ describe("MealResultsAccordion", () => {
         recommendations: [buildMeal("First dinner"), buildMeal("Second dinner")],
         form,
         market,
+        onOpenStoreMap,
       }),
     );
 
@@ -114,6 +117,7 @@ describe("MealResultsAccordion", () => {
         recommendations: [buildMeal("First dinner"), buildMeal("Second dinner")],
         form,
         market,
+        onOpenStoreMap,
       }),
     );
 
@@ -146,6 +150,7 @@ describe("MealResultsAccordion", () => {
         recommendations: [buildMeal("First dinner")],
         form,
         market,
+        onOpenStoreMap,
       }),
     );
 

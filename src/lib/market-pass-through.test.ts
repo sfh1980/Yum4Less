@@ -6,7 +6,9 @@ import {
   validatePassedMarketForRanking,
 } from "@/lib/market-pass-through";
 import { rehydratePassedMarketNearbyStores } from "@/lib/market-pass-through-rehydrate";
+import type { MarketDataSnapshot } from "@/lib/market-repository";
 import type { MarketSummary } from "@/lib/recommendation-service";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 import {
   buildZip23111RankingSnapshot,
   zip23111MechanicsvilleLocation,
@@ -20,25 +22,17 @@ function minimalMarket(overrides: Partial<MarketSummary> = {}): MarketSummary {
     searchLongitude: -77.3321,
     radiusMiles: 5,
     nearbyStores: [
-      {
+      buildTestNearbyStoreSummary({
         id: "kroger-1",
         name: "Kroger",
-        kind: "grocery",
         latitude: 37.6153,
         longitude: -77.3491,
         distanceMiles: 2.4,
-        chain: "kroger",
-        chainLabel: "Kroger",
-        rolloutStatus: "weekly-ad-preview",
-        recommendationEnabled: true,
         rolloutNote: "Fixture note.",
-        pricingStatus: "weekly-ad-preview",
-        pricingLabel: "Est. sale prices",
-        pricingNote: "Fixture.",
-        locationProvenance: "postgres-catalog",
+        locationProvenance: "bootstrap",
         locationBadge: "Catalog pin",
         locationNote: "Fixture.",
-      },
+      }),
     ],
     recommendationReadyStoreCount: 1,
     providerRollout: [],
@@ -227,7 +221,10 @@ describe("trimMarketForRankingPassThrough", () => {
 
 describe("rehydratePassedMarketNearbyStores", () => {
   it("rebuilds full store rows for passed store ids from the catalog snapshot", () => {
-    const snapshot = buildZip23111RankingSnapshot(["kroger-mechanicsville"]);
+    const snapshot: MarketDataSnapshot = {
+      ...buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
+      ingredients: [],
+    };
     const thinMarket = trimMarketForRankingPassThrough(
       minimalMarket({
         radiusMiles: 6,

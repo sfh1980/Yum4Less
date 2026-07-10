@@ -12,6 +12,7 @@ import {
   buildStoreMapLocationNote,
   resolveStoreMapLocationProvenance,
 } from "@/lib/store-map-location-copy";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
 const { insertPriceObservationIfChanged, touchStoreVerification } = vi.hoisted(() => ({
   insertPriceObservationIfChanged: vi.fn(),
@@ -25,10 +26,7 @@ vi.mock("@/lib/price-observation-writes", () => ({
 }));
 
 function withLocationFields(
-  store: Omit<
-    NearbyStoreSummary,
-    "locationProvenance" | "locationBadge" | "locationNote"
-  >,
+  store: Partial<NearbyStoreSummary> & Pick<NearbyStoreSummary, "id" | "name">,
 ): NearbyStoreSummary {
   const locationInput = {
     storeId: store.id,
@@ -36,12 +34,12 @@ function withLocationFields(
     lastVerifiedAt: store.lastVerifiedAt,
   };
 
-  return {
+  return buildTestNearbyStoreSummary({
     ...store,
     locationProvenance: resolveStoreMapLocationProvenance(locationInput),
     locationBadge: buildStoreMapLocationBadge(locationInput),
     locationNote: buildStoreMapLocationNote(locationInput),
-  };
+  });
 }
 
 const nearbyStores: NearbyStoreSummary[] = [

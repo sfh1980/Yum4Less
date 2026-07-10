@@ -7,11 +7,12 @@ import {
   validateFixtureIngestDatabasePolicy,
 } from "@/lib/fixture-ingest-policy";
 
-function baseEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+function baseEnv(overrides: Partial<NodeJS.ProcessEnv> = {}): NodeJS.ProcessEnv {
   return {
+    NODE_ENV: "test",
     DATABASE_URL: "postgresql://postgres:postgres@localhost:5433/yum4less_dev",
     ...overrides,
-  };
+  } as NodeJS.ProcessEnv;
 }
 
 describe("fixture-ingest-policy", () => {

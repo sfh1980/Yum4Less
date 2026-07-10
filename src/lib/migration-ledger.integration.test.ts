@@ -1,3 +1,4 @@
+/// <reference path="./test-only/scripts-migrations.d.ts" />
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -5,7 +6,7 @@ import {
   applyPendingMigrations,
   createPostgresMigrationDb,
   listInitMigrationFiles,
-} from "../../scripts/lib/apply-migrations.mjs";
+} from "@scripts-lib/apply-migrations";
 import {
   columnExists,
   createDatabase,
@@ -14,7 +15,7 @@ import {
   psqlQueryRows,
   psqlQueryScalar,
   tableExists,
-} from "../../scripts/lib/spawn-safe.mjs";
+} from "@scripts-lib/spawn-safe";
 
 const TEST_DB = "yum4less_migration_itest";
 
@@ -69,8 +70,8 @@ describe("migration ledger integration", () => {
     const summary = applyPendingMigrations(migrationDb());
 
     expect(summary.applied).toContain("015");
-    expect(readLedger().map((row) => row.version)).toContain("015");
-    expect(readLedger().map((row) => row.version)).toContain("016");
+    expect(readLedger().map((row) => String(row.version))).toContain("015");
+    expect(readLedger().map((row) => String(row.version))).toContain("016");
     expect(psqlQueryScalar(TEST_DB, "select count(*) from stores where id = 'publix-atlee';")).toBe("0");
     expect(psqlQueryScalar(TEST_DB, "select count(*) from stores where id = 'publix-1626';")).toBe("1");
     },

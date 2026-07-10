@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { deleteProcessEnvKey } from "@/lib/test-only/process-env-test-helpers";
 import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 
 const { getStoreDiscoveryProviders } = vi.hoisted(() => ({
@@ -30,7 +31,7 @@ describe("searchOfficialProviderStores", () => {
     persistProviderStoreSearchResult.mockReset();
     getLatestProviderStoreSearchSnapshot.mockReset();
     process.env.YUM4LESS_ENABLE_API_DB_WRITES = "1";
-    delete process.env.NODE_ENV;
+    deleteProcessEnvKey("NODE_ENV");
   });
 
   afterEach(() => {
@@ -41,7 +42,7 @@ describe("searchOfficialProviderStores", () => {
     }
 
     if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
+      deleteProcessEnvKey("NODE_ENV");
     } else {
       stubTestNodeEnv(originalNodeEnv);
     }

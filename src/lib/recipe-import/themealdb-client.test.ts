@@ -51,7 +51,7 @@ describe("Themealdb parsing helpers", () => {
       strMeasure2: "",
       strIngredient3: "  ",
       strMeasure3: "1 tsp",
-    } as ThemealdbLookupMeal;
+    } as unknown as ThemealdbLookupMeal;
 
     expect(parseThemealdbIngredientLines(meal)).toEqual([
       { displayName: "soy sauce", measure: "3/4 cup" },

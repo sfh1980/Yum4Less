@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { deleteProcessEnvKey } from "@/lib/test-only/process-env-test-helpers";
 import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 
 const { resolveLocationInput, getMarketSearchExperience } = vi.hoisted(() => ({
@@ -42,7 +43,7 @@ describe("POST /api/market-search", () => {
     }
 
     if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
+      deleteProcessEnvKey("NODE_ENV");
     } else {
       stubTestNodeEnv(originalNodeEnv);
     }
@@ -50,7 +51,7 @@ describe("POST /api/market-search", () => {
 
   it("keeps Postgres writes disabled on the public route by default", () => {
     delete process.env.YUM4LESS_ENABLE_API_DB_WRITES;
-    delete process.env.NODE_ENV;
+    deleteProcessEnvKey("NODE_ENV");
     expect(isPublicApiDbWriteEnabled()).toBe(false);
   });
 

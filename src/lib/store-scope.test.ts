@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarketSummary, NearbyStoreSummary } from "@/lib/recommendation-types";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 import {
   buildStoreSelectionSyncNotices,
   filterSaleIngredientChoicesByStoreIds,
@@ -11,7 +12,7 @@ import {
 function store(
   partial: Partial<NearbyStoreSummary> & Pick<NearbyStoreSummary, "id" | "name" | "chain">,
 ): NearbyStoreSummary {
-  return {
+  return buildTestNearbyStoreSummary({
     city: "Mechanicsville",
     state: "VA",
     kind: "grocery",
@@ -25,10 +26,8 @@ function store(
     locationProvenance: "bootstrap",
     locationBadge: "Seed catalog pin",
     locationNote: "Fixture",
-    sourceName: partial.sourceName,
-    sourceStoreId: partial.sourceStoreId,
     ...partial,
-  };
+  });
 }
 
 const market: MarketSummary = {
@@ -38,38 +37,24 @@ const market: MarketSummary = {
   searchLongitude: -77.3321,
   radiusMiles: 5,
   nearbyStores: [
-    {
+    buildTestNearbyStoreSummary({
       id: "kroger-mechanicsville",
       name: "Kroger",
-      kind: "grocery",
       latitude: 37.61,
       longitude: -77.33,
       distanceMiles: 1.2,
       chain: "kroger",
       chainLabel: "Kroger",
-      rolloutStatus: "weekly-ad-preview",
-      recommendationEnabled: true,
-      rolloutNote: "Fixture",
-      locationProvenance: "bootstrap",
-      locationBadge: "Seed catalog pin",
-      locationNote: "Fixture",
-    },
-    {
+    }),
+    buildTestNearbyStoreSummary({
       id: "aldi-mechanicsville",
       name: "Aldi",
-      kind: "grocery",
       latitude: 37.62,
       longitude: -77.34,
       distanceMiles: 2.1,
       chain: "aldi",
       chainLabel: "Aldi",
-      rolloutStatus: "weekly-ad-preview",
-      recommendationEnabled: true,
-      rolloutNote: "Fixture",
-      locationProvenance: "bootstrap",
-      locationBadge: "Seed catalog pin",
-      locationNote: "Fixture",
-    },
+    }),
   ],
   recommendationReadyStoreCount: 2,
   providerRollout: [],

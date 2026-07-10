@@ -5,6 +5,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
+import { buildTestMarketSummary, buildTestProviderCoverageRollup } from "@/lib/test-fixtures/contract-fixtures";
 import {
   collectPricingTrustHeadsUpDetailText,
   FORBIDDEN_TRUST_CLAIM_PATTERNS,
@@ -12,22 +13,28 @@ import {
   PRICING_TRUST_HEADS_UP_EXPAND_SUMMARY,
 } from "@/lib/pricing-trust-heads-up-expanded";
 
-const marketWithStoreContext = {
+const marketWithStoreContext = buildTestMarketSummary({
   providerStoreSearches: [
     {
+      provider: "kroger",
+      label: "Kroger official store discovery",
+      status: "available",
+      provenance: "official-api",
+      retrievalMode: "live",
+      configured: true,
       fallbackUsed: false,
+      stores: [],
+      message: "Fixture store search.",
+      fetchedAt: "2026-05-20T12:00:00.000Z",
     },
   ],
-  providerPricingPreviews: [],
-  providerCoverageRollup: {
-    rankedPricingSource: "weekly-ad-cache" as const,
-  },
-  lookupSource: "geocodio" as const,
-  dataSource: "database" as const,
+  providerCoverageRollup: buildTestProviderCoverageRollup({
+    rankedPricingSource: "weekly-ad-cache",
+  }),
+  lookupSource: "geocodio",
   lookupProviderConfigured: true,
   recommendationReadyStoreCount: 1,
-  nearbyStores: [],
-};
+});
 
 function getTrustDetails(container: HTMLElement): HTMLDetailsElement {
   const details = container.querySelector(".trust-heads-up-details");

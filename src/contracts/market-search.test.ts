@@ -32,7 +32,7 @@ describe("parseMarketSearchRequest", () => {
     [{ zipCode: "2311", radiusMiles: 5 }, "invalid ZIP"],
     [{ radiusMiles: 5 }, "missing location"],
     [null, "null body"],
-  ])("rejects invalid payload (%s)", (body) => {
+  ])("rejects invalid payload (%s)", (body, _reason) => {
     expect(parseMarketSearchRequest(body)).toBeUndefined();
   });
 });

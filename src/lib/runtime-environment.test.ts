@@ -5,6 +5,7 @@ import {
   isProductionRuntime,
   isTestRuntime,
 } from "@/lib/runtime-environment";
+import { buildTestProcessEnv } from "@/lib/test-only/process-env-test-helpers";
 
 describe("runtime-environment", () => {
   it("treats production as strict unless CI or test runners are active", () => {
@@ -33,8 +34,8 @@ describe("runtime-environment", () => {
 
   it("detects CI and production runtimes", () => {
     expect(isProductionRuntime({ NODE_ENV: "production" })).toBe(true);
-    expect(isCiRuntime({ CI: "true" })).toBe(true);
-    expect(isCiRuntime({ CI: "1" })).toBe(true);
+    expect(isCiRuntime(buildTestProcessEnv({ CI: "true" }))).toBe(true);
+    expect(isCiRuntime(buildTestProcessEnv({ CI: "1" }))).toBe(true);
     expect(isTestRuntime({ NODE_ENV: "test" })).toBe(true);
   });
 });

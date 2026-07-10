@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sanitizeMarketSummaryForPublicApi } from "@/lib/public-api-response-sanitizer";
 import type { MarketSummary } from "@/lib/recommendation-service";
+import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
 function buildMarketSummary(overrides: Partial<MarketSummary> = {}): MarketSummary {
   return {
@@ -9,22 +10,13 @@ function buildMarketSummary(overrides: Partial<MarketSummary> = {}): MarketSumma
     searchLongitude: -77.3321,
     radiusMiles: 5,
     nearbyStores: [
-      {
+      buildTestNearbyStoreSummary({
         id: "kroger-mechanicsville",
         name: "Kroger Mechanicsville",
-        kind: "grocery",
         latitude: 37.6085,
         longitude: -77.3321,
         distanceMiles: 1.2,
-        chain: "kroger",
-        chainLabel: "Kroger",
-        rolloutStatus: "weekly-ad-preview",
-        recommendationEnabled: true,
-        rolloutNote: "Fixture coverage.",
-        locationProvenance: "bootstrap",
-        locationBadge: "Seed catalog pin",
-        locationNote: "Fixture seed catalog coordinates.",
-      },
+      }),
     ],
     recommendationReadyStoreCount: 0,
     providerRollout: [],
@@ -107,6 +99,7 @@ function buildMarketSummary(overrides: Partial<MarketSummary> = {}): MarketSumma
         syncedCount: 3,
         unchangedCount: 0,
         skippedCount: 1,
+        failedCount: 0,
         retrievalMode: "live",
         message:
           "Synced 3 ingredient price observation(s) into PostgreSQL for kroger-mechanicsville.",
@@ -177,20 +170,14 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
     const sanitized = sanitizeMarketSummaryForPublicApi(
       buildMarketSummary({
         nearbyStores: [
-          {
+          buildTestNearbyStoreSummary({
             id: "kroger-mechanicsville",
             name: "Kroger Mechanicsville",
-            kind: "grocery",
             latitude: 37.6085,
             longitude: -77.3321,
             distanceMiles: 1.2,
-            chain: "kroger",
-            chainLabel: "Kroger",
-            rolloutStatus: "weekly-ad-preview",
-            recommendationEnabled: true,
-            rolloutNote: "Fixture coverage.",
             sourceStoreId: "02900529",
-          },
+          }),
         ],
       }),
     );
@@ -203,23 +190,16 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
     const sanitized = sanitizeMarketSummaryForPublicApi(
       buildMarketSummary({
         nearbyStores: [
-          {
+          buildTestNearbyStoreSummary({
             id: "kroger-mechanicsville",
             name: "Kroger Mechanicsville",
-            kind: "grocery",
             latitude: 37.6085,
             longitude: -77.3321,
             distanceMiles: 1.2,
-            chain: "kroger",
-            chainLabel: "Kroger",
-            rolloutStatus: "weekly-ad-preview",
-            recommendationEnabled: true,
-            rolloutNote: "Fixture coverage.",
-          },
-          {
+          }),
+          buildTestNearbyStoreSummary({
             id: "publix-1626",
             name: "Publix Brandy Creek",
-            kind: "grocery",
             latitude: 37.65,
             longitude: -77.35,
             distanceMiles: 2.4,
@@ -228,7 +208,7 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
             rolloutStatus: "coming-soon",
             recommendationEnabled: false,
             rolloutNote: "Coming soon.",
-          },
+          }),
         ],
       }),
     );
