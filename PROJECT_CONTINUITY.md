@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** Chain coverage honesty slice — local `npm test` **922/922**, `npm run test:integration` **31/31**, `npm run build` **pass**, `npm run test:e2e:ci` **25 passed** / 1 skipped. Live re-ingest + provider sync on `yum4less_dev`; Phase 2a post-ingest: Kroger **96/97**, Publix **34/97**, Food Lion **17/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only. Remote CI pending on Track B commit (ingest `b9c4a46` pushed). Prior: [**29063232861**](https://github.com/sfh1980/Yum4Less/actions/runs/29063232861) green on **`9591428`**.
+**Verified (2026-07-09):** Chain coverage honesty slice — local `npm test` **922/922**, `npm run test:integration` **31/31**, `npm run build` **pass**, `npm run test:e2e:ci` **25 passed** / 1 skipped. Live re-ingest + provider sync on `yum4less_dev`; Phase 2a post-ingest: Kroger **96/97**, Publix **34/97**, Food Lion **17/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only. Remote CI [**29064540982**](https://github.com/sfh1980/Yum4Less/actions/runs/29064540982) **green** on **`5781348`** (verify + integration + e2e). Ingest commit [**29063845905**](https://github.com/sfh1980/Yum4Less/actions/runs/29063845905) on **`b9c4a46`**.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -253,7 +253,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **#13 closure:** Addressed via UI honesty + documented architectural asymmetry — **not** “fixed” as equal cross-chain coverage.
 - **#16 closure:** Aldi **at-ceiling re-confirmed**; UI now explains weekly-ad depth limits. Food Lion remains not a hard ceiling but deprioritized for matching work.
 - **New backlog #18 (queued, out of scope):** Dollar Tree / Dollar General onboarding investigation — locator source, `getProviderRolloutForCatalogStore` pattern, ingest feasibility, 97-item catalog fit vs private-label inventory.
-- **Evidence (local):** `npm test` **922/922**; `npm run test:integration` **31/31**; `npm run build` **pass**; `npm run test:e2e:ci` **25 passed** / 1 skipped.
+- **Evidence (local):** `npm test` **922/922**; `npm run test:integration` **31/31**; `npm run build` **pass**; `npm run test:e2e:ci` **25 passed** / 1 skipped. Remote CI [**29064540982**](https://github.com/sfh1980/Yum4Less/actions/runs/29064540982) **green** on **`5781348`**.
 
 ### 2026-07-09 — E2e: pin single-store-map-overlay Settings test (index-selection brittleness #2) — CLOSED
 
@@ -2000,7 +2000,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npm run test:e2e:ci` (local) | 2026-07-09 | **25 passed**, 1 skipped |
 | Phase 2a chain coverage (`yum4less_dev`, post-ingest) | 2026-07-09 | Kroger **96/97**, Publix **34/97**, Food Lion **17/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only — `scripts/.investigate-internal-catalog-chain-neutrality.ts` |
 | Coverage ingest slices 2–5 on `origin/master` | 2026-07-09 | **Shipped** — `b9c4a46` |
-| **Remote CI** (chain coverage honesty) | 2026-07-09 | Pending Track B push — ingest `b9c4a46` pushed |
+| **Remote CI** (chain coverage honesty `5781348`) | 2026-07-09 | **Green** — [29064540982](https://github.com/sfh1980/Yum4Less/actions/runs/29064540982): verify **922/922** + integration **31/31** + e2e **25+1 skip** |
+| **Remote CI** (ingest slices `b9c4a46`) | 2026-07-09 | **Green** — [29063845905](https://github.com/sfh1980/Yum4Less/actions/runs/29063845905) |
 | `npm test` (local) | 2026-07-09 | **911/911** pass (store-ID integrity #14–15) |
 | `npm run test:integration` (local) | 2026-07-09 | **29/29** pass |
 | `npm run build` (local) | 2026-07-09 | **Pass** (store-ID integrity #14–15) |
