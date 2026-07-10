@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** DB migration ledger (backlog #3) — local `npm test` **916/916**, `npm run test:integration` **31/31**, `npm run build` **pass**; simulated partial volume evidence via `npm run db:probe:migration-ledger` on `yum4less_mig_sim_*` (before touching owner `yum4less_dev`). Remote CI — **pending this commit**. Prior store-ID bundle — local **911/911**; remote [**29060088692**](https://github.com/sfh1980/Yum4Less/actions/runs/29060088692) green on **`debddf0`**. **Re-triage pass (same day, read-only):** `npx tsc --noEmit` **84 errors** (up from 64–66 baseline); Phase 2a chain coverage re-measured on `yum4less_dev` — see [Verification snapshot](#verification-snapshot). Not claiming beta v1 demo-complete or homelab deploy-ready.
+**Verified (2026-07-09):** DB migration ledger (backlog #3) — local `npm test` **916/916**, `npm run test:integration` **31/31**, `npm run build` **pass**; simulated partial volume evidence via `npm run db:probe:migration-ledger` on `yum4less_mig_sim_*` (before touching owner `yum4less_dev`). Remote CI [**29062082986**](https://github.com/sfh1980/Yum4Less/actions/runs/29062082986) on **`d72465b`**: verify + integration **green**; e2e **1 failed** (overlay flake). Prior store-ID bundle — remote [**29060088692**](https://github.com/sfh1980/Yum4Less/actions/runs/29060088692) green on **`debddf0`**. **Re-triage pass (same day, read-only):** `npx tsc --noEmit` **84 errors** (up from 64–66 baseline); Phase 2a chain coverage re-measured on `yum4less_dev` — see [Verification snapshot](#verification-snapshot). Not claiming beta v1 demo-complete or homelab deploy-ready.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -250,7 +250,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Shipped:** `db/init/000_schema_migrations.sql`; `scripts/lib/apply-migrations.mjs` (ledger + effect probes incl. **015/016**); `applyPendingMigrations()` wired through `ensure-test-db.mjs` / `npm run db:migrate`; retires `applyPhaseCMigrationsIfMissing()`. Checksum warn-on-mismatch (fail in CI). `npm run db:probe:migration-ledger` for simulated-volume evidence.
 - **Unblocks:** backlog **#4** Option A universal store reconciliation and any future `db/init/021+` tombstone/data migrations — ledger is now source of truth; incremental path no longer silently skips files.
 - **Evidence (simulated volumes, before `yum4less_dev`):** partial volume (001–013 only, ledger absent) → **015** applied (plus any later files whose effects were missing, e.g. **020** when present locally), prior migrations backfilled, full ledger row count matches `db/init/*.sql`; fresh docker-style init → **`applied: []`**, all files **backfilled**, Kroger term count unchanged.
-- **Evidence (local gates):** `npm test` **916/916**; `npm run test:integration` **31/31** (+2 migration-ledger specs); `npm run build` **pass**. Remote CI — link after push.
+- **Evidence (local gates):** `npm test` **916/916**; `npm run test:integration` **31/31** (+2 migration-ledger specs); `npm run build` **pass**. Remote CI [**29062082986**](https://github.com/sfh1980/Yum4Less/actions/runs/29062082986) on **`d72465b`**: verify **905/905** + integration **31/31** **green**; e2e **24 passed / 1 failed** (`single-store-map-overlay` Kroger heading flake — pre-existing overlay class, not this slice).
 
 ### 2026-07-09 — Store-ID integrity bundle (#14–15) — CLOSED
 
@@ -1993,8 +1993,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npx tsc --noEmit` (local) | 2026-07-09 | **84 errors** (re-triage pass; grown from 64–66; top files: `shopping-plan-builder.test.ts`, weekly-ad test mocks) |
 | Phase 2a chain coverage (`yum4less_dev`) | 2026-07-09 | Kroger **96/97**, Publix **34/97**, Food Lion **18/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only — `scripts/.investigate-internal-catalog-chain-neutrality.ts` |
 | `schema_migrations` ledger | 2026-07-09 | **Shipped** — `000_schema_migrations.sql` + `applyPendingMigrations()`; simulated partial/fresh volume evidence via `npm run db:probe:migration-ledger` |
-| `npm test` (local) | 2026-07-09 | **916/916** (+5 unit, incl. migration ledger helpers) |
-| `npm run test:integration` (local) | 2026-07-09 | **31/31** (+2 migration-ledger integration specs) |
+| `npm test` (local) | 2026-07-09 | **916/916** (+5 migration ledger unit tests) |
+| `npm test` (CI `d72465b`) | 2026-07-09 | **905/905** — verify job green |
+| `npm run test:integration` (local + CI) | 2026-07-09 | **31/31** (+2 migration-ledger integration specs) |
+| Remote CI (`d72465b`) | 2026-07-09 | [**29062082986**](https://github.com/sfh1980/Yum4Less/actions/runs/29062082986) — verify + integration **green**; e2e **1 failed** (overlay flake) |
 | Coverage slices 2–5 on `origin/master` | 2026-07-09 | **Not committed** — local working tree only; slice 1 (`c18f99e`) on master |
 | Locator chain inference regression | 2026-07-06 | `chain-rollout-policy.test.ts` + `provider-rollout.test.ts` on `0c73016` (CI unit job) |
 | `publix-1626` ranked path (`yum4less_dev`) | 2026-07-06 | **36** fresh obs; API `chain: publix`, `recommendationEnabled: true`, `weekly-ad-preview`; **0 meal cards** — no recipe with 100% ingredient coverage at store (not a chain gate failure) |
