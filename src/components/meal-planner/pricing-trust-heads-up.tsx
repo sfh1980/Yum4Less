@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useId } from "react";
-import type { RecommendationExperience } from "@/lib/recommendation-service";
+import type { MealRecommendation, RecommendationExperience } from "@/lib/recommendation-service";
 import { HelpHint } from "@/components/help-hint";
-import { buildPricingTrustHeadsUp } from "@/lib/pricing-trust-heads-up";
 import {
-  PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS,
+  buildPricingTrustHeadsUp,
+  type PricingTrustHeadsUpContext,
+} from "@/lib/pricing-trust-heads-up";
+import {
+  buildPricingTrustHeadsUpDetailSections,
   PRICING_TRUST_HEADS_UP_EXPAND_SUMMARY,
 } from "@/lib/pricing-trust-heads-up-expanded";
 import { pricingTrustHeadsUpHelp } from "@/lib/help-hint-content";
@@ -14,11 +17,13 @@ import { pricingTrustHeadsUpHelp } from "@/lib/help-hint-content";
 type PricingTrustHeadsUpBannerProps = {
   market?: RecommendationExperience["market"];
   instanceId?: string;
+  trustContext?: PricingTrustHeadsUpContext;
 };
 
 export function PricingTrustHeadsUpBanner({
   market,
   instanceId,
+  trustContext,
 }: PricingTrustHeadsUpBannerProps) {
   const generatedId = useId();
   const idPrefix = instanceId ?? generatedId;
@@ -30,10 +35,12 @@ export function PricingTrustHeadsUpBanner({
     return null;
   }
 
-  const headsUp = buildPricingTrustHeadsUp(market);
+  const headsUp = buildPricingTrustHeadsUp(market, trustContext);
   if (!headsUp) {
     return null;
   }
+
+  const detailSections = buildPricingTrustHeadsUpDetailSections(market);
 
   return (
     <aside
@@ -59,7 +66,7 @@ export function PricingTrustHeadsUpBanner({
           {PRICING_TRUST_HEADS_UP_EXPAND_SUMMARY}
         </summary>
         <div className="trust-heads-up-details-body">
-          {PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS.map((section) => (
+          {detailSections.map((section) => (
             <section
               aria-labelledby={`${detailsId}-${section.heading.replace(/\s+/g, "-").toLowerCase()}`}
               className="trust-heads-up-detail-section"

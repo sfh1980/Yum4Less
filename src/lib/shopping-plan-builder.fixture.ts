@@ -15,6 +15,9 @@ export const krogerStore: NearbyStoreSummary = {
   rolloutStatus: "weekly-ad-preview",
   recommendationEnabled: true,
   rolloutNote: "Fixture coverage.",
+  matchedIngredientCount: 12,
+  totalTrackedIngredientCount: 97,
+  pricingSourceKind: "weekly-ad",
   sourceName: "kroger-weekly-ad-scrape",
   locationProvenance: "bootstrap",
   locationBadge: "Catalog coordinates",
@@ -33,6 +36,9 @@ export const aldiStore: NearbyStoreSummary = {
   rolloutStatus: "weekly-ad-preview",
   recommendationEnabled: true,
   rolloutNote: "Fixture coverage.",
+  matchedIngredientCount: 6,
+  totalTrackedIngredientCount: 97,
+  pricingSourceKind: "weekly-ad",
   sourceName: "aldi-weekly-ad-scrape",
   locationProvenance: "bootstrap",
   locationBadge: "Catalog coordinates",
@@ -85,6 +91,9 @@ export const splitStoreNearbyStores = fixtureStores
     rolloutStatus: "weekly-ad-preview" as const,
     recommendationEnabled: true,
     rolloutNote: "Fixture coverage.",
+    matchedIngredientCount: store.id === "kroger-mechanicsville" ? 12 : 6,
+    totalTrackedIngredientCount: 97,
+    pricingSourceKind: "weekly-ad" as const,
     sourceName:
       store.id === "kroger-mechanicsville"
         ? "kroger-weekly-ad-scrape"

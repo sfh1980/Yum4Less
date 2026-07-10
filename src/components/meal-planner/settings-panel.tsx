@@ -10,6 +10,7 @@ import {
   filterSettingsSelectableStores,
 } from "@/lib/settings-store-selection";
 import { formatSettingsStoreOptionLabel } from "@/lib/store-display-labels";
+import { buildMultiStoreCoverageSummary } from "@/lib/chain-coverage-honesty";
 import { radiusHelp, zipCodeHelp } from "@/lib/help-hint-content";
 import type { FieldErrors, FormState, MarketSearchState } from "@/components/meal-planner/types";
 import type { RecommendationExperience } from "@/lib/recommendation-service";
@@ -115,6 +116,10 @@ export function SettingsPanel({
   const selectedSingleStore = selectableStores.find(
     (store) => store.id === form.selectedStoreIds[0],
   );
+  const multiStoreCoverageSummary =
+    storesReady && form.shoppingStyle === "multi-store"
+      ? buildMultiStoreCoverageSummary(selectableStores, form.selectedStoreIds)
+      : null;
 
   return (
     <div className="panel panel-padding meal-planner-panel meal-planner-panel--inputs flow-panel flow-panel--settings">
@@ -268,6 +273,11 @@ export function SettingsPanel({
                   );
                 })}
               </div>
+              {multiStoreCoverageSummary ? (
+                <p className="field-hint badge-trust" role="status">
+                  {multiStoreCoverageSummary}
+                </p>
+              ) : null}
             </FormField>
           )
         ) : null}

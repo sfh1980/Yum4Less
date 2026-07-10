@@ -1,9 +1,17 @@
 import type { MarketSummary } from "@/lib/recommendation-service";
+import type { MealRecommendation } from "@/lib/recommendation-types";
 import type { RankedPricingSource } from "@/lib/price-source-policy";
+import { buildMultiStoreCoverageSkewReason } from "@/lib/chain-coverage-honesty";
 
 export type PricingTrustHeadsUp = {
   title: string;
   message: string;
+};
+
+export type PricingTrustHeadsUpContext = {
+  shoppingStyle?: "single-store" | "multi-store";
+  selectedStoreIds?: readonly string[];
+  recommendations?: readonly MealRecommendation[];
 };
 
 export const PRICING_TRUST_HEADS_UP_TITLE = "Heads up about these prices";
@@ -29,7 +37,9 @@ export function buildPricingTrustHeadsUp(
     | "dataSource"
     | "lookupProviderConfigured"
     | "recommendationReadyStoreCount"
+    | "nearbyStores"
   >,
+  context?: PricingTrustHeadsUpContext,
 ): PricingTrustHeadsUp | null {
   const reasons: string[] = [];
 
@@ -75,6 +85,22 @@ export function buildPricingTrustHeadsUp(
     rankedPricingSource === "none"
   ) {
     reasons.push("Meal pricing has limited coverage right now.");
+  }
+
+  const coverageSkewReason =
+    context?.shoppingStyle &&
+    context.selectedStoreIds &&
+    context.recommendations
+      ? buildMultiStoreCoverageSkewReason({
+          shoppingStyle: context.shoppingStyle,
+          nearbyStores: market.nearbyStores,
+          selectedStoreIds: context.selectedStoreIds,
+          recommendations: context.recommendations,
+        })
+      : null;
+
+  if (coverageSkewReason) {
+    reasons.push(coverageSkewReason);
   }
 
   const hasStoreContext =

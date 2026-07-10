@@ -2,6 +2,9 @@
  * Long-form trust copy recovered from `trust-explainer-modal.tsx` (removed 2026-06-26).
  * Rendered inside the expandable `PricingTrustHeadsUpBanner` disclosure — not a modal.
  */
+import type { MarketSummary } from "@/lib/recommendation-service";
+import { buildChainCoverageDepthLiveSummary } from "@/lib/chain-coverage-honesty";
+
 export type PricingTrustHeadsUpDetailSection = {
   heading: string;
   paragraphs: readonly string[];
@@ -22,6 +25,13 @@ export const PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS: readonly PricingTrustHeadsU
       heading: "Chain coverage",
       paragraphs: [
         "The current production release ranks dinners from Kroger-family, Aldi, Publix, and Food Lion when daily ingest and promotion gates pass. Walmart, OSM, and other unsupported pins are map context only—not live-priced sources for meal totals.",
+      ],
+    },
+    {
+      heading: "Chain coverage depth",
+      paragraphs: [
+        "Kroger-family stores can price most dinner ingredients from recently checked online catalog data. Aldi, Publix, and Food Lion ranked estimates use current weekly-ad sales only — a smaller share of the dinner-tracked list is on sale in any given week.",
+        "Multi-store plans pick the lowest estimated priced item per ingredient across your selected stores. When another chain has fewer sale matches, more line items may route to the chain with deeper coverage — that is a data-source difference, not proof that other stores are farther away or have no deals.",
       ],
     },
     {
@@ -67,6 +77,30 @@ export const PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS: readonly PricingTrustHeadsU
       ],
     },
   ] as const;
+
+export function buildPricingTrustHeadsUpDetailSections(
+  market?: Pick<MarketSummary, "nearbyStores">,
+): PricingTrustHeadsUpDetailSection[] {
+  const nearbyStores = market?.nearbyStores ?? [];
+  const liveCoverageSummary =
+    nearbyStores.length > 0
+      ? buildChainCoverageDepthLiveSummary(nearbyStores)
+      : null;
+
+  return PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS.map((section) => {
+    if (section.heading !== "Chain coverage depth" || !liveCoverageSummary) {
+      return {
+        heading: section.heading,
+        paragraphs: [...section.paragraphs],
+      };
+    }
+
+    return {
+      heading: section.heading,
+      paragraphs: [...section.paragraphs, liveCoverageSummary],
+    };
+  });
+}
 
 /** M156-positive claims that must not appear in shopper-facing trust copy. */
 export const FORBIDDEN_TRUST_CLAIM_PATTERNS: readonly RegExp[] = [

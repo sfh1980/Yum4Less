@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09) — `schema_migrations` + unified `applyPendingMigrations()`; retires hand-coded `applyPhaseCMigrationsIfMissing()` (fixes missing `015`/`016` on long-lived volumes). Prerequisite for future tombstones and [Option A universal store reconciliation (backlog #4)](#backlog-re-triage-2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09) — rank path applies `resolveSelectedStoreIdsForRanking` (stale-filter → collocated collapse), Option (c) notices, `effectiveSelectedStoreIds` client re-sync, `e2e/stale-store-selection.spec.ts`. **Four quick-win audit fixes CLOSED** (2026-07-09) — e2e scoped-store map assertion, `ingest-standards.md` M128 doc sync, M156 `save money` copy + guard, map-overlay `useModalDialog` focus trap (see changelog). **Bug [pantry-ID-fix] CLOSED** (2026-07-09) — pantry Phase 2 on `648d745`. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`** on `origin/master`; live **`yum4less_dev` re-measure 2026-07-09: **34/97** (35.1%) tracked-ingredient coverage (was 0/97 pre-fix, 31/97 immediately post-fix). CI [29047864858](https://github.com/sfh1980/Yum4Less/actions/runs/29047864858). **Rank intermediate screen removal CLOSED** (2026-07-09) — **`08e8801`**; stacks with UX #7 pantry skip; CI [29048785870](https://github.com/sfh1980/Yum4Less/actions/runs/29048785870). **Full-project audit (Stages 1–5) closed** — post-audit follow-ups: expanded `PricingTrustHeadsUpBanner` disclosure (modal detail relocated); M128/M151 manual-pause-only ingest reality now aligned in rules **and** `@ingest-standards`. **Six-batch remediation (2026-07-04)** closed P1 security/cron/UI-state items + P2 hygiene — now on `origin/master`. **2026-07-06:** Dependabot merges (#5 pg, #6 react-dom, #8 zod) + Publix locator/dedupe on master; **FRESH-1 weekly-ad promotion gate aligned to 24h ranked-read TTL** — **CLOSED** (`1304542` gate + `08f4bfb`/`aa884a1` fixture follow-up; CI [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318) green on `aa884a1`); **locator chain inference P1** — **CLOSED** (`0c73016`; CI [28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364) green). **Store-discovery quick patch (2026-07-06)** — display names, Aldi bootstrap coord, straight-line distance labels — **CLOSED locally** (see [Store-discovery bug status](#store-discovery-bug-status-2026-07-06)). **2026-07-08:** Fixture OSM permanently separated from live Overpass + same-chain collocated catalog collapse (Decision A) — **CLOSED** on `e5b1285` (CI [28954380879](https://github.com/sfh1980/Yum4Less/actions/runs/28954380879)). **Pantry Phase 2 (2026-07-08)** — DB-backed pantry validation + full-catalog manual entry autocomplete — **CLOSED** on `648d745` (CI [28987447695](https://github.com/sfh1980/Yum4Less/actions/runs/28987447695)). **Coverage slices 2–5 (2026-07-09)** — Kroger p2 terms, Flipp supplemental, per-chain dedupe, Aldi direct-scrape merge — **implemented locally, not on `origin/master`** (uncommitted working tree; see changelog entries + [Verification snapshot](#verification-snapshot)). **Full backlog re-triage (2026-07-09)** — 17 audit items re-verified against live code/DB; see [Backlog re-triage 2026-07-09](#backlog-re-triage-2026-07-09). **Active queue:** geolocation denial handler + Settings gate bypass. Saved persistence + cuisine chips (R11) deferred.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09) — Kroger p2 terms (`020`), Flipp supplemental for unmatched ingredients, per-chain weekly-ad dedupe, Aldi Flipp+direct-scrape merge on `b9c4a46`; live re-ingest + `sync:provider-prices` on `yum4less_dev` (see [Phase 2a](#verification-snapshot)). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09) — Track B UI (trust banner depth, Settings multi-store live summary, results skew heads-up); architectural asymmetry documented; **not** a coverage-gap fix. Aldi weekly-ad ceiling **re-confirmed** with shopper-facing explanation. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Active queue:** geolocation denial handler + Settings gate bypass; **new backlog #18** — Dollar Tree / Dollar General onboarding investigation (separate from coverage honesty).
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-09):** E2e overlay Settings test pin fix — local `npm test` **916/916**, `npm run test:e2e:ci` **25 passed** / 1 skipped; isolated `:15` **5/5** (`--retries=0`). Remote CI [**29063232861**](https://github.com/sfh1980/Yum4Less/actions/runs/29063232861) **green** on **`9591428`** (verify + integration + e2e). Prior migration ledger — [**29062082986**](https://github.com/sfh1980/Yum4Less/actions/runs/29062082986) on **`d72465b`** (verify + integration green; e2e failed before overlay fix).
+**Verified (2026-07-09):** Chain coverage honesty slice — local `npm test` **922/922**, `npm run test:integration` **31/31**, `npm run build` **pass**, `npm run test:e2e:ci` **25 passed** / 1 skipped. Live re-ingest + provider sync on `yum4less_dev`; Phase 2a post-ingest: Kroger **96/97**, Publix **34/97**, Food Lion **17/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only. Remote CI pending on Track B commit (ingest `b9c4a46` pushed). Prior: [**29063232861**](https://github.com/sfh1980/Yum4Less/actions/runs/29063232861) green on **`9591428`**.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -243,6 +243,17 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-09 — Chain coverage honesty (#13 + #16) + ingest slices 2–5 shipped — CLOSED
+
+- **Theme:** [Backlog re-triage](#backlog-re-triage-2026-07-09) items **#13** (chain-content bias) and **#16** (Aldi/FL weekly-ad ceiling). Phase 1 concluded architectural asymmetry (Kroger official API ~full catalog vs weekly-ad chains ~17–35/97) is not closable via more search-term tuning without new product APIs; shopper honesty was the high-value fix.
+- **Ingest (Track A ops only — `b9c4a46`):** `020_kroger_search_terms_p2_gaps.sql`; Flipp supplemental for unmatched tracked ingredients; `weekly-ad-ingest-store-priority` per-chain dedupe; Aldi Flipp+`aldi.us` scrape merge when matches stay &lt;25. Live `npm run ingest:weekly-ads:browser` + `npm run sync:provider-prices` on `yum4less_dev`.
+- **UI honesty (Track B):** `chain-coverage-honesty.ts` + `matchedIngredientCount` on `NearbyStoreSummary`; trust banner **Chain coverage depth** section (static architecture + live per-chain ratios when market loaded); Settings multi-store live coverage summary; results `buildPricingTrustHeadsUp` skew notice when &gt;60% of priced plan items cluster on the chain with deepest coverage.
+- **Phase 2a post-ingest (`yum4less_dev`, 90d, in-stock, official+weekly-ad):** Kroger **96/97**, Publix **34/97**, Food Lion **17/97** (−1 vs pre-ingest), Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only; **0/97** all five chains. Ingest parse saw Aldi **19** / Food Lion **16** matched at parse time — DB counts unchanged for Aldi/Publix/Kroger; Food Lion −1 at freshness edge. **No new search-term tuning** (same class as Walmart deferral).
+- **#13 closure:** Addressed via UI honesty + documented architectural asymmetry — **not** “fixed” as equal cross-chain coverage.
+- **#16 closure:** Aldi **at-ceiling re-confirmed**; UI now explains weekly-ad depth limits. Food Lion remains not a hard ceiling but deprioritized for matching work.
+- **New backlog #18 (queued, out of scope):** Dollar Tree / Dollar General onboarding investigation — locator source, `getProviderRolloutForCatalogStore` pattern, ingest feasibility, 97-item catalog fit vs private-label inventory.
+- **Evidence (local):** `npm test` **922/922**; `npm run test:integration` **31/31**; `npm run build` **pass**; `npm run test:e2e:ci` **25 passed** / 1 skipped.
 
 ### 2026-07-09 — E2e: pin single-store-map-overlay Settings test (index-selection brittleness #2) — CLOSED
 
@@ -1905,6 +1916,9 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-07-09 | **Chain coverage honesty (#13):** Kroger official API vs weekly-ad depth asymmetry is architectural — addressed with shopper-facing honesty (trust banner depth, Settings multi-store live ratios, results skew heads-up), not by equalizing coverage via search-term tuning. Phase 2a post-ingest: Kroger **96/97**, Publix **34/97**, Food Lion **17/97**, Aldi **17/97**. | **Closed** |
+| 2026-07-09 | **Aldi weekly-ad ceiling (#16) re-confirmed:** ~17/97 on dinner-tracked list is expected for weekly-ad inventory; UI explains limit. Further non-Kroger matching tuning deprioritized (same class as Walmart). Food Lion not at hard ceiling but risky without guard discipline. | **Closed** |
+| 2026-07-09 | **Dollar Tree / Dollar General (#18 queued):** separate new-chain onboarding investigation — locator, chain inference, ingest feasibility, catalog fit — not part of coverage-honesty slice. | **Queued** |
 | 2026-07-08 | **Catalog collocated merge radii (Decision A):** same-chain catalog↔catalog collapse uses chain-configurable radius — default `CATALOG_COLLOCATED_MERGE_MILES=0.05`; Kroger exception `KROGER_COLLOCATED_MERGE_MILES=0.15` (legacy API variance). Unvalidated for other chains — do not widen shared 0.05 from the Kroger exception. Module: `catalog-store-colocated-identity.ts`. | **Active** |
 | 2026-07-08 | **Fixture OSM vs live Overpass identity:** rehearsal map rows persist only as `fixture-osm-*` + `yum4less-map-fixture`; live Overpass keeps `osm-*` + `openstreetmap-overpass`. Pricing/`touchStoreVerification` must not rewrite location-provenance `source_name`. Ranked Aldi nearest-OSM ignores synthetic 90000x ids. Owner/dev DBs purge residual synthetic/fixture OSM via `018`. | **Active** |
 | 2026-07-03 | **Food Lion coordinate writes require storefront verification, not Nominatim alone.** `food-lion-mechanicsville` was corrected after Google satellite confirmed the old pin sat on Bell Creek Middle School and the new pin sat on the storefront; `osm-node-3103220732` and `osm-node-6527816794` stayed unchanged because SNAP + satellite showed the current stored pins already land on the storefront while Nominatim landed on road geometry | **Active** |
@@ -1980,6 +1994,13 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (local) | 2026-07-09 | **922/922** pass (chain coverage honesty + ingest slices) |
+| `npm run test:integration` (local) | 2026-07-09 | **31/31** pass |
+| `npm run build` (local) | 2026-07-09 | **Pass** |
+| `npm run test:e2e:ci` (local) | 2026-07-09 | **25 passed**, 1 skipped |
+| Phase 2a chain coverage (`yum4less_dev`, post-ingest) | 2026-07-09 | Kroger **96/97**, Publix **34/97**, Food Lion **17/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only — `scripts/.investigate-internal-catalog-chain-neutrality.ts` |
+| Coverage ingest slices 2–5 on `origin/master` | 2026-07-09 | **Shipped** — `b9c4a46` |
+| **Remote CI** (chain coverage honesty) | 2026-07-09 | Pending Track B push — ingest `b9c4a46` pushed |
 | `npm test` (local) | 2026-07-09 | **911/911** pass (store-ID integrity #14–15) |
 | `npm run test:integration` (local) | 2026-07-09 | **29/29** pass |
 | `npm run build` (local) | 2026-07-09 | **Pass** (store-ID integrity #14–15) |
@@ -1998,13 +2019,13 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Remote CI** (`0c73016`) | 2026-07-06 | **Green** — [run 28825310364](https://github.com/sfh1980/Yum4Less/actions/runs/28825310364): verify (lint + **813/813** unit + build) + integration **27/27** + e2e **21+1 skip** — **not re-run** after fixture-OSM / collocated slices |
 | `npm run lint` (local) | 2026-07-06 | **Not re-run** this slice; build lint step passed 2026-07-08 |
 | `npx tsc --noEmit` (local) | 2026-07-09 | **84 errors** (re-triage pass; grown from 64–66; top files: `shopping-plan-builder.test.ts`, weekly-ad test mocks) |
-| Phase 2a chain coverage (`yum4less_dev`) | 2026-07-09 | Kroger **96/97**, Publix **34/97**, Food Lion **18/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only — `scripts/.investigate-internal-catalog-chain-neutrality.ts` |
+| Phase 2a chain coverage (`yum4less_dev`) | 2026-07-09 | Superseded by post-ingest row above |
 | `schema_migrations` ledger | 2026-07-09 | **Shipped** — `000_schema_migrations.sql` + `applyPendingMigrations()`; simulated partial/fresh volume evidence via `npm run db:probe:migration-ledger` |
 | `npm test` (local) | 2026-07-09 | **916/916** (+5 migration ledger unit tests) |
 | `npm test` (CI `d72465b`) | 2026-07-09 | **905/905** — verify job green |
 | `npm run test:integration` (local + CI) | 2026-07-09 | **31/31** (+2 migration-ledger integration specs) |
 | `npm run test:e2e:ci` (local) | 2026-07-09 | **25 passed** / 1 skipped — after overlay `:15` pin fix |
-| Coverage slices 2–5 on `origin/master` | 2026-07-09 | **Not committed** — local working tree only; slice 1 (`c18f99e`) on master |
+| Coverage slices 2–5 on `origin/master` | 2026-07-09 | **Shipped** — `b9c4a46` (see changelog) |
 | Locator chain inference regression | 2026-07-06 | `chain-rollout-policy.test.ts` + `provider-rollout.test.ts` on `0c73016` (CI unit job) |
 | `publix-1626` ranked path (`yum4less_dev`) | 2026-07-06 | **36** fresh obs; API `chain: publix`, `recommendationEnabled: true`, `weekly-ad-preview`; **0 meal cards** — no recipe with 100% ingredient coverage at store (not a chain gate failure) |
 | **Remote CI** (`aa884a1`) | 2026-07-06 | **Green** — [run 28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318): verify (lint + **811/811** unit + build) + integration **27/27** + e2e **21+1 skip** |
@@ -2095,11 +2116,12 @@ Read-only re-verification of 17 items from `docs/audits/full-system-run-report.m
 | 10 | Geocodio quota/key | `geocodio:global` 20/min; key in server URL only | Med homelab | Low dev / Med scale | Homelab |
 | 11 | H12 e2e skip | Intentional Leaflet skip; H12 UI shipped | Small | **Low** | **Accept** |
 | 12 | `navigation-theme` flake | 3rd recurrence; helper asserts full API vs scoped stores | Small | Med CI noise | **Quick win P1** |
-| 13 | Chain-content bias | Live: Kroger 96/97, Publix 34/97, FL 18/97, Aldi 17/97, WM 10/97 | Med–Large | Med multi-chain demos | Bundle with #16 |
+| 13 | Chain-content bias | **CLOSED** (2026-07-09) — UI honesty + documented API vs weekly-ad asymmetry; Phase 2a **96/34/17/17/10** per chain | — | — | Track B |
 | 14 | Ranking collocated collapse | **CLOSED** (2026-07-09) — `resolveSelectedStoreIdsForRanking` | Small–Med | — | Was bundle #14–15 |
 | 15 | Stale `selectedStoreIds` | **CLOSED** (2026-07-09) — Option (c) + client re-sync | Small–Med | — | Was bundle #14–15 |
-| 16 | Aldi/FL weekly-ad ceiling | Aldi **at-ceiling** (decision log); FL not hard ceiling; DB 17–18/97 weekly-ad | Accept Aldi / Med FL | Low Aldi | Aldi **accept** |
+| 16 | Aldi/FL weekly-ad ceiling | **CLOSED** (2026-07-09) — Aldi at-ceiling **re-confirmed**; UI explains weekly-ad depth; FL deprioritized for tuning | Accept Aldi | Low Aldi | Track B |
 | 17 | Walmart matching | Deprioritized; 10/97 obs; promotion hard-blocked | Large if v1 | **None v1** | **Won't-fix v1** |
+| 18 | Dollar Tree / Dollar General onboarding | **Queued** — locator source, chain ID pattern, ingest feasibility, 97-item catalog fit vs private-label SKUs | Design | TBD | New-chain scope |
 
 **Recommended order:** #12 → #6, #8, #9 (quick wins) → #14+#15 → #3 → #4 (planning) → #1+#2.
 

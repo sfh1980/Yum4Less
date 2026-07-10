@@ -323,6 +323,19 @@ export function buildNearbyStoresForSearch(
         freshOfficialApiMatchedCount:
           officialApiCoverage?.freshMatchedIngredientCount ?? 0,
       });
+      const krogerOfficialApiActive =
+        baseRollout.chain === "kroger" &&
+        officialApiCoverage !== null &&
+        krogerOfficialApiPromotionGatesPass(officialApiCoverage);
+      const matchedIngredientCount = krogerOfficialApiActive
+        ? officialApiCoverage.freshMatchedIngredientCount
+        : coverage.matchedIngredientCount;
+      const pricingSourceKind: NearbyStoreSummary["pricingSourceKind"] =
+        krogerOfficialApiActive
+          ? "official-online"
+          : coverage.usesWeeklyAdSource
+            ? "weekly-ad"
+            : "none";
       return {
         id: store.id,
         name: formatStoreHeadlineWithOptionalSubtitle({
@@ -348,6 +361,9 @@ export function buildNearbyStoresForSearch(
         rolloutStatus: rollout.status,
         recommendationEnabled: rollout.recommendationEnabled,
         rolloutNote: rollout.note,
+        matchedIngredientCount,
+        totalTrackedIngredientCount: recipeIngredientIds.length,
+        pricingSourceKind,
         sourceName: store.sourceName,
         sourceStoreId: store.sourceStoreId,
         lastVerifiedAt: store.lastVerifiedAt,

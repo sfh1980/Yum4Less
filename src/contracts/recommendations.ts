@@ -78,6 +78,12 @@ export type NearbyStoreSummary = {
   rolloutStatus: ProviderRolloutStatus;
   recommendationEnabled: boolean;
   rolloutNote: string;
+  /** Dinner-tracked ingredients with a fresh ranked price at this store. */
+  matchedIngredientCount: number;
+  /** Denominator for coverage ratios (dinner-tracked catalog size). */
+  totalTrackedIngredientCount: number;
+  /** Primary ranked price source for shopper honesty copy. */
+  pricingSourceKind: "official-online" | "weekly-ad" | "none";
   sourceName?: string;
   sourceStoreId?: string;
   lastVerifiedAt?: string;

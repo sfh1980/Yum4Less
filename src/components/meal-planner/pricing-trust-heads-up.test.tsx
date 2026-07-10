@@ -26,6 +26,7 @@ const marketWithStoreContext = {
   dataSource: "database" as const,
   lookupProviderConfigured: true,
   recommendationReadyStoreCount: 1,
+  nearbyStores: [],
 };
 
 function getTrustDetails(container: HTMLElement): HTMLDetailsElement {
@@ -72,8 +73,8 @@ describe("PricingTrustHeadsUpBanner expanded disclosure", () => {
     ).toBeInTheDocument();
     expect(
       within(
-        screen.getByRole("region", { name: "Chain coverage" }),
-      ).getByText(/Kroger-family, Aldi, Publix, and Food Lion/i),
+        screen.getByRole("region", { name: "Chain coverage depth" }),
+      ).getByText(/weekly-ad sales only/i),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Freshness" }),

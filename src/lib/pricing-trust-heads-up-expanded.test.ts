@@ -11,7 +11,8 @@ describe("pricing-trust-heads-up-expanded", () => {
       PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS,
     );
 
-    expect(text).toContain("Chain coverage");
+    expect(text).toContain("Chain coverage depth");
+    expect(text).toContain("weekly-ad sales only");
     expect(text).toContain("Kroger-family, Aldi, Publix, and Food Lion");
     expect(text).toContain("24-hour cache");
     expect(text).toContain("Sale confidence");
@@ -28,6 +29,7 @@ describe("pricing-trust-heads-up-expanded", () => {
     expect(headings).toEqual([
       "Beta v1",
       "Chain coverage",
+      "Chain coverage depth",
       "Confidence labels",
       "Freshness",
       "Sale confidence",

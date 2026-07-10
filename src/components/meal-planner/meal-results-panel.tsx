@@ -95,7 +95,15 @@ export function MealResultsPanel({
         </div>
       </div>
 
-      <PricingTrustHeadsUpBanner instanceId="meals" market={market} />
+      <PricingTrustHeadsUpBanner
+        instanceId="meals"
+        market={market}
+        trustContext={{
+          shoppingStyle: _form.shoppingStyle,
+          selectedStoreIds: _form.selectedStoreIds,
+          recommendations,
+        }}
+      />
 
       <div className="warning warning-with-hint">
         <p>
