@@ -13,6 +13,9 @@ import type {
   WeeklyAdRawOffer,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
+/** Cap per-chain Flipp ingredient lookups to keep scheduled ingest bounded. */
+export const FLIPP_SUPPLEMENTAL_MAX_SEARCH_TERMS = 30;
+
 export async function resolveFlippWeeklyAdOffersForChain(input: {
   chain: WeeklyAdChain;
   zipCode: string;
@@ -34,9 +37,15 @@ export async function resolveFlippWeeklyAdOffersForChain(input: {
       ? "Flipp syndicated weekly-ad feed + flyer lookup"
       : "Flipp syndicated weekly-ad feed";
 
-  if (countMatchedOffers(input.chain, rawOffers, input.trackedIngredientIds) === 0) {
-    const supplementalSearchTerms = buildSupplementalFlippSearchTerms(
-      input.trackedIngredientIds,
+  const unmatchedIngredientIds = listUnmatchedTrackedIngredientIds(
+    input.chain,
+    rawOffers,
+    input.trackedIngredientIds,
+  );
+
+  if (unmatchedIngredientIds.length > 0) {
+    const supplementalSearchTerms = buildSupplementalFlippSearchTermsForIngredients(
+      unmatchedIngredientIds,
     );
     if (supplementalSearchTerms.length > 0) {
       const supplementalOffers = await fetchFlippWeeklyAdOffersForSearchTerms({
@@ -54,34 +63,62 @@ export async function resolveFlippWeeklyAdOffersForChain(input: {
   return { rawOffers, retrievalLabel };
 }
 
-function buildSupplementalFlippSearchTerms(trackedIngredientIds: string[]) {
-  const terms = new Set<string>();
-  for (const ingredient of INTERNAL_CATALOG_INGREDIENTS) {
-    if (!trackedIngredientIds.includes(ingredient.id)) {
+export function buildSupplementalFlippSearchTermsForIngredients(
+  unmatchedIngredientIds: string[],
+) {
+  const terms: string[] = [];
+  const seen = new Set<string>();
+
+  for (const ingredientId of unmatchedIngredientIds) {
+    if (terms.length >= FLIPP_SUPPLEMENTAL_MAX_SEARCH_TERMS) {
+      break;
+    }
+
+    const ingredient = INTERNAL_CATALOG_INGREDIENTS.find(
+      (entry) => entry.id === ingredientId,
+    );
+    if (!ingredient) {
       continue;
     }
 
-    for (const searchTerm of getWeeklyAdIngredientSearchTerms(ingredient)) {
-      if (searchTerm.length >= 4) {
-        terms.add(searchTerm);
-      }
+    const primaryTerm = getWeeklyAdIngredientSearchTerms(ingredient).find(
+      (term) => term.length >= 4,
+    );
+    if (!primaryTerm) {
+      continue;
     }
+
+    const normalized = primaryTerm.toLowerCase();
+    if (seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    terms.push(primaryTerm);
   }
 
-  return [...terms];
+  return terms;
 }
 
-function countMatchedOffers(
+function listUnmatchedTrackedIngredientIds(
   chain: WeeklyAdChain,
   rawOffers: WeeklyAdRawOffer[],
   trackedIngredientIds: string[],
 ) {
-  return matchWeeklyAdOffers({
+  const matchedOffers = matchWeeklyAdOffers({
     chain,
     storeId: "matching-probe",
     sourceUrl: "flipp://matching-probe",
     observedAt: new Date().toISOString(),
     rawOffers,
     trackedIngredientIds,
-  }).filter((offer) => offer.ingredientId).length;
+  });
+
+  const matchedIds = new Set(
+    matchedOffers
+      .map((offer) => offer.ingredientId)
+      .filter((ingredientId): ingredientId is string => Boolean(ingredientId)),
+  );
+
+  return trackedIngredientIds.filter((ingredientId) => !matchedIds.has(ingredientId));
 }

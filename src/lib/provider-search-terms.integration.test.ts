@@ -8,6 +8,12 @@ const KROGER_FALLBACK_INGREDIENTS = [
   "chicken-broth",
   "frozen-broccoli",
   "frozen-mixed-vegetables",
+  "chickpeas",
+  "dried-oregano",
+  "cornstarch",
+  "jalapeno",
+  "shredded-cheese-blend",
+  "bread-loaf",
 ] as const;
 
 describe("provider_search_terms (integration)", () => {
@@ -79,6 +85,20 @@ describe("provider_search_terms (integration)", () => {
       ingredientName: "Chicken broth",
       searchTerm: "chicken broth",
       fallbackSearchTerm: "chicken stock",
+    });
+
+    expect(terms.find((term) => term.ingredientId === "chickpeas")).toEqual({
+      ingredientId: "chickpeas",
+      ingredientName: "Chickpeas",
+      searchTerm: "chickpeas",
+      fallbackSearchTerm: "garbanzo beans",
+    });
+
+    expect(terms.find((term) => term.ingredientId === "bread-loaf")).toEqual({
+      ingredientId: "bread-loaf",
+      ingredientName: "Sandwich bread",
+      searchTerm: "white sandwich bread",
+      fallbackSearchTerm: "bread loaf",
     });
   });
 });

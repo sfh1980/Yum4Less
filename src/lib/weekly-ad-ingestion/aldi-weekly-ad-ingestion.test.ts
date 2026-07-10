@@ -1,9 +1,59 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAldiWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
+import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
+import {
+  ALDI_SCRAPE_MERGE_MIN_MATCHED_INGREDIENTS,
+  createAldiWeeklyAdIngestionClient,
+  shouldSupplementAldiWeeklyAdWithDirectScrape,
+} from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
 import * as flippFeed from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import * as pageFetcher from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
 
 const originalFixtureFlag = process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
+const fullCatalogIngredientIds = INTERNAL_CATALOG_INGREDIENTS.map(
+  (ingredient) => ingredient.id,
+);
+
+describe("shouldSupplementAldiWeeklyAdWithDirectScrape", () => {
+  it("scrapes when Flipp returns no offers", () => {
+    expect(
+      shouldSupplementAldiWeeklyAdWithDirectScrape({
+        rawOfferCount: 0,
+        matchedIngredientCount: 0,
+        trackedIngredientCount: fullCatalogIngredientIds.length,
+      }),
+    ).toBe(true);
+  });
+
+  it("scrapes on full-catalog runs when matched count is below the threshold", () => {
+    expect(
+      shouldSupplementAldiWeeklyAdWithDirectScrape({
+        rawOfferCount: 40,
+        matchedIngredientCount: 13,
+        trackedIngredientCount: fullCatalogIngredientIds.length,
+      }),
+    ).toBe(true);
+  });
+
+  it("skips scrape on full-catalog runs when matched count meets the threshold", () => {
+    expect(
+      shouldSupplementAldiWeeklyAdWithDirectScrape({
+        rawOfferCount: 80,
+        matchedIngredientCount: ALDI_SCRAPE_MERGE_MIN_MATCHED_INGREDIENTS,
+        trackedIngredientCount: fullCatalogIngredientIds.length,
+      }),
+    ).toBe(false);
+  });
+
+  it("skips low-coverage scrape for small tracked-ingredient test runs", () => {
+    expect(
+      shouldSupplementAldiWeeklyAdWithDirectScrape({
+        rawOfferCount: 2,
+        matchedIngredientCount: 2,
+        trackedIngredientCount: 2,
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("aldi weekly ad ingestion", () => {
   beforeEach(() => {
@@ -93,5 +143,46 @@ describe("aldi weekly ad ingestion", () => {
       result.provenance,
     );
     expect(result.message).toContain("weekly-ad run");
+  });
+
+  it("merges direct scrape offers when full-catalog Flipp coverage is thin", async () => {
+    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([
+      {
+        productName: "Fresh Family Pack Chicken Thighs",
+        price: 2.49,
+      },
+      {
+        productName: "Black Beans",
+        price: 0.79,
+      },
+    ]);
+    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForMerchantFlyers").mockResolvedValue(
+      [],
+    );
+    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForSearchTerms").mockResolvedValue(
+      [],
+    );
+    const pageSpy = vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent").mockResolvedValue({
+      html: `<script id="weekly-ad-offers-data">[{"productName":"Fresh Baby Spinach","price":1.99}]</script>`,
+      method: "browser",
+      parsedOfferCount: 1,
+    });
+
+    const client = createAldiWeeklyAdIngestionClient();
+    const result = await client.ingestWeeklyAd({
+      chain: "aldi",
+      storeId: "aldi-mechanicsville",
+      storeName: "Aldi",
+      zipCode: "23111",
+      trackedIngredientIds: fullCatalogIngredientIds,
+    });
+
+    expect(pageSpy).toHaveBeenCalled();
+    expect(result.status).toBe("live");
+    expect(result.provenance).toBe("weekly-ad-scrape");
+    expect(result.offers.some((offer) => offer.ingredientId === "spinach")).toBe(
+      true,
+    );
+    expect(result.message).toContain("browser scrape");
   });
 });

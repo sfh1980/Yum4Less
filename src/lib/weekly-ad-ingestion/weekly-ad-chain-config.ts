@@ -22,7 +22,7 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
       "#weekly-ad-offers-data, [data-weekly-ad-product], [class*='weekly'], iframe",
     researchTargets: ["https://www.aldi.us/en/weekly-specials/"],
     termsNote:
-      "Aldi weekly specials use the Flipp syndicated weekly-ad feed for ZIP-scoped offers, then optional direct page scrape when the feed is empty. Verify current deals in store before checkout.",
+      "Aldi weekly specials use the Flipp syndicated weekly-ad feed for ZIP-scoped offers, then merge in a direct page scrape when the feed is empty or matched dinner-ingredient coverage stays low. Verify current deals in store before checkout.",
   },
   {
     chain: "food-lion",

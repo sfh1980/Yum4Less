@@ -120,6 +120,76 @@ describe("weekly ad ingestion service", () => {
     syncSpy.mockRestore();
   });
 
+  it("fans out one Aldi weekly-ad ingest to every Aldi store id when persisting", async () => {
+    const purgeSpy = vi
+      .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")
+      .mockResolvedValue(0);
+    const syncSpy = vi
+      .spyOn(weeklyAdOfferSync, "syncWeeklyAdOffersToPriceObservations")
+      .mockResolvedValue({
+        chain: "aldi",
+        storeId: "aldi-mechanicsville",
+        syncedCount: 1,
+        skippedCount: 0,
+        failedCount: 0,
+        retrievalMode: "fixture",
+        message: "synced",
+      });
+
+    const { results } = await runWeeklyAdIngestionForStores({
+      nearbyStores: [
+        { id: "aldi-mechanicsville", name: "ALDI", chain: "aldi" },
+        { id: "osm-node-6531578976", name: "ALDI", chain: "aldi" },
+      ],
+      zipCode: "23111",
+      persistToDatabase: true,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.chain).toBe("aldi");
+    expect(syncSpy).toHaveBeenCalledTimes(2);
+    expect(
+      syncSpy.mock.calls.map((call) => call[0]?.result.offers[0]?.storeId).sort(),
+    ).toEqual(["aldi-mechanicsville", "osm-node-6531578976"]);
+
+    purgeSpy.mockRestore();
+    syncSpy.mockRestore();
+  });
+
+  it("fans out one Publix weekly-ad ingest to every Publix store id when persisting", async () => {
+    const purgeSpy = vi
+      .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")
+      .mockResolvedValue(0);
+    const syncSpy = vi
+      .spyOn(weeklyAdOfferSync, "syncWeeklyAdOffersToPriceObservations")
+      .mockResolvedValue({
+        chain: "publix",
+        storeId: "publix-1566",
+        syncedCount: 1,
+        skippedCount: 0,
+        failedCount: 0,
+        retrievalMode: "fixture",
+        message: "synced",
+      });
+
+    await runWeeklyAdIngestionForStores({
+      nearbyStores: [
+        { id: "publix-1626", name: "Brandy Creek Commons", chain: "publix" },
+        { id: "publix-1566", name: "Nuckols Place", chain: "publix" },
+      ],
+      zipCode: "23111",
+      persistToDatabase: true,
+    });
+
+    expect(syncSpy).toHaveBeenCalledTimes(2);
+    expect(
+      syncSpy.mock.calls.map((call) => call[0]?.result.offers[0]?.storeId).sort(),
+    ).toEqual(["publix-1566", "publix-1626"]);
+
+    purgeSpy.mockRestore();
+    syncSpy.mockRestore();
+  });
+
   it("parses Food Lion fixture offers for tracked ingredients", async () => {
     const { createFoodLionWeeklyAdIngestionClient } = await import(
       "@/lib/weekly-ad-ingestion/food-lion-weekly-ad-ingestion"

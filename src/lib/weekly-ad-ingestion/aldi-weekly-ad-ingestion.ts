@@ -1,5 +1,6 @@
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
+import { mergeWeeklyAdRawOffers } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
 import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
@@ -9,11 +10,35 @@ import type {
   WeeklyAdIngestionClient,
   WeeklyAdIngestionInput,
   WeeklyAdIngestionResult,
+  WeeklyAdRawOffer,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 const FIXTURE_FILE_NAME = "aldi-weekly-ad-sample.html";
 const ALDI_WEEKLY_SPECIALS_URL = "https://www.aldi.us/en/weekly-specials/";
 const ALDI_FLIPP_MERCHANT = "ALDI";
+
+/** Scrape aldi.us when a full-catalog Flipp run matches fewer than this many ingredients. */
+export const ALDI_SCRAPE_MERGE_MIN_MATCHED_INGREDIENTS = 25;
+
+export function shouldSupplementAldiWeeklyAdWithDirectScrape(input: {
+  rawOfferCount: number;
+  matchedIngredientCount: number;
+  trackedIngredientCount: number;
+}): boolean {
+  if (input.rawOfferCount === 0) {
+    return true;
+  }
+
+  if (
+    input.trackedIngredientCount < ALDI_SCRAPE_MERGE_MIN_MATCHED_INGREDIENTS
+  ) {
+    return false;
+  }
+
+  return (
+    input.matchedIngredientCount < ALDI_SCRAPE_MERGE_MIN_MATCHED_INGREDIENTS
+  );
+}
 
 export function createAldiWeeklyAdIngestionClient(): WeeklyAdIngestionClient {
   const config = getWeeklyAdChainConfig("aldi");
@@ -62,17 +87,44 @@ async function ingestAldiWeeklyAd(
     let fallbackUsed = true;
     let captureHtml = "";
 
-    if (rawOffers.length === 0) {
+    const flippMatchedCount = countAldiMatchedIngredientIds(
+      rawOffers,
+      input.trackedIngredientIds,
+    );
+    const shouldScrapeAldiPage = shouldSupplementAldiWeeklyAdWithDirectScrape({
+      rawOfferCount: rawOffers.length,
+      matchedIngredientCount: flippMatchedCount,
+      trackedIngredientCount: input.trackedIngredientIds.length,
+    });
+
+    if (shouldScrapeAldiPage) {
       const pageFetch = await fetchWeeklyAdPageContent({
         url: ALDI_WEEKLY_SPECIALS_URL,
         fetchStrategy: config?.fetchStrategy ?? "browser-fallback",
         browserWaitSelector: config?.browserWaitSelector,
       });
       captureHtml = pageFetch.html;
-      rawOffers = parseWeeklyAdHtml(pageFetch.html);
-      retrievalLabel = `${pageFetch.method} scrape`;
-      provenance = "weekly-ad-scrape";
-      fallbackUsed = pageFetch.method === "browser";
+      const scrapedOffers = parseWeeklyAdHtml(pageFetch.html);
+
+      if (scrapedOffers.length > 0) {
+        if (rawOffers.length > 0) {
+          rawOffers = mergeWeeklyAdRawOffers(rawOffers, scrapedOffers);
+          retrievalLabel = `${retrievalLabel} + ${pageFetch.method} scrape`;
+          if (pageFetch.method === "browser") {
+            provenance = "weekly-ad-scrape";
+          }
+          fallbackUsed = true;
+        } else {
+          rawOffers = scrapedOffers;
+          retrievalLabel = `${pageFetch.method} scrape`;
+          provenance = "weekly-ad-scrape";
+          fallbackUsed = pageFetch.method === "browser";
+        }
+      } else if (rawOffers.length === 0) {
+        retrievalLabel = `${pageFetch.method} scrape`;
+        provenance = "weekly-ad-scrape";
+        fallbackUsed = pageFetch.method === "browser";
+      }
     }
 
     if (rawOffers.length === 0) {
@@ -149,4 +201,18 @@ async function ingestAldiWeeklyAd(
       termsNote,
     };
   }
+}
+
+function countAldiMatchedIngredientIds(
+  rawOffers: WeeklyAdRawOffer[],
+  trackedIngredientIds: string[],
+) {
+  return matchWeeklyAdOffers({
+    chain: "aldi",
+    storeId: "matching-probe",
+    sourceUrl: ALDI_WEEKLY_SPECIALS_URL,
+    observedAt: new Date().toISOString(),
+    rawOffers,
+    trackedIngredientIds,
+  }).filter((offer) => offer.ingredientId).length;
 }

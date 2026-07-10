@@ -8,6 +8,10 @@ import { createKrogerWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/k
 import { createLidlWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/lidl-weekly-ad-ingestion";
 import { createWalmartWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/walmart-weekly-ad-ingestion";
 import {
+  groupWeeklyAdIngestStoresByChain,
+  pickPrimaryWeeklyAdIngestStoreForChain,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-ingest-store-priority";
+import {
   isWeeklyAdChain,
   WEEKLY_AD_CHAINS,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-registry";
@@ -98,29 +102,39 @@ export async function runWeeklyAdIngestionForStores(input: {
     }
   }
 
-  for (const store of nonKrogerStores) {
-    if (!isWeeklyAdChain(store.chain)) {
+  for (const [chain, chainStores] of groupWeeklyAdIngestStoresByChain(nonKrogerStores)) {
+    if (!isWeeklyAdChain(chain)) {
       continue;
     }
 
-    const client = getWeeklyAdIngestionClient(store.chain);
+    const client = getWeeklyAdIngestionClient(chain);
     if (!client) {
       continue;
     }
 
+    const primaryStore = pickPrimaryWeeklyAdIngestStoreForChain(chainStores);
     const result = await client.ingestWeeklyAd({
-      chain: store.chain,
-      storeId: store.id,
-      storeName: store.name,
+      chain,
+      storeId: primaryStore.id,
+      storeName: primaryStore.name,
       zipCode,
       trackedIngredientIds,
     });
     results.push(result);
 
     if (input.persistToDatabase && result.offers.length > 0) {
-      syncSummaries.push(
-        await syncWeeklyAdOffersToPriceObservations({ result }),
-      );
+      for (const targetStore of chainStores) {
+        const fanOutResult: WeeklyAdIngestionResult = {
+          ...result,
+          offers: result.offers.map((offer) => ({
+            ...offer,
+            storeId: targetStore.id,
+          })),
+        };
+        syncSummaries.push(
+          await syncWeeklyAdOffersToPriceObservations({ result: fanOutResult }),
+        );
+      }
     }
   }
 
