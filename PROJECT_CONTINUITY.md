@@ -256,6 +256,8 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 **Evidence (local):** `npx tsc --noEmit` **0 errors**; `npm test` **922/922**; `npm run test:integration` **31/31**; `npm run build` **pass**; `npm run test:e2e:ci` **25 passed** / 1 skipped
 
+**Remote CI:** [**29066007641**](https://github.com/sfh1980/Yum4Less/actions/runs/29066007641) **green** on `a643aed` (verify typecheck + unit + build + integration + e2e)
+
 **Limits:** No production pantry logic changed — test + type-narrowness fix only.
 
 ### 2026-07-09 — Chain coverage honesty (#13 + #16) + ingest slices 2–5 shipped — CLOSED
