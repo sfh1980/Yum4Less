@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-10):** Option A Slice 4 — local `npm test` **954/954** (T1–T3 Aldi/OSM resolver + Food Lion negative + known-pair stays Kroger-only), `npm run test:integration` **36/36** (includes T4 migration 023 idempotency + no-store-row guard), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **24 passed** / 1 flaky (navigation-theme Cook tab — passed on retry) / 1 skipped (H12 map-mount; **no new skips**). Master flag **OFF**. Remote CI _(filled after push)_. Prior Slice 3: [**29135637011**](https://github.com/sfh1980/Yum4Less/actions/runs/29135637011) on **`11fadca`**.
+**Verified (2026-07-10):** Option A Slice 4 — local `npm test` **954/954** (T1–T3 Aldi/OSM resolver + Food Lion negative + known-pair stays Kroger-only), `npm run test:integration` **36/36** (includes T4 migration 023 idempotency + no-store-row guard), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **24 passed** / 1 flaky (navigation-theme Cook tab — passed on retry) / 1 skipped (H12 map-mount; **no new skips**). Master flag **OFF**. Remote CI [**29136665905**](https://github.com/sfh1980/Yum4Less/actions/runs/29136665905) **green** on **`bfe5f3a`**. Prior Slice 3: [**29135637011**](https://github.com/sfh1980/Yum4Less/actions/runs/29135637011) on **`11fadca`**.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -252,7 +252,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Settings:** **No surface changes.** Known-pair lookup remains Kroger-only (OSM not Settings-selectable when catalog Aldi present).
 - **Named technical debt (updated):** Second seed (Aldi/OSM) landed via migration 023; Settings known-pair lookup remains Kroger-only because Aldi/OSM has no Settings-selectable surface (OSM is suppressed by `filterSettingsSelectableStores` when catalog Aldi is present). Generalize the lookup when Map wiring or a genuinely Settings-selectable twin pair needs it — not before.
 - **Out of scope:** Map / market-search merge / ingest matcher; **no default flag flip** (master + sub-flags OFF including dev).
-- **Evidence:** `npm test` 954/954; integration 36/36; build + typecheck clean; e2e 24 passed / 1 flaky (retry pass) / 1 skipped (H12; no new skips). Remote CI _(after push)_.
+- **Evidence:** `npm test` 954/954; integration 36/36; build + typecheck clean; e2e 24 passed / 1 flaky (retry pass) / 1 skipped (H12; no new skips). Remote CI [29136665905](https://github.com/sfh1980/Yum4Less/actions/runs/29136665905) on `bfe5f3a`.
 
 ### 2026-07-10 — Option A Slice 3: Kroger identity seed + Settings canonicalize — CLOSED
 
@@ -2080,7 +2080,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npm run build` (local) | 2026-07-10 | **Pass** |
 | `npm run typecheck` (local) | 2026-07-10 | **0 errors** |
 | `npm run test:e2e:ci` (local) | 2026-07-10 | **24 passed**, 1 flaky (retry pass), 1 skipped (H12 baseline; no new skips) |
-| **Remote CI** (Option A Slice 4) | 2026-07-10 | _(filled after push)_ |
+| **Remote CI** (Option A Slice 4 `bfe5f3a`) | 2026-07-10 | **Green** — [29136665905](https://github.com/sfh1980/Yum4Less/actions/runs/29136665905) |
 | `npm test` (local) | 2026-07-10 | **949/949** pass (Option A Slice 3 Settings canonicalize T1–T3 + structural 0.85) |
 | `npm run test:integration` (local) | 2026-07-10 | **33/33** pass (includes T4 `022` Kroger seed idempotency) |
 | `npm run build` (local) | 2026-07-10 | **Pass** |
