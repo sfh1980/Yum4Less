@@ -79,15 +79,39 @@ import {
   formatStoreHeadlineWithOptionalSubtitle,
 } from "@/lib/store-display-labels";
 import type { MarketSummary, NearbyStoreSummary } from "@/lib/recommendation-types";
+import { collapseConfirmedIdentityLinkedCatalogStores } from "@/lib/store-identity-catalog-collapse";
+import {
+  isStoreIdentityExpandEnabled,
+  type StoreIdentityEnv,
+} from "@/lib/store-identity-flags";
+import { createPostgresStoreIdentityLookupSafe } from "@/lib/store-identity-postgres-lookup";
+import {
+  createDefaultStoreIdentityLookup,
+  expandStoreIdsForRead,
+  type StoreIdentityLookup,
+} from "@/lib/store-identity-resolvers";
+
+export type MarketSearchIdentityOptions = {
+  identityLookup?: StoreIdentityLookup;
+  env?: StoreIdentityEnv;
+};
 
 export async function getMarketSearchExperience(
   radiusMiles: number,
   location: ResolvedSearchLocation,
   providerConfigured: boolean,
+  identityOptions?: MarketSearchIdentityOptions,
 ): Promise<{
   market: MarketSummary;
   snapshot: Awaited<ReturnType<typeof getMarketDataSnapshot>>["snapshot"];
 }> {
+  const storeIdentityEnv = identityOptions?.env ?? process.env;
+  const identityLookup =
+    identityOptions?.identityLookup ??
+    (isStoreIdentityExpandEnabled(storeIdentityEnv)
+      ? await createPostgresStoreIdentityLookupSafe()
+      : createDefaultStoreIdentityLookup());
+
   const providerStoreSearches = await searchOfficialProviderStores({
     location,
     radiusMiles,
@@ -212,12 +236,21 @@ export async function getMarketSearchExperience(
     );
   }
 
+  // Confirmed identity links → one pin at canonical (flag-gated). Unlinked
+  // same-chain OSM twins still rely on 1.5 mi suppress above — unchanged.
+  mergedCatalogStores = collapseConfirmedIdentityLinkedCatalogStores(
+    mergedCatalogStores,
+    identityLookup,
+    storeIdentityEnv,
+  );
+
   let nearbyStores = buildNearbyStoresForSearch(
     mergedCatalogStores,
     location,
     radiusMiles,
     snapshot.priceObservations,
     recipeIngredientIds,
+    { identityLookup, env: storeIdentityEnv },
   );
   const coverageTrackedIngredients = await resolveKrogerPreviewTrackedIngredients();
   const providerPricingPreviews = await buildProviderPricingPreviews({
@@ -260,6 +293,7 @@ export async function getMarketSearchExperience(
       nearbyStores,
       snapshot.priceObservations,
       recipeIngredientIds,
+      { identityLookup, env: storeIdentityEnv },
     ),
   });
 
@@ -293,21 +327,31 @@ export function buildNearbyStoresForSearch(
   radiusMiles: number,
   priceObservations: CatalogPriceObservation[],
   recipeIngredientIds: string[],
+  identityOptions?: MarketSearchIdentityOptions,
 ): NearbyStoreSummary[] {
+  const lookup =
+    identityOptions?.identityLookup ?? createDefaultStoreIdentityLookup();
+  const env = identityOptions?.env ?? process.env;
+
   return stores
     .map((store) => {
       const baseRollout = getProviderRolloutForCatalogStore(store);
+      const equivalentStoreIds = new Set(
+        expandStoreIdsForRead(lookup, [store.id], env),
+      );
       const coverage = buildWeeklyAdStoreCoverage({
         storeId: store.id,
         chain: baseRollout.chain,
         priceObservations,
         recipeIngredientIds,
+        equivalentStoreIds,
       });
       const officialApiCoverage =
         baseRollout.chain === "kroger"
           ? buildKrogerOfficialApiStoreCoverage({
               storeId: store.id,
               priceObservations,
+              equivalentStoreIds,
             })
           : null;
       const rollout = resolveProviderRolloutForCatalogStore(store, {
@@ -458,13 +502,20 @@ function buildWeeklyAdCoverageByStoreId(
   nearbyStores: NearbyStoreSummary[],
   priceObservations: CatalogPriceObservation[],
   recipeIngredientIds: string[],
+  identityOptions?: MarketSearchIdentityOptions,
 ) {
   const coverageByStoreId = new Map<
     string,
     ReturnType<typeof buildWeeklyAdStoreCoverage>
   >();
+  const lookup =
+    identityOptions?.identityLookup ?? createDefaultStoreIdentityLookup();
+  const env = identityOptions?.env ?? process.env;
 
   for (const store of nearbyStores) {
+    const equivalentStoreIds = new Set(
+      expandStoreIdsForRead(lookup, [store.id], env),
+    );
     coverageByStoreId.set(
       store.id,
       buildWeeklyAdStoreCoverage({
@@ -472,6 +523,7 @@ function buildWeeklyAdCoverageByStoreId(
         chain: store.chain,
         priceObservations,
         recipeIngredientIds,
+        equivalentStoreIds,
       }),
     );
   }

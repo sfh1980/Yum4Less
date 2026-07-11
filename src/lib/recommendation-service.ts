@@ -249,6 +249,8 @@ export async function getRecommendationExperience(
       priceObservations: snapshot.priceObservations,
       location,
       recipes: snapshot.recipes,
+      identityLookup,
+      env: storeIdentityEnv,
     }),
   });
   market = scopeMarketSummaryToSelectedStores(market, pricingScopeStoreIds);

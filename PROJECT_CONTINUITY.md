@@ -4,11 +4,11 @@
 
 ---
 
-## Resume (as of 2026-07-10)
+## Resume (as of 2026-07-11)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09) — Kroger p2 terms (`020`), Flipp supplemental for unmatched ingredients, per-chain weekly-ad dedupe, Aldi Flipp+direct-scrape merge on `b9c4a46`; live re-ingest + `sync:provider-prices` on `yum4less_dev` (see [Phase 2a](#verification-snapshot)). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09) — Track B UI (trust banner depth, Settings multi-store live summary, results skew heads-up); architectural asymmetry documented; **not** a coverage-gap fix. Aldi weekly-ad ceiling **re-confirmed** with shopper-facing explanation. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10) — identity infra + rank/pantry expand + Kroger seed (`022`) + Settings canonicalize + Aldi↔OSM seed (`023`); master flag still **OFF** by default (including dev); Settings known-pair remains Kroger-only. **Active queue:** Option A **Slice 5** (map/market-search/ingest identity wiring TBD); Settings gate bypass (P1-1); **backlog #18** — Dollar Tree / Dollar General onboarding investigation. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09) — 0 errors + CI `npm run typecheck`.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09) — Kroger p2 terms (`020`), Flipp supplemental for unmatched ingredients, per-chain weekly-ad dedupe, Aldi Flipp+direct-scrape merge on `b9c4a46`; live re-ingest + `sync:provider-prices` on `yum4less_dev` (see [Phase 2a](#verification-snapshot)). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09) — Track B UI (trust banner depth, Settings multi-store live summary, results skew heads-up); architectural asymmetry documented; **not** a coverage-gap fix. Aldi weekly-ad ceiling **re-confirmed** with shopper-facing explanation. **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5a CLOSED** (2026-07-11) — Postgres `StoreIdentityLookup` + market-search coverage expand + confirmed-link catalog collapse; seeds **022/023** live-readable for the first time; master flag still **OFF** by default (including dev). **Still open:** Slice **5b** (Map pin contract), Slice **5c** (ingest upsert-alias); Settings gate bypass (P1-1); **backlog #18** — Dollar Tree / Dollar General onboarding investigation. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09) — 0 errors + CI `npm run typecheck`.
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -22,8 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-10):** Option A Slice 4 **CLOSED** — local `npm test` **954/954**, `npm run test:integration` **36/36**, `npm run build` **pass**, `npm run typecheck` **0 errors**. Master flag **OFF**. Remote CI [**29136665905**](https://github.com/sfh1980/Yum4Less/actions/runs/29136665905) **green** on **`bfe5f3a`**. Remote e2e “1 flaky” on that run = **`single-store-map-overlay` mobile viewport** (pre-existing across Option A Slices 1–4 CI — not Cook tab). Local full-suite gate also saw a **separate** Cook-tab flake once (passed retry) — tracked in Deferred backlog; isolated `--repeat-each=5 --retries=0` on that spec **5/5 clean**. Prior Slice 3: [**29135637011**](https://github.com/sfh1980/Yum4Less/actions/runs/29135637011) on **`11fadca`**.
-
+**Verified (2026-07-11):** Option A Slice **5a CLOSED** — local `npm test` **966/966**, `npm run test:integration` **37/37**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **24 passed** / 1 flaky (Cook-tab `navigation-theme` — known backlog) / 1 skipped (H12). Master flag **OFF**. Remote CI link follows push.
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
@@ -243,6 +242,15 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-11 — Option A Slice 5a: Postgres lookup + market-search coverage/merge — CLOSED
+
+- **Theme:** First server-path identity read of seeds **022/023**; market-search coverage expand + confirmed-link catalog collapse behind master flag.
+- **Shipped:** `createPostgresStoreIdentityLookup` (confirmed aliases only + virtual singleton for unlinked); `collapseConfirmedIdentityLinkedCatalogStores`; `buildNearbyStoresForSearch` / weekly-ad + Kroger official coverage accept `equivalentStoreIds`; `getMarketSearchExperience` loads Postgres lookup only when expand ON.
+- **Tests:** coverage expand ON/OFF + fail-closed exact-id bypass; linked Aldi+OSM → one canonical; unlinked → two; 1.5 mi OSM suppress still fires for unlinked near/far; Food Lion ~0.2 mi negative; integration loads real 022/023 + ignores provisional — `store-identity-market-search-5a.test.ts` + `store-identity-postgres-lookup.integration.test.ts`.
+- **Out of scope:** **5b** Map pin contract; **5c** ingest upsert-alias; Slice D batch matcher; **no default flag flip** (master + sub-flags OFF including dev).
+- **E2e:** local full suite **24 passed** / **1 flaky** (Cook-tab `navigation-theme` — known backlog) / **1 skipped** (H12); no new skips.
+- **Evidence:** `npm test` 966/966; integration 37/37; build + typecheck clean.
 
 ### 2026-07-10 — Option A Slice 4: Aldi↔OSM identity seed — CLOSED
 
@@ -2076,6 +2084,11 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (local) | 2026-07-11 | **966/966** pass (Option A Slice 5a coverage expand + merge + OSM suppress regressions) |
+| `npm run test:integration` (local) | 2026-07-11 | **37/37** pass (includes Postgres `createPostgresStoreIdentityLookup` + 022/023 live read) |
+| `npm run build` (local) | 2026-07-11 | **Pass** |
+| `npm run typecheck` (local) | 2026-07-11 | **0 errors** |
+| `npm run test:e2e:ci` (local) | 2026-07-11 | **24 passed**, 1 flaky (Cook-tab `navigation-theme` — known), 1 skipped (H12); no new skips |
 | `npm test` (local) | 2026-07-10 | **954/954** pass (Option A Slice 4 Aldi/OSM T1–T3 + known-pair Kroger-only guard) |
 | `npm run test:integration` (local) | 2026-07-10 | **36/36** pass (includes T4 `023` Aldi/OSM seed idempotency + no-store-row) |
 | `npm run build` (local) | 2026-07-10 | **Pass** |
@@ -2198,7 +2211,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Bootstrap seed data provenance audit** | Confirm whether bootstrap rows in `yum4less_dev` carry a distinct `source_name` that separates hand-planted/CI bootstrap stores from real discovered stores. If not, add one in the bootstrap SQL so the app and future audits can distinguish seed rows from real discovery coverage. |
 | **Scale risk A — Client-trust audit across all public API routes** | From trust pass-through hardening (2026-07-01): only the rank pass-through path was hardened; other routes or client-supplied fields may still influence trust display without server-side recomputation. Systematic audit of all public API responses for client-controllable trust-sensitive fields deferred — should precede any significant traffic increase or public launch. Suggested owner: `@verifier` + `@web-backend-standards` |
 | **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
-| **General locator-vs-OSM dedupe across all v1 chains (Option A)** | **IN PROGRESS** — Slice 1–4 **CLOSED** (2026-07-10); Slice 5 next | Alias-graph design accepted (Q1–Q3). **Slice 4:** Aldi↔OSM Mechanicsville seeded (`023`, confidence 0.985); **no Settings surface** (OSM map-context). **Named debt:** Settings known-pair remains Kroger-only — generalize when Map wiring or a Settings-selectable twin needs it. **Structural:** no-pointer perfect twins land on confirmThreshold 0.85 by design. **Not yet:** map/market-search/ingest identity wiring; onboarding checklist (Slice 6). |
+| **General locator-vs-OSM dedupe across all v1 chains (Option A)** | **IN PROGRESS** — Slice 1–4 + **5a CLOSED** (2026-07-11); **5b/5c open** | Alias-graph design accepted (Q1–Q3). **5a:** Postgres lookup + market-search coverage expand + confirmed-link collapse; seeds 022/023 live-readable; flag **OFF**. **Named debt:** Settings known-pair remains Kroger-only (Map uses server lookup, not Settings registry). **Not yet:** 5b Map pin contract; 5c ingest upsert-alias; Slice D batch matcher; onboarding checklist (Slice 6). |
 | **e2e `single-store-map-overlay` mobile viewport flake** | **OPEN (pre-existing)** | Recurs on remote CI across Option A Slices 1–4 (`:65` meal accordion not visible in 30s; passes retry). Confirmed unrelated to identity seeds. Dedicated fix still owed. |
 | **e2e Cook tab / `navigation-theme` local flake** | **OPEN (new, local-only)** | First seen during Slice 4 local full-suite gate: `enables Cook tab…` → `completePantryAndSuggestRecipes` → `waitForResponse(/api/recommendations)` timeout (90s), passed on retry. **Not** in remote CI Cook-tab logs (Slices 1–4). Unrelated to Slice 4 by diff-scope (`bfe5f3a` has no e2e/meal-planner/recommendations/nav changes). Isolated `npx playwright test e2e/navigation-theme.spec.ts -g "enables Cook tab" --repeat-each=5 --retries=0` → **5/5 clean** (suggests full-suite load/timing, not hard break). Root cause not yet triaged. |
 | **Shopping-plan `storeId` (name-join fragility)** | **DEFERRED follow-up** (explicitly out of Option A Slices 2–3) | Plans still emit `storeName` only; map/route join by name. Track separately from identity expand wiring. |
@@ -2227,7 +2240,7 @@ Read-only re-verification of 17 items from `docs/audits/full-system-run-report.m
 | 1 | Mobile GPS/HTTPS | **Denial asymmetry CLOSED** (`295daee` / [29108969234](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234)); still no `enableHighAccuracy`; no app HTTPS redirect | Med | Med mobile without TLS | Homelab + UX (`enableHighAccuracy` / HTTPS remain) |
 | 2 | Settings gate bypass | Home/Deals/Saved reachable before `setupComplete`; only Cook disabled (recipes) | Small | Low–Med UX | Bundle with #1 |
 | 3 | No migration ledger | **CLOSED** (2026-07-09) — `schema_migrations` + `applyPendingMigrations()` | Med | — | Was prerequisite for tombstones / #4 |
-| 4 | Universal store reconciliation | **Slice 1–4 CLOSED** — Kroger + Aldi/OSM seeds; Settings known-pair still Kroger-only; Map wiring next | Med | Low–Med | Option A slices |
+| 4 | Universal store reconciliation | **Slice 1–4 + 5a CLOSED** — Postgres lookup + market-search expand; **5b/5c open** | Med | Low–Med | Option A slices |
 | 5 | `tsc` bucket | **CLOSED** (2026-07-09) — **0 errors** + `npm run typecheck` in CI; B1 pantry-add test fix found via cleanup | — | — | Hygiene |
 | 6 | Ingest auto-pause doc drift | `ingest-standards.md` still claims robots.txt/auto-pause/kill switches | Small | Low ops / Med agent trust | Quick win |
 | 7 | OSRM in discovery | OSRM shopping-route only; discovery haversine + "straight-line" labels | Large if pursued | **Low** | **Accept** |

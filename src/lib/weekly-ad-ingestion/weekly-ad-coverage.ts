@@ -42,11 +42,18 @@ export function buildWeeklyAdStoreCoverage(input: {
   chain: StoreChain;
   priceObservations: CatalogPriceObservation[];
   recipeIngredientIds: string[];
+  /**
+   * When set (market-search identity expand ON), obs on any equivalent
+   * member store_id count toward this store's coverage. Omit → exact id.
+   */
+  equivalentStoreIds?: ReadonlySet<string>;
 }): WeeklyAdStoreCoverage {
   const weeklyAdSource = getWeeklyAdSourceNameForChain(input.chain);
+  const storeIds =
+    input.equivalentStoreIds ?? new Set([input.storeId]);
   const weeklyAdObservations = input.priceObservations.filter(
     (observation) =>
-      observation.storeId === input.storeId &&
+      storeIds.has(observation.storeId) &&
       observation.priceSource === weeklyAdSource &&
       observation.inStock &&
       observation.ingredientId !== undefined &&

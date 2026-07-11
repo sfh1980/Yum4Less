@@ -13,10 +13,17 @@ export type KrogerOfficialApiStoreCoverage = {
 export function buildKrogerOfficialApiStoreCoverage(input: {
   storeId: string;
   priceObservations: CatalogPriceObservation[];
+  /**
+   * When set (market-search identity expand ON), obs on any equivalent
+   * member store_id count toward this store's coverage. Omit → exact id.
+   */
+  equivalentStoreIds?: ReadonlySet<string>;
 }): KrogerOfficialApiStoreCoverage {
+  const storeIds =
+    input.equivalentStoreIds ?? new Set([input.storeId]);
   const officialObservations = input.priceObservations.filter(
     (observation) =>
-      observation.storeId === input.storeId &&
+      storeIds.has(observation.storeId) &&
       observation.priceSource === KROGER_OFFICIAL_PRICE_SOURCE &&
       observation.inStock &&
       observation.ingredientId !== undefined &&

@@ -185,9 +185,9 @@ export function scopeStoreIdsForPricing(input: {
 }
 
 /**
- * Live-path default until a Postgres-backed lookup exists: every store is a
- * virtual singleton. With expand ON and no linked rows, behavior matches
- * exact-id. Tests inject linked fixtures via createMemoryStoreIdentityLookup.
+ * Live-path default when expand is OFF or Postgres lookup is unavailable:
+ * every store is a virtual singleton. Slice 5a adds createPostgresStoreIdentityLookup
+ * for server paths when expand is ON. Tests inject fixtures via createMemoryStoreIdentityLookup.
  */
 export function createDefaultStoreIdentityLookup(): StoreIdentityLookup {
   return createMemoryStoreIdentityLookup({

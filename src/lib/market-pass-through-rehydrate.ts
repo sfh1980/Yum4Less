@@ -29,6 +29,8 @@ export function buildPricingScopeExtraNearbyStores(input: {
   priceObservations: CatalogPriceObservation[];
   location: ResolvedSearchLocation;
   recipes: MarketDataSnapshot["recipes"];
+  identityLookup?: StoreIdentityLookup;
+  env?: StoreIdentityEnv;
 }): NearbyStoreSummary[] {
   const existingIds = new Set(input.market.nearbyStores.map((store) => store.id));
   const missingIds = input.pricingScopeStoreIds.filter((id) => !existingIds.has(id));
@@ -49,6 +51,7 @@ export function buildPricingScopeExtraNearbyStores(input: {
     input.market.radiusMiles,
     input.priceObservations,
     collectRecipeIngredientIdsForRollout(input.recipes),
+    { identityLookup: input.identityLookup, env: input.env },
   );
 }
 
@@ -81,6 +84,7 @@ export function rehydratePassedMarketNearbyStores(
       market.radiusMiles,
       snapshot.priceObservations,
       recipeIngredientIds,
+      identityOptions,
     ).map((store) => [store.id, store]),
   );
 
