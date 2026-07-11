@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-10):** Option A Slice 1 — local `npm test` **938/938**, `npm run test:integration` **32/32** (includes store-identity schema constraints), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 1 skipped (H12 map-mount; no new skips). Remote CI filled after push. Prior P1-3: [**29108969234**](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234) on **`295daee`**.
+**Verified (2026-07-10):** Option A Slice 1 — local `npm test` **938/938**, `npm run test:integration` **32/32** (includes store-identity schema constraints), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 1 skipped (H12 map-mount; no new skips). Remote CI [**29132909311**](https://github.com/sfh1980/Yum4Less/actions/runs/29132909311) **green** on **`71ac279`**. Prior P1-3: [**29108969234**](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234) on **`295daee`**.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -262,7 +262,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 **Evidence (local):** `npm test` **938/938**; `npm run test:integration` **32/32** (includes store-identity schema constraints); `npm run build` **pass**; `npm run typecheck` **0 errors**; `npm run test:e2e:ci` **25 passed** / 1 skipped (H12 baseline; no new skips)
 
-**Remote CI:** filled after push
+**Remote CI:** [**29132909311**](https://github.com/sfh1980/Yum4Less/actions/runs/29132909311) **green** on **`71ac279`**
 
 ### 2026-07-10 — Geolocation denial asymmetry (P1-3) — CLOSED
 
@@ -2051,7 +2051,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npm run build` (local) | 2026-07-10 | **Pass** |
 | `npm run typecheck` (local) | 2026-07-10 | **0 errors** |
 | `npm run test:e2e:ci` (local) | 2026-07-10 | **25 passed**, 1 skipped (H12 baseline; no new skips) |
-| **Remote CI** (Option A Slice 1) | 2026-07-10 | Filled after push |
+| **Remote CI** (Option A Slice 1 `71ac279`) | 2026-07-10 | **Green** — [29132909311](https://github.com/sfh1980/Yum4Less/actions/runs/29132909311) |
 | `npm test` (local) | 2026-07-10 | **925/925** pass (geolocation denial ZIP fallback P1-3) |
 | `npm run test:integration` (local) | 2026-07-10 | **31/31** pass |
 | `npm run build` (local) | 2026-07-10 | **Pass** |
