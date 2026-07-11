@@ -2,9 +2,9 @@
  * Option A Slice 3 — Settings-only narrow known-pair identity lookup.
  *
  * INTENTIONALLY NARROW: Mechanicsville Kroger slug↔API twin only.
- * Aldi/OSM is not Settings-selectable when catalog Aldi is present — Map
- * expand-aware scope uses createMapPinIdentityLookup (022+023) instead.
- * Do not broaden this Settings lookup without a Settings-selectable twin.
+ * Aldi/OSM is not Settings-selectable when catalog Aldi is present. Map
+ * expand-aware scope consumes server `equivalentStoreIds` on nearbyStores
+ * (Postgres-backed) — not a second client known-pair table.
  *
  * Master expand flag gates all remapping; flag OFF → exact-id (today's behavior).
  */

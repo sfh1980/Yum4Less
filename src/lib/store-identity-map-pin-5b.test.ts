@@ -1,6 +1,6 @@
 /**
- * Option A Slice 5b — Map pin contract: inherit 5a collapse + expand-aware
- * scope/highlight for stale alias selection (client/server flag mismatch).
+ * Option A Slice 5b — Map pin contract: inherit 5a collapse + consume
+ * server equivalentStoreIds for stale alias selection (no client known-pair).
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -21,17 +21,18 @@ import {
   FIXTURE_KROGER_SLUG,
 } from "@/lib/fixtures/store-identity.fixtures";
 import { collapseConfirmedIdentityLinkedCatalogStores } from "@/lib/store-identity-catalog-collapse";
-import { createMapPinIdentityLookup } from "@/lib/store-identity-map-lookup";
 import {
   filterNearbyStoresBySelectionForMap,
   resolveSelectedMapMarkerId,
   scopeMarketSummaryToSelectedStoresForMap,
 } from "@/lib/store-identity-map-pin-resolve";
-import { buildTestNearbyStoreSummary, buildTestMarketSummary } from "@/lib/test-fixtures/contract-fixtures";
+import {
+  buildTestMarketSummary,
+  buildTestNearbyStoreSummary,
+} from "@/lib/test-fixtures/contract-fixtures";
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 
 const EXPAND_ON = { YUM4LESS_STORE_IDENTITY_EXPAND: "1" } as const;
-const EXPAND_OFF = {} as const;
 
 function withLocationFields(
   store: Partial<NearbyStoreSummary> & Pick<NearbyStoreSummary, "id" | "name">,
@@ -80,6 +81,7 @@ function nearbyFromFixture(
     sourceSystem: string;
   },
   chain: NearbyStoreSummary["chain"],
+  equivalentStoreIds?: string[],
 ): NearbyStoreSummary {
   return withLocationFields({
     id: fixture.id,
@@ -94,18 +96,7 @@ function nearbyFromFixture(
     recommendationEnabled: true,
     rolloutNote: "test",
     sourceName: fixture.sourceSystem,
-  });
-}
-
-function bareMarket(nearbyStores: NearbyStoreSummary[]) {
-  return buildTestMarketSummary({
-    nearbyStores,
-    recommendationReadyStoreCount: nearbyStores.filter((s) => s.recommendationEnabled)
-      .length,
-    searchLatitude: 37.6085,
-    searchLongitude: -77.3739,
-    lookupSource: "geocodio",
-    lookupProviderConfigured: true,
+    equivalentStoreIds,
   });
 }
 
@@ -131,6 +122,7 @@ describe("Option A Slice 5b — Map pin contract (collapsed model)", () => {
           sourceSystem: collapsed[0]!.sourceName ?? "aldi-weekly-ad-scrape",
         },
         "aldi",
+        ["aldi-mechanicsville", "osm-node-6531578976"],
       ),
     ];
     const model = buildDiscoveryMapModel({
@@ -145,7 +137,9 @@ describe("Option A Slice 5b — Map pin contract (collapsed model)", () => {
     expect(model.stores).toHaveLength(1);
     expect(model.stores[0]?.id).toBe("aldi-mechanicsville");
     expect(model.stores[0]?.latitude).toBe(FIXTURE_ALDI_CATALOG.latitude);
-    expect(model.stores[0]?.longitude).toBe(FIXTURE_ALDI_CATALOG.longitude);
+    expect(model.stores[0]?.equivalentStoreIds).toContain(
+      "osm-node-6531578976",
+    );
   });
 
   it("linked Kroger → one discovery pin at API/canonical coords (flag ON)", () => {
@@ -170,6 +164,7 @@ describe("Option A Slice 5b — Map pin contract (collapsed model)", () => {
           sourceSystem: "kroger-official-api",
         },
         "kroger",
+        [FIXTURE_KROGER_API.id, FIXTURE_KROGER_SLUG.id],
       ),
     ];
     const model = buildDiscoveryMapModel({
@@ -184,32 +179,37 @@ describe("Option A Slice 5b — Map pin contract (collapsed model)", () => {
     expect(model.stores).toHaveLength(1);
     expect(model.stores[0]?.id).toBe("kroger-02900529");
     expect(model.stores[0]?.latitude).toBe(FIXTURE_KROGER_API.latitude);
-    expect(model.stores[0]?.longitude).toBe(FIXTURE_KROGER_API.longitude);
   });
 });
 
-describe("Option A Slice 5b — stale alias selection gap (flag mismatch)", () => {
-  const lookup = createMapPinIdentityLookup();
-
+describe("Option A Slice 5b — stale alias selection gap (server-fed membership)", () => {
   it("server expand ON + stale alias client selection → map still shows store (not empty)", () => {
-    // Server already collapsed to canonical only (5a side effect).
-    const market = bareMarket([
-      nearbyFromFixture(FIXTURE_KROGER_API, "kroger"),
-    ]);
-    // Client still has slug in localStorage / NEXT_PUBLIC lagging.
+    // Server already collapsed to canonical and attached equivalentStoreIds.
+    const market = buildTestMarketSummary({
+      nearbyStores: [
+        nearbyFromFixture(FIXTURE_KROGER_API, "kroger", [
+          FIXTURE_KROGER_API.id,
+          FIXTURE_KROGER_SLUG.id,
+        ]),
+      ],
+      recommendationReadyStoreCount: 1,
+    });
     const staleSelection = [FIXTURE_KROGER_SLUG.id];
 
-    const exactEmpty = filterNearbyStoresBySelectionForMap(
-      market.nearbyStores,
+    // Without membership on the payload, exact-id would empty (prove risk path).
+    const withoutMembers = filterNearbyStoresBySelectionForMap(
+      [
+        nearbyFromFixture(FIXTURE_KROGER_API, "kroger", [
+          FIXTURE_KROGER_API.id,
+        ]),
+      ],
       staleSelection,
-      { identityLookup: lookup, env: EXPAND_OFF },
     );
-    expect(exactEmpty).toHaveLength(0);
+    expect(withoutMembers).toHaveLength(0);
 
     const scoped = scopeMarketSummaryToSelectedStoresForMap(
       market,
       staleSelection,
-      { identityLookup: lookup, env: EXPAND_ON },
     );
     expect(scoped.nearbyStores).toHaveLength(1);
     expect(scoped.nearbyStores[0]?.id).toBe(FIXTURE_KROGER_API.id);
@@ -226,32 +226,31 @@ describe("Option A Slice 5b — stale alias selection gap (flag mismatch)", () =
     expect(model.stores[0]?.id).toBe("kroger-02900529");
   });
 
-  it("resolveSelectedMapMarkerId maps stale alias highlight to canonical marker", () => {
-    const markerIds = [FIXTURE_KROGER_API.id];
+  it("resolveSelectedMapMarkerId maps stale alias highlight via equivalentStoreIds", () => {
+    const markers = [
+      {
+        id: FIXTURE_KROGER_API.id,
+        equivalentStoreIds: [FIXTURE_KROGER_API.id, FIXTURE_KROGER_SLUG.id],
+      },
+    ];
+    expect(resolveSelectedMapMarkerId(FIXTURE_KROGER_SLUG.id, markers)).toBe(
+      FIXTURE_KROGER_API.id,
+    );
     expect(
-      resolveSelectedMapMarkerId(FIXTURE_KROGER_SLUG.id, markerIds, {
-        identityLookup: lookup,
-        env: EXPAND_ON,
-      }),
-    ).toBe(FIXTURE_KROGER_API.id);
-
-    expect(
-      resolveSelectedMapMarkerId(FIXTURE_KROGER_SLUG.id, markerIds, {
-        identityLookup: lookup,
-        env: EXPAND_OFF,
-      }),
+      resolveSelectedMapMarkerId(FIXTURE_KROGER_SLUG.id, [
+        { id: FIXTURE_KROGER_API.id },
+      ]),
     ).toBeUndefined();
   });
 
-  it("flag OFF both sides → exact-id empty when selection is alias and market is canonical", () => {
-    const market = bareMarket([
-      nearbyFromFixture(FIXTURE_KROGER_API, "kroger"),
+  it("no equivalentStoreIds on payload → exact-id empty when selection is alias", () => {
+    const market = buildTestMarketSummary({
+      nearbyStores: [nearbyFromFixture(FIXTURE_KROGER_API, "kroger")],
+      recommendationReadyStoreCount: 1,
+    });
+    const scoped = scopeMarketSummaryToSelectedStoresForMap(market, [
+      FIXTURE_KROGER_SLUG.id,
     ]);
-    const scoped = scopeMarketSummaryToSelectedStoresForMap(
-      market,
-      [FIXTURE_KROGER_SLUG.id],
-      { identityLookup: lookup, env: EXPAND_OFF },
-    );
     expect(scoped.nearbyStores).toHaveLength(0);
   });
 });

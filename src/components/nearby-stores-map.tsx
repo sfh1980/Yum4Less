@@ -193,12 +193,11 @@ export function NearbyStoresMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    // Expand-aware highlight (Slice 5b): stale alias selectedStoreId still
-    // flyTo/openTooltip on the canonical marker when expand is ON.
-    const resolvedMarkerId = resolveSelectedMapMarkerId(
-      selectedStoreId,
-      markersRef.current.keys(),
-    );
+    const stores =
+      model.kind === "single-store" ? [model.store] : model.stores;
+    // Expand-aware highlight (Slice 5b): uses server equivalentStoreIds on
+    // markers — no client known-pair lookup.
+    const resolvedMarkerId = resolveSelectedMapMarkerId(selectedStoreId, stores);
     const marker = resolvedMarkerId
       ? markersRef.current.get(resolvedMarkerId)
       : undefined;
@@ -212,7 +211,7 @@ export function NearbyStoresMap({
       duration: prefersReducedMotion() ? 0 : 0.75,
     });
     marker.openTooltip();
-  }, [selectedStoreId]);
+  }, [selectedStoreId, model]);
 
   if (mapError) {
     return (

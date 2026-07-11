@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-11):** Option A Slice **5b CLOSED** — local `npm test` **973/973**, `npm run test:integration` **37/37** (unchanged DB surface), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **24 passed** / 1 flaky (Cook-tab — known) / 1 skipped (H12). Master + `NEXT_PUBLIC_` expand flags **OFF**. Remote CI [**29155832474**](https://github.com/sfh1980/Yum4Less/actions/runs/29155832474) **green** on **`9a68cd7`**.> **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
+**Verified (2026-07-11):** Option A Slice **5b CLOSED** (payload-fed fix) — local `npm test` **974/974**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 0 flaky / 1 skipped (H12). Master + `NEXT_PUBLIC_` expand flags **OFF**. Map consumes server `equivalentStoreIds` — no client known-pair table. Remote CI link follows push.> **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
 
@@ -245,11 +245,11 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ### 2026-07-11 — Option A Slice 5b: Map pin contract (expand-aware scope) — CLOSED
 
 - **Theme:** Thin Map contract after 5a — no Leaflet rewrite; close silent-empty when server emits canonical pins but client selection still holds an alias.
-- **Shipped:** `createMapPinIdentityLookup` (022+023 for Map only; Settings stays Kroger-only); `scopeMarketSummaryToSelectedStoresForMap` / `filterNearbyStoresBySelectionForMap`; `resolveSelectedMapMarkerId` highlight helper; wired in `use-meal-planner` + `nearby-stores-map`. OSM suppress paths **untouched**.
-- **Named finding:** Client/server expand flag mismatch (server `YUM4LESS_STORE_IDENTITY_EXPAND` vs client `NEXT_PUBLIC_…` / stale localStorage alias) can empty the discovery map under exact-id scope — same silent-failure class as Slice 2 ranking. Closed for Map; remember when adding other client surfaces that filter by `store.id` against server-collapsed lists.
-- **Tests:** linked Aldi/Kroger one-pin models; stale-alias → non-empty scope (gap path); highlight resolve; unlinked OSM 1.5 mi suppress regressions — `store-identity-map-pin-5b.test.ts`.
+- **Shipped:** Server attaches `equivalentStoreIds` on each `nearbyStores` row from Postgres expand; client `scopeMarketSummaryToSelectedStoresForMap` / `resolveSelectedMapMarkerId` consume that payload only. **Deleted** the brief `createMapPinIdentityLookup` hardcoded mirror (would have been a third place to sync pairs). Settings known-pair stays Kroger-only. OSM suppress paths **untouched**.
+- **Named finding:** Client/server expand flag mismatch can empty exact-id Map scope — closed by **server-fed membership**, not a client known-pair table. Remember: do not add another hardcoded pair registry for client surfaces that filter against server-collapsed lists; prefer payload membership (or a real identity API).
+- **Tests:** linked Aldi/Kroger one-pin models; stale-alias → non-empty via `equivalentStoreIds`; highlight resolve; sanitizer preserves membership; unlinked OSM 1.5 mi suppress regressions — `store-identity-map-pin-5b.test.ts`.
 - **Out of scope:** **5c** ingest upsert-alias; Leaflet pixel e2e; **no default flag flip** (master + `NEXT_PUBLIC_` OFF including dev).
-- **Evidence:** `npm test` 973/973; integration 37/37; build + typecheck clean; e2e 24 passed / 1 flaky Cook-tab (known) / 1 skipped H12; remote CI [29155832474](https://github.com/sfh1980/Yum4Less/actions/runs/29155832474) green on `9a68cd7`.
+- **Evidence:** (re-verified after payload-fed fix; see verification snapshot)
 
 ### 2026-07-11 — Option A Slice 5a: Postgres lookup + market-search coverage/merge — CLOSED
 
@@ -2092,11 +2092,16 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (local) | 2026-07-11 | **974/974** pass (Slice 5b payload-fed Map scope; no client known-pair) |
+| `npm run build` (local) | 2026-07-11 | **Pass** (5b payload-fed fix) |
+| `npm run typecheck` (local) | 2026-07-11 | **0 errors** |
+| `npm run test:e2e:ci` (local) | 2026-07-11 | **25 passed**, 0 flaky, 1 skipped (H12); no new skips |
 | `npm test` (local) | 2026-07-11 | **973/973** pass (Option A Slice 5b Map pin contract + stale-alias gap) |
 | `npm run test:integration` (local) | 2026-07-11 | **37/37** pass (no new DB surface in 5b) |
 | `npm run build` (local) | 2026-07-11 | **Pass** |
 | `npm run typecheck` (local) | 2026-07-11 | **0 errors** |
 | `npm run test:e2e:ci` (local) | 2026-07-11 | **24 passed**, 1 flaky (Cook-tab — known), 1 skipped (H12); no new skips |
+| **Remote CI** (Option A Slice 5b `9a68cd7`) | 2026-07-11 | **Green** — [29155832474](https://github.com/sfh1980/Yum4Less/actions/runs/29155832474) |
 | `npm test` (local) | 2026-07-11 | **966/966** pass (Option A Slice 5a coverage expand + merge + OSM suppress regressions) |
 | `npm run test:integration` (local) | 2026-07-11 | **37/37** pass (includes Postgres `createPostgresStoreIdentityLookup` + 022/023 live read) |
 | `npm run build` (local) | 2026-07-11 | **Pass** |

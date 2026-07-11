@@ -426,6 +426,9 @@ export function buildNearbyStoresForSearch(
           sourceName: store.sourceName,
           lastVerifiedAt: store.lastVerifiedAt,
         }),
+        // Public member ids only (not sourceStoreId). Client Map scope/highlight
+        // consumes this instead of a hardcoded known-pair lookup.
+        equivalentStoreIds: [...equivalentStoreIds],
       };
     })
     .filter((store) => store.distanceMiles <= radiusMiles)

@@ -90,6 +90,12 @@ export type NearbyStoreSummary = {
   locationProvenance: StoreMapLocationProvenance;
   locationBadge: string;
   locationNote: string;
+  /**
+   * Identity member store ids for this pin (Slice 5a/5b). When expand is ON,
+   * includes linked aliases so the client can match stale selections without a
+   * hardcoded known-pair table. Omitted or `[id]` when expand is OFF.
+   */
+  equivalentStoreIds?: string[];
 };
 
 export type MarketSummary = {

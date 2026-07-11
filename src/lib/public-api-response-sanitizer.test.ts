@@ -166,6 +166,25 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
     expect(sanitized).not.toHaveProperty("message");
   });
 
+  it("preserves equivalentStoreIds on nearby stores (Map expand membership)", () => {
+    const sanitized = sanitizeMarketSummaryForPublicApi(
+      buildMarketSummary({
+        nearbyStores: [
+          {
+            ...buildMarketSummary().nearbyStores[0]!,
+            id: "kroger-02900529",
+            equivalentStoreIds: ["kroger-02900529", "kroger-mechanicsville"],
+          },
+        ],
+      }),
+    );
+
+    expect(sanitized.nearbyStores[0]?.equivalentStoreIds).toEqual([
+      "kroger-02900529",
+      "kroger-mechanicsville",
+    ]);
+  });
+
   it("strips numeric retailer sourceStoreId from nearby stores", () => {
     const sanitized = sanitizeMarketSummaryForPublicApi(
       buildMarketSummary({

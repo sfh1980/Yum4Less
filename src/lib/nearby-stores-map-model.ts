@@ -21,6 +21,8 @@ export type MapStoreMarker = {
   locationProvenance: StoreMapLocationProvenance;
   locationBadge: string;
   locationNote: string;
+  /** Server-provided identity members for expand-aware highlight (Slice 5b). */
+  equivalentStoreIds?: string[];
 };
 
 /** Full multi-store discovery map: search anchor, radius circle, and all nearby pins. */
@@ -65,6 +67,7 @@ function toMapStoreMarker(store: NearbyStoreSummary): MapStoreMarker {
     locationProvenance: store.locationProvenance,
     locationBadge: store.locationBadge,
     locationNote: store.locationNote,
+    equivalentStoreIds: store.equivalentStoreIds,
   };
 }
 
