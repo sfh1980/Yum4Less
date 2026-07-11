@@ -1,0 +1,86 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { getDbPool, resetDbPoolForTests } from "@/lib/db";
+
+const SEED_SQL = readFileSync(
+  join(process.cwd(), "db/init/022_seed_kroger_mechanicsville_identity.sql"),
+  "utf8",
+);
+
+/**
+ * T4: migration 022 seeds Kroger Mechanicsville identity idempotently.
+ */
+describe("store identity Kroger seed migration 022 (integration)", () => {
+  afterEach(async () => {
+    const pool = getDbPool();
+    await pool.query(
+      `delete from store_identity_aliases
+       where identity_id = 'kroger-02900529'
+          or store_id in ('kroger-02900529', 'kroger-mechanicsville')`,
+    );
+    await pool.query(
+      `delete from store_identities where id = 'kroger-02900529'`,
+    );
+    // Leave CI/bootstrap store rows; only remove API twin if we created it solely for this test
+    // when no other identity references it. Prefer not deleting kroger-mechanicsville (CI bootstrap).
+    await pool.query(
+      `delete from stores where id = 'kroger-02900529'
+         and not exists (
+           select 1 from store_identity_aliases where store_id = 'kroger-02900529'
+         )
+         and not exists (
+           select 1 from store_identities where canonical_store_id = 'kroger-02900529'
+         )`,
+    );
+    await resetDbPoolForTests();
+  });
+
+  it("T4: re-applying 022 yields one identity and two aliases (idempotent)", async () => {
+    const pool = getDbPool();
+
+    await pool.query(SEED_SQL);
+    await pool.query(SEED_SQL);
+
+    const identities = await pool.query<{ id: string; canonical_store_id: string }>(
+      `select id, canonical_store_id from store_identities where id = 'kroger-02900529'`,
+    );
+    expect(identities.rows).toHaveLength(1);
+    expect(identities.rows[0]?.canonical_store_id).toBe("kroger-02900529");
+
+    const aliases = await pool.query<{
+      store_id: string;
+      member_role: string;
+      link_status: string;
+      match_method: string;
+    }>(
+      `select store_id, member_role, link_status, match_method
+       from store_identity_aliases
+       where identity_id = 'kroger-02900529'
+       order by member_role desc, store_id`,
+    );
+    expect(aliases.rows).toHaveLength(2);
+    expect(aliases.rows.map((row) => row.store_id).sort()).toEqual([
+      "kroger-02900529",
+      "kroger-mechanicsville",
+    ]);
+    expect(aliases.rows.every((row) => row.link_status === "confirmed")).toBe(
+      true,
+    );
+    expect(aliases.rows.every((row) => row.match_method === "seeded")).toBe(
+      true,
+    );
+    expect(
+      aliases.rows.find((row) => row.member_role === "canonical")?.store_id,
+    ).toBe("kroger-02900529");
+    expect(
+      aliases.rows.find((row) => row.member_role === "alias")?.store_id,
+    ).toBe("kroger-mechanicsville");
+
+    // T3-adjacent: no accidental Aldi identity from this seed
+    const aldi = await pool.query(
+      `select 1 from store_identities where id = 'aldi-mechanicsville'`,
+    );
+    expect(aldi.rows).toHaveLength(0);
+  });
+});

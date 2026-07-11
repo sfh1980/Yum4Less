@@ -1,15 +1,25 @@
 /**
  * Option A Slice 1 — match policy (proximity + name/type + pointer bonus).
  *
- * PINNED STARTING THRESHOLDS — unvalidated against real fixture pairs until
- * Slice 2. Do not treat hardMiles/softMiles/confirm/provisional as final
- * product policy; retune via this module (no schema change).
+ * PINNED STARTING THRESHOLDS — validated against fixture pairs in Slice 1–2.
+ * Do not treat hardMiles/softMiles/confirm/provisional as final product policy;
+ * retune via this module (no schema change).
  *
  * Starting knobs (Decision A / Phase 2 design):
  * - hardMiles: 0.15
  * - softMiles: 0.05
  * - confirmThreshold: ~0.85
  * - provisionalThreshold: ~0.70
+ *
+ * STRUCTURAL BOUNDARY (Slice 3 finding — do not "fix" casually):
+ * Weights sum to 1.0. A no-pointer perfect twin (distance=1, name=1, type=1,
+ * pointer=0) scores exactly `1 - pointerWeight` = `1 - 0.15` = **0.85** =
+ * confirmThreshold. That is by design of the weight table, not a Kroger quirk —
+ * Publix / Food Lion / future same-chain official↔slug pairs without a
+ * source_store_id pointer will land on the same boundary. Classification uses
+ * `>= confirmThreshold`, so the boundary is confirmed. Slice 3 seeds the
+ * Mechanicsville Kroger link manually rather than relying on auto-confirm.
+ * Flag for future scorer-tuning conversations; not a bug to patch in Slice 3.
  */
 
 import { getDistanceMiles } from "@/lib/geo-distance";

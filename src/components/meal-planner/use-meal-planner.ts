@@ -23,6 +23,10 @@ import {
   readSettingsPreferences,
   writeSettingsPreferences,
 } from "@/lib/settings-preferences";
+import {
+  canonicalizeStoreIdsForSettings,
+  filterSelectedStoreIdsAgainstSelectable,
+} from "@/lib/store-identity-settings-lookup";
 import { scopeMarketSummaryToSelectedStores } from "@/lib/store-scope";
 import { defaultSelectedStoreIdsForSettings, filterSettingsSelectableStores } from "@/lib/settings-store-selection";
 import type { AppTab } from "@/components/meal-planner/app-tab";
@@ -94,7 +98,13 @@ function hydrateFormFromSettings(): FormState {
       ? { radiusMiles: String(saved.radiusMiles) }
       : {}),
     ...(saved.shoppingStyle ? { shoppingStyle: saved.shoppingStyle } : {}),
-    ...(saved.selectedStoreIds ? { selectedStoreIds: saved.selectedStoreIds } : {}),
+    ...(saved.selectedStoreIds
+      ? {
+          selectedStoreIds: canonicalizeStoreIdsForSettings(
+            saved.selectedStoreIds,
+          ),
+        }
+      : {}),
     ...(saved.theme ? { theme: saved.theme } : {}),
   };
 }
@@ -118,7 +128,7 @@ function persistLocationPreferences(
       zipCode: form.zipCode.trim(),
       radiusMiles,
       shoppingStyle: form.shoppingStyle,
-      selectedStoreIds: form.selectedStoreIds,
+      selectedStoreIds: canonicalizeStoreIdsForSettings(form.selectedStoreIds),
       theme: form.theme,
       ...(request?.mode === "browser"
         ? {
@@ -282,7 +292,7 @@ export function useMealPlanner() {
         zipCode: form.zipCode.trim(),
         radiusMiles,
         shoppingStyle: form.shoppingStyle,
-        selectedStoreIds: form.selectedStoreIds,
+        selectedStoreIds: canonicalizeStoreIdsForSettings(form.selectedStoreIds),
         theme: form.theme,
       }),
     );
@@ -508,8 +518,9 @@ export function useMealPlanner() {
             .filter((store) => store.recommendationEnabled)
             .map((store) => store.id),
         );
-        const persistedSelection = current.selectedStoreIds.filter((storeId) =>
-          enabledSelectableIds.has(storeId),
+        const persistedSelection = filterSelectedStoreIdsAgainstSelectable(
+          current.selectedStoreIds,
+          enabledSelectableIds,
         );
         const selectedStoreIds =
           persistedSelection.length > 0
@@ -689,7 +700,7 @@ export function useMealPlanner() {
       zipCode: form.zipCode.trim(),
       radiusMiles,
       shoppingStyle: form.shoppingStyle,
-      selectedStoreIds: form.selectedStoreIds,
+      selectedStoreIds: canonicalizeStoreIdsForSettings(form.selectedStoreIds),
       theme: form.theme,
       ...(activeLocationRequest?.mode === "browser"
         ? {
@@ -707,6 +718,15 @@ export function useMealPlanner() {
     }
 
     writeSettingsPreferences(prefs);
+    if (
+      prefs.selectedStoreIds &&
+      !sameSelectedStoreIds(form.selectedStoreIds, prefs.selectedStoreIds)
+    ) {
+      setForm((current) => ({
+        ...current,
+        selectedStoreIds: prefs.selectedStoreIds!,
+      }));
+    }
     autoMarketSearchAttemptedRef.current = true;
     setActiveTab("home");
     setFlowStep("welcome");
@@ -985,13 +1005,14 @@ export function useMealPlanner() {
         return;
       }
 
-      const syncedSelectedStoreIds =
-        result.experience.effectiveSelectedStoreIds ?? preferences.selectedStoreIds;
+      const syncedSelectedStoreIds = canonicalizeStoreIdsForSettings(
+        result.experience.effectiveSelectedStoreIds ?? preferences.selectedStoreIds,
+      );
 
       if (result.experience.effectiveSelectedStoreIds) {
         setForm((current) => ({
           ...current,
-          selectedStoreIds: result.experience.effectiveSelectedStoreIds!,
+          selectedStoreIds: syncedSelectedStoreIds,
         }));
         const radiusMiles = Number(form.radiusMiles);
         if (Number.isFinite(radiusMiles)) {
@@ -1000,7 +1021,7 @@ export function useMealPlanner() {
               zipCode: preferences.zipCode.trim(),
               radiusMiles,
               shoppingStyle: preferences.shoppingStyle,
-              selectedStoreIds: result.experience.effectiveSelectedStoreIds,
+              selectedStoreIds: syncedSelectedStoreIds,
               theme: form.theme,
             }),
           );

@@ -9,6 +9,10 @@ import {
   defaultSelectedStoreIdsForSettings,
   filterSettingsSelectableStores,
 } from "@/lib/settings-store-selection";
+import {
+  canonicalizeStoreIdsForSettings,
+  isSettingsStoreIdSelected,
+} from "@/lib/store-identity-settings-lookup";
 import { formatSettingsStoreOptionLabel } from "@/lib/store-display-labels";
 import { buildMultiStoreCoverageSummary } from "@/lib/chain-coverage-honesty";
 import { radiusHelp, zipCodeHelp } from "@/lib/help-hint-content";
@@ -80,7 +84,9 @@ export function SettingsPanel({
 
     setForm((current) => ({
       ...current,
-      selectedStoreIds: storeId ? [storeId] : [],
+      selectedStoreIds: storeId
+        ? canonicalizeStoreIdsForSettings([storeId])
+        : [],
     }));
   }
 
@@ -92,14 +98,23 @@ export function SettingsPanel({
 
     setForm((current) => {
       if (checked) {
-        return current.selectedStoreIds.includes(storeId)
-          ? current
-          : { ...current, selectedStoreIds: [...current.selectedStoreIds, storeId] };
+        if (isSettingsStoreIdSelected(current.selectedStoreIds, storeId)) {
+          return current;
+        }
+        return {
+          ...current,
+          selectedStoreIds: canonicalizeStoreIdsForSettings([
+            ...current.selectedStoreIds,
+            storeId,
+          ]),
+        };
       }
 
       return {
         ...current,
-        selectedStoreIds: current.selectedStoreIds.filter((id) => id !== storeId),
+        selectedStoreIds: current.selectedStoreIds.filter(
+          (id) => !isSettingsStoreIdSelected([id], storeId),
+        ),
       };
     });
   }
@@ -113,8 +128,8 @@ export function SettingsPanel({
     setIsStoreMapOpen(false);
   }
 
-  const selectedSingleStore = selectableStores.find(
-    (store) => store.id === form.selectedStoreIds[0],
+  const selectedSingleStore = selectableStores.find((store) =>
+    isSettingsStoreIdSelected(form.selectedStoreIds, store.id),
   );
   const multiStoreCoverageSummary =
     storesReady && form.shoppingStyle === "multi-store"
@@ -195,7 +210,7 @@ export function SettingsPanel({
               <div className="settings-single-store-row">
                 <select
                   id="settings-selected-store"
-                  value={form.selectedStoreIds[0] ?? ""}
+                  value={selectedSingleStore?.id ?? form.selectedStoreIds[0] ?? ""}
                   onChange={(event) => handleSingleStoreChange(event.target.value)}
                 >
                   <option value="">Choose a store</option>
@@ -230,7 +245,10 @@ export function SettingsPanel({
               <div className="store-multi-select" id="settings-selected-stores">
                 {selectableStores.map((store) => {
                   const checkboxId = `settings-store-${store.id}`;
-                  const selected = form.selectedStoreIds.includes(store.id);
+                  const selected = isSettingsStoreIdSelected(
+                    form.selectedStoreIds,
+                    store.id,
+                  );
                   const storeSelectable = store.recommendationEnabled;
 
                   return (

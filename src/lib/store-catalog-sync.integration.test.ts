@@ -13,6 +13,10 @@ import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.
 describe("store catalog sync (integration)", () => {
   beforeEach(async () => {
     const pool = getDbPool();
+    await pool.query(
+      `delete from store_identity_aliases where identity_id = 'kroger-02900529'`,
+    );
+    await pool.query(`delete from store_identities where id = 'kroger-02900529'`);
     await pool.query(`delete from stores where id like 'osm-%' or id like 'fixture-osm-%'`);
     await pool.query(`delete from stores where source_name = 'yum4less-map-fixture'`);
     await pool.query(
@@ -72,6 +76,10 @@ describe("store catalog sync (integration)", () => {
     `);
     await pool.query(`delete from stores where id like 'osm-%' or id like 'fixture-osm-%'`);
     await pool.query(`delete from stores where source_name = 'yum4less-map-fixture'`);
+    await pool.query(
+      `delete from store_identity_aliases where identity_id = 'kroger-02900529'`,
+    );
+    await pool.query(`delete from store_identities where id = 'kroger-02900529'`);
     await pool.query(
       `delete from stores where source_name = 'kroger-official-api' and id <> 'kroger-mechanicsville'`,
     );

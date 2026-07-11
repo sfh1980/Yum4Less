@@ -155,6 +155,15 @@ export function migrationEffectPresent(version, db) {
         db.tableExists("store_identities") &&
         db.tableExists("store_identity_aliases")
       );
+    case "022":
+      return (
+        db.tableExists("store_identities") &&
+        Number(
+          db.queryScalar(
+            "select count(*) from store_identities where id = 'kroger-02900529'",
+          ),
+        ) >= 1
+      );
     default:
       return false;
   }

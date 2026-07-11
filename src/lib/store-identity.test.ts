@@ -59,6 +59,17 @@ describe("store identity match policy (pinned starting thresholds)", () => {
     expect(score.confidence).toBeGreaterThanOrEqual(STORE_IDENTITY_CONFIRM_THRESHOLD);
   });
 
+  it("documents structural no-pointer perfect twin = confirmThreshold (1 - pointerWeight)", () => {
+    const score = scoreStoreIdentityMatch(FIXTURE_KROGER_API, FIXTURE_KROGER_SLUG);
+    expect(score.distanceScore).toBe(1);
+    expect(score.nameScore).toBe(1);
+    expect(score.typeScore).toBe(1);
+    expect(score.pointerScore).toBe(0);
+    // 0.35+0.35+0.15+0 = 0.85 — structural for any same-chain twin without pointer
+    expect(score.confidence).toBe(STORE_IDENTITY_CONFIRM_THRESHOLD);
+    expect(score.classification).toBe("confirmed");
+  });
+
   it("scores Aldi+OSM into confirm range with pointer bonus doing work", () => {
     const withPointer = scoreStoreIdentityMatch(FIXTURE_ALDI_CATALOG, FIXTURE_ALDI_OSM);
     expect(scoreStoreIdentityPointerBonus(FIXTURE_ALDI_CATALOG, FIXTURE_ALDI_OSM)).toBe(
@@ -125,6 +136,14 @@ describe("store identity feature flags", () => {
       snapMatchingEnabled: true,
       searchProvisionalEnabled: true,
     });
+  });
+
+  it("treats NEXT_PUBLIC expand flag as enabling master expand (Settings client)", () => {
+    expect(
+      isStoreIdentityExpandEnabled({
+        NEXT_PUBLIC_YUM4LESS_STORE_IDENTITY_EXPAND: "1",
+      }),
+    ).toBe(true);
   });
 });
 

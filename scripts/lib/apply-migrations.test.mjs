@@ -28,6 +28,7 @@ describe("listInitMigrationFiles", () => {
     expect(files[0]).toBe("000_schema_migrations.sql");
     expect(files).toContain("015_retire_publix_atlee_bootstrap.sql");
     expect(files).toContain("021_store_identities.sql");
+    expect(files).toContain("022_seed_kroger_mechanicsville_identity.sql");
     expect(files.length).toBeGreaterThanOrEqual(20);
   });
 });
@@ -44,6 +45,9 @@ describe("migrationEffectPresent", () => {
         if (sql.includes("provider = 'kroger'")) {
           return "50";
         }
+        if (sql.includes("kroger-02900529")) {
+          return "1";
+        }
         return "0";
       },
     };
@@ -55,6 +59,10 @@ describe("migrationEffectPresent", () => {
       ...db,
       tableExists: (name) =>
         name === "store_identities" || name === "store_identity_aliases",
+    })).toBe(true);
+    expect(migrationEffectPresent("022", {
+      ...db,
+      tableExists: (name) => name === "store_identities",
     })).toBe(true);
   });
 });
