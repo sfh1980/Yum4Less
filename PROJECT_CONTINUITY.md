@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-10):** Option A Slice 3 — local `npm test` **949/949** (T1–T3 Settings canonicalize + structural 0.85 boundary), `npm run test:integration` **33/33** (includes T4 migration 022 idempotency), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 1 skipped (H12 map-mount; **no new skips**). Master flag **OFF**. Remote CI — see verification snapshot after push. Prior Slice 2: [**29134198168**](https://github.com/sfh1980/Yum4Less/actions/runs/29134198168) on **`938bb90`**.
+**Verified (2026-07-10):** Option A Slice 3 — local `npm test` **949/949** (T1–T3 Settings canonicalize + structural 0.85 boundary), `npm run test:integration` **33/33** (includes T4 migration 022 idempotency), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 1 skipped (H12 map-mount; **no new skips**). Master flag **OFF**. Remote CI [**29135637011**](https://github.com/sfh1980/Yum4Less/actions/runs/29135637011) **green** on **`11fadca`** (follow-up: 022 does not insert stores). Feature commit **`892ae97`**. Prior Slice 2: [**29134198168**](https://github.com/sfh1980/Yum4Less/actions/runs/29134198168) on **`938bb90`**.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -252,7 +252,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Structural finding (not fixed):** no-pointer perfect twins (distance=1, name=1, type=1, pointer=0) score exactly `1 − pointerWeight` = **0.85** = `confirmThreshold` — by weight design, will recur for Publix/Food Lion/future chains; classification uses `>=`; Kroger link is manual/seeded, not auto-confirm.
 - **Named technical debt:** Settings identity lookup is currently a **hardcoded known-pair (Kroger Mechanicsville only)**; does not generalize to the next chain without a real client identity API or Postgres-backed lookup. **Revisit before/during Slice 4 (Aldi)** if a second consumer makes the pattern worth generalizing, or explicitly accept narrow-lookup-per-slice as the interim pattern if that's cheaper for now.
 - **Out of scope:** Aldi↔OSM, Map, Market-search merge, Ingest matcher; **no default flag flip** (master + sub-flags OFF including dev).
-- **Evidence:** `npm test` 949/949; integration 33/33; build + typecheck clean; e2e — see Resume Verified / verification snapshot after push.
+- **Evidence:** `npm test` 949/949; integration 33/33; build + typecheck clean; e2e 25 passed / 1 skipped; remote CI [29135637011](https://github.com/sfh1980/Yum4Less/actions/runs/29135637011) on `11fadca` (feature `892ae97`).
 
 ### 2026-07-10 — Option A Slice 2: rank/pantry identity expand + silent-empty guards — CLOSED
 
@@ -2070,7 +2070,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npm run build` (local) | 2026-07-10 | **Pass** |
 | `npm run typecheck` (local) | 2026-07-10 | **0 errors** |
 | `npm run test:e2e:ci` (local) | 2026-07-10 | **25 passed**, 1 skipped (H12 baseline; no new skips) |
-| **Remote CI** (Option A Slice 3 — pending push) | 2026-07-10 | Fill after push |
+| **Remote CI** (Option A Slice 3 `11fadca`) | 2026-07-10 | **Green** — [29135637011](https://github.com/sfh1980/Yum4Less/actions/runs/29135637011) (feature `892ae97` + 022 no-store-insert fix) |
 | `npm test` (local) | 2026-07-10 | **943/943** pass (Option A Slice 2 rank/pantry expand; T1–T4 + membership) |
 | `npm run test:integration` (local) | 2026-07-10 | **32/32** pass (no new Postgres identity lookup this slice) |
 | `npm run build` (local) | 2026-07-10 | **Pass** |
