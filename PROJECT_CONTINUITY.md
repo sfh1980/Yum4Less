@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-10):** Option A Slice 2 — local `npm test` **943/943** (includes T1–T4 + membership in `store-identity-expand-ranking.test.ts`), `npm run test:integration` **32/32** (no new Postgres lookup), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 1 skipped (H12 map-mount; no new skips). Remote CI link filled after push. Prior Slice 1: [**29132909311**](https://github.com/sfh1980/Yum4Less/actions/runs/29132909311) on **`71ac279`**.
+**Verified (2026-07-10):** Option A Slice 2 — local `npm test` **943/943** (includes T1–T4 + membership in `store-identity-expand-ranking.test.ts`), `npm run test:integration` **32/32** (no new Postgres lookup), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 1 skipped (H12 map-mount; no new skips). Remote CI [**29134198168**](https://github.com/sfh1980/Yum4Less/actions/runs/29134198168) **green** on **`938bb90`**. Prior Slice 1: [**29132909311**](https://github.com/sfh1980/Yum4Less/actions/runs/29132909311) on **`71ac279`**.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -251,7 +251,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Tests:** T1 silent-empty ON, T2 flag-OFF regression, T3 Food Lion ~0.2 mi negative, T4 expand-bypass via `filterPriceObservationsByStoreIds`, membership false-drop guard — `src/lib/store-identity-expand-ranking.test.ts`.
 - **Out of scope:** Settings, Map, Market-search, Ingest; no default flag flip; no `store_identities` seed rows.
 - **Pre-Slice-3 checklist:** Kroger twin scorer confidence is exactly **0.85** (on `confirmThreshold`) — retune before auto-confirm linking in Slices 3–4.
-- **Evidence:** `npm test` 943/943; integration 32/32; build + typecheck clean; e2e 25 passed / 1 skipped.
+- **Evidence:** `npm test` 943/943; integration 32/32; build + typecheck clean; e2e 25 passed / 1 skipped; remote CI [29134198168](https://github.com/sfh1980/Yum4Less/actions/runs/29134198168) on `938bb90`.
 
 ### 2026-07-10 — Option A Slice 1: alias-graph store identity infrastructure — CLOSED
 
@@ -2060,7 +2060,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npm run build` (local) | 2026-07-10 | **Pass** |
 | `npm run typecheck` (local) | 2026-07-10 | **0 errors** |
 | `npm run test:e2e:ci` (local) | 2026-07-10 | **25 passed**, 1 skipped (H12 baseline; no new skips) |
-| **Remote CI** (Option A Slice 2) | 2026-07-10 | Pending push — fill run link after Actions |
+| **Remote CI** (Option A Slice 2 `938bb90`) | 2026-07-10 | **Green** — [29134198168](https://github.com/sfh1980/Yum4Less/actions/runs/29134198168) |
 | `npm test` (local) | 2026-07-10 | **938/938** pass (Option A Slice 1 identity infra) |
 | `npm run test:integration` (local) | 2026-07-10 | **32/32** pass (includes `store-identity.integration.test.ts` constraints) |
 | `npm run build` (local) | 2026-07-10 | **Pass** |
