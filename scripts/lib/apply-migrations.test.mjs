@@ -45,7 +45,13 @@ describe("migrationEffectPresent", () => {
         if (sql.includes("provider = 'kroger'")) {
           return "50";
         }
-        if (sql.includes("kroger-02900529")) {
+        if (sql.includes("store_identities where id = 'kroger-02900529'")) {
+          return "0";
+        }
+        if (
+          sql.includes("kroger-02900529") &&
+          sql.includes("kroger-mechanicsville")
+        ) {
           return "1";
         }
         return "0";
@@ -60,10 +66,8 @@ describe("migrationEffectPresent", () => {
       tableExists: (name) =>
         name === "store_identities" || name === "store_identity_aliases",
     })).toBe(true);
-    expect(migrationEffectPresent("022", {
-      ...db,
-      tableExists: (name) => name === "store_identities",
-    })).toBe(true);
+    // Vacuous done when fewer than both Kroger members exist
+    expect(migrationEffectPresent("022", db)).toBe(true);
   });
 });
 

@@ -9,7 +9,8 @@ const SEED_SQL = readFileSync(
 );
 
 /**
- * T4: migration 022 seeds Kroger Mechanicsville identity idempotently.
+ * T4: migration 022 seeds Kroger Mechanicsville identity idempotently
+ * when both member store rows already exist.
  */
 describe("store identity Kroger seed migration 022 (integration)", () => {
   afterEach(async () => {
@@ -22,22 +23,28 @@ describe("store identity Kroger seed migration 022 (integration)", () => {
     await pool.query(
       `delete from store_identities where id = 'kroger-02900529'`,
     );
-    // Leave CI/bootstrap store rows; only remove API twin if we created it solely for this test
-    // when no other identity references it. Prefer not deleting kroger-mechanicsville (CI bootstrap).
-    await pool.query(
-      `delete from stores where id = 'kroger-02900529'
-         and not exists (
-           select 1 from store_identity_aliases where store_id = 'kroger-02900529'
-         )
-         and not exists (
-           select 1 from store_identities where canonical_store_id = 'kroger-02900529'
-         )`,
-    );
+    await pool.query(`delete from stores where id = 'kroger-02900529'`);
     await resetDbPoolForTests();
   });
 
   it("T4: re-applying 022 yields one identity and two aliases (idempotent)", async () => {
     const pool = getDbPool();
+
+    await pool.query(
+      `insert into stores (
+         id, name, kind, city, state, latitude, longitude, source_name, source_store_id
+       ) values
+         ('kroger-02900529', 'Kroger Marketplace - Kroger Marketplace', 'grocery',
+          'Mechanicsville', 'VA', 37.61546, -77.32939, 'kroger-official-api', '02900529'),
+         ('kroger-mechanicsville', 'Kroger', 'grocery',
+          'Mechanicsville', 'VA', 37.6154615, -77.32939, 'kroger-weekly-ad-scrape',
+          'kroger-mechanicsville')
+       on conflict (id) do update set
+         source_name = excluded.source_name,
+         source_store_id = excluded.source_store_id,
+         latitude = excluded.latitude,
+         longitude = excluded.longitude`,
+    );
 
     await pool.query(SEED_SQL);
     await pool.query(SEED_SQL);
@@ -77,7 +84,6 @@ describe("store identity Kroger seed migration 022 (integration)", () => {
       aliases.rows.find((row) => row.member_role === "alias")?.store_id,
     ).toBe("kroger-mechanicsville");
 
-    // T3-adjacent: no accidental Aldi identity from this seed
     const aldi = await pool.query(
       `select 1 from store_identities where id = 'aldi-mechanicsville'`,
     );

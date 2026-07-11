@@ -1,48 +1,10 @@
--- Option A Slice 3: seed Mechanicsville Kroger slug↔ API twin as one identity.
+-- Option A Slice 3: seed Mechanicsville Kroger slug ↔ API twin as one identity.
 -- Manual/seeded confirm (not live auto-confirm). Q3: official API id is canonical.
 --
--- Ensures both member store rows exist (ON CONFLICT DO NOTHING) so the link can
--- apply on CI/fresh volumes; does not overwrite ingest-updated coords/names.
+-- Does NOT insert stores rows — only links when both members already exist
+-- (ingest / CI bootstrap). Avoids changing Settings collocated collapse with
+-- the identity expand flag still OFF.
 -- Idempotent: safe to re-apply.
-
-insert into stores (
-  id,
-  name,
-  kind,
-  city,
-  state,
-  latitude,
-  longitude,
-  source_name,
-  source_store_id,
-  last_verified_at
-)
-values
-  (
-    'kroger-02900529',
-    'Kroger Marketplace - Kroger Marketplace',
-    'grocery',
-    'Mechanicsville',
-    'VA',
-    37.615460,
-    -77.329390,
-    'kroger-official-api',
-    '02900529',
-    now()
-  ),
-  (
-    'kroger-mechanicsville',
-    'Kroger',
-    'grocery',
-    'Mechanicsville',
-    'VA',
-    37.6154615,
-    -77.329390,
-    'kroger-weekly-ad-scrape',
-    'kroger-mechanicsville',
-    now()
-  )
-on conflict (id) do nothing;
 
 insert into store_identities (
   id,
@@ -59,16 +21,17 @@ insert into store_identities (
 select
   'kroger-02900529',
   'kroger-02900529',
-  'Kroger Marketplace - Kroger Marketplace',
+  coalesce(api.name, 'Kroger Marketplace - Kroger Marketplace'),
   'grocery',
-  'Mechanicsville',
-  'VA',
-  37.615460,
-  -77.329390,
-  'kroger-official-api',
+  coalesce(api.city, 'Mechanicsville'),
+  coalesce(api.state, 'VA'),
+  api.latitude,
+  api.longitude,
+  coalesce(api.source_name, 'kroger-official-api'),
   now()
-where exists (select 1 from stores where id = 'kroger-02900529')
-  and exists (select 1 from stores where id = 'kroger-mechanicsville')
+from stores api
+inner join stores slug on slug.id = 'kroger-mechanicsville'
+where api.id = 'kroger-02900529'
   and not exists (
     select 1 from store_identities where id = 'kroger-02900529'
   );

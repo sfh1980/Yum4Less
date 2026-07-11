@@ -157,12 +157,17 @@ export function migrationEffectPresent(version, db) {
       );
     case "022":
       return (
-        db.tableExists("store_identities") &&
+        // Seeded when both Kroger members exist; otherwise vacuous no-op is done.
         Number(
           db.queryScalar(
             "select count(*) from store_identities where id = 'kroger-02900529'",
           ),
-        ) >= 1
+        ) >= 1 ||
+        Number(
+          db.queryScalar(
+            "select count(*) from stores where id in ('kroger-02900529', 'kroger-mechanicsville')",
+          ),
+        ) < 2
       );
     default:
       return false;
