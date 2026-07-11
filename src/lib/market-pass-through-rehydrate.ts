@@ -1,5 +1,6 @@
-import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 import type { MarketDataSnapshot, MarketDataSource } from "@/lib/market-repository";
+import type { CatalogStore } from "@/lib/market-catalog-types";
+import type { CatalogPriceObservation } from "@/lib/market-catalog-types";
 import {
   buildNearbyStoresForSearch,
   collectRecipeIngredientIdsForRollout,
@@ -10,18 +11,67 @@ import { searchOfficialProviderStores } from "@/lib/provider-market-service";
 import { buildProviderPricingPreviews } from "@/lib/provider-pricing-preview-service";
 import { resolveKrogerPreviewTrackedIngredients } from "@/lib/provider-search-terms";
 import type { MarketSummary, NearbyStoreSummary } from "@/lib/recommendation-types";
+import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
+import type { StoreIdentityLookup } from "@/lib/store-identity-resolvers";
+import { resolvePricingScopeStoreIds } from "@/lib/store-scope";
+import type { ResolvedSearchLocation } from "@/lib/location-resolution";
+
+export type MarketPassThroughIdentityOptions = {
+  identityLookup?: StoreIdentityLookup;
+  env?: StoreIdentityEnv;
+};
+
+/** Build nearby rows for pricing-scope ids not already on the market list. */
+export function buildPricingScopeExtraNearbyStores(input: {
+  market: MarketSummary;
+  pricingScopeStoreIds: string[];
+  catalogStores: CatalogStore[];
+  priceObservations: CatalogPriceObservation[];
+  location: ResolvedSearchLocation;
+  recipes: MarketDataSnapshot["recipes"];
+}): NearbyStoreSummary[] {
+  const existingIds = new Set(input.market.nearbyStores.map((store) => store.id));
+  const missingIds = input.pricingScopeStoreIds.filter((id) => !existingIds.has(id));
+  if (missingIds.length === 0) {
+    return [];
+  }
+
+  const missingCatalog = input.catalogStores.filter((store) =>
+    missingIds.includes(store.id),
+  );
+  if (missingCatalog.length === 0) {
+    return [];
+  }
+
+  return buildNearbyStoresForSearch(
+    missingCatalog,
+    input.location,
+    input.market.radiusMiles,
+    input.priceObservations,
+    collectRecipeIngredientIdsForRollout(input.recipes),
+  );
+}
 
 /**
  * Rebuilds full nearby-store rows from the catalog snapshot for store IDs
  * present on a thin pass-through market (coordinates, badges, rollout gates).
  * Server-only — do not import from client components.
+ *
+ * When identity expand is ON, catalog rows for linked alias members are also
+ * eligible for rehydrate so twin ids do not vanish.
  */
 export function rehydratePassedMarketNearbyStores(
   market: MarketSummary,
   snapshot: MarketDataSnapshot,
   location: ResolvedSearchLocation,
+  identityOptions?: MarketPassThroughIdentityOptions,
 ): MarketSummary {
-  const passedStoreIds = new Set(market.nearbyStores.map((store) => store.id));
+  const expandedPassedIds = resolvePricingScopeStoreIds({
+    selectedStoreIds: market.nearbyStores.map((store) => store.id),
+    identityLookup: identityOptions?.identityLookup,
+    env: identityOptions?.env,
+  });
+  const passedStoreIds = new Set(expandedPassedIds);
   const catalogStores = snapshot.stores.filter((store) => passedStoreIds.has(store.id));
   const recipeIngredientIds = collectRecipeIngredientIdsForRollout(snapshot.recipes);
   const rehydratedById = new Map(
@@ -35,7 +85,7 @@ export function rehydratePassedMarketNearbyStores(
   );
 
   const nearbyStores = market.nearbyStores
-    .map((store) => rehydratedById.get(store.id))
+    .map((store) => resolveRehydratedStore(store, rehydratedById, identityOptions))
     .filter((store): store is NearbyStoreSummary => store !== undefined);
 
   return {
@@ -45,6 +95,30 @@ export function rehydratePassedMarketNearbyStores(
       (store) => store.recommendationEnabled,
     ).length,
   };
+}
+
+function resolveRehydratedStore(
+  store: NearbyStoreSummary,
+  rehydratedById: Map<string, NearbyStoreSummary>,
+  identityOptions?: MarketPassThroughIdentityOptions,
+): NearbyStoreSummary | undefined {
+  const direct = rehydratedById.get(store.id);
+  if (direct) {
+    return direct;
+  }
+
+  const memberIds = resolvePricingScopeStoreIds({
+    selectedStoreIds: [store.id],
+    identityLookup: identityOptions?.identityLookup,
+    env: identityOptions?.env,
+  });
+  for (const memberId of memberIds) {
+    const member = rehydratedById.get(memberId);
+    if (member) {
+      return member;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -57,6 +131,8 @@ export async function recomputePassedMarketTrustFields(input: {
   snapshotSource: MarketDataSource;
   location: ResolvedSearchLocation;
   providerConfigured: boolean;
+  identityLookup?: StoreIdentityLookup;
+  env?: StoreIdentityEnv;
 }): Promise<MarketSummary> {
   const { market, snapshot, snapshotSource, location, providerConfigured } = input;
   const providerStoreSearches = await searchOfficialProviderStores({
@@ -69,9 +145,13 @@ export async function recomputePassedMarketTrustFields(input: {
     trackedIngredients: coverageTrackedIngredients,
   });
   const recommendationReadyStoreIds = new Set(
-    market.nearbyStores
-      .filter((store) => store.recommendationEnabled)
-      .map((store) => store.id),
+    resolvePricingScopeStoreIds({
+      selectedStoreIds: market.nearbyStores
+        .filter((store) => store.recommendationEnabled)
+        .map((store) => store.id),
+      identityLookup: input.identityLookup,
+      env: input.env,
+    }),
   );
   const providerCoverageRollup = buildProviderCoverageRollup(
     providerPricingPreviews,
@@ -79,7 +159,9 @@ export async function recomputePassedMarketTrustFields(input: {
       priceSources: snapshot.priceObservations
         .filter((observation) => recommendationReadyStoreIds.has(observation.storeId))
         .map((observation) => observation.priceSource),
-      recommendationEnabledStoreCount: recommendationReadyStoreIds.size,
+      recommendationEnabledStoreCount: market.nearbyStores.filter(
+        (store) => store.recommendationEnabled,
+      ).length,
     }),
     coverageTrackedIngredients,
   );
@@ -92,6 +174,8 @@ export async function recomputePassedMarketTrustFields(input: {
     providerStoreSearches,
     providerPricingPreviews,
     providerCoverageRollup,
-    recommendationReadyStoreCount: recommendationReadyStoreIds.size,
+    recommendationReadyStoreCount: market.nearbyStores.filter(
+      (store) => store.recommendationEnabled,
+    ).length,
   };
 }

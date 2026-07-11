@@ -184,6 +184,18 @@ export function scopeStoreIdsForPricing(input: {
   return input.observationStoreIds.filter((id) => expanded.has(id));
 }
 
+/**
+ * Live-path default until a Postgres-backed lookup exists: every store is a
+ * virtual singleton. With expand ON and no linked rows, behavior matches
+ * exact-id. Tests inject linked fixtures via createMemoryStoreIdentityLookup.
+ */
+export function createDefaultStoreIdentityLookup(): StoreIdentityLookup {
+  return createMemoryStoreIdentityLookup({
+    identities: [],
+    aliases: [],
+  });
+}
+
 /** In-memory lookup for unit tests and Slice 1 fixtures. */
 export function createMemoryStoreIdentityLookup(input: {
   identities: StoreIdentityRecord[];

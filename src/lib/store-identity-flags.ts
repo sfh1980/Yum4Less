@@ -1,8 +1,8 @@
 /**
  * Option A Slice 1 — feature flags for store identity.
  *
- * Master expand and all sub-flags default OFF (including local/dev) until
- * Slice 2 ranking/pantry silent-empty tests are green.
+ * Master expand and all sub-flags default OFF (including local/dev).
+ * Slice 2 wired expand on rank/pantry behind the flag; keep OFF until reviewed.
  */
 
 export type StoreIdentityEnv = Record<string, string | undefined>;

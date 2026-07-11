@@ -8,11 +8,9 @@ import {
   type MarketDataSnapshot,
   type MarketDataSource,
 } from "@/lib/market-repository";
-import { rehydratePassedMarketNearbyStores, recomputePassedMarketTrustFields } from "@/lib/market-pass-through-rehydrate";
+import { rehydratePassedMarketNearbyStores, recomputePassedMarketTrustFields, buildPricingScopeExtraNearbyStores } from "@/lib/market-pass-through-rehydrate";
 import {
   getMarketSearchExperience,
-  buildNearbyStoresForSearch,
-  collectRecipeIngredientIdsForRollout,
 } from "@/lib/market-search-service";
 import {
   buildInactiveRecipeSourceShopperNotice,
@@ -26,13 +24,19 @@ import {
 } from "@/lib/recipe-import/recipe-ranking-eligibility";
 import {
   buildStoreSelectionSyncNotices,
+  buildEquivalentStoreIdsByStoreId,
   filterPriceObservationsByStoreIds,
   filterNearbyStoresBySelection,
+  mergePricingScopeStoresIntoMarket,
   mergeRankingShopperNotices,
   resolveEffectiveSelectedIngredientIds,
+  resolvePricingScopeStoreIds,
   resolveSelectedStoreIdsForRanking,
   scopeMarketSummaryToSelectedStores,
 } from "@/lib/store-scope";
+import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
+import type { StoreIdentityLookup } from "@/lib/store-identity-resolvers";
+import { createDefaultStoreIdentityLookup } from "@/lib/store-identity-resolvers";
 import { buildEligibleRecipePool } from "@/lib/ranking-recipe-pool";
 import {
   getConfidenceLabel,
@@ -111,24 +115,39 @@ export async function getRecommendationExperience(
   providerConfigured: boolean,
   options?: {
     passedMarket?: MarketSummary;
+    identityLookup?: StoreIdentityLookup;
+    storeIdentityEnv?: StoreIdentityEnv;
   },
 ): Promise<RecommendationExperience> {
   let market: MarketSummary;
   let snapshot: MarketDataSnapshot;
   let snapshotSource: MarketDataSource;
+  const identityLookup =
+    options?.identityLookup ?? createDefaultStoreIdentityLookup();
+  const storeIdentityEnv = options?.storeIdentityEnv;
+  const identityOptions = {
+    identityLookup,
+    env: storeIdentityEnv,
+  };
 
   if (options?.passedMarket) {
     market = options.passedMarket;
     const snapshotResult = await getMarketDataSnapshot();
     snapshot = snapshotResult.snapshot;
     snapshotSource = snapshotResult.source;
-    market = rehydratePassedMarketNearbyStores(market, snapshot, location);
+    market = rehydratePassedMarketNearbyStores(
+      market,
+      snapshot,
+      location,
+      identityOptions,
+    );
     market = await recomputePassedMarketTrustFields({
       market,
       snapshot,
       snapshotSource,
       location,
       providerConfigured,
+      ...identityOptions,
     });
   } else {
     const searchExperience = await getMarketSearchExperience(
@@ -150,10 +169,17 @@ export async function getRecommendationExperience(
       ? resolveSelectedStoreIdsForRanking({
           selectedStoreIds: preferences.selectedStoreIds,
           marketNearbyStores: market.nearbyStores,
+          identityLookup,
+          env: storeIdentityEnv,
         })
       : undefined;
   const effectiveSelectedStoreIds =
     storeSelection?.effectiveSelectedStoreIds ?? preferences.selectedStoreIds ?? [];
+  const pricingScopeStoreIds = resolvePricingScopeStoreIds({
+    selectedStoreIds: effectiveSelectedStoreIds,
+    identityLookup,
+    env: storeIdentityEnv,
+  });
 
   if (storeSelection && storeSelection.droppedStoreIds.length > 0) {
     logDroppedStoreSelectionIds(storeSelection.droppedStoreIds);
@@ -167,10 +193,10 @@ export async function getRecommendationExperience(
   ) {
     // BOUNDARY: recipe catalog refresh is cron/script-only — never on recommendation request
     const refreshObservations =
-      effectiveSelectedStoreIds.length > 0
+      pricingScopeStoreIds.length > 0
         ? filterPriceObservationsByStoreIds(
             snapshot.priceObservations,
-            effectiveSelectedStoreIds,
+            pricingScopeStoreIds,
           )
         : snapshot.priceObservations;
     const saleIngredientIds = collectSaleIngredientIdsFromObservations(
@@ -213,16 +239,33 @@ export async function getRecommendationExperience(
     };
   }
 
-  market = scopeMarketSummaryToSelectedStores(market, effectiveSelectedStoreIds);
+  market = mergePricingScopeStoresIntoMarket({
+    market,
+    pricingScopeStoreIds,
+    extraNearbyStores: buildPricingScopeExtraNearbyStores({
+      market,
+      pricingScopeStoreIds,
+      catalogStores: snapshot.stores,
+      priceObservations: snapshot.priceObservations,
+      location,
+      recipes: snapshot.recipes,
+    }),
+  });
+  market = scopeMarketSummaryToSelectedStores(market, pricingScopeStoreIds);
   const scopedObservations = filterPriceObservationsByStoreIds(
     snapshot.priceObservations,
-    effectiveSelectedStoreIds,
+    pricingScopeStoreIds,
   );
 
   const recommendationStores = filterNearbyStoresBySelection(
     market.nearbyStores,
-    effectiveSelectedStoreIds,
+    pricingScopeStoreIds,
   ).filter((store) => store.recommendationEnabled);
+  const equivalentStoreIdsByStoreId = buildEquivalentStoreIdsByStoreId(
+    recommendationStores.map((store) => store.id),
+    identityLookup,
+    storeIdentityEnv,
+  );
 
   const selectionSyncNotices = storeSelection
     ? buildStoreSelectionSyncNotices(storeSelection)
@@ -252,7 +295,7 @@ export async function getRecommendationExperience(
   const effectiveSelectedIngredientIds = resolveEffectiveSelectedIngredientIds({
     selectedIngredientIds: preferences.selectedIngredientIds,
     priceObservations: scopedObservations,
-    selectedStoreIds: effectiveSelectedStoreIds,
+    selectedStoreIds: pricingScopeStoreIds,
   });
 
   if (effectiveSelectedIngredientIds.length === 0) {
@@ -275,7 +318,7 @@ export async function getRecommendationExperience(
     recipes: snapshot.recipes,
     preferences,
     priceObservations: scopedObservations,
-    selectedStoreIds: effectiveSelectedStoreIds,
+    selectedStoreIds: pricingScopeStoreIds,
   });
 
   const candidates = ingredientScopedRecipes
@@ -287,6 +330,7 @@ export async function getRecommendationExperience(
         scopedObservations,
         market.dataSource,
         buildValidPantryIngredientIdsFromSnapshot(snapshot),
+        equivalentStoreIdsByStoreId,
       ),
     )
     .filter((candidate): candidate is RecommendationCandidate => candidate !== null)
@@ -413,6 +457,7 @@ function buildCandidate(
   priceObservations: CatalogPriceObservation[],
   dataSource: MarketDataSource,
   validPantryIngredientIds: ReadonlySet<string>,
+  equivalentStoreIdsByStoreId?: ReadonlyMap<string, ReadonlySet<string>>,
 ): RecommendationCandidate | null {
   const pantryIngredientIds = new Set(
     filterValidPantryIngredientIds(
@@ -420,8 +465,12 @@ function buildCandidate(
       validPantryIngredientIds,
     ),
   );
-  const planOptions =
-    pantryIngredientIds.size > 0 ? { pantryIngredientIds } : undefined;
+  const planOptions = {
+    ...(pantryIngredientIds.size > 0 ? { pantryIngredientIds } : {}),
+    ...(equivalentStoreIdsByStoreId
+      ? { equivalentStoreIdsByStoreId }
+      : {}),
+  };
   const shoppingPlan =
     preferences.shoppingStyle === "single-store"
       ? buildSingleStorePlan(

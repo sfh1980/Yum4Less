@@ -20,6 +20,11 @@ import type {
 
 export type ShoppingPlanBuilderOptions = {
   pantryIngredientIds?: ReadonlySet<string>;
+  /**
+   * Expand-aware observation join: for each plan store id, accept obs whose
+   * storeId is any identity member. Omit → exact-id only (flag OFF / default).
+   */
+  equivalentStoreIdsByStoreId?: ReadonlyMap<string, ReadonlySet<string>>;
 };
 
 // TODO: add storeId to ShoppingPlanItem and StorePlan so overlay join
@@ -34,6 +39,7 @@ export function buildSingleStorePlan(
   options?: ShoppingPlanBuilderOptions,
 ): ShoppingPlanItem[] {
   const pantryIds = options?.pantryIngredientIds ?? new Set<string>();
+  const equivalentByStore = options?.equivalentStoreIdsByStoreId;
 
   const candidatePlans = nearbyStores
     .map((store) => {
@@ -49,6 +55,7 @@ export function buildSingleStorePlan(
           priceObservations,
           store.id,
           ingredient.ingredientId,
+          equivalentByStore?.get(store.id),
         );
         if (!observation) {
           return null;
@@ -87,6 +94,7 @@ export function buildMultiStorePlan(
   options?: ShoppingPlanBuilderOptions,
 ): ShoppingPlanItem[] {
   const pantryIds = options?.pantryIngredientIds ?? new Set<string>();
+  const equivalentByStore = options?.equivalentStoreIdsByStoreId;
   const plan: ShoppingPlanItem[] = [];
 
   for (const ingredient of recipe.ingredients) {
@@ -102,6 +110,7 @@ export function buildMultiStorePlan(
           priceObservations,
           store.id,
           ingredient.ingredientId,
+          equivalentByStore?.get(store.id),
         ),
       }))
       .filter(
@@ -141,10 +150,12 @@ function getObservationForStore(
   priceObservations: CatalogPriceObservation[],
   storeId: string,
   ingredientId: string,
+  equivalentStoreIds?: ReadonlySet<string>,
 ) {
+  const allowed = equivalentStoreIds ?? new Set([storeId]);
   return priceObservations.find(
     (observation) =>
-      observation.storeId === storeId &&
+      allowed.has(observation.storeId) &&
       observation.ingredientId === ingredientId &&
       observation.inStock,
   );

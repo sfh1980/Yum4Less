@@ -10,6 +10,12 @@ import {
   type SaleIngredientChoice,
   collectRankableIngredientIdsAtStores,
 } from "@/lib/sale-ingredient-offers";
+import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
+import {
+  createDefaultStoreIdentityLookup,
+  expandStoreIdsForRead,
+  type StoreIdentityLookup,
+} from "@/lib/store-identity-resolvers";
 
 export type ResolvedStoreSelectionForRanking = {
   effectiveSelectedStoreIds: string[];
@@ -28,12 +34,77 @@ function sameSelectedStoreIdSet(left: string[], right: string[]): boolean {
 }
 
 /**
+ * Single upstream expand for rank/pantry pricing scope.
+ * Flag OFF → exact-id passthrough (Slice 1 contract).
+ */
+export function resolvePricingScopeStoreIds(input: {
+  selectedStoreIds: string[];
+  identityLookup?: StoreIdentityLookup;
+  env?: StoreIdentityEnv;
+}): string[] {
+  return expandStoreIdsForRead(
+    input.identityLookup ?? createDefaultStoreIdentityLookup(),
+    input.selectedStoreIds,
+    input.env,
+  );
+}
+
+/** Per-store member sets for expand-aware observation joins (plan + pantry). */
+export function buildEquivalentStoreIdsByStoreId(
+  storeIds: string[],
+  identityLookup?: StoreIdentityLookup,
+  env?: StoreIdentityEnv,
+): ReadonlyMap<string, ReadonlySet<string>> {
+  const lookup = identityLookup ?? createDefaultStoreIdentityLookup();
+  const map = new Map<string, ReadonlySet<string>>();
+  for (const storeId of storeIds) {
+    map.set(
+      storeId,
+      new Set(expandStoreIdsForRead(lookup, [storeId], env)),
+    );
+  }
+  return map;
+}
+
+/**
+ * Append pre-built nearby rows for pricing-scope members missing from market.
+ * Callers build extras via buildNearbyStoresForSearch (keeps store-scope free of
+ * market-search imports). Flag OFF → no missing ids → no-op.
+ */
+export function mergePricingScopeStoresIntoMarket(input: {
+  market: MarketSummary;
+  pricingScopeStoreIds: string[];
+  extraNearbyStores: NearbyStoreSummary[];
+}): MarketSummary {
+  const existingIds = new Set(input.market.nearbyStores.map((store) => store.id));
+  const extras = input.extraNearbyStores.filter(
+    (store) =>
+      input.pricingScopeStoreIds.includes(store.id) && !existingIds.has(store.id),
+  );
+  if (extras.length === 0) {
+    return input.market;
+  }
+
+  const nearbyStores = [...input.market.nearbyStores, ...extras];
+  return {
+    ...input.market,
+    nearbyStores,
+    recommendationReadyStoreCount: nearbyStores.filter(
+      (store) => store.recommendationEnabled,
+    ).length,
+  };
+}
+
+/**
  * Membership-filter then same-chain collocated collapse for rank/pantry scoping.
  * Stale-filter runs before collapse so retired twins never reach price comparison.
+ * When identity expand is ON, a selected id may resolve via a linked market member.
  */
 export function resolveSelectedStoreIdsForRanking(input: {
   selectedStoreIds: string[];
   marketNearbyStores: NearbyStoreSummary[];
+  identityLookup?: StoreIdentityLookup;
+  env?: StoreIdentityEnv;
 }): ResolvedStoreSelectionForRanking {
   const marketById = new Map(
     input.marketNearbyStores.map((store) => [store.id, store]),
@@ -41,11 +112,37 @@ export function resolveSelectedStoreIdsForRanking(input: {
 
   const knownStores: NearbyStoreSummary[] = [];
   const droppedStoreIds: string[] = [];
+  const seenMarketIds = new Set<string>();
 
   for (const storeId of input.selectedStoreIds) {
-    const store = marketById.get(storeId);
-    if (store) {
-      knownStores.push(store);
+    const direct = marketById.get(storeId);
+    if (direct) {
+      if (!seenMarketIds.has(direct.id)) {
+        knownStores.push(direct);
+        seenMarketIds.add(direct.id);
+      }
+      continue;
+    }
+
+    const memberIds = resolvePricingScopeStoreIds({
+      selectedStoreIds: [storeId],
+      identityLookup: input.identityLookup,
+      env: input.env,
+    });
+    let matched: NearbyStoreSummary | undefined;
+    for (const memberId of memberIds) {
+      const store = marketById.get(memberId);
+      if (store) {
+        matched = store;
+        break;
+      }
+    }
+
+    if (matched) {
+      if (!seenMarketIds.has(matched.id)) {
+        knownStores.push(matched);
+        seenMarketIds.add(matched.id);
+      }
     } else {
       droppedStoreIds.push(storeId);
     }

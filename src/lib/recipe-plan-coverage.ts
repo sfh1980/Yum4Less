@@ -11,6 +11,10 @@ export type RecipePlanCoverageContext = {
   observations: CatalogPriceObservation[];
   shoppingStyle: "single-store" | "multi-store";
   pantryIngredientIds?: ReadonlySet<string>;
+  /**
+   * Expand-aware observation join for single-store coverage. Omit → exact-id.
+   */
+  equivalentStoreIdsByStoreId?: ReadonlyMap<string, ReadonlySet<string>>;
 };
 
 export type MissingIngredientLine = {
@@ -57,10 +61,12 @@ function hasInStockObservation(
   storeId: string,
   ingredientId: string,
   observations: CatalogPriceObservation[],
+  equivalentStoreIds?: ReadonlySet<string>,
 ): boolean {
+  const allowed = equivalentStoreIds ?? new Set([storeId]);
   return observations.some(
     (observation) =>
-      observation.storeId === storeId &&
+      allowed.has(observation.storeId) &&
       observation.ingredientId === ingredientId &&
       observation.inStock,
   );
@@ -72,13 +78,17 @@ function isLineSatisfied(
   observations: CatalogPriceObservation[],
   pantryIds: ReadonlySet<string>,
   shoppingStyle: RecipePlanCoverageContext["shoppingStyle"],
+  equivalentStoreIds?: ReadonlySet<string>,
 ): boolean {
   if (pantryIds.has(ingredientId)) {
     return true;
   }
 
   if (shoppingStyle === "single-store") {
-    return storeId !== undefined && hasInStockObservation(storeId, ingredientId, observations);
+    return (
+      storeId !== undefined &&
+      hasInStockObservation(storeId, ingredientId, observations, equivalentStoreIds)
+    );
   }
 
   return observations.some(
@@ -129,6 +139,7 @@ export function assessRecipePlanCoverage(
   );
 
   for (const store of context.stores) {
+    const equivalentIds = context.equivalentStoreIdsByStoreId?.get(store.id);
     const missingLines = recipe.ingredients
       .filter(
         (ingredient) =>
@@ -138,6 +149,7 @@ export function assessRecipePlanCoverage(
             context.observations,
             pantryIds,
             "single-store",
+            equivalentIds,
           ),
       )
       .map((ingredient) =>
