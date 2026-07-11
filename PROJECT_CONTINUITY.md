@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-11):** Option A Slice **5b CLOSED** (payload-fed fix) — local `npm test` **974/974**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 0 flaky / 1 skipped (H12). Master + `NEXT_PUBLIC_` expand flags **OFF**. Map consumes server `equivalentStoreIds` — no client known-pair table. Remote CI link follows push.> **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
+**Verified (2026-07-11):** Option A Slice **5b CLOSED** (payload-fed fix) — local `npm test` **974/974**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 0 flaky / 1 skipped (H12). Master + `NEXT_PUBLIC_` expand flags **OFF**. Map consumes server `equivalentStoreIds` — no client known-pair table. Remote CI [**29156347884**](https://github.com/sfh1980/Yum4Less/actions/runs/29156347884) **green** on **`69a4be0`**.> **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
 
@@ -249,7 +249,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Named finding:** Client/server expand flag mismatch can empty exact-id Map scope — closed by **server-fed membership**, not a client known-pair table. Remember: do not add another hardcoded pair registry for client surfaces that filter against server-collapsed lists; prefer payload membership (or a real identity API).
 - **Tests:** linked Aldi/Kroger one-pin models; stale-alias → non-empty via `equivalentStoreIds`; highlight resolve; sanitizer preserves membership; unlinked OSM 1.5 mi suppress regressions — `store-identity-map-pin-5b.test.ts`.
 - **Out of scope:** **5c** ingest upsert-alias; Leaflet pixel e2e; **no default flag flip** (master + `NEXT_PUBLIC_` OFF including dev).
-- **Evidence:** (re-verified after payload-fed fix; see verification snapshot)
+- **Evidence:** `npm test` 974/974; build + typecheck clean; e2e 25 passed / 0 flaky / 1 skipped H12; remote CI [29156347884](https://github.com/sfh1980/Yum4Less/actions/runs/29156347884) green on `69a4be0` (payload-fed fix). Prior 5b push `9a68cd7` had client known-pair — superseded.
 
 ### 2026-07-11 — Option A Slice 5a: Postgres lookup + market-search coverage/merge — CLOSED
 
