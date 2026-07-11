@@ -169,6 +169,20 @@ export function migrationEffectPresent(version, db) {
           ),
         ) < 2
       );
+    case "023":
+      return (
+        // Seeded when both Aldi+OSM members exist; otherwise vacuous no-op is done.
+        Number(
+          db.queryScalar(
+            "select count(*) from store_identities where id = 'aldi-mechanicsville'",
+          ),
+        ) >= 1 ||
+        Number(
+          db.queryScalar(
+            "select count(*) from stores where id in ('aldi-mechanicsville', 'osm-node-6531578976')",
+          ),
+        ) < 2
+      );
     default:
       return false;
   }

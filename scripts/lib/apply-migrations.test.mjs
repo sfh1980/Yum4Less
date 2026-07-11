@@ -29,7 +29,8 @@ describe("listInitMigrationFiles", () => {
     expect(files).toContain("015_retire_publix_atlee_bootstrap.sql");
     expect(files).toContain("021_store_identities.sql");
     expect(files).toContain("022_seed_kroger_mechanicsville_identity.sql");
-    expect(files.length).toBeGreaterThanOrEqual(20);
+    expect(files).toContain("023_seed_aldi_mechanicsville_identity.sql");
+    expect(files.length).toBeGreaterThanOrEqual(21);
   });
 });
 
@@ -48,9 +49,18 @@ describe("migrationEffectPresent", () => {
         if (sql.includes("store_identities where id = 'kroger-02900529'")) {
           return "0";
         }
+        if (sql.includes("store_identities where id = 'aldi-mechanicsville'")) {
+          return "0";
+        }
         if (
           sql.includes("kroger-02900529") &&
           sql.includes("kroger-mechanicsville")
+        ) {
+          return "1";
+        }
+        if (
+          sql.includes("aldi-mechanicsville") &&
+          sql.includes("osm-node-6531578976")
         ) {
           return "1";
         }
@@ -68,6 +78,8 @@ describe("migrationEffectPresent", () => {
     })).toBe(true);
     // Vacuous done when fewer than both Kroger members exist
     expect(migrationEffectPresent("022", db)).toBe(true);
+    // Vacuous done when fewer than both Aldi+OSM members exist
+    expect(migrationEffectPresent("023", db)).toBe(true);
   });
 });
 

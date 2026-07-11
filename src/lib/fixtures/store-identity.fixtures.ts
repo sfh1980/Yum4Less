@@ -189,8 +189,8 @@ export function createLinkedAldiOsmIdentityLookup(): StoreIdentityLookup {
       storeId: "aldi-mechanicsville",
       memberRole: "canonical",
       linkStatus: "confirmed",
-      matchMethod: "proximity+name",
-      matchConfidence: 0.99,
+      matchMethod: "seeded",
+      matchConfidence: 0.985,
     },
     {
       identityId: identity.id,
@@ -199,8 +199,8 @@ export function createLinkedAldiOsmIdentityLookup(): StoreIdentityLookup {
       storeId: "osm-node-6531578976",
       memberRole: "alias",
       linkStatus: "confirmed",
-      matchMethod: "proximity+name",
-      matchConfidence: 0.99,
+      matchMethod: "seeded",
+      matchConfidence: 0.985,
     },
   ];
 

@@ -2,8 +2,10 @@
  * Option A Slice 3 — Settings-only narrow known-pair identity lookup.
  *
  * INTENTIONALLY NARROW: Mechanicsville Kroger slug↔API twin only.
- * Does not generalize to the next chain. Named debt in PROJECT_CONTINUITY.md —
- * revisit before/during Slice 4 (Aldi) or accept per-slice known pairs interim.
+ * Second seed (Aldi/OSM via migration 023) intentionally omitted — OSM is not
+ * Settings-selectable when catalog Aldi is present. Named debt in
+ * PROJECT_CONTINUITY.md: generalize when Map wiring or a Settings-selectable
+ * twin needs it — not before.
  *
  * Master expand flag gates all remapping; flag OFF → exact-id (today's behavior).
  */

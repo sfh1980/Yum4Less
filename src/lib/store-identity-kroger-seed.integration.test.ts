@@ -83,10 +83,5 @@ describe("store identity Kroger seed migration 022 (integration)", () => {
     expect(
       aliases.rows.find((row) => row.member_role === "alias")?.store_id,
     ).toBe("kroger-mechanicsville");
-
-    const aldi = await pool.query(
-      `select 1 from store_identities where id = 'aldi-mechanicsville'`,
-    );
-    expect(aldi.rows).toHaveLength(0);
   });
 });
