@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-11):** Option A Slice **5c CLOSED** (ingest upsert-alias) — Slice 5 fully complete across 5a/5b/5c. Local `npm test` **978/978**, `npm run test:integration` **46/46**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 0 flaky / 1 skipped (H12). Master expand + `AUTO_CONFIRM` **OFF**. First live alias writes outside a reviewed migration (self-alias + allowlisted Aldi→OSM pointer only). Postgres MCP on `yum4less_dev`: Aldi identity has catalog `self` + OSM `pointer` @ 1.0; Kroger slug/API remain separate self-aliases (no ingest cross-link). Remote CI link filled after push.
+**Verified (2026-07-11):** Option A Slice **5c CLOSED** (ingest upsert-alias) — Slice 5 fully complete across 5a/5b/5c. Local `npm test` **978/978**, `npm run test:integration` **46/46**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 0 flaky / 1 skipped (H12). Master expand + `AUTO_CONFIRM` **OFF**. First live alias writes outside a reviewed migration (self-alias + allowlisted Aldi→OSM pointer only). Postgres MCP on `yum4less_dev`: Aldi identity has catalog `self` + OSM `pointer` @ 1.0; Kroger slug/API remain separate self-aliases (no ingest cross-link). Remote CI [**29171092681**](https://github.com/sfh1980/Yum4Less/actions/runs/29171092681) **green** on **`dd4131d`**.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -251,7 +251,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Policy:** `match_method=self` @ 1.0; pointer @ 1.0 (exact id; notes reference seed 023’s fixture 0.985); no proximity matcher; Kroger slug↔API not auto-linked; `AUTO_CONFIRM` + master expand **OFF**.
 - **Tests:** 8 named cases (idempotency, self-alias, explicit-pointer, negative-no-proximity, negative-bad-pointer, collision, Kroger-non-link, rollback) — integration for DB/collision/rollback; unit for allowlist policy.
 - **Out of scope:** Slice D batch matcher; provisional attach; default flag flip.
-- **Evidence:** `npm test` 978/978; integration 46/46; build + typecheck clean; e2e 25 passed / 0 flaky / 1 skipped H12; Postgres MCP confirmed Aldi `self`+`pointer` and separate Kroger self-aliases on `yum4less_dev`.
+- **Evidence:** `npm test` 978/978; integration 46/46; build + typecheck clean; e2e 25 passed / 0 flaky / 1 skipped H12; Postgres MCP confirmed Aldi `self`+`pointer` and separate Kroger self-aliases on `yum4less_dev`; remote CI [29171092681](https://github.com/sfh1980/Yum4Less/actions/runs/29171092681) green on `dd4131d`.
 
 ### 2026-07-11 — Option A Slice 5b: Map pin contract (expand-aware scope) — CLOSED
 
@@ -2103,6 +2103,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| **Remote CI** (Option A Slice 5c `dd4131d`) | 2026-07-11 | **Green** — [29171092681](https://github.com/sfh1980/Yum4Less/actions/runs/29171092681) |
 | `npm test` (local) | 2026-07-11 | **978/978** pass (Slice 5c ingest upsert-alias; +4 unit policy cases) |
 | `npm run test:integration` (local) | 2026-07-11 | **46/46** pass (+9 Slice 5c alias write cases on real Postgres) |
 | `npm run build` (local) | 2026-07-11 | **Pass** (5c) |
