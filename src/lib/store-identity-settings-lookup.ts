@@ -2,10 +2,9 @@
  * Option A Slice 3 — Settings-only narrow known-pair identity lookup.
  *
  * INTENTIONALLY NARROW: Mechanicsville Kroger slug↔API twin only.
- * Second seed (Aldi/OSM via migration 023) intentionally omitted — OSM is not
- * Settings-selectable when catalog Aldi is present. Named debt in
- * PROJECT_CONTINUITY.md: generalize when Map wiring or a Settings-selectable
- * twin needs it — not before.
+ * Aldi/OSM is not Settings-selectable when catalog Aldi is present — Map
+ * expand-aware scope uses createMapPinIdentityLookup (022+023) instead.
+ * Do not broaden this Settings lookup without a Settings-selectable twin.
  *
  * Master expand flag gates all remapping; flag OFF → exact-id (today's behavior).
  */

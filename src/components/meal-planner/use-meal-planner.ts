@@ -27,7 +27,7 @@ import {
   canonicalizeStoreIdsForSettings,
   filterSelectedStoreIdsAgainstSelectable,
 } from "@/lib/store-identity-settings-lookup";
-import { scopeMarketSummaryToSelectedStores } from "@/lib/store-scope";
+import { scopeMarketSummaryToSelectedStoresForMap } from "@/lib/store-identity-map-pin-resolve";
 import { defaultSelectedStoreIdsForSettings, filterSettingsSelectableStores } from "@/lib/settings-store-selection";
 import type { AppTab } from "@/components/meal-planner/app-tab";
 import {
@@ -226,7 +226,12 @@ export function useMealPlanner() {
       return market;
     }
 
-    return scopeMarketSummaryToSelectedStores(market, form.selectedStoreIds);
+    // Expand-aware Map scope (Slice 5b): alias selection still finds canonical
+    // pins when server expand collapsed nearbyStores. Flag OFF → exact-id.
+    return scopeMarketSummaryToSelectedStoresForMap(
+      market,
+      form.selectedStoreIds,
+    );
   }, [market, form.selectedStoreIds]);
   const recommendations = recommendationState.recommendations ?? [];
   const shopperNotice = recommendationState.shopperNotice;

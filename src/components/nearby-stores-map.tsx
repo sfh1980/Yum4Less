@@ -16,6 +16,7 @@ import { buildStoreMapPricingLabel } from "@/lib/store-pricing-status-copy";
 import { MAP_CATALOG_LOCATION_FOOTNOTE } from "@/lib/store-map-location-copy";
 import { formatStraightLineDistanceMiles } from "@/lib/store-display-labels";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
+import { resolveSelectedMapMarkerId } from "@/lib/store-identity-map-pin-resolve";
 
 type NearbyStoresMapProps = {
   model: StoresMapModel;
@@ -192,8 +193,16 @@ export function NearbyStoresMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    const marker = selectedStoreId ? markersRef.current.get(selectedStoreId) : undefined;
-    if (!map || !marker || !selectedStoreId) {
+    // Expand-aware highlight (Slice 5b): stale alias selectedStoreId still
+    // flyTo/openTooltip on the canonical marker when expand is ON.
+    const resolvedMarkerId = resolveSelectedMapMarkerId(
+      selectedStoreId,
+      markersRef.current.keys(),
+    );
+    const marker = resolvedMarkerId
+      ? markersRef.current.get(resolvedMarkerId)
+      : undefined;
+    if (!map || !marker || !resolvedMarkerId) {
       return;
     }
 
