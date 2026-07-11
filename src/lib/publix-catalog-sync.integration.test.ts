@@ -17,6 +17,15 @@ describe("publix-catalog-sync (integration)", () => {
       [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
     );
     await pool.query(
+      `delete from store_identity_aliases
+       where store_id in ($1, $2) or identity_id in ($1, $2)`,
+      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+    );
+    await pool.query(
+      `delete from store_identities where id in ($1, $2) or canonical_store_id in ($1, $2)`,
+      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+    );
+    await pool.query(
       `delete from stores where id in ($1, $2)`,
       [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
     );
@@ -84,6 +93,15 @@ describe("publix-catalog-sync (integration)", () => {
 
     await pool.query(
       `delete from price_observations where store_id in ($1, $2)`,
+      [TEST_OSM_PUBLIX_DUPLICATE_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+    );
+    await pool.query(
+      `delete from store_identity_aliases
+       where store_id in ($1, $2) or identity_id in ($1, $2)`,
+      [TEST_OSM_PUBLIX_DUPLICATE_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+    );
+    await pool.query(
+      `delete from store_identities where id in ($1, $2) or canonical_store_id in ($1, $2)`,
       [TEST_OSM_PUBLIX_DUPLICATE_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
     );
     await pool.query(

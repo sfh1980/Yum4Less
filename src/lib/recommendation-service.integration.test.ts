@@ -104,9 +104,12 @@ describe("recommendation path through Postgres (CI-06)", () => {
 
     const pool = getDbPool();
     await pool.query(
-      `delete from store_identity_aliases where identity_id = 'kroger-02900529'`,
+      `delete from store_identity_aliases where identity_id = 'kroger-02900529'
+          or store_id like 'kroger-%'`,
     );
-    await pool.query(`delete from store_identities where id = 'kroger-02900529'`);
+    await pool.query(
+      `delete from store_identities where id = 'kroger-02900529' or id like 'kroger-%'`,
+    );
     await pool.query(
       `delete from stores where source_name = 'kroger-official-api' and id <> 'kroger-mechanicsville'`,
     );

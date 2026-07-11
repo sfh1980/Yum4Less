@@ -10,6 +10,7 @@ import {
 import type { PublixStoreRecord } from "@/lib/providers/publix/publix-services-api-types";
 import type { CatalogStoreRecord } from "@/lib/store-catalog-sync";
 import { upsertCatalogStores } from "@/lib/store-catalog-sync";
+import { deleteStoreIdentityAttachmentsForStore } from "@/lib/store-identity-ingest-aliases";
 
 export const PUBLIX_STORE_LOCATOR_SOURCE = "publix-store-locator";
 
@@ -106,6 +107,7 @@ async function migratePriceObservationsAndRetireStore(
     [fromStoreId, toStoreId],
   );
 
+  await deleteStoreIdentityAttachmentsForStore(fromStoreId, pool);
   const deleted = await pool.query(`delete from stores where id = $1`, [fromStoreId]);
 
   return {

@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5a CLOSED** (2026-07-11) — Postgres lookup + market-search coverage/merge. **Option A Slice 5b CLOSED** (2026-07-11) — Map pin contract (expand-aware scope/highlight; no Leaflet rewrite); master + `NEXT_PUBLIC_` expand flags still **OFF** by default. **Still open:** Slice **5c** (ingest upsert-alias); Settings gate bypass (P1-1); **backlog #18**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11) — market-search/map/ingest upsert-alias full loop; master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Still open:** Settings gate bypass (P1-1); **backlog #18**; Slice D batch matcher. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
 
 **Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
 
@@ -22,7 +22,9 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-11):** Option A Slice **5b CLOSED** (payload-fed fix) — local `npm test` **974/974**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 0 flaky / 1 skipped (H12). Master + `NEXT_PUBLIC_` expand flags **OFF**. Map consumes server `equivalentStoreIds` — no client known-pair table. Remote CI [**29156347884**](https://github.com/sfh1980/Yum4Less/actions/runs/29156347884) **green** on **`69a4be0`**.> **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
+**Verified (2026-07-11):** Option A Slice **5c CLOSED** (ingest upsert-alias) — Slice 5 fully complete across 5a/5b/5c. Local `npm test` **978/978**, `npm run test:integration` **46/46**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 0 flaky / 1 skipped (H12). Master expand + `AUTO_CONFIRM` **OFF**. First live alias writes outside a reviewed migration (self-alias + allowlisted Aldi→OSM pointer only). Postgres MCP on `yum4less_dev`: Aldi identity has catalog `self` + OSM `pointer` @ 1.0; Kroger slug/API remain separate self-aliases (no ingest cross-link). Remote CI link filled after push.
+
+> **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
 
@@ -241,6 +243,15 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-11 — Option A Slice 5c: ingest upsert-alias — CLOSED
+
+- **Theme:** First live alias writes outside a reviewed migration — self-alias on catalog upsert/refresh + allowlisted Aldi→OSM explicit-pointer only.
+- **Shipped:** `ensureStoreSelfAlias` / `ensureAllowlistedPointerCrossLink` in `store-identity-ingest-aliases.ts`; hooked from **both** `upsertCatalogStores` and Aldi refresh (`updateIngestedRankedStoreCoordinates`); conflict log `store-identity.ingest-alias-conflict`; counters `aliasesEnsured` / `aliasesSkipped` / `aliasConflicts` in sync job output.
+- **Policy:** `match_method=self` @ 1.0; pointer @ 1.0 (exact id; notes reference seed 023’s fixture 0.985); no proximity matcher; Kroger slug↔API not auto-linked; `AUTO_CONFIRM` + master expand **OFF**.
+- **Tests:** 8 named cases (idempotency, self-alias, explicit-pointer, negative-no-proximity, negative-bad-pointer, collision, Kroger-non-link, rollback) — integration for DB/collision/rollback; unit for allowlist policy.
+- **Out of scope:** Slice D batch matcher; provisional attach; default flag flip.
+- **Evidence:** `npm test` 978/978; integration 46/46; build + typecheck clean; e2e 25 passed / 0 flaky / 1 skipped H12; Postgres MCP confirmed Aldi `self`+`pointer` and separate Kroger self-aliases on `yum4less_dev`.
 
 ### 2026-07-11 — Option A Slice 5b: Map pin contract (expand-aware scope) — CLOSED
 
@@ -2092,10 +2103,16 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (local) | 2026-07-11 | **978/978** pass (Slice 5c ingest upsert-alias; +4 unit policy cases) |
+| `npm run test:integration` (local) | 2026-07-11 | **46/46** pass (+9 Slice 5c alias write cases on real Postgres) |
+| `npm run build` (local) | 2026-07-11 | **Pass** (5c) |
+| `npm run typecheck` (local) | 2026-07-11 | **0 errors** (5c) |
+| `npm run test:e2e:ci` (local) | 2026-07-11 | **25 passed** / 0 flaky / 1 skipped (H12) — baseline; no UI wiring in 5c |
 | `npm test` (local) | 2026-07-11 | **974/974** pass (Slice 5b payload-fed Map scope; no client known-pair) |
 | `npm run build` (local) | 2026-07-11 | **Pass** (5b payload-fed fix) |
 | `npm run typecheck` (local) | 2026-07-11 | **0 errors** |
 | `npm run test:e2e:ci` (local) | 2026-07-11 | **25 passed**, 0 flaky, 1 skipped (H12); no new skips |
+| **Remote CI** (Option A Slice 5b payload-fed `69a4be0`) | 2026-07-11 | **Green** — [29156347884](https://github.com/sfh1980/Yum4Less/actions/runs/29156347884) |
 | `npm test` (local) | 2026-07-11 | **973/973** pass (Option A Slice 5b Map pin contract + stale-alias gap) |
 | `npm run test:integration` (local) | 2026-07-11 | **37/37** pass (no new DB surface in 5b) |
 | `npm run build` (local) | 2026-07-11 | **Pass** |
@@ -2230,7 +2247,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Bootstrap seed data provenance audit** | Confirm whether bootstrap rows in `yum4less_dev` carry a distinct `source_name` that separates hand-planted/CI bootstrap stores from real discovered stores. If not, add one in the bootstrap SQL so the app and future audits can distinguish seed rows from real discovery coverage. |
 | **Scale risk A — Client-trust audit across all public API routes** | From trust pass-through hardening (2026-07-01): only the rank pass-through path was hardened; other routes or client-supplied fields may still influence trust display without server-side recomputation. Systematic audit of all public API responses for client-controllable trust-sensitive fields deferred — should precede any significant traffic increase or public launch. Suggested owner: `@verifier` + `@web-backend-standards` |
 | **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
-| **General locator-vs-OSM dedupe across all v1 chains (Option A)** | **IN PROGRESS** — Slice 1–4 + **5a/5b CLOSED** (2026-07-11); **5c open** | Alias-graph. **5b:** Map expand-aware scope/highlight; flags **OFF**. **Named finding:** client/server expand flag mismatch can silent-empty exact-id Map scope — closed for Map. **Not yet:** 5c ingest upsert-alias; Slice D batch matcher; onboarding (Slice 6). |
+| **General locator-vs-OSM dedupe across all v1 chains (Option A)** | **IN PROGRESS** — Slice 1–5 **CLOSED** (2026-07-11; 5a/5b/5c); Slice D + Slice 6 open | Alias-graph. **5c:** ingest self-alias + allowlisted Aldi→OSM pointer; flags + `AUTO_CONFIRM` **OFF**. **Safety boundary until Slice D:** no proximity/name matcher at ingest. **Not yet:** Slice D batch matcher; onboarding (Slice 6). |
 | **e2e `single-store-map-overlay` mobile viewport flake** | **OPEN (pre-existing)** | Recurs on remote CI across Option A Slices 1–4 (`:65` meal accordion not visible in 30s; passes retry). Confirmed unrelated to identity seeds. Dedicated fix still owed. |
 | **e2e Cook tab / `navigation-theme` local flake** | **OPEN (new, local-only)** | First seen during Slice 4 local full-suite gate: `enables Cook tab…` → `completePantryAndSuggestRecipes` → `waitForResponse(/api/recommendations)` timeout (90s), passed on retry. **Not** in remote CI Cook-tab logs (Slices 1–4). Unrelated to Slice 4 by diff-scope (`bfe5f3a` has no e2e/meal-planner/recommendations/nav changes). Isolated `npx playwright test e2e/navigation-theme.spec.ts -g "enables Cook tab" --repeat-each=5 --retries=0` → **5/5 clean** (suggests full-suite load/timing, not hard break). Root cause not yet triaged. |
 | **Shopping-plan `storeId` (name-join fragility)** | **DEFERRED follow-up** (explicitly out of Option A Slices 2–3) | Plans still emit `storeName` only; map/route join by name. Track separately from identity expand wiring. |
@@ -2259,7 +2276,7 @@ Read-only re-verification of 17 items from `docs/audits/full-system-run-report.m
 | 1 | Mobile GPS/HTTPS | **Denial asymmetry CLOSED** (`295daee` / [29108969234](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234)); still no `enableHighAccuracy`; no app HTTPS redirect | Med | Med mobile without TLS | Homelab + UX (`enableHighAccuracy` / HTTPS remain) |
 | 2 | Settings gate bypass | Home/Deals/Saved reachable before `setupComplete`; only Cook disabled (recipes) | Small | Low–Med UX | Bundle with #1 |
 | 3 | No migration ledger | **CLOSED** (2026-07-09) — `schema_migrations` + `applyPendingMigrations()` | Med | — | Was prerequisite for tombstones / #4 |
-| 4 | Universal store reconciliation | **Slice 1–4 + 5a/5b CLOSED** — Map pin contract done; **5c open** | Med | Low–Med | Option A slices |
+| 4 | Universal store reconciliation | **Slice 1–5 CLOSED** (5a/5b/5c) — ingest upsert-alias done; Slice D open | Med | Low–Med | Option A slices |
 | 5 | `tsc` bucket | **CLOSED** (2026-07-09) — **0 errors** + `npm run typecheck` in CI; B1 pantry-add test fix found via cleanup | — | — | Hygiene |
 | 6 | Ingest auto-pause doc drift | `ingest-standards.md` still claims robots.txt/auto-pause/kill switches | Small | Low ops / Med agent trust | Quick win |
 | 7 | OSRM in discovery | OSRM shopping-route only; discovery haversine + "straight-line" labels | Large if pursued | **Low** | **Accept** |

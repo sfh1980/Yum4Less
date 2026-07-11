@@ -11,12 +11,32 @@ import {
 import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.fixtures";
 
 describe("store catalog sync (integration)", () => {
+  async function clearIngestIdentityAttachments() {
+    const pool = getDbPool();
+    // Slice 5c self-alias / pointer rows RESTRICT store deletes — clear first.
+    await pool.query(`
+      delete from store_identity_aliases
+      where store_id like 'osm-%'
+         or store_id like 'fixture-osm-%'
+         or store_id like 'kroger-%'
+         or store_id like 'aldi-%'
+         or identity_id like 'osm-%'
+         or identity_id like 'fixture-osm-%'
+         or identity_id like 'kroger-%'
+         or identity_id like 'aldi-%'
+    `);
+    await pool.query(`
+      delete from store_identities
+      where id like 'osm-%'
+         or id like 'fixture-osm-%'
+         or id like 'kroger-%'
+         or id like 'aldi-%'
+    `);
+  }
+
   beforeEach(async () => {
     const pool = getDbPool();
-    await pool.query(
-      `delete from store_identity_aliases where identity_id = 'kroger-02900529'`,
-    );
-    await pool.query(`delete from store_identities where id = 'kroger-02900529'`);
+    await clearIngestIdentityAttachments();
     await pool.query(`delete from stores where id like 'osm-%' or id like 'fixture-osm-%'`);
     await pool.query(`delete from stores where source_name = 'yum4less-map-fixture'`);
     await pool.query(
@@ -74,12 +94,9 @@ describe("store catalog sync (integration)", () => {
         name = excluded.name,
         last_verified_at = excluded.last_verified_at
     `);
+    await clearIngestIdentityAttachments();
     await pool.query(`delete from stores where id like 'osm-%' or id like 'fixture-osm-%'`);
     await pool.query(`delete from stores where source_name = 'yum4less-map-fixture'`);
-    await pool.query(
-      `delete from store_identity_aliases where identity_id = 'kroger-02900529'`,
-    );
-    await pool.query(`delete from store_identities where id = 'kroger-02900529'`);
     await pool.query(
       `delete from stores where source_name = 'kroger-official-api' and id <> 'kroger-mechanicsville'`,
     );
@@ -414,6 +431,7 @@ describe("store catalog sync (integration)", () => {
   it("creates aldi-{zip} only when no collocated slug exists", async () => {
     const pool = getDbPool();
     await pool.query(`delete from price_observations where store_id like 'aldi-%'`);
+    await clearIngestIdentityAttachments();
     await pool.query(`delete from stores where id like 'aldi-%'`);
 
     const liveOsmAldi = {
@@ -608,7 +626,9 @@ describe("store catalog sync (integration)", () => {
       shopTag: "supermarket",
     };
     await pool.query(`delete from price_observations where store_id = 'aldi-23111'`);
+    await clearIngestIdentityAttachments();
     await pool.query(`delete from stores where id = 'aldi-23111'`);
+    // Ensure aldi-mechanicsville exists without a ZIP twin for this case.
     // Start within collocated radius but with stale/missing OSM link so refresh
     // can prove prefer-colocate updates the slug instead of inventing aldi-23111.
     await pool.query(`

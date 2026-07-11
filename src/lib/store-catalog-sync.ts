@@ -4,6 +4,13 @@ import { findNearestOsmAldiStore } from "@/lib/aldi-location-discovery";
 import { USDA_SNAP_CONTEXT_SOURCE } from "@/lib/map-context-types";
 import { PUBLIX_STORE_LOCATOR_SOURCE } from "@/lib/publix-catalog-sync";
 import { logServerError } from "@/lib/server-log";
+import {
+  accumulateAliasWriteStats,
+  deleteStoreIdentityAttachmentsForStore,
+  emptyAliasWriteStats,
+  ensureCatalogStoreIdentityAliases,
+  type StoreIdentityAliasWriteStats,
+} from "@/lib/store-identity-ingest-aliases";
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 import type { ProviderDiscoveredStore } from "@/lib/providers/provider-types";
 import { findSnapLocationWitnessForStore } from "@/lib/snap-retailer-locations";
@@ -146,6 +153,7 @@ async function mergeApiDiscoveredStoreIntoCanonical(input: {
   duplicateStoreId: string;
   catalog: CatalogStoreRecord;
   providerStore?: ProviderDiscoveredStore;
+  aliasStats?: StoreIdentityAliasWriteStats;
 }): Promise<number> {
   const pool = getDbPool();
 
@@ -163,6 +171,8 @@ async function mergeApiDiscoveredStoreIntoCanonical(input: {
       `,
       [input.canonicalStoreId, input.duplicateStoreId],
     );
+    // Self-alias identities RESTRICT store deletes — drop singleton attachments first.
+    await deleteStoreIdentityAttachmentsForStore(input.duplicateStoreId, pool);
     await pool.query(`delete from stores where id = $1`, [input.duplicateStoreId]);
   }
 
@@ -170,6 +180,7 @@ async function mergeApiDiscoveredStoreIntoCanonical(input: {
     input.canonicalStoreId,
     input.catalog,
     input.providerStore,
+    input.aliasStats,
   );
 }
 
@@ -297,7 +308,10 @@ export function buildOsmCatalogStore(
 
 export async function upsertCatalogStores(
   stores: CatalogStoreRecord[],
-  options?: { preserveRankedSources?: boolean },
+  options?: {
+    preserveRankedSources?: boolean;
+    aliasStats?: StoreIdentityAliasWriteStats;
+  },
 ): Promise<number> {
   if (stores.length === 0) {
     return 0;
@@ -308,6 +322,7 @@ export async function upsertCatalogStores(
     let upserted = 0;
     const preserveRankedSources = options?.preserveRankedSources ?? false;
     const rankedSources = [...RANKED_CATALOG_SOURCES];
+    const aliasStats = options?.aliasStats ?? emptyAliasWriteStats();
 
     const existingResult = await pool.query<{
       id: string;
@@ -465,6 +480,44 @@ export async function upsertCatalogStores(
       } else {
         existingCollocated.push(snapshotRow);
       }
+
+      // Slice 5c: self-alias (+ allowlisted Aldi→OSM pointer). Uses writeId after
+      // collocated redirect so Mechanicsville slug gets the alias, not aldi-{zip}.
+      accumulateAliasWriteStats(
+        aliasStats,
+        await ensureCatalogStoreIdentityAliases(
+          {
+            storeId: writeId,
+            sourceName: writeSourceName,
+            sourceStoreId: store.sourceStoreId,
+            name: store.name,
+            kind: store.kind,
+            city: store.city,
+            state: store.state,
+            latitude: store.latitude,
+            longitude: store.longitude,
+          },
+          pool,
+          { logSummary: false },
+        ),
+      );
+    }
+
+    if (
+      !options?.aliasStats &&
+      (aliasStats.aliasesEnsured > 0 ||
+        aliasStats.aliasesSkipped > 0 ||
+        aliasStats.aliasConflicts > 0)
+    ) {
+      console.log(
+        JSON.stringify({
+          level: "info",
+          scope: "store-identity.ingest-alias-summary",
+          ...aliasStats,
+          path: "upsertCatalogStores",
+          at: new Date().toISOString(),
+        }),
+      );
     }
 
     return upserted;
@@ -482,6 +535,7 @@ export async function syncV1ChainStoresToCatalog(input: {
 }): Promise<number> {
   const { getProviderRolloutForCatalogStore } = await import("@/lib/provider-rollout");
   const pool = getDbPool();
+  const aliasStats = emptyAliasWriteStats();
   const existingResult = await pool.query<{
     id: string;
     name: string;
@@ -521,6 +575,7 @@ export async function syncV1ChainStoresToCatalog(input: {
           duplicateStoreId: catalogStore.id,
           catalog: catalogStore,
           providerStore: discovered,
+          aliasStats,
         });
         applyCanonicalStoreMergeToSnapshot(existingStores, {
           canonicalStoreId,
@@ -564,25 +619,47 @@ export async function syncV1ChainStoresToCatalog(input: {
       catalogStores.push(aldiCatalog);
     } else {
       // Prefer existing slug/API twin: refresh its coordinates, do not upsert aldi-{zip}.
+      // Slice 5c: alias ensure runs inside updateIngestedRankedStoreCoordinates.
       mergedCount += await updateIngestedRankedStoreCoordinates(
         target.storeId,
         {
           ...aldiCatalog,
           id: target.storeId,
         },
+        undefined,
+        aliasStats,
       );
     }
   }
 
   const uniqueById = new Map(catalogStores.map((store) => [store.id, store]));
-  const providerUpserted = await upsertCatalogStores([...uniqueById.values()]);
+  const providerUpserted = await upsertCatalogStores([...uniqueById.values()], {
+    aliasStats,
+  });
   const refreshed = await refreshIngestedRankedStoreCoordinates({
     ...input,
     osmFoodRetailStores: input.osmFoodRetailStores,
     existingStores: existingResult.rows,
+    aliasStats,
   });
   const reconciledCount = await reconcileDuplicateApiDerivedKrogerStores();
   const proximityReconciledCount = await reconcileProximityDuplicateKrogerSlugStores();
+
+  if (
+    aliasStats.aliasesEnsured > 0 ||
+    aliasStats.aliasesSkipped > 0 ||
+    aliasStats.aliasConflicts > 0
+  ) {
+    console.log(
+      JSON.stringify({
+        level: "info",
+        scope: "store-identity.ingest-alias-summary",
+        ...aliasStats,
+        path: "syncV1ChainStoresToCatalog",
+        at: new Date().toISOString(),
+      }),
+    );
+  }
 
   return providerUpserted + mergedCount + refreshed + reconciledCount + proximityReconciledCount;
 }
@@ -843,6 +920,7 @@ export async function refreshIngestedRankedStoreCoordinates(input: {
   providerStoreSearches: ProviderStoreSearchResult[];
   osmFoodRetailStores?: OsmDiscoveredFoodRetailStore[];
   existingStores?: { id: string; name: string; source_name?: string | null; source_store_id?: string | null }[];
+  aliasStats?: StoreIdentityAliasWriteStats;
 }): Promise<number> {
   const { getProviderRolloutForCatalogStore } = await import("@/lib/provider-rollout");
   const existing =
@@ -874,6 +952,7 @@ export async function refreshIngestedRankedStoreCoordinates(input: {
         storeId,
         catalog,
         discovered,
+        input.aliasStats,
       );
     }
   }
@@ -933,10 +1012,15 @@ export async function refreshIngestedRankedStoreCoordinates(input: {
       existingAldi,
     );
 
-    updated += await updateIngestedRankedStoreCoordinates(target.storeId, {
-      ...aldiCatalog,
-      id: target.storeId,
-    });
+    updated += await updateIngestedRankedStoreCoordinates(
+      target.storeId,
+      {
+        ...aldiCatalog,
+        id: target.storeId,
+      },
+      undefined,
+      input.aliasStats,
+    );
   }
 
   return updated;
@@ -1018,6 +1102,7 @@ async function updateIngestedRankedStoreCoordinates(
   storeId: string,
   catalog: CatalogStoreRecord,
   providerStore?: ProviderDiscoveredStore,
+  aliasStats?: StoreIdentityAliasWriteStats,
 ): Promise<number> {
   try {
     const pool = getDbPool();
@@ -1104,6 +1189,43 @@ async function updateIngestedRankedStoreCoordinates(
         rankedSources,
       ],
     );
+
+    // Slice 5c: always ensure aliases after Aldi/Kroger refresh attempts so the
+    // Mechanicsville collocated path (no upsertCatalogStores) still writes
+    // self-alias + allowlisted OSM pointer when source_store_id is set.
+    const ensured = await ensureCatalogStoreIdentityAliases(
+      {
+        storeId,
+        sourceName: writeSourceName,
+        sourceStoreId: catalog.sourceStoreId,
+        name: catalog.name,
+        kind: catalog.kind,
+        city: catalog.city,
+        state: catalog.state,
+        latitude,
+        longitude,
+      },
+      pool,
+      { logSummary: false },
+    );
+    if (aliasStats) {
+      accumulateAliasWriteStats(aliasStats, ensured);
+    } else if (
+      ensured.aliasesEnsured > 0 ||
+      ensured.aliasesSkipped > 0 ||
+      ensured.aliasConflicts > 0
+    ) {
+      console.log(
+        JSON.stringify({
+          level: "info",
+          scope: "store-identity.ingest-alias-summary",
+          ...ensured,
+          path: "updateIngestedRankedStoreCoordinates",
+          storeId,
+          at: new Date().toISOString(),
+        }),
+      );
+    }
 
     return result.rowCount ?? 0;
   } catch (error) {
