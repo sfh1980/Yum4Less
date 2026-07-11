@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-11):** Option A Slice **5b CLOSED** — local `npm test` **973/973**, `npm run test:integration` **37/37** (unchanged DB surface), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **24 passed** / 1 flaky (Cook-tab — known) / 1 skipped (H12). Master + `NEXT_PUBLIC_` expand flags **OFF**. Remote CI link follows push.> **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
+**Verified (2026-07-11):** Option A Slice **5b CLOSED** — local `npm test` **973/973**, `npm run test:integration` **37/37** (unchanged DB surface), `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **24 passed** / 1 flaky (Cook-tab — known) / 1 skipped (H12). Master + `NEXT_PUBLIC_` expand flags **OFF**. Remote CI [**29155832474**](https://github.com/sfh1980/Yum4Less/actions/runs/29155832474) **green** on **`9a68cd7`**.> **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
 
@@ -249,7 +249,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Named finding:** Client/server expand flag mismatch (server `YUM4LESS_STORE_IDENTITY_EXPAND` vs client `NEXT_PUBLIC_…` / stale localStorage alias) can empty the discovery map under exact-id scope — same silent-failure class as Slice 2 ranking. Closed for Map; remember when adding other client surfaces that filter by `store.id` against server-collapsed lists.
 - **Tests:** linked Aldi/Kroger one-pin models; stale-alias → non-empty scope (gap path); highlight resolve; unlinked OSM 1.5 mi suppress regressions — `store-identity-map-pin-5b.test.ts`.
 - **Out of scope:** **5c** ingest upsert-alias; Leaflet pixel e2e; **no default flag flip** (master + `NEXT_PUBLIC_` OFF including dev).
-- **Evidence:** `npm test` 973/973; integration 37/37; build + typecheck clean; e2e 24 passed / 1 flaky Cook-tab (known) / 1 skipped H12.
+- **Evidence:** `npm test` 973/973; integration 37/37; build + typecheck clean; e2e 24 passed / 1 flaky Cook-tab (known) / 1 skipped H12; remote CI [29155832474](https://github.com/sfh1980/Yum4Less/actions/runs/29155832474) green on `9a68cd7`.
 
 ### 2026-07-11 — Option A Slice 5a: Postgres lookup + market-search coverage/merge — CLOSED
 
