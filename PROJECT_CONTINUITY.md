@@ -22,7 +22,7 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-11):** Option A Slice **5a CLOSED** — local `npm test` **966/966**, `npm run test:integration` **37/37**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **24 passed** / 1 flaky (Cook-tab `navigation-theme` — known backlog) / 1 skipped (H12). Master flag **OFF**. Remote CI link follows push.
+**Verified (2026-07-11):** Option A Slice **5a CLOSED** — local `npm test` **966/966**, `npm run test:integration` **37/37**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **24 passed** / 1 flaky (Cook-tab `navigation-theme` — known backlog) / 1 skipped (H12). Master flag **OFF**. Remote CI [**29155138961**](https://github.com/sfh1980/Yum4Less/actions/runs/29155138961) **green** on **`6d02a9a`**.
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
@@ -250,7 +250,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Tests:** coverage expand ON/OFF + fail-closed exact-id bypass; linked Aldi+OSM → one canonical; unlinked → two; 1.5 mi OSM suppress still fires for unlinked near/far; Food Lion ~0.2 mi negative; integration loads real 022/023 + ignores provisional — `store-identity-market-search-5a.test.ts` + `store-identity-postgres-lookup.integration.test.ts`.
 - **Out of scope:** **5b** Map pin contract; **5c** ingest upsert-alias; Slice D batch matcher; **no default flag flip** (master + sub-flags OFF including dev).
 - **E2e:** local full suite **24 passed** / **1 flaky** (Cook-tab `navigation-theme` — known backlog) / **1 skipped** (H12); no new skips.
-- **Evidence:** `npm test` 966/966; integration 37/37; build + typecheck clean.
+- **Evidence:** `npm test` 966/966; integration 37/37; build + typecheck clean; remote CI [29155138961](https://github.com/sfh1980/Yum4Less/actions/runs/29155138961) green on `6d02a9a`.
 
 ### 2026-07-10 — Option A Slice 4: Aldi↔OSM identity seed — CLOSED
 
