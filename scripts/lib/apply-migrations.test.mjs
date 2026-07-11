@@ -27,7 +27,8 @@ describe("listInitMigrationFiles", () => {
     const files = listInitMigrationFiles();
     expect(files[0]).toBe("000_schema_migrations.sql");
     expect(files).toContain("015_retire_publix_atlee_bootstrap.sql");
-    expect(files.length).toBeGreaterThanOrEqual(19);
+    expect(files).toContain("021_store_identities.sql");
+    expect(files.length).toBeGreaterThanOrEqual(20);
   });
 });
 
@@ -50,6 +51,11 @@ describe("migrationEffectPresent", () => {
     expect(migrationEffectPresent("001", db)).toBe(true);
     expect(migrationEffectPresent("015", db)).toBe(false);
     expect(migrationEffectPresent("013", db)).toBe(false);
+    expect(migrationEffectPresent("021", {
+      ...db,
+      tableExists: (name) =>
+        name === "store_identities" || name === "store_identity_aliases",
+    })).toBe(true);
   });
 });
 

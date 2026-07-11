@@ -150,6 +150,11 @@ export function migrationEffectPresent(version, db) {
         db.tableExists("provider_search_terms") &&
         Number(countKrogerP2GapTerms(db)) >= 6
       );
+    case "021":
+      return (
+        db.tableExists("store_identities") &&
+        db.tableExists("store_identity_aliases")
+      );
     default:
       return false;
   }
