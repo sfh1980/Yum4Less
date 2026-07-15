@@ -251,7 +251,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Theme:** Close S6 — debug dumps must not be open to anyone who can hit a non-prod LAN host with the flag on.
 - **Shipped:** `YUM4LESS_DEBUG_ADMIN_KEY` required after env gate; shared `isRequestAuthorizedWithAdminKey` (Bearer / `X-Yum4Less-Admin-Key`); feedback list now uses the same helper. Production still always 404 via `isDebugRoutesEnabled()`.
 - **Out of scope:** Pass 3+; `timingSafeEqual` (Tier 1 S7 P2); Next.js loopback bind enforcement (operator note in `.env.example` only).
-- **Evidence:** `npm test` **999/999**; `npm run typecheck` **0**; `npm run build` pass.
+- **Evidence:** `npm test` **999/999**; `npm run typecheck` **0**; `npm run build` pass; remote CI **green** on **`485be3c`** ([**29427921631**](https://github.com/sfh1980/Yum4Less/actions/runs/29427921631)).
 
 ### 2026-07-15 — Tier 1 Pass 1: ranked-price freshness heartbeat + exit-policy doc — CLOSED
 
@@ -2133,6 +2133,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| **Remote CI** (Pass 2 `485be3c`) | 2026-07-15 | **Green** — [29427921631](https://github.com/sfh1980/Yum4Less/actions/runs/29427921631) |
 | `npm test` (local) | 2026-07-15 | **999/999** pass (Pass 2 debug admin key + shared admin-key helper) |
 | `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 2) |
 | `npm run build` (local) | 2026-07-15 | **Pass** (Pass 2) |
