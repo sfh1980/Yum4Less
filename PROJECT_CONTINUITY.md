@@ -251,7 +251,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Theme:** Close audit finding #7 — expand-ON rank/pantry must not use empty virtual-singleton lookup while market-search uses Postgres.
 - **Shipped:** `resolveServerStoreIdentityLookup` in `store-identity-server-lookup.ts`; market-search, recommendations, and pantry-coverage all share it; rank/pantry pass the resolved lookup into internal `getMarketSearchExperience` calls.
 - **Out of scope:** Expand flag flip; Slice D; Settings known-pair changes.
-- **Evidence:** `npm test` **1003/1003**; typecheck **0**; build pass. (CI link after push.)
+- **Evidence:** `npm test` **1003/1003**; typecheck **0**; build pass; remote CI **green** on **`3f43d40`** ([**29445257153**](https://github.com/sfh1980/Yum4Less/actions/runs/29445257153)).
 
 ### 2026-07-15 — Tier 1 Pass 2: debug pipeline shared admin key — CLOSED
 
