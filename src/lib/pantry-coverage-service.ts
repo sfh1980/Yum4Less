@@ -29,10 +29,8 @@ import {
   filterValidPantryIngredientIds,
 } from "@/lib/recipe-plan-coverage";
 import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
-import {
-  createDefaultStoreIdentityLookup,
-  type StoreIdentityLookup,
-} from "@/lib/store-identity-resolvers";
+import type { StoreIdentityLookup } from "@/lib/store-identity-resolvers";
+import { resolveServerStoreIdentityLookup } from "@/lib/store-identity-server-lookup";
 
 export type PantryCoverageServiceInput = MealPreferenceForm & {
   pantryIngredientIds?: string[];
@@ -52,9 +50,11 @@ export async function getPantryCoverageExperience(
   const ingredientCatalog = await loadCatalogIngredients();
   const catalogById = buildCatalogById(ingredientCatalog);
   const validIngredientIds = buildCatalogIdSet(ingredientCatalog);
-  const identityLookup =
-    options?.identityLookup ?? createDefaultStoreIdentityLookup();
-  const storeIdentityEnv = options?.storeIdentityEnv;
+  const { identityLookup, env: storeIdentityEnv } =
+    await resolveServerStoreIdentityLookup({
+      identityLookup: options?.identityLookup,
+      env: options?.storeIdentityEnv,
+    });
   const identityOptions = {
     identityLookup,
     env: storeIdentityEnv,
@@ -88,6 +88,7 @@ export async function getPantryCoverageExperience(
       preferences.radiusMiles,
       location,
       providerConfigured,
+      identityOptions,
     );
     market = searchExperience.market;
     snapshot = searchExperience.snapshot;

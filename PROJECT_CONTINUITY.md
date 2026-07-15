@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1 CLOSED** (2026-07-15) — ranked-price freshness heartbeat + homelab exit-policy doc fix. **Tier 1 Pass 2 CLOSED** (2026-07-15) — debug pipeline shared admin key. **Still open (Pass 3+):** expand-ON rank/pantry Postgres lookup parity; e2e Publix Settings miss; migration-ledger timeout; Settings gate bypass; inert selector; 022 vacuous probe; backup/restore; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1 CLOSED** (2026-07-15) — ranked-price freshness heartbeat + homelab exit-policy doc fix. **Tier 1 Pass 2 CLOSED** (2026-07-15) — debug pipeline shared admin key. **Tier 1 Pass 3 CLOSED** (2026-07-15) — expand-ON rank/pantry Postgres identity lookup parity with market-search. **Still open (Pass 4+):** e2e Publix Settings miss; migration-ledger timeout; Settings gate bypass; inert selector; 022 vacuous probe; backup/restore; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
 
 **Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Scheduled pipeline now **fail-closes** on **0 ranked in-stock observations in 24h** (`npm run check:ranked-price-freshness`). Exit-policy doc matches any-chain fail-loud code. **Still not** owner-run on hardware; Pass 6 backup/restore still open before treating unattended cron as foundation-complete.
 
@@ -245,6 +245,13 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-15 — Tier 1 Pass 3: rank/pantry Postgres identity parity — CLOSED
+
+- **Theme:** Close audit finding #7 — expand-ON rank/pantry must not use empty virtual-singleton lookup while market-search uses Postgres.
+- **Shipped:** `resolveServerStoreIdentityLookup` in `store-identity-server-lookup.ts`; market-search, recommendations, and pantry-coverage all share it; rank/pantry pass the resolved lookup into internal `getMarketSearchExperience` calls.
+- **Out of scope:** Expand flag flip; Slice D; Settings known-pair changes.
+- **Evidence:** `npm test` **1003/1003**; typecheck **0**; build pass. (CI link after push.)
 
 ### 2026-07-15 — Tier 1 Pass 2: debug pipeline shared admin key — CLOSED
 
@@ -2133,10 +2140,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (local) | 2026-07-15 | **1003/1003** pass (Pass 3 rank/pantry identity parity) |
+| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 3) |
+| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 3) |
 | **Remote CI** (Pass 2 `485be3c`) | 2026-07-15 | **Green** — [29427921631](https://github.com/sfh1980/Yum4Less/actions/runs/29427921631) |
-| `npm test` (local) | 2026-07-15 | **999/999** pass (Pass 2 debug admin key + shared admin-key helper) |
-| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 2) |
-| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 2) |
 | **Remote CI** (Pass 1 `8f76e8b`) | 2026-07-15 | **Green** — [29426088895](https://github.com/sfh1980/Yum4Less/actions/runs/29426088895) |
 | **Remote CI** (Option A Slice 5c `dd4131d`) | 2026-07-11 | **Green** — [29171092681](https://github.com/sfh1980/Yum4Less/actions/runs/29171092681) |
 | `npm test` (local) | 2026-07-11 | **978/978** pass (Slice 5c ingest upsert-alias; +4 unit policy cases) |

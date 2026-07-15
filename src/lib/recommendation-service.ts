@@ -36,7 +36,7 @@ import {
 } from "@/lib/store-scope";
 import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
 import type { StoreIdentityLookup } from "@/lib/store-identity-resolvers";
-import { createDefaultStoreIdentityLookup } from "@/lib/store-identity-resolvers";
+import { resolveServerStoreIdentityLookup } from "@/lib/store-identity-server-lookup";
 import { buildEligibleRecipePool } from "@/lib/ranking-recipe-pool";
 import {
   getConfidenceLabel,
@@ -122,9 +122,11 @@ export async function getRecommendationExperience(
   let market: MarketSummary;
   let snapshot: MarketDataSnapshot;
   let snapshotSource: MarketDataSource;
-  const identityLookup =
-    options?.identityLookup ?? createDefaultStoreIdentityLookup();
-  const storeIdentityEnv = options?.storeIdentityEnv;
+  const { identityLookup, env: storeIdentityEnv } =
+    await resolveServerStoreIdentityLookup({
+      identityLookup: options?.identityLookup,
+      env: options?.storeIdentityEnv,
+    });
   const identityOptions = {
     identityLookup,
     env: storeIdentityEnv,
@@ -154,6 +156,7 @@ export async function getRecommendationExperience(
       preferences.radiusMiles,
       location,
       providerConfigured,
+      identityOptions,
     );
     market = searchExperience.market;
     snapshot = searchExperience.snapshot;

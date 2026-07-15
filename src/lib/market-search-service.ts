@@ -80,11 +80,8 @@ import {
 } from "@/lib/store-display-labels";
 import type { MarketSummary, NearbyStoreSummary } from "@/lib/recommendation-types";
 import { collapseConfirmedIdentityLinkedCatalogStores } from "@/lib/store-identity-catalog-collapse";
-import {
-  isStoreIdentityExpandEnabled,
-  type StoreIdentityEnv,
-} from "@/lib/store-identity-flags";
-import { createPostgresStoreIdentityLookupSafe } from "@/lib/store-identity-postgres-lookup";
+import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
+import { resolveServerStoreIdentityLookup } from "@/lib/store-identity-server-lookup";
 import {
   createDefaultStoreIdentityLookup,
   expandStoreIdsForRead,
@@ -105,12 +102,11 @@ export async function getMarketSearchExperience(
   market: MarketSummary;
   snapshot: Awaited<ReturnType<typeof getMarketDataSnapshot>>["snapshot"];
 }> {
-  const storeIdentityEnv = identityOptions?.env ?? process.env;
-  const identityLookup =
-    identityOptions?.identityLookup ??
-    (isStoreIdentityExpandEnabled(storeIdentityEnv)
-      ? await createPostgresStoreIdentityLookupSafe()
-      : createDefaultStoreIdentityLookup());
+  const { identityLookup, env: storeIdentityEnv } =
+    await resolveServerStoreIdentityLookup({
+      identityLookup: identityOptions?.identityLookup,
+      env: identityOptions?.env,
+    });
 
   const providerStoreSearches = await searchOfficialProviderStores({
     location,

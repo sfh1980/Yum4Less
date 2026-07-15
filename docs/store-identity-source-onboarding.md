@@ -30,11 +30,11 @@ This doc is **identity resolution only**.
 | Schema `store_identities` / `store_identity_aliases` | Shipped (`021`) |
 | Resolvers (expand / canonicalize / virtual singleton) | Shipped |
 | Match policy scorer + pair override hooks | Shipped; **not** run as ingest matcher yet |
-| Rank/pantry expand | Behind master flag (Slice 2) |
+| Rank/pantry expand | Behind master flag (Slice 2); **Postgres lookup when expand ON** (Pass 3 — shared with market-search) |
 | Settings canonicalize | Behind flag; **client known-pair = Kroger Mechanicsville only** (Slice 3) |
 | Kroger slug↔API seed | `022` (`match_method=seeded`) |
 | Aldi catalog↔OSM seed | `023` (`match_method=seeded`) |
-| Postgres lookup + market-search coverage/collapse | Behind flag (Slice 5a) |
+| Postgres lookup + market-search coverage/collapse | Behind flag (Slice 5a); **rank/pantry use same resolver** (Pass 3) |
 | Map pin scope / highlight | Server `equivalentStoreIds` only (Slice 5b) |
 | Ingest alias writes | Self-alias + **allowlisted Aldi→OSM pointer** only (Slice 5c) |
 | Slice D batch proximity/name matcher | **Not shipped** |
@@ -62,6 +62,7 @@ Documented in `.env.example`. Do not flip defaults in an onboarding slice.
 | Resolvers | `src/lib/store-identity-resolvers.ts` |
 | Flags | `src/lib/store-identity-flags.ts` |
 | Postgres lookup | `src/lib/store-identity-postgres-lookup.ts` |
+| Server lookup resolve (market/rank/pantry) | `src/lib/store-identity-server-lookup.ts` |
 | Catalog collapse | `src/lib/store-identity-catalog-collapse.ts` |
 | Map pin resolve (payload-fed) | `src/lib/store-identity-map-pin-resolve.ts` |
 | Ingest aliases (self + allowlisted pointer) | `src/lib/store-identity-ingest-aliases.ts` |
