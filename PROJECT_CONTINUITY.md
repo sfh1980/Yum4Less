@@ -250,7 +250,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 - **4a:** `publix-catalog-sync` integration cleanup no longer deletes shared `publix-1626`; restores CI Publix pin afterEach; e2e prep re-applies `014` bootstrap + asserts four Settings pins (`9df88fe`).
 - **4b:** `applyPendingMigrations` honors `stopAfterVersion`; partial-migrate itest batches 001–013 + stops at 016 (`978ad20`).
-- **Evidence:** integration **46/46**; `npm test` **1003/1003**; typecheck **0**; build pass; `test:e2e:ci` **25 passed / 1 skipped** (Publix Settings restored). (CI after push.)
+- **Evidence:** integration **46/46**; `npm test` **1003/1003**; typecheck **0**; build pass; `test:e2e:ci` **25 passed / 1 skipped** (Publix Settings restored); remote CI **green** on **`beb56d5`** ([**29447016878**](https://github.com/sfh1980/Yum4Less/actions/runs/29447016878)).
 
 ### 2026-07-15 — Tier 1 Pass 3: rank/pantry Postgres identity parity — CLOSED
 
@@ -2146,6 +2146,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| **Remote CI** (Pass 4 `beb56d5`) | 2026-07-15 | **Green** — [29447016878](https://github.com/sfh1980/Yum4Less/actions/runs/29447016878) |
 | `npm test` (local) | 2026-07-15 | **1003/1003** pass (Pass 4) |
 | `npm run test:integration` (local) | 2026-07-15 | **46/46** pass (Pass 4b ledger + 4a Publix cleanup) |
 | `npm run test:e2e:ci` (local) | 2026-07-15 | **25 passed** / 1 skipped (Pass 4a Publix Settings restored) |
