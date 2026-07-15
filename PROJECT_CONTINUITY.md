@@ -4,13 +4,13 @@
 
 ---
 
-## Resume (as of 2026-07-11)
+## Resume (as of 2026-07-15)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Still open:** Settings gate bypass (P1-1); **backlog #18**; Slice D batch matcher. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1 CLOSED** (2026-07-15) — ranked-price freshness heartbeat + homelab exit-policy doc fix. **Still open (Pass 2+):** debug pipeline shared secret; expand-ON rank/pantry Postgres lookup parity; e2e Publix Settings miss; migration-ledger timeout; Settings gate bypass; inert selector; 022 vacuous probe; backup/restore; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
 
-**Homelab prep:** Scheduled-ingest runbook for a future 24/7 Linux box → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron, `.env.local`, log rotation, Postgres freshness checks, pre-go-live gaps). Not owner-run on hardware yet.
+**Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Scheduled pipeline now **fail-closes** on **0 ranked in-stock observations in 24h** (`npm run check:ranked-price-freshness`). Exit-policy doc matches any-chain fail-loud code. **Still not** owner-run on hardware; Pass 6 backup/restore still open before treating unattended cron as foundation-complete.
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
@@ -22,7 +22,9 @@
 
 **Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
 
-**Verified (2026-07-11):** Option A Slice **5c CLOSED** (ingest upsert-alias) — Slice 5 fully complete across 5a/5b/5c. Local `npm test` **978/978**, `npm run test:integration` **46/46**, `npm run build` **pass**, `npm run typecheck` **0 errors**, `npm run test:e2e:ci` **25 passed** / 0 flaky / 1 skipped (H12). Master expand + `AUTO_CONFIRM` **OFF**. First live alias writes outside a reviewed migration (self-alias + allowlisted Aldi→OSM pointer only). Postgres MCP on `yum4less_dev`: Aldi identity has catalog `self` + OSM `pointer` @ 1.0; Kroger slug/API remain separate self-aliases (no ingest cross-link). Remote CI [**29171092681**](https://github.com/sfh1980/Yum4Less/actions/runs/29171092681) **green** on **`dd4131d`**.
+**Verified (2026-07-11 Slice 5c evidence — historical):** Option A Slice **5c CLOSED**. At that time: unit **978/978**, integration **46/46**, build pass, typecheck **0**, e2e **25/1 skip**. Remote CI later green on **`812d6b7`** ([**29173497984**](https://github.com/sfh1980/Yum4Less/actions/runs/29173497984)). Master expand + `AUTO_CONFIRM` **OFF**.
+
+**Tier 1 re-run (2026-07-15 @ `812d6b7` — not full verified):** unit **978/978**, typecheck **0**, build OK; integration **45/46** (ledger timeout); e2e **24/1 fail/1 skip** (Publix Settings miss). See [`docs/audits/tier1-foundation-hardening-report.md`](docs/audits/tier1-foundation-hardening-report.md). Do **not** treat 2026-07-11 Verified counts as current local gate truth.
 
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
@@ -243,6 +245,19 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-15 — Tier 1 Pass 1: ranked-price freshness heartbeat + exit-policy doc — CLOSED
+
+- **Theme:** Ops truth — make 0-in-24h ranked staleness cron-visible; align homelab exit-policy docs with fail-loud code.
+- **Shipped:** `src/lib/ingest/ingest-freshness-heartbeat.ts` + `scripts/check-ranked-price-freshness.ts` + `npm run check:ranked-price-freshness`; final fatal step on `ingest:weekly-ads:scheduled`; optional `YUM4LESS_FRESHNESS_WEBHOOK_URL` (native fetch); emergency `YUM4LESS_SKIP_FRESHNESS_HEARTBEAT=1`. [`docs/homelab-deploy.md`](docs/homelab-deploy.md) L20/L366-class drift fixed (any-chain / any-persist fail-loud) + heartbeat documented.
+- **Policy:** Fail closed only when **aggregate** ranked in-stock freshTotal is 0; per-source lines are diagnostic (single-chain thin week does not fail).
+- **Out of scope:** Pass 2+; UI shopperNotice heartbeat; expand flag flips; SaaS monitoring.
+- **Evidence:** `npm test` **988/988**; `npm run typecheck` **0**; `npm run build` pass. (Integration/e2e not required — no DB merge semantics change; heartbeat SQL reuses existing ranked filters.)
+
+### 2026-07-15 — Tier 1 foundation hardening audit (read-only)
+- **Shipped:** [`docs/audits/tier1-foundation-hardening-report.md`](docs/audits/tier1-foundation-hardening-report.md) — OWASP/resilience/data-integrity/trust/observability pass; supersedes reliance on full-system-run “gates green” alone for homelab precursors.
+- **Evidence this session:** lint OK; unit **978/978**; typecheck **0**; build OK; integration **45/46** (migration-ledger timeout ×2); e2e **24 pass / 1 fail** (Publix missing from Settings select — trace saved); `npm audit` 2 moderate; Postgres MCP: 308 obs, **0** fresh_24h, ledger through **023**, Kroger twins still unmerged; Semgrep 0; GitHub MCP still error (root-caused to PAT/MCP env — used `gh`).
+- **Limits:** Playwright MCP exploratory + live inert/a11y deep pass degraded; no live DB-kill chaos. **Not** verified / deploy-ready / Tier-2-complete.
 
 ### 2026-07-11 — Option A Slice 6: identity source onboarding doc — CLOSED
 
@@ -2032,6 +2047,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-07-15 | **Ranked-price freshness heartbeat (Pass 1):** scheduled ingest fails closed when **zero** in-stock ranked `price_observations` fall inside the shared **24h** cache window. Alert = non-zero exit + `[freshness]` log lines; optional `YUM4LESS_FRESHNESS_WEBHOOK_URL` via native fetch — no third-party monitoring SaaS. Per-source zeroes alone do not fail. | **Active** |
 | 2026-07-09 | **Chain coverage honesty (#13):** Kroger official API vs weekly-ad depth asymmetry is architectural — addressed with shopper-facing honesty (trust banner depth, Settings multi-store live ratios, results skew heads-up), not by equalizing coverage via search-term tuning. Phase 2a post-ingest: Kroger **96/97**, Publix **34/97**, Food Lion **17/97**, Aldi **17/97**. | **Closed** |
 | 2026-07-09 | **Aldi weekly-ad ceiling (#16) re-confirmed:** ~17/97 on dinner-tracked list is expected for weekly-ad inventory; UI explains limit. Further non-Kroger matching tuning deprioritized (same class as Walmart). Food Lion not at hard ceiling but risky without guard discipline. | **Closed** |
 | 2026-07-09 | **Dollar Tree / Dollar General (#18 queued):** separate new-chain onboarding investigation — locator, chain inference, ingest feasibility, catalog fit — not part of coverage-honesty slice. | **Queued** |
@@ -2110,6 +2126,9 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (local) | 2026-07-15 | **988/988** pass (Pass 1 freshness heartbeat policy + webhook unit cases) |
+| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 1) |
+| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 1) |
 | **Remote CI** (Option A Slice 5c `dd4131d`) | 2026-07-11 | **Green** — [29171092681](https://github.com/sfh1980/Yum4Less/actions/runs/29171092681) |
 | `npm test` (local) | 2026-07-11 | **978/978** pass (Slice 5c ingest upsert-alias; +4 unit policy cases) |
 | `npm run test:integration` (local) | 2026-07-11 | **46/46** pass (+9 Slice 5c alias write cases on real Postgres) |

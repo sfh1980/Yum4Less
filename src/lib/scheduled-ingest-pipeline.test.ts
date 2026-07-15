@@ -15,6 +15,7 @@ const STEP_MARKERS: Record<(typeof SCHEDULED_INGEST_STEP_ORDER)[number], string>
   "snap-ensure": "ensure-snap-context.mjs",
   "provider-sync": "sync:provider-prices",
   "themealdb-from-sales": "ingest:themealdb:from-sales",
+  "ranked-price-freshness": "check:ranked-price-freshness",
 };
 
 describe("scheduled ingest pipeline order", () => {

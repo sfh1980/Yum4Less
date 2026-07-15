@@ -17,10 +17,11 @@ Copy-paste guide for a **dedicated Linux box** running Postgres, the Yum4Less ap
 | 1. Env guard (live only) | `scripts/assert-live-ingest-env.ts` | **Yes** — missing keys |
 | 2. Postgres prep | `scripts/ensure-test-db.mjs` | **Yes** — Docker/DB/schema |
 | 3. Map catalog | `npm run ingest:map-catalog` | **No** — logs warning, continues |
-| 4. Weekly-ad ingest | `scripts/ingest-weekly-ads.ts` | **Yes** if all chains error or DB persist failures |
+| 4. Weekly-ad ingest | `scripts/ingest-weekly-ads.ts` | **Yes** if **any** chain errors or **any** DB persist failure |
 | 5. SNAP ensure | `scripts/ensure-snap-context.mjs` | **No** — warning only |
 | 6. Kroger official sync | `npm run sync:provider-prices` | **Yes** |
 | 7. TheMealDB import | `npm run ingest:themealdb:from-sales` | **Yes** if script throws |
+| 8. Ranked-price freshness | `npm run check:ranked-price-freshness` | **Yes** if **0** ranked in-stock observations in the shared **24h** window |
 
 **Not the CI path:** `npm run ingest:weekly-ads:scheduled:fixture` — deterministic rehearsal only; do not use on the homelab cron.
 
@@ -244,8 +245,10 @@ tail -n 80 /var/log/yum4less/ingest.log
 grep -E 'Starting scheduled|completed|failed|error|Exit' /var/log/yum4less/ingest.log | tail -20
 ```
 
-Success signature: `Scheduled pricing ingest completed.`  
-Failure signature: non-zero exit (if wrapper uses `set -e`), or lines like `Scheduled ingest failed during ...`.
+Success signature: `Scheduled pricing ingest completed.` plus a prior `[freshness] OK — …` line.  
+Failure signature: non-zero exit (wrapper uses `set -e`), or lines like `Scheduled ingest failed during ...` / `[freshness] STALE — 0 fresh`.
+
+**Alert model (single-operator, no SaaS):** cron non-zero exit + `[freshness]` log lines are the primary signal. Optional `YUM4LESS_FRESHNESS_WEBHOOK_URL` POSTs a small JSON body when the check fails (native `fetch`, no new dependency). Cron `MAILTO` still works if you configure mail on the box.
 
 ### 4.2 Postgres — freshness by source
 
@@ -286,7 +289,18 @@ LIMIT 20;
 "
 ```
 
-### 4.3 One-liner “is ranked data fresh?”
+### 4.3 Automated heartbeat (preferred) + manual one-liner
+
+Scheduled ingest **already** runs `npm run check:ranked-price-freshness` as the final fatal step. It fails closed when **aggregate** ranked in-stock freshness is **0 in 24h** (same SQL window as shopper ranked reads). Per-source lines are diagnostic only — a thin week for one chain does **not** fail the job while another ranked source is fresh.
+
+Manual re-check (or mid-day sanity without re-ingesting):
+
+```bash
+cd /opt/yum4less
+npm run check:ranked-price-freshness
+```
+
+Equivalent SQL one-liner:
 
 ```bash
 docker exec yum4less-postgres psql -U postgres -d yum4less_dev -t -c "
@@ -301,18 +315,19 @@ WHERE source_kind IN ('weekly-ad', 'official-online')
 "
 ```
 
-Run this **after 03:30** on the day following first cron, or after a manual ingest.
+Run this **after 03:30** on the day following first cron, or after a manual ingest. Emergency escape only: `YUM4LESS_SKIP_FRESHNESS_HEARTBEAT=1` (do not leave set).
 
 ---
 
 ## 5. When ingest silently stops working
 
-There is **no dedicated in-app “ingest heartbeat”** today. Symptoms overlap with a genuinely thin weekly ad week:
+The scheduled wrapper ends with a **ranked-price freshness heartbeat** (`npm run check:ranked-price-freshness`). If cron “succeeds” without writing any in-stock ranked rows inside 24h, the job **exits non-zero** and logs `[freshness] STALE`. Symptoms that still overlap with a genuinely thin weekly ad week:
 
 | What you see | Possible cause |
 |--------------|----------------|
-| Ranked stores flip to **context only** / empty sale-ingredient list | No observations within **24h** SQL filter |
-| Same UI as a **thin sale week** (few ingredients on ad) | Cron failed **or** ad simply has few dinner SKUs |
+| Cron exit non-zero + `[freshness] STALE` | No ranked observations within **24h** — operations first |
+| Ranked stores flip to **context only** / empty sale-ingredient list | Same SQL filter; confirm heartbeat / §4.3 |
+| Same UI as a **thin sale week** (few ingredients on ad) | Cron **OK** with fresh rows, but few dinner SKUs matched |
 | `ingest.log` stops growing | Cron not installed, wrong path, or permission error |
 | Log shows `Live scheduled ingest requires ...` | Missing `.env.local` keys for cron user |
 | Log shows `Docker is not available` | Docker down or cron user not in `docker` group |
@@ -320,13 +335,13 @@ There is **no dedicated in-app “ingest heartbeat”** today. Symptoms overlap 
 | Map catalog warnings, weekly-ad continues | OSM Overpass timeout — ranked path may still work from Flipp |
 | `sync:provider-prices` wrote 0 Kroger API rows | `KROGER_API_ENV` not `production`, store mapping, or weak product match — weekly-ad may still rank |
 
-**Until a product slice adds ingest-health signaling**, treat **log monitoring + Postgres freshness queries** (§4) as the owner workflow. Check logs at least weekly; automate the SQL check with a simple external script or monitoring hook if desired.
+Treat **cron exit + `[freshness]` lines + optional webhook** as the owner alert path. Keep reading §4 SQL for per-source diagnosis.
 
-### Known product gap (do not fix in this pass)
+### Known product gap (UI distinction)
 
-**Stale data vs thin data:** The app does not clearly distinguish “cron has not run / observations aged out” from “ingest ran but this week’s ad has few matched dinner ingredients.” Both can present as limited ranked coverage or empty sale-ingredient pickers with generic daily-refresh copy (`RANKED_PRICE_DAILY_REFRESH_USER_MESSAGE`). After cron has run successfully for a few weeks, if freshness SQL says OK but coverage is still thin, trust the **thin week** explanation; if SQL says STALE, fix **operations** first.
+**Stale data vs thin data:** The shopper UI does not yet clearly distinguish “cron has not run / observations aged out” from “ingest ran but this week’s ad has few matched dinner ingredients.” Both can present as limited ranked coverage or empty sale-ingredient pickers with generic daily-refresh copy (`RANKED_PRICE_DAILY_REFRESH_USER_MESSAGE`). After cron has run successfully for a few weeks, if freshness heartbeat says OK but coverage is still thin, trust the **thin week** explanation; if heartbeat/SQL says STALE, fix **operations** first.
 
-**Future slice candidate:** ingest heartbeat / last-success timestamp surfaced in admin or `shopperNotice` when ranked reads are empty due to cache miss vs filter-empty.
+**Future slice candidate:** last-success timestamp surfaced in admin or `shopperNotice` when ranked reads are empty due to cache miss vs filter-empty.
 
 ---
 
@@ -363,7 +378,7 @@ Issues to resolve **before** relying on unattended cron:
 | **`assert-live-ingest-env` does not require `KROGER_API_ENV=production`** | Cron exits 0 but Kroger official API sync no-ops | Set `KROGER_API_ENV=production` explicitly in `.env.local` |
 | **`YUM4LESS_INGEST_ZIPS` defaults to 23111** | Ingest warms wrong market silently | Set real ZIPs in `.env.local`; verify stores in §4.2 SQL |
 | **Map catalog failure is non-fatal** | Cron exit 0 with degraded OSM/catalog | Read warnings in log; rerun `npm run ingest:map-catalog` manually |
-| **Partial weekly-ad chain failure** | Exit 0 if any chain succeeds — other chains may be stale | Scan per-chain `[kroger]` / `[aldi]` lines in log |
+| **Partial weekly-ad chain failure** | Exit **non-zero** if **any** chain errors or any persist failure (code is fail-loud; other chains may still have written) | Scan per-chain `[kroger]` / `[aldi]` lines in log; fix the failed chain |
 | **Playwright / headless deps on Linux** | Kroger scrape fallback fails with browser launch errors | Run `playwright install-deps` once; test manual ingest |
 | **No interactive prompts in scheduled path** | ✅ None found — safe for no-TTY cron | — |
 | **Parent wrapper does not load `.env.local` before `ensure-test-db`** | ✅ Child TS scripts load it; DB URL defaults match compose | Set `DATABASE_URL` in `.env.local` anyway |
@@ -376,4 +391,5 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
+| 2026-07-15 | Pass 1 ops truth: ranked-price freshness heartbeat (fail closed on 0-in-24h) + exit-policy doc aligned with any-chain fail-loud |
 | 2026-06-29 | Initial homelab scheduled-ingest runbook |

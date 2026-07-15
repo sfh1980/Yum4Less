@@ -48,7 +48,7 @@ if (ensure.status !== 0) {
   process.exit(ensure.status ?? 1);
 }
 
-// Step order: map-catalog → weekly-ad → snap-ensure → provider-sync → themealdb-from-sales
+// Step order: map-catalog → weekly-ad → snap-ensure → provider-sync → themealdb-from-sales → ranked-price-freshness
 // (see src/lib/scheduled-ingest-pipeline.ts + unit test)
 
 if (!weeklyOnly && !providerOnly) {
@@ -109,6 +109,17 @@ if (!weeklyOnly && !useFixture) {
     console.error("Scheduled ingest failed during TheMealDB sale-driven import.");
     process.exit(themealdbImport.status ?? 1);
   }
+}
+
+const freshness = spawnNpm(["run", "check:ranked-price-freshness"], {
+  env: process.env,
+});
+
+if (freshness.status !== 0) {
+  console.error(
+    "Scheduled ingest failed ranked-price freshness heartbeat (0 fresh observations in 24h, or check crashed).",
+  );
+  process.exit(freshness.status ?? 1);
 }
 
 console.log(`[${new Date().toISOString()}] Scheduled pricing ingest completed.`);

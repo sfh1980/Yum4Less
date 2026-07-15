@@ -8,6 +8,7 @@ export const SCHEDULED_INGEST_STEP_ORDER = [
   "snap-ensure",
   "provider-sync",
   "themealdb-from-sales",
+  "ranked-price-freshness",
 ] as const;
 
 export type ScheduledIngestStep = (typeof SCHEDULED_INGEST_STEP_ORDER)[number];
