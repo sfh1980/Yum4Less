@@ -2140,6 +2140,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| **Remote CI** (Pass 3 `3f43d40`) | 2026-07-15 | **Green** — [29445257153](https://github.com/sfh1980/Yum4Less/actions/runs/29445257153) |
 | `npm test` (local) | 2026-07-15 | **1003/1003** pass (Pass 3 rank/pantry identity parity) |
 | `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 3) |
 | `npm run build` (local) | 2026-07-15 | **Pass** (Pass 3) |
