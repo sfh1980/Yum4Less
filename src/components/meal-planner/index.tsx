@@ -184,6 +184,7 @@ export function MealPlanner() {
 
       <BottomNav
         activeTab={demo.activeTab}
+        settingsComplete={demo.settingsComplete}
         cookEnabled={demo.cookEnabled}
         onTabChange={demo.handleTabChange}
       />

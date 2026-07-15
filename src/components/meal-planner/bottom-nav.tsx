@@ -1,9 +1,13 @@
 "use client";
 
-import type { AppTab } from "@/components/meal-planner/app-tab";
+import {
+  isAppTabEnabled,
+  type AppTab,
+} from "@/components/meal-planner/app-tab";
 
 type BottomNavProps = {
   activeTab: AppTab;
+  settingsComplete: boolean;
   cookEnabled: boolean;
   onTabChange: (tab: AppTab) => void;
 };
@@ -16,13 +20,20 @@ const TABS: { id: AppTab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
-export function BottomNav({ activeTab, cookEnabled, onTabChange }: BottomNavProps) {
+export function BottomNav({
+  activeTab,
+  settingsComplete,
+  cookEnabled,
+  onTabChange,
+}: BottomNavProps) {
   return (
     <nav className="bottom-nav" aria-label="Main">
       <ul className="bottom-nav-list">
         {TABS.map((tab) => {
-          const isCook = tab.id === "cook";
-          const disabled = isCook && !cookEnabled;
+          const disabled = !isAppTabEnabled(tab.id, {
+            settingsComplete,
+            cookEnabled,
+          });
 
           return (
             <li key={tab.id} className="bottom-nav-item">

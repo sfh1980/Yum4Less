@@ -33,7 +33,7 @@ export function useModalDialog(input: {
     document.body.classList.add("modal-open");
 
     const backgroundColumns = document.querySelectorAll<HTMLElement>(
-      ".meal-planner-grid-col",
+      ".meal-planner-grid, .meal-planner-grid-col",
     );
     for (const column of backgroundColumns) {
       column.inert = true;

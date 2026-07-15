@@ -41,7 +41,8 @@ const testStore: NearbyStoreSummary = {
 
 function mountBackgroundFocusTarget() {
   const background = document.createElement("div");
-  background.className = "meal-planner-grid-col";
+  // Live home shell uses `.meal-planner-grid` (index.tsx); keep legacy col support via selector union.
+  background.className = "meal-planner-grid";
   const backgroundButton = document.createElement("button");
   backgroundButton.type = "button";
   backgroundButton.textContent = "Background action";
@@ -57,7 +58,7 @@ function expectModalFocusTrap(input: {
 }) {
   expect(document.body.classList.contains("modal-open")).toBe(true);
   expect(
-    (document.querySelector(".meal-planner-grid-col") as HTMLElement | null)?.inert,
+    (document.querySelector(".meal-planner-grid") as HTMLElement | null)?.inert,
     "background content should be inert while modal is open",
   ).toBe(true);
 

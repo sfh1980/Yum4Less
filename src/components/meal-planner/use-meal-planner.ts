@@ -31,6 +31,7 @@ import { scopeMarketSummaryToSelectedStoresForMap } from "@/lib/store-identity-m
 import { defaultSelectedStoreIdsForSettings, filterSettingsSelectableStores } from "@/lib/settings-store-selection";
 import type { AppTab } from "@/components/meal-planner/app-tab";
 import {
+  isAppTabEnabled,
   resolveAppTabFromPreferences,
   SSR_DEFAULT_APP_TAB,
 } from "@/components/meal-planner/app-tab";
@@ -145,6 +146,7 @@ function persistLocationPreferences(
 
 export function useMealPlanner() {
   const [activeTab, setActiveTab] = useState<AppTab>(SSR_DEFAULT_APP_TAB);
+  const [settingsComplete, setSettingsComplete] = useState(false);
   const [flowStep, setFlowStep] = useState<FlowStep>(() => getInitialFlowStep());
   const [form, setForm] = useState<FormState>(defaultFormState);
   const preferencesHydratedRef = useRef(false);
@@ -211,6 +213,9 @@ export function useMealPlanner() {
   useEffect(() => {
     setActiveTab(resolveAppTabFromPreferences());
     setForm(hydrateFormFromSettings());
+    setSettingsComplete(
+      isSettingsPreferencesComplete(readSettingsPreferences()),
+    );
     preferencesHydratedRef.current = true;
   }, []);
 
@@ -593,7 +598,12 @@ export function useMealPlanner() {
   }, [activeTab, flowStep, marketSearchState.status]);
 
   function handleTabChange(tab: AppTab) {
-    if (tab === "cook" && !cookEnabled) {
+    if (
+      !isAppTabEnabled(tab, {
+        settingsComplete,
+        cookEnabled,
+      })
+    ) {
       return;
     }
 
@@ -723,6 +733,7 @@ export function useMealPlanner() {
     }
 
     writeSettingsPreferences(prefs);
+    setSettingsComplete(true);
     if (
       prefs.selectedStoreIds &&
       !sameSelectedStoreIds(form.selectedStoreIds, prefs.selectedStoreIds)
@@ -746,6 +757,7 @@ export function useMealPlanner() {
     setHasAttemptedWelcome(false);
     setHasAttemptedRanking(false);
     setLocationValidationMode("zip");
+    setSettingsComplete(false);
     setActiveTab("settings");
     setFlowStep("welcome");
   }
@@ -1160,6 +1172,7 @@ export function useMealPlanner() {
   return {
     activeTab,
     handleTabChange,
+    settingsComplete,
     cookEnabled,
     flowStep,
     form,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { createPortal } from "react-dom";
 import { NearbyStoresMap } from "@/components/nearby-stores-map";
 import { useModalDialog } from "@/components/use-modal-dialog";
 import { buildSingleStoreMapModel } from "@/lib/nearby-stores-map-model";
@@ -27,13 +28,15 @@ export function SingleStoreMapOverlay({
     [isOpen, mapReady, store],
   );
 
-  if (!isOpen) {
+  if (!isOpen || typeof document === "undefined") {
     return null;
   }
 
   const title = store ? formatStoreNameWithLocation(store) : "Store location";
 
-  return (
+  // Portal out of `.meal-planner-grid` so useModalDialog can inert the shell
+  // without hiding this dialog from the accessibility tree.
+  return createPortal(
     <div className="map-overlay single-store-map-overlay" role="presentation">
       <button
         type="button"
@@ -73,6 +76,7 @@ export function SingleStoreMapOverlay({
           </p>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

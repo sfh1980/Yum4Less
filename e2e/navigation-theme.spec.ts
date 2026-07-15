@@ -13,6 +13,18 @@ test.describe("Bottom navigation and theme", () => {
     await resetAppPreferences(page);
   });
 
+  test("disables Home/Deals/Saved until Settings setup is complete", async ({
+    page,
+  }) => {
+    const mainNav = page.getByRole("navigation", { name: "Main" });
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await expect(mainNav.getByRole("button", { name: "Settings" })).toBeEnabled();
+    await expect(mainNav.getByRole("button", { name: "Home" })).toBeDisabled();
+    await expect(mainNav.getByRole("button", { name: "Deals" })).toBeDisabled();
+    await expect(mainNav.getByRole("button", { name: "Saved" })).toBeDisabled();
+    await expect(mainNav.getByRole("button", { name: "Cook" })).toBeDisabled();
+  });
+
   test("routes across main tabs and disables Cook until recipes exist", async ({ page }) => {
     await completeSettingsZipFlow(page);
     await completeWelcomeFlow(page);

@@ -6,7 +6,6 @@ import {
 import {
   completeSettingsZipFlow,
   completeWelcomeFlow,
-  E2E_ZIP_FALLBACK,
   goToPantryStep,
   resetAppPreferences,
   switchMainTab,
@@ -18,6 +17,8 @@ test.describe("API error surfaces in the UI", () => {
   });
 
   test("shows market-search 400 copy on the Deals tab", async ({ page }) => {
+    await completeSettingsZipFlow(page);
+
     const error = buildMarketSearchErrorResponse(
       400,
       "Market search payload is invalid.",
@@ -34,14 +35,21 @@ test.describe("API error surfaces in the UI", () => {
       });
     });
 
-    await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
+    await switchMainTab(page, "Settings");
+    // Clearing location re-shows Find so we can force a failed search after setup.
+    await page.getByRole("textbox", { name: "ZIP code" }).fill("00000");
     await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await expect(page.getByText(/ZIP must be five digits/i)).toBeVisible({
+      timeout: 30_000,
+    });
 
     await switchMainTab(page, "Deals");
     await expect(page.getByText(/ZIP must be five digits/i)).toBeVisible();
   });
 
   test("shows market-search 500 copy on the Deals tab", async ({ page }) => {
+    await completeSettingsZipFlow(page);
+
     const error = buildMarketSearchErrorResponse(500, "Internal server error.");
     await page.route("**/api/market-search", async (route) => {
       if (route.request().method() !== "POST") {
@@ -55,11 +63,17 @@ test.describe("API error surfaces in the UI", () => {
       });
     });
 
-    await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
+    await switchMainTab(page, "Settings");
+    await page.getByRole("textbox", { name: "ZIP code" }).fill("00000");
     await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await expect(
+      page.getByText(/Internal server error|temporarily unavailable/i),
+    ).toBeVisible({ timeout: 30_000 });
 
     await switchMainTab(page, "Deals");
-    await expect(page.getByText(/Internal server error|temporarily unavailable/i)).toBeVisible();
+    await expect(
+      page.getByText(/Internal server error|temporarily unavailable/i),
+    ).toBeVisible();
   });
 
   test("shows recommendations 500 copy after rank request", async ({ page }) => {

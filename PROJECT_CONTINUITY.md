@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–3 CLOSED** (2026-07-15). **Tier 1 Pass 4 CLOSED** (2026-07-15) — 4a Publix Settings e2e pin restore / 4b migration-ledger timeout. **Still open (Pass 5+):** Settings gate bypass; inert selector; 022 vacuous probe; backup/restore; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–5 CLOSED** (2026-07-15). **Still open (Pass 6+):** 022 vacuous probe; backup/restore; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
 
 **Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Scheduled pipeline now **fail-closes** on **0 ranked in-stock observations in 24h** (`npm run check:ranked-price-freshness`). Exit-policy doc matches any-chain fail-loud code. **Still not** owner-run on hardware; Pass 6 backup/restore still open before treating unattended cron as foundation-complete.
 
@@ -245,6 +245,14 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-15 — Tier 1 Pass 5: Settings-first gate + modal inert — CLOSED
+
+- **Settings gate:** `isAppTabEnabled` blocks Home/Deals/Cook/Saved until `setupComplete`; BottomNav disables those tabs; `handleTabChange` enforces the same rule.
+- **Modal inert:** `useModalDialog` targets `.meal-planner-grid` (and legacy `.meal-planner-grid-col`); focus-trap tests plant the live class.
+- **Nested overlay:** `SingleStoreMapOverlay` portals to `document.body` so inerting the grid does not hide the dialog from AT (meal-card map pill on Home).
+- **e2e:** Settings-gate assertion in `navigation-theme`; api-errors Deals copy tests complete Settings before switching; local `test:e2e:ci` **25 passed** / 1 skip / 1 flaky mvp-flow.
+- **Out of scope:** Pass 6 backup/restore; Pass 7 GitHub MCP; 022 vacuous probe.
 
 ### 2026-07-15 — Tier 1 Pass 4: Publix e2e pin + migration-ledger timeout — CLOSED
 
@@ -2146,12 +2154,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| **Remote CI** (Pass 4 `beb56d5`) | 2026-07-15 | **Green** — [29447016878](https://github.com/sfh1980/Yum4Less/actions/runs/29447016878) |
-| `npm test` (local) | 2026-07-15 | **1003/1003** pass (Pass 4) |
-| `npm run test:integration` (local) | 2026-07-15 | **46/46** pass (Pass 4b ledger + 4a Publix cleanup) |
-| `npm run test:e2e:ci` (local) | 2026-07-15 | **25 passed** / 1 skipped (Pass 4a Publix Settings restored) |
-| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 4) |
-| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 4) |
+| **Remote CI** (Pass 5 — pending push) | 2026-07-15 | Local gates green; CI link after push |
+| `npm test` (local) | 2026-07-15 | **1007/1007** pass (Pass 5) |
+| `npm run test:integration` (local) | 2026-07-15 | **46/46** pass (Pass 4; not re-run Pass 5 — no DB change) |
+| `npm run test:e2e:ci` (local) | 2026-07-15 | **25 passed** / 1 skipped / 1 flaky mvp-flow (Pass 5) |
+| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 5 with build) |
+| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 5) |
 | **Remote CI** (Pass 3 `3f43d40`) | 2026-07-15 | **Green** — [29445257153](https://github.com/sfh1980/Yum4Less/actions/runs/29445257153) |
 | **Remote CI** (Pass 2 `485be3c`) | 2026-07-15 | **Green** — [29427921631](https://github.com/sfh1980/Yum4Less/actions/runs/29427921631) |
 | **Remote CI** (Pass 1 `8f76e8b`) | 2026-07-15 | **Green** — [29426088895](https://github.com/sfh1980/Yum4Less/actions/runs/29426088895) |

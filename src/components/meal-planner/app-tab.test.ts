@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  isAppTabEnabled,
   resolveAppTabFromPreferences,
   SSR_DEFAULT_APP_TAB,
 } from "@/components/meal-planner/app-tab";
@@ -29,5 +30,43 @@ describe("app tab routing", () => {
       setupComplete: true,
     });
     expect(resolveAppTabFromPreferences()).toBe("home");
+  });
+});
+
+describe("isAppTabEnabled (Settings-first gate)", () => {
+  it("allows only Settings before setup is complete", () => {
+    expect(
+      isAppTabEnabled("settings", { settingsComplete: false, cookEnabled: false }),
+    ).toBe(true);
+    expect(
+      isAppTabEnabled("home", { settingsComplete: false, cookEnabled: false }),
+    ).toBe(false);
+    expect(
+      isAppTabEnabled("deals", { settingsComplete: false, cookEnabled: false }),
+    ).toBe(false);
+    expect(
+      isAppTabEnabled("saved", { settingsComplete: false, cookEnabled: false }),
+    ).toBe(false);
+    expect(
+      isAppTabEnabled("cook", { settingsComplete: false, cookEnabled: true }),
+    ).toBe(false);
+  });
+
+  it("allows Home/Deals/Saved after setup; Cook still needs recipes", () => {
+    expect(
+      isAppTabEnabled("home", { settingsComplete: true, cookEnabled: false }),
+    ).toBe(true);
+    expect(
+      isAppTabEnabled("deals", { settingsComplete: true, cookEnabled: false }),
+    ).toBe(true);
+    expect(
+      isAppTabEnabled("saved", { settingsComplete: true, cookEnabled: false }),
+    ).toBe(true);
+    expect(
+      isAppTabEnabled("cook", { settingsComplete: true, cookEnabled: false }),
+    ).toBe(false);
+    expect(
+      isAppTabEnabled("cook", { settingsComplete: true, cookEnabled: true }),
+    ).toBe(true);
   });
 });
