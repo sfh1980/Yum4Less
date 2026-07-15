@@ -252,7 +252,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Shipped:** `src/lib/ingest/ingest-freshness-heartbeat.ts` + `scripts/check-ranked-price-freshness.ts` + `npm run check:ranked-price-freshness`; final fatal step on `ingest:weekly-ads:scheduled`; optional `YUM4LESS_FRESHNESS_WEBHOOK_URL` (native fetch); emergency `YUM4LESS_SKIP_FRESHNESS_HEARTBEAT=1`. [`docs/homelab-deploy.md`](docs/homelab-deploy.md) L20/L366-class drift fixed (any-chain / any-persist fail-loud) + heartbeat documented.
 - **Policy:** Fail closed only when **aggregate** ranked in-stock freshTotal is 0; per-source lines are diagnostic (single-chain thin week does not fail).
 - **Out of scope:** Pass 2+; UI shopperNotice heartbeat; expand flag flips; SaaS monitoring.
-- **Evidence:** `npm test` **988/988**; `npm run typecheck` **0**; `npm run build` pass. (Integration/e2e not required — no DB merge semantics change; heartbeat SQL reuses existing ranked filters.)
+- **Evidence:** `npm test` **988/988**; `npm run typecheck` **0**; `npm run build` pass; remote CI **green** on **`8f76e8b`** ([**29426088895**](https://github.com/sfh1980/Yum4Less/actions/runs/29426088895)) — verify/integration/semgrep/e2e (e2e: 24 pass / 1 known overlay flaky / 1 skip). Local smoke: `check:ranked-price-freshness` correctly exited 1 on stale `yum4less_dev` (0/308 fresh).
 
 ### 2026-07-15 — Tier 1 foundation hardening audit (read-only)
 - **Shipped:** [`docs/audits/tier1-foundation-hardening-report.md`](docs/audits/tier1-foundation-hardening-report.md) — OWASP/resilience/data-integrity/trust/observability pass; supersedes reliance on full-system-run “gates green” alone for homelab precursors.
