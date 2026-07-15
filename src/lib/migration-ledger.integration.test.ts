@@ -50,14 +50,17 @@ describe("migration ledger integration", () => {
     () => {
     recreateTestDatabase();
 
-    for (const fileName of listInitMigrationFiles()) {
-      const version = fileName.slice(0, 3);
-      if (version < "001" || version > "013") {
-        continue;
-      }
-      const sql = readFileSync(join(process.cwd(), "db", "init", fileName), "utf8");
-      psqlApplySqlContent(TEST_DB, sql);
-    }
+    // One docker-exec round-trip for legacy 001–013 (avoids 13× sequential overhead on Windows).
+    const legacyBootstrapSql = listInitMigrationFiles()
+      .filter((fileName) => {
+        const version = fileName.slice(0, 3);
+        return version >= "001" && version <= "013";
+      })
+      .map((fileName) =>
+        readFileSync(join(process.cwd(), "db", "init", fileName), "utf8"),
+      )
+      .join("\n");
+    psqlApplySqlContent(TEST_DB, legacyBootstrapSql);
 
     psqlApplySqlContent(
       TEST_DB,
@@ -67,7 +70,10 @@ describe("migration ledger integration", () => {
 
     expect(readLedger()).toHaveLength(0);
 
-    const summary = applyPendingMigrations(migrationDb());
+    // Scope to what this case asserts — do not pay for 017–023 docker probes.
+    const summary = applyPendingMigrations(migrationDb(), {
+      stopAfterVersion: "016",
+    });
 
     expect(summary.applied).toContain("015");
     expect(readLedger().map((row) => String(row.version))).toContain("015");
@@ -75,7 +81,7 @@ describe("migration ledger integration", () => {
     expect(psqlQueryScalar(TEST_DB, "select count(*) from stores where id = 'publix-atlee';")).toBe("0");
     expect(psqlQueryScalar(TEST_DB, "select count(*) from stores where id = 'publix-1626';")).toBe("1");
     },
-    60_000,
+    90_000,
   );
 
   it(

@@ -265,6 +265,7 @@ function countPublixOsmLocatorPairsWithin015Mi(db) {
 
 export function applyPendingMigrations(db, options = {}) {
   const initDir = options.initDir ?? INIT_DIR;
+  const stopAfterVersion = options.stopAfterVersion;
   const files = listInitMigrationFiles(initDir);
   const ledgerBootstrapped = ensureLedgerTable(db, initDir);
   const appliedLedger = readAppliedMigrations(db);
@@ -278,6 +279,9 @@ export function applyPendingMigrations(db, options = {}) {
 
   for (const fileName of files) {
     const version = parseMigrationVersion(fileName);
+    if (stopAfterVersion && version > stopAfterVersion) {
+      break;
+    }
     const filePath = join(initDir, fileName);
     const checksum = computeMigrationChecksum(filePath);
     const existing = appliedLedger.get(version);
