@@ -9,34 +9,66 @@ import {
 
 const TEST_OSM_PUBLIX_DUPLICATE_STORE_ID = "osm-way-test-publix-dedupe";
 
+/** Transient fixtures only — never leave a hole in shared `yum4less_test` CI pin. */
+const TRANSIENT_STORE_IDS = [
+  RETIRED_PUBLIX_BOOTSTRAP_STORE_ID,
+  TEST_OSM_PUBLIX_DUPLICATE_STORE_ID,
+] as const;
+
 describe("publix-catalog-sync (integration)", () => {
-  async function cleanupPublixBootstrapFixture() {
+  async function cleanupTransientPublixFixtures() {
     const pool = getDbPool();
     await pool.query(
-      `delete from price_observations where store_id in ($1, $2)`,
-      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+      `delete from price_observations where store_id = any($1::text[])`,
+      [TRANSIENT_STORE_IDS],
     );
     await pool.query(
       `delete from store_identity_aliases
-       where store_id in ($1, $2) or identity_id in ($1, $2)`,
-      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+       where store_id = any($1::text[]) or identity_id = any($1::text[])`,
+      [TRANSIENT_STORE_IDS],
     );
     await pool.query(
-      `delete from store_identities where id in ($1, $2) or canonical_store_id in ($1, $2)`,
-      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+      `delete from store_identities
+       where id = any($1::text[]) or canonical_store_id = any($1::text[])`,
+      [TRANSIENT_STORE_IDS],
     );
-    await pool.query(
-      `delete from stores where id in ($1, $2)`,
-      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
-    );
+    await pool.query(`delete from stores where id = any($1::text[])`, [
+      TRANSIENT_STORE_IDS,
+    ]);
+  }
+
+  /** Re-upsert Mechanicsville Publix so e2e Settings four-chain select stays populated. */
+  async function restoreCiPublixBootstrapStore() {
+    const pool = getDbPool();
+    await pool.query(`
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude,
+        source_name, source_store_id, last_verified_at
+      )
+      values (
+        'publix-1626', 'Publix', 'grocery', 'Mechanicsville', 'VA',
+        37.610899, -77.335779, 'yum4less-internal-catalog', '1626', now()
+      )
+      on conflict (id) do update set
+        name = excluded.name,
+        city = excluded.city,
+        state = excluded.state,
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        source_name = excluded.source_name,
+        source_store_id = excluded.source_store_id,
+        last_verified_at = excluded.last_verified_at
+    `);
   }
 
   beforeEach(async () => {
-    await cleanupPublixBootstrapFixture();
+    await cleanupTransientPublixFixtures();
+    await restoreCiPublixBootstrapStore();
   });
 
   afterEach(async () => {
-    await cleanupPublixBootstrapFixture();
+    await cleanupTransientPublixFixtures();
+    await restoreCiPublixBootstrapStore();
     await resetDbPoolForTests();
   });
 
@@ -50,8 +82,19 @@ describe("publix-catalog-sync (integration)", () => {
       values
         ('publix-atlee', 'Publix', 'grocery', 'Mechanicsville', 'VA', 37.632, -77.348, 'yum4less-internal-catalog', 'publix-atlee', now()),
         ('publix-1626', 'Publix', 'grocery', 'Mechanicsville', 'VA', 37.610899, -77.335779, 'publix-store-locator', '1626', now())
-      on conflict (id) do nothing
+      on conflict (id) do update set
+        name = excluded.name,
+        source_name = excluded.source_name,
+        source_store_id = excluded.source_store_id,
+        latitude = excluded.latitude,
+        longitude = excluded.longitude
     `);
+
+    await pool.query(
+      `delete from price_observations
+       where store_id in ($1, $2) and ingredient_id in ('broccoli', 'lemon')`,
+      [RETIRED_PUBLIX_BOOTSTRAP_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
+    );
 
     await pool.query(`
       insert into price_observations (
@@ -104,10 +147,9 @@ describe("publix-catalog-sync (integration)", () => {
       `delete from store_identities where id in ($1, $2) or canonical_store_id in ($1, $2)`,
       [TEST_OSM_PUBLIX_DUPLICATE_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
     );
-    await pool.query(
-      `delete from stores where id in ($1, $2)`,
-      [TEST_OSM_PUBLIX_DUPLICATE_STORE_ID, PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID],
-    );
+    await pool.query(`delete from stores where id = $1`, [
+      TEST_OSM_PUBLIX_DUPLICATE_STORE_ID,
+    ]);
 
     await pool.query(`
       insert into stores (
@@ -116,7 +158,12 @@ describe("publix-catalog-sync (integration)", () => {
       values
         ('${TEST_OSM_PUBLIX_DUPLICATE_STORE_ID}', 'Publix', 'grocery', 'Mechanicsville', 'VA', 37.610845, -77.335685, 'openstreetmap-overpass', '789560637', now()),
         ('publix-1626', 'Brandy Creek Commons', 'grocery', 'Mechanicsville', 'VA', 37.610899, -77.335779, 'publix-store-locator', '1626', now())
-      on conflict (id) do nothing
+      on conflict (id) do update set
+        name = excluded.name,
+        source_name = excluded.source_name,
+        source_store_id = excluded.source_store_id,
+        latitude = excluded.latitude,
+        longitude = excluded.longitude
     `);
 
     await pool.query(`
@@ -146,13 +193,6 @@ describe("publix-catalog-sync (integration)", () => {
     expect(prices.rows).toEqual([
       { store_id: "publix-1626", ingredient_id: "broccoli" },
       { store_id: "publix-1626", ingredient_id: "lemon" },
-    ]);
-
-    await pool.query(`delete from price_observations where store_id = $1`, [
-      PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID,
-    ]);
-    await pool.query(`delete from stores where id = $1`, [
-      PUBLIX_MECHANICSVILLE_BOOTSTRAP_STORE_ID,
     ]);
   });
 });

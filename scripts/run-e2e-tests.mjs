@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { spawnNodeScript, spawnNpm, spawnNpx } from "./lib/spawn-safe.mjs";
 import { loadEnvLocal } from "./lib/load-env-local.mjs";
 import { ensureTestDatabase } from "./ensure-test-db.mjs";
+import { psqlApplySqlContent, psqlQueryScalar } from "./lib/spawn-safe.mjs";
 
 loadEnvLocal();
 
@@ -32,8 +35,34 @@ function resolveE2eDatabaseUrl() {
   return DEFAULT_E2E_DATABASE_URL;
 }
 
+function databaseNameFromUrl(databaseUrl) {
+  return new URL(databaseUrl).pathname.replace(/^\//, "").trim();
+}
+
+/** Fail closed if shared CI pins were wiped (e.g. by integration cleanup). */
+function assertE2eSettingsBootstrapStores(databaseName) {
+  const requiredIds = [
+    "kroger-mechanicsville",
+    "aldi-mechanicsville",
+    "publix-1626",
+    "food-lion-mechanicsville",
+  ];
+  for (const storeId of requiredIds) {
+    const count = psqlQueryScalar(
+      databaseName,
+      `select count(*) from stores where id = '${storeId.replace(/'/g, "''")}';`,
+    );
+    if (count !== "1") {
+      throw new Error(
+        `e2e prep: expected store ${storeId} in ${databaseName} (found count=${count}). Re-run ensure-test-db / CI bootstrap; integration tests must not leave shared pins deleted.`,
+      );
+    }
+  }
+}
+
 async function main() {
   const databaseUrl = resolveE2eDatabaseUrl();
+  const databaseName = databaseNameFromUrl(databaseUrl);
   const ciEnv = {
     ...process.env,
     CI: "1",
@@ -78,6 +107,14 @@ async function main() {
   if (mapCatalogFixture.status !== 0) {
     process.exit(mapCatalogFixture.status ?? 1);
   }
+
+  // Belt-and-suspenders: re-apply CI bootstrap pins after fixture paths that may prune rows.
+  const bootstrapSql = readFileSync(
+    join(process.cwd(), "db", "ci", "014_ci_bootstrap_stores.sql"),
+    "utf8",
+  );
+  psqlApplySqlContent(databaseName, bootstrapSql);
+  assertE2eSettingsBootstrapStores(databaseName);
 
   const e2e = spawnNpx(["playwright", "test"], {
     stdio: "inherit",
