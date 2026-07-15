@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
 import { API_LIMITS, clampInteger, isValidZipCode } from "@/lib/api-request";
+import { isDebugPipelineAuthorized } from "@/lib/debug/debug-admin-auth";
 import { isDebugRoutesEnabled } from "@/lib/debug/debug-routes-policy";
 import { getPipelineDebugView } from "@/lib/debug/pipeline-debug-service";
 import { resolveLocationInput } from "@/lib/location-resolution";
@@ -26,6 +27,13 @@ export async function GET(request: Request) {
   const rateLimit = enforceApiRateLimit(request, "apiDebugPipeline");
   if (!rateLimit.ok) {
     return rateLimitResponse(rateLimit);
+  }
+
+  if (!isDebugPipelineAuthorized(request)) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized." },
+      { status: 401 },
+    );
   }
 
   const { searchParams } = new URL(request.url);

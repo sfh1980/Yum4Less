@@ -19,6 +19,15 @@ import { resetRateLimitsForTests } from "@/lib/rate-limit";
 
 const originalNodeEnv = process.env.NODE_ENV;
 const originalDebugRoutesEnabled = process.env.YUM4LESS_DEBUG_ROUTES_ENABLED;
+const originalDebugAdminKey = process.env.YUM4LESS_DEBUG_ADMIN_KEY;
+
+const TEST_ADMIN_KEY = "test-debug-admin-key";
+
+function authorizedRequest(url: string, init?: RequestInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("Authorization", `Bearer ${TEST_ADMIN_KEY}`);
+  return new Request(url, { ...init, headers });
+}
 
 describe("GET /api/debug/pipeline", () => {
   beforeEach(() => {
@@ -27,6 +36,7 @@ describe("GET /api/debug/pipeline", () => {
     resetRateLimitsForTests();
     stubTestNodeEnv("development");
     process.env.YUM4LESS_DEBUG_ROUTES_ENABLED = "1";
+    process.env.YUM4LESS_DEBUG_ADMIN_KEY = TEST_ADMIN_KEY;
   });
 
   afterEach(() => {
@@ -37,6 +47,11 @@ describe("GET /api/debug/pipeline", () => {
     } else {
       process.env.YUM4LESS_DEBUG_ROUTES_ENABLED = originalDebugRoutesEnabled;
     }
+    if (originalDebugAdminKey === undefined) {
+      delete process.env.YUM4LESS_DEBUG_ADMIN_KEY;
+    } else {
+      process.env.YUM4LESS_DEBUG_ADMIN_KEY = originalDebugAdminKey;
+    }
   });
 
   it("returns 404 in production", async () => {
@@ -44,7 +59,7 @@ describe("GET /api/debug/pipeline", () => {
     process.env.YUM4LESS_DEBUG_ROUTES_ENABLED = "1";
 
     const response = await GET(
-      new Request("http://localhost/api/debug/pipeline?zip=23111"),
+      authorizedRequest("http://localhost/api/debug/pipeline?zip=23111"),
     );
 
     expect(response.status).toBe(404);
@@ -59,15 +74,43 @@ describe("GET /api/debug/pipeline", () => {
     delete process.env.YUM4LESS_DEBUG_ROUTES_ENABLED;
 
     const response = await GET(
-      new Request("http://localhost/api/debug/pipeline?zip=23111"),
+      authorizedRequest("http://localhost/api/debug/pipeline?zip=23111"),
     );
 
     expect(response.status).toBe(404);
     expect(getPipelineDebugView).not.toHaveBeenCalled();
   });
 
+  it("returns 401 when debug flag is on but admin key is missing", async () => {
+    delete process.env.YUM4LESS_DEBUG_ADMIN_KEY;
+
+    const response = await GET(
+      authorizedRequest("http://localhost/api/debug/pipeline?zip=23111"),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Unauthorized.",
+    });
+    expect(getPipelineDebugView).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when the admin key does not match", async () => {
+    const response = await GET(
+      new Request("http://localhost/api/debug/pipeline?zip=23111", {
+        headers: { Authorization: "Bearer wrong-key" },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(getPipelineDebugView).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when neither zip nor coordinates are provided", async () => {
-    const response = await GET(new Request("http://localhost/api/debug/pipeline"));
+    const response = await GET(
+      authorizedRequest("http://localhost/api/debug/pipeline"),
+    );
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
@@ -78,7 +121,7 @@ describe("GET /api/debug/pipeline", () => {
 
   it("returns 400 for an invalid ZIP", async () => {
     const response = await GET(
-      new Request("http://localhost/api/debug/pipeline?zip=abc"),
+      authorizedRequest("http://localhost/api/debug/pipeline?zip=abc"),
     );
 
     expect(response.status).toBe(400);
@@ -90,7 +133,9 @@ describe("GET /api/debug/pipeline", () => {
 
   it("returns 400 when zip and coordinates are both provided", async () => {
     const response = await GET(
-      new Request("http://localhost/api/debug/pipeline?zip=23111&lat=37.6&lng=-77.4"),
+      authorizedRequest(
+        "http://localhost/api/debug/pipeline?zip=23111&lat=37.6&lng=-77.4",
+      ),
     );
 
     expect(response.status).toBe(400);
@@ -158,7 +203,7 @@ describe("GET /api/debug/pipeline", () => {
     });
 
     const response = await GET(
-      new Request("http://localhost/api/debug/pipeline?zip=23111"),
+      authorizedRequest("http://localhost/api/debug/pipeline?zip=23111"),
     );
 
     expect(response.status).toBe(200);
@@ -208,7 +253,9 @@ describe("GET /api/debug/pipeline", () => {
     });
 
     const response = await GET(
-      new Request("http://localhost/api/debug/pipeline?lat=37.6&lng=-77.4"),
+      authorizedRequest(
+        "http://localhost/api/debug/pipeline?lat=37.6&lng=-77.4",
+      ),
     );
 
     expect(response.status).toBe(200);
@@ -253,7 +300,7 @@ describe("GET /api/debug/pipeline", () => {
     });
 
     const response = await GET(
-      new Request("http://localhost/api/debug/pipeline?zip=23111"),
+      authorizedRequest("http://localhost/api/debug/pipeline?zip=23111"),
     );
 
     expect(response.status).toBe(503);

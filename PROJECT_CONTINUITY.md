@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1 CLOSED** (2026-07-15) — ranked-price freshness heartbeat + homelab exit-policy doc fix. **Still open (Pass 2+):** debug pipeline shared secret; expand-ON rank/pantry Postgres lookup parity; e2e Publix Settings miss; migration-ledger timeout; Settings gate bypass; inert selector; 022 vacuous probe; backup/restore; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1 CLOSED** (2026-07-15) — ranked-price freshness heartbeat + homelab exit-policy doc fix. **Tier 1 Pass 2 CLOSED** (2026-07-15) — debug pipeline shared admin key. **Still open (Pass 3+):** expand-ON rank/pantry Postgres lookup parity; e2e Publix Settings miss; migration-ledger timeout; Settings gate bypass; inert selector; 022 vacuous probe; backup/restore; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
 
 **Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Scheduled pipeline now **fail-closes** on **0 ranked in-stock observations in 24h** (`npm run check:ranked-price-freshness`). Exit-policy doc matches any-chain fail-loud code. **Still not** owner-run on hardware; Pass 6 backup/restore still open before treating unattended cron as foundation-complete.
 
@@ -30,7 +30,7 @@
 
 ### Working today (honest)
 
-- **Pipeline debug:** local-only `GET /api/debug/pipeline?zip=23111` or `?lat=&lng=` — stores, ranked observations, 24h freshness, missing tracked ingredients (404 in production)
+- **Pipeline debug:** local-only `GET /api/debug/pipeline?zip=23111` or `?lat=&lng=` with `YUM4LESS_DEBUG_ROUTES_ENABLED=1` **and** `YUM4LESS_DEBUG_ADMIN_KEY` (`Authorization: Bearer` or `X-Yum4Less-Admin-Key`) — stores, ranked observations, 24h freshness, missing tracked ingredients (404 in production; 401 without key)
 - **Phase B price/store alignment:** `resolveInternalKrogerStoreId` maps locationId via `source_store_id` / canonical `kroger-{locationId}` / name heuristics — **no** single-store guess fallback (H8); ingest prefers catalog `source_store_id` for Kroger weekly-ad URLs; `sync:provider-prices` resolves nearest Kroger-family numeric `locationId` via `resolvePreferredKrogerLocationIdForZip` (Postgres + haversine; optional `KROGER_LOCATION_ID` escape hatch) and logs `skip_reason`
 - **Phase C location trust:** `store-location-reconciliation` — ranked coord updates need agreeing witnesses (Kroger API + Geocodio address; optional USDA SNAP corroboration); change-only when delta ≥ `YUM4LESS_LOCATION_CHANGE_THRESHOLD_METERS` (default 50); single provider witness still promotes bootstrap → API
 - **Coordinate sanity audit path:** `coordinate-sanity-check.ts` now reports `flagReasons[]` (including dual-flag rows like `unknown_city_state` + `coordinate_delta`), `scripts/audit-food-lion-coordinates.mjs` buckets correction-candidate vs metadata-only vs manual-review rows and supports `--ids=...`, rollout policy keeps Food Lion/Lidl as coordinate-audit-required, and the verified `food-lion-mechanicsville` pin is corrected in dev + CI/fixture bootstrap data
@@ -245,6 +245,13 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-15 — Tier 1 Pass 2: debug pipeline shared admin key — CLOSED
+
+- **Theme:** Close S6 — debug dumps must not be open to anyone who can hit a non-prod LAN host with the flag on.
+- **Shipped:** `YUM4LESS_DEBUG_ADMIN_KEY` required after env gate; shared `isRequestAuthorizedWithAdminKey` (Bearer / `X-Yum4Less-Admin-Key`); feedback list now uses the same helper. Production still always 404 via `isDebugRoutesEnabled()`.
+- **Out of scope:** Pass 3+; `timingSafeEqual` (Tier 1 S7 P2); Next.js loopback bind enforcement (operator note in `.env.example` only).
+- **Evidence:** `npm test` **999/999**; `npm run typecheck` **0**; `npm run build` pass.
 
 ### 2026-07-15 — Tier 1 Pass 1: ranked-price freshness heartbeat + exit-policy doc — CLOSED
 
@@ -2126,10 +2133,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (local) | 2026-07-15 | **999/999** pass (Pass 2 debug admin key + shared admin-key helper) |
+| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 2) |
+| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 2) |
 | **Remote CI** (Pass 1 `8f76e8b`) | 2026-07-15 | **Green** — [29426088895](https://github.com/sfh1980/Yum4Less/actions/runs/29426088895) |
-| `npm test` (local) | 2026-07-15 | **988/988** pass (Pass 1 freshness heartbeat policy + webhook unit cases) |
-| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 1) |
-| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 1) |
 | **Remote CI** (Option A Slice 5c `dd4131d`) | 2026-07-11 | **Green** — [29171092681](https://github.com/sfh1980/Yum4Less/actions/runs/29171092681) |
 | `npm test` (local) | 2026-07-11 | **978/978** pass (Slice 5c ingest upsert-alias; +4 unit policy cases) |
 | `npm run test:integration` (local) | 2026-07-11 | **46/46** pass (+9 Slice 5c alias write cases on real Postgres) |
