@@ -156,36 +156,139 @@ export function migrationEffectPresent(version, db) {
         db.tableExists("store_identity_aliases")
       );
     case "022":
+      // Vacuous no-op when either Kroger member is missing; otherwise require
+      // the full seeded cross-link (not merely that an identity id exists).
       return (
-        // Seeded when both Kroger members exist; otherwise vacuous no-op is done.
-        Number(
-          db.queryScalar(
-            "select count(*) from store_identities where id = 'kroger-02900529'",
-          ),
-        ) >= 1 ||
-        Number(
-          db.queryScalar(
-            "select count(*) from stores where id in ('kroger-02900529', 'kroger-mechanicsville')",
-          ),
-        ) < 2
+        countIdentitySeedMemberStores(db, IDENTITY_SEED_SPECS["022"]) < 2 ||
+        identitySeedEffectPresent(db, IDENTITY_SEED_SPECS["022"])
       );
     case "023":
       return (
-        // Seeded when both Aldi+OSM members exist; otherwise vacuous no-op is done.
-        Number(
-          db.queryScalar(
-            "select count(*) from store_identities where id = 'aldi-mechanicsville'",
-          ),
-        ) >= 1 ||
-        Number(
-          db.queryScalar(
-            "select count(*) from stores where id in ('aldi-mechanicsville', 'osm-node-6531578976')",
-          ),
-        ) < 2
+        countIdentitySeedMemberStores(db, IDENTITY_SEED_SPECS["023"]) < 2 ||
+        identitySeedEffectPresent(db, IDENTITY_SEED_SPECS["023"])
       );
     default:
       return false;
   }
+}
+
+/** @typedef {{
+ *   version: string;
+ *   identityId: string;
+ *   canonicalStoreId: string;
+ *   aliasStoreId: string;
+ *   memberStoreIds: [string, string];
+ * }} IdentitySeedSpec */
+
+/** @type {Record<string, IdentitySeedSpec>} */
+export const IDENTITY_SEED_SPECS = {
+  "022": {
+    version: "022",
+    identityId: "kroger-02900529",
+    canonicalStoreId: "kroger-02900529",
+    aliasStoreId: "kroger-mechanicsville",
+    memberStoreIds: ["kroger-02900529", "kroger-mechanicsville"],
+  },
+  "023": {
+    version: "023",
+    identityId: "aldi-mechanicsville",
+    canonicalStoreId: "aldi-mechanicsville",
+    aliasStoreId: "osm-node-6531578976",
+    memberStoreIds: ["aldi-mechanicsville", "osm-node-6531578976"],
+  },
+};
+
+export function countIdentitySeedMemberStores(db, spec) {
+  if (!db.tableExists("stores")) {
+    return 0;
+  }
+  const [leftId, rightId] = spec.memberStoreIds;
+  return Number(
+    db.queryScalar(
+      `select count(*) from stores where id in ('${leftId}', '${rightId}')`,
+    ),
+  );
+}
+
+/**
+ * True only when the seeded twin link is fully present: one identity with
+ * matching canonical id, exactly two confirmed seeded aliases, correct roles.
+ */
+export function identitySeedEffectPresent(db, spec) {
+  if (!db.tableExists("store_identities") || !db.tableExists("store_identity_aliases")) {
+    return false;
+  }
+
+  const identityCount = Number(
+    db.queryScalar(
+      `select count(*) from store_identities
+       where id = '${spec.identityId}'
+         and canonical_store_id = '${spec.canonicalStoreId}'`,
+    ),
+  );
+  if (identityCount !== 1) {
+    return false;
+  }
+
+  const aliasTotal = Number(
+    db.queryScalar(
+      `select count(*) from store_identity_aliases
+       where identity_id = '${spec.identityId}'`,
+    ),
+  );
+  if (aliasTotal !== 2) {
+    return false;
+  }
+
+  const canonicalAliasCount = Number(
+    db.queryScalar(
+      `select count(*) from store_identity_aliases
+       where identity_id = '${spec.identityId}'
+         and store_id = '${spec.canonicalStoreId}'
+         and member_role = 'canonical'
+         and link_status = 'confirmed'
+         and match_method = 'seeded'`,
+    ),
+  );
+  if (canonicalAliasCount !== 1) {
+    return false;
+  }
+
+  const twinAliasCount = Number(
+    db.queryScalar(
+      `select count(*) from store_identity_aliases
+       where identity_id = '${spec.identityId}'
+         and store_id = '${spec.aliasStoreId}'
+         and member_role = 'alias'
+         and link_status = 'confirmed'
+         and match_method = 'seeded'`,
+    ),
+  );
+  return twinAliasCount === 1;
+}
+
+/**
+ * Fail-closed after applying 022/023: if both member stores exist, the seed
+ * must have produced the full structural effect. Vacuous (members < 2) is OK.
+ */
+export function assertIdentitySeedEffectAfterApply(version, db) {
+  const spec = IDENTITY_SEED_SPECS[version];
+  if (!spec) {
+    return;
+  }
+  if (countIdentitySeedMemberStores(db, spec) < 2) {
+    return;
+  }
+  if (identitySeedEffectPresent(db, spec)) {
+    return;
+  }
+  throw new Error(
+    `Migration ${version} applied but identity seed effect is incomplete: ` +
+      `expected identity ${spec.identityId} (canonical=${spec.canonicalStoreId}) ` +
+      `with exactly two confirmed seeded aliases ` +
+      `(${spec.canonicalStoreId} canonical + ${spec.aliasStoreId} alias). ` +
+      `Refusing to record ledger success.`,
+  );
 }
 
 function countKrogerP2GapTerms(db) {
@@ -301,6 +404,9 @@ export function applyPendingMigrations(db, options = {}) {
 
     console.log(`Applying db/init/${fileName} to ${db.databaseName}...`);
     db.applySqlFile(fileName, readFileSync(filePath, "utf8"));
+    // Fail closed for identity seeds: never ledger-success when both members
+    // exist but the seeded cross-link is still missing after apply.
+    assertIdentitySeedEffectAfterApply(version, db);
     const result = recordMigration(db, version, fileName, checksum, "apply");
     summary.applied.push(result.version);
     appliedLedger.set(version, { version, filename: fileName, checksum });

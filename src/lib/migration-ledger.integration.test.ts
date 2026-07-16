@@ -5,7 +5,10 @@ import { describe, expect, it } from "vitest";
 import {
   applyPendingMigrations,
   createPostgresMigrationDb,
+  IDENTITY_SEED_SPECS,
+  identitySeedEffectPresent,
   listInitMigrationFiles,
+  migrationEffectPresent,
 } from "@scripts-lib/apply-migrations";
 import {
   columnExists,
@@ -111,6 +114,113 @@ describe("migration ledger integration", () => {
     expect(summary.backfilled.length).toBe(listInitMigrationFiles().length);
     expect(readLedger()).toHaveLength(listInitMigrationFiles().length);
     expect(krogerAfter).toBe(krogerBefore);
+    },
+    120_000,
+  );
+
+  it(
+    "022/023 proof-of-catch: broken self-only identity fails probe and post-apply throw",
+    () => {
+      recreateTestDatabase();
+      applyPendingMigrations(migrationDb(), { stopAfterVersion: "021" });
+
+      psqlApplySqlContent(
+        TEST_DB,
+        `
+        insert into stores (id, name, kind, city, state, latitude, longitude, source_name, source_store_id)
+        values
+          ('kroger-02900529', 'Kroger Marketplace', 'grocery', 'Mechanicsville', 'VA', 37.61546, -77.32939, 'kroger-official-api', '02900529'),
+          ('kroger-mechanicsville', 'Kroger', 'grocery', 'Mechanicsville', 'VA', 37.61546, -77.32939, 'kroger-weekly-ad-scrape', 'kroger-mechanicsville'),
+          ('aldi-mechanicsville', 'Aldi', 'grocery', 'Mechanicsville', 'VA', 37.611004, -77.336853, 'aldi-weekly-ad-scrape', 'aldi-mechanicsville'),
+          ('osm-node-6531578976', 'ALDI', 'grocery', 'Mechanicsville', 'VA', 37.611004, -77.336853, 'openstreetmap-overpass', 'osm-node-6531578976')
+        on conflict (id) do update set
+          source_name = excluded.source_name,
+          source_store_id = excluded.source_store_id;
+
+        insert into store_identities (id, canonical_store_id, display_name)
+        values
+          ('kroger-02900529', 'kroger-02900529', 'Kroger Marketplace'),
+          ('aldi-mechanicsville', 'aldi-mechanicsville', 'Aldi');
+
+        insert into store_identity_aliases (
+          identity_id, source_system, external_id, store_id,
+          member_role, link_status, match_method, match_confidence
+        ) values
+          ('kroger-02900529', 'kroger-official-api', '02900529', 'kroger-02900529',
+           'canonical', 'confirmed', 'self', 1.0),
+          ('aldi-mechanicsville', 'aldi-weekly-ad-scrape', 'aldi-mechanicsville', 'aldi-mechanicsville',
+           'canonical', 'confirmed', 'self', 1.0);
+        `,
+      );
+
+      const db = migrationDb();
+      expect(migrationEffectPresent("022", db)).toBe(false);
+      expect(migrationEffectPresent("023", db)).toBe(false);
+
+      expect(() =>
+        applyPendingMigrations(db, { stopAfterVersion: "022" }),
+      ).toThrow(/Migration 022 applied but identity seed effect is incomplete/);
+
+      expect(readLedger().map((row) => String(row.version))).not.toContain("022");
+
+      // Drop Kroger members so 022 becomes a vacuous no-op; keep Aldi broken for 023.
+      psqlApplySqlContent(
+        TEST_DB,
+        `
+        delete from store_identity_aliases
+         where identity_id = 'kroger-02900529'
+            or store_id in ('kroger-02900529', 'kroger-mechanicsville');
+        delete from store_identities where id = 'kroger-02900529';
+        delete from stores where id in ('kroger-02900529', 'kroger-mechanicsville');
+        `,
+      );
+      expect(migrationEffectPresent("022", db)).toBe(true);
+      expect(migrationEffectPresent("023", db)).toBe(false);
+
+      expect(() =>
+        applyPendingMigrations(db, { stopAfterVersion: "023" }),
+      ).toThrow(/Migration 023 applied but identity seed effect is incomplete/);
+
+      expect(readLedger().map((row) => String(row.version))).toContain("022");
+      expect(readLedger().map((row) => String(row.version))).not.toContain("023");
+    },
+    120_000,
+  );
+
+  it(
+    "022/023 proof-of-catch: clean both-members seed passes probe after apply",
+    () => {
+      recreateTestDatabase();
+      applyPendingMigrations(migrationDb(), { stopAfterVersion: "021" });
+
+      psqlApplySqlContent(
+        TEST_DB,
+        `
+        insert into stores (id, name, kind, city, state, latitude, longitude, source_name, source_store_id)
+        values
+          ('kroger-02900529', 'Kroger Marketplace', 'grocery', 'Mechanicsville', 'VA', 37.61546, -77.32939, 'kroger-official-api', '02900529'),
+          ('kroger-mechanicsville', 'Kroger', 'grocery', 'Mechanicsville', 'VA', 37.61546, -77.32939, 'kroger-weekly-ad-scrape', 'kroger-mechanicsville'),
+          ('aldi-mechanicsville', 'Aldi', 'grocery', 'Mechanicsville', 'VA', 37.611004, -77.336853, 'aldi-weekly-ad-scrape', 'aldi-mechanicsville'),
+          ('osm-node-6531578976', 'ALDI', 'grocery', 'Mechanicsville', 'VA', 37.611004, -77.336853, 'openstreetmap-overpass', 'osm-node-6531578976')
+        on conflict (id) do update set
+          source_name = excluded.source_name,
+          source_store_id = excluded.source_store_id;
+        `,
+      );
+
+      const db = migrationDb();
+      expect(migrationEffectPresent("022", db)).toBe(false);
+      expect(migrationEffectPresent("023", db)).toBe(false);
+
+      const summary = applyPendingMigrations(db, { stopAfterVersion: "023" });
+      expect(summary.applied).toEqual(expect.arrayContaining(["022", "023"]));
+      expect(migrationEffectPresent("022", db)).toBe(true);
+      expect(migrationEffectPresent("023", db)).toBe(true);
+      expect(identitySeedEffectPresent(db, IDENTITY_SEED_SPECS["022"])).toBe(true);
+      expect(identitySeedEffectPresent(db, IDENTITY_SEED_SPECS["023"])).toBe(true);
+      expect(readLedger().map((row) => String(row.version))).toEqual(
+        expect.arrayContaining(["022", "023"]),
+      );
     },
     120_000,
   );

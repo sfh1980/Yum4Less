@@ -4,11 +4,11 @@
 
 ---
 
-## Resume (as of 2026-07-15)
+## Resume (as of 2026-07-16)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **Still open:** 022 vacuous probe (isolate anytime). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **Still open:** `yum4less_dev` Kroger identity live repair (see Deferred backlog). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
 
 **Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware.
 
@@ -245,6 +245,13 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-16 — 022/023 vacuous identity-seed probes — CLOSED
+
+- **Theme:** Ledger honesty — `migrationEffectPresent("022"|"023")` no longer treats “identity id exists” as success.
+- **Shipped:** Structural effect probes (canonical id, exactly 2 confirmed `seeded` aliases, correct store_id pairing); post-apply `assertIdentitySeedEffectAfterApply` throws (no ledger record) when both members exist but seed effect is still incomplete; unit matrix + migration-ledger integration proof-of-catch.
+- **Follow-up (OPEN — do not silently rediscover):** `yum4less_dev` Kroger identity is currently **unmerged** despite ledger claiming 022 applied (two self-only identities: `kroger-02900529` + `kroger-mechanicsville`). Requires **manual repair** (heal or re-seed after resolving conflicting self-identities) before this dev environment’s Kroger data can be trusted for any expand-flag testing. See Deferred backlog.
+- **Evidence:** close-out gates this session (`npm test`, `test:integration`, `build`, `typecheck`).
 
 ### 2026-07-16 — Tier 1 Pass 7: GitHub MCP env launcher — CLOSED
 
@@ -2180,8 +2187,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| **Remote CI** (022/023 probe fix — pending push) | 2026-07-16 | See close-out after push |
+| `npm test` (local) | 2026-07-16 | **1017/1017** pass (022/023 structural probe + post-apply assert matrix) |
+| `npm run test:integration` (local) | 2026-07-16 | **48/48** pass (+2 proof-of-catch: broken→throw, clean→seeded) |
+| `npm run typecheck` (local) | 2026-07-16 | **0 errors** |
+| `npm run build` (local) | 2026-07-16 | **Pass** |
 | **Remote CI** (Pass 7 `0eed3bf`) | 2026-07-16 | **Green** — [29501996180](https://github.com/sfh1980/Yum4Less/actions/runs/29501996180) |
-| `npm test` (local) | 2026-07-16 | Not required (Pass 7 = MCP launcher/docs; no product code) |
 | GitHub MCP smoke (local) | 2026-07-16 | **OK** — wrapper starts server v1.0.4 via `gh auth token` |
 | **Remote CI** (Pass 6 `bac4135`) | 2026-07-15 | **Green** — [29464106035](https://github.com/sfh1980/Yum4Less/actions/runs/29464106035) |
 | `npm test` (local) | 2026-07-15 | **1011/1011** pass (Pass 6 +4 backup helper tests) |
@@ -2324,6 +2335,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Item | Why later |
 |------|-----------|
+| **`yum4less_dev` Kroger identity live repair** | **OPEN (2026-07-16)** — Kroger identity is currently **unmerged** despite ledger claiming 022 applied (two self-only identities: `kroger-02900529` + `kroger-mechanicsville`). Vacuous-probe fix closed the mechanism; this volume still needs **manual heal / re-seed after resolving conflicting self-identities** before expand-flag testing on `yum4less_dev` can be trusted. Suggested owner: `@database-codegen-standards`. |
 | Homelab deploy + exposure | After migration-ready checklist |
 | Walmart ranked pricing | Shopper API + Flipp matching work |
 | BJ's ranked pricing | Regional; stub ingest — see Resume for v1 production-ranked chains (Publix + Food Lion shipped 2026-06-29) |

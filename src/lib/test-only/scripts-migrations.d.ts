@@ -31,6 +31,37 @@ declare module "@scripts-lib/apply-migrations" {
     db: PostgresMigrationDb,
     options?: { stopAfterVersion?: string },
   ): { applied: string[]; skipped: string[]; backfilled: string[] };
+
+  export function migrationEffectPresent(
+    version: string,
+    db: PostgresMigrationDb,
+  ): boolean;
+
+  export function identitySeedEffectPresent(
+    db: PostgresMigrationDb,
+    spec: {
+      identityId: string;
+      canonicalStoreId: string;
+      aliasStoreId: string;
+      memberStoreIds: [string, string];
+    },
+  ): boolean;
+
+  export function assertIdentitySeedEffectAfterApply(
+    version: string,
+    db: PostgresMigrationDb,
+  ): void;
+
+  export const IDENTITY_SEED_SPECS: Record<
+    string,
+    {
+      version: string;
+      identityId: string;
+      canonicalStoreId: string;
+      aliasStoreId: string;
+      memberStoreIds: [string, string];
+    }
+  >;
 }
 
 declare module "@scripts-lib/spawn-safe" {
