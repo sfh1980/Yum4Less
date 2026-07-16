@@ -38,6 +38,9 @@ docs/application-decision-trees.pdf
 # Local TypeScript error scratch dumps (agent/debug — not source of truth)
 .cursor-tsc-errors*.txt
 
+# Local Postgres dumps from db:backup / drills (may contain store + price data)
+backups/
+
 # Stray CI/workflow fragments (not tracked config)
 slice4-check.yml
 

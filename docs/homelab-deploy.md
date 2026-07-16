@@ -317,6 +317,36 @@ WHERE source_kind IN ('weekly-ad', 'official-online')
 
 Run this **after 03:30** on the day following first cron, or after a manual ingest. Emergency escape only: `YUM4LESS_SKIP_FRESHNESS_HEARTBEAT=1` (do not leave set).
 
+### 4.4 Postgres backup / restore (Pass 6)
+
+Logical dumps use `pg_dump` / `psql` **inside** the `yum4less-postgres` container. Dump files land under repo-local `backups/` (gitignored).
+
+| Command | Purpose |
+|---------|---------|
+| `npm run db:backup` | Dump `yum4less_dev` → `backups/yum4less_dev_<timestamp>.sql` |
+| `npm run db:backup -- --database=yum4less_test` | Dump another DB on the same container |
+| `npm run db:restore -- --file=backups/<dump>.sql --database=yum4less_restore_scratch` | Restore into a **non-dev** target (drops/recreates that DB) |
+| `npm run db:backup-restore-drill` | **Proof drill:** dump source → restore into disposable `yum4less_backup_drill` → assert store / `price_observations` / `schema_migrations` counts match → drop drill DB |
+
+**Protected restore:** restoring into `yum4less_dev` (or `postgres` / templates) is refused unless you pass `--i-understand-destructively-restore-dev`. Prefer restore-into-scratch + cutover over in-place overwrite.
+
+**Suggested nightly cron (same host as ingest):**
+
+```cron
+15 4 * * * cd /opt/yum4less && /usr/bin/npm run db:backup >> /var/log/yum4less/backup.log 2>&1
+```
+
+Rotate or prune `backups/` yourself (e.g. keep 14 days). After a real restore into scratch, point `DATABASE_URL` at the restored DB or rename databases only when the app is stopped.
+
+**Verify the drill once per host** before treating unattended cron as foundation-complete:
+
+```bash
+cd /opt/yum4less
+npm run db:up
+npm run db:backup-restore-drill
+# expect: [drill] OK — backup/restore round-trip verified
+```
+
 ---
 
 ## 5. When ingest silently stops working
@@ -391,5 +421,6 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
+| 2026-07-15 | Pass 6: Postgres backup/restore runbook + `db:backup` / `db:restore` / `db:backup-restore-drill` (disposable drill DB) |
 | 2026-07-15 | Pass 1 ops truth: ranked-price freshness heartbeat (fail closed on 0-in-24h) + exit-policy doc aligned with any-chain fail-loud |
 | 2026-06-29 | Initial homelab scheduled-ingest runbook |

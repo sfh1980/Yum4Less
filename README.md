@@ -137,6 +137,7 @@ Full list and ingest flags → `.env.example`.
 | `npm run test:all` | Unit + integration |
 | `npm run test:e2e` / `npm run test:e2e:ci` | Playwright browser suite — CI uses port **3100**; see [`e2e/README.md`](e2e/README.md) |
 | `npm run db:up` / `db:down` / `db:reset` / `db:logs` | Local Postgres on host port **5433** |
+| `npm run db:backup` / `db:restore` / `db:backup-restore-drill` | Logical `pg_dump`/`psql` backup + disposable restore drill (see [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §4.4) |
 | `npm run ingest:weekly-ads:fixture` | **CI/rehearsal only** — deterministic weekly ads → Postgres |
 | `npm run ingest:weekly-ads` | Live weekly-ad fetch (HTTP + browser fallback) |
 | `npm run ingest:weekly-ads:browser` | Force Playwright browser fetch |

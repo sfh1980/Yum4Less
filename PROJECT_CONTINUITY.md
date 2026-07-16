@@ -8,9 +8,9 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–5 CLOSED** (2026-07-15). **Still open (Pass 6+):** 022 vacuous probe; backup/restore; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–6 CLOSED** (2026-07-15). **Still open (Pass 7+):** 022 vacuous probe; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
 
-**Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Scheduled pipeline now **fail-closes** on **0 ranked in-stock observations in 24h** (`npm run check:ranked-price-freshness`). Exit-policy doc matches any-chain fail-loud code. **Still not** owner-run on hardware; Pass 6 backup/restore still open before treating unattended cron as foundation-complete.
+**Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Scheduled pipeline **fail-closes** on **0 ranked in-stock observations in 24h**. Backup/restore runbook + disposable drill (`npm run db:backup-restore-drill`) shipped — **still not** owner-run on hardware.
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
@@ -245,6 +245,15 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-15 — Tier 1 Pass 6: Postgres backup/restore drill — CLOSED
+
+- **Theme:** Data durability — prove `pg_dump`/`psql` restore exists before unattended cron claims.
+- **Shipped:** `scripts/lib/db-backup-restore.mjs` + `db-backup.mjs` / `db-restore.mjs` / `db-backup-restore-drill.mjs`; npm `db:backup` / `db:restore` / `db:backup-restore-drill`; `backups/` gitignored; [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §4.4 + README row.
+- **Drill evidence (this session):** source `yum4less_dev` stores=281 / PO=308 / migrations=23 → restore into disposable `yum4less_backup_drill` → counts matched → drill DB dropped. `yum4less_dev` never wiped.
+- **Safety:** restore into `yum4less_dev` refused without `--i-understand-destructively-restore-dev`.
+- **Out of scope:** Pass 7 GitHub MCP; 022 vacuous probe; offsite/S3 backup; automated retention prune.
+- **Evidence:** drill OK; helper unit tests **4/4**; full `npm test` / typecheck / build in close-out.
 
 ### 2026-07-15 — Pass 5 flake triage: mvp-flow rank-wait (not portal)
 
@@ -2162,12 +2171,13 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| **Remote CI** (Pass 5 `4a6db23`) | 2026-07-15 | **Green** — [29454283367](https://github.com/sfh1980/Yum4Less/actions/runs/29454283367) |
-| `npm test` (local) | 2026-07-15 | **1007/1007** pass (Pass 5) |
-| `npm run test:integration` (local) | 2026-07-15 | **46/46** pass (Pass 4; not re-run Pass 5 — no DB change) |
-| `npm run test:e2e:ci` (local) | 2026-07-15 | **25 passed** / 1 skipped / 1 flaky mvp-flow (Pass 5) |
-| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 5 with build) |
-| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 5) |
+| **Remote CI** (Pass 6 — pending push) | 2026-07-15 | Local gates green; CI link after push |
+| `npm test` (local) | 2026-07-15 | **1011/1011** pass (Pass 6 +4 backup helper tests) |
+| `npm run test:integration` (local) | 2026-07-15 | Not required for Pass 6 (no schema/merge change) |
+| `npm run test:e2e:ci` (local) | 2026-07-15 | Not required for Pass 6 (no UI/flow change) |
+| `npm run typecheck` (local) | 2026-07-15 | **0 errors** (Pass 6) |
+| `npm run build` (local) | 2026-07-15 | **Pass** (Pass 6) |
+| `npm run db:backup-restore-drill` (local) | 2026-07-15 | **OK** — 281 stores / 308 PO / 23 migrations round-trip |
 | **Remote CI** (Pass 3 `3f43d40`) | 2026-07-15 | **Green** — [29445257153](https://github.com/sfh1980/Yum4Less/actions/runs/29445257153) |
 | **Remote CI** (Pass 2 `485be3c`) | 2026-07-15 | **Green** — [29427921631](https://github.com/sfh1980/Yum4Less/actions/runs/29427921631) |
 | **Remote CI** (Pass 1 `8f76e8b`) | 2026-07-15 | **Green** — [29426088895](https://github.com/sfh1980/Yum4Less/actions/runs/29426088895) |
