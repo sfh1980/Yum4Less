@@ -2187,7 +2187,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| **Remote CI** (022/023 probe fix — pending push) | 2026-07-16 | See close-out after push |
+| **Remote CI** (022/023 probe `96824e0`) | 2026-07-16 | **Green** — [29503706147](https://github.com/sfh1980/Yum4Less/actions/runs/29503706147) |
 | `npm test` (local) | 2026-07-16 | **1017/1017** pass (022/023 structural probe + post-apply assert matrix) |
 | `npm run test:integration` (local) | 2026-07-16 | **48/48** pass (+2 proof-of-catch: broken→throw, clean→seeded) |
 | `npm run typecheck` (local) | 2026-07-16 | **0 errors** |
