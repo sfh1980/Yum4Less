@@ -8,9 +8,9 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–6 CLOSED** (2026-07-15). **Still open (Pass 7+):** 022 vacuous probe; GitHub MCP env. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **Still open:** 022 vacuous probe (isolate anytime). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
 
-**Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Scheduled pipeline **fail-closes** on **0 ranked in-stock observations in 24h**. Backup/restore runbook + disposable drill (`npm run db:backup-restore-drill`) shipped — **still not** owner-run on hardware.
+**Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware.
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
@@ -245,6 +245,15 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-16 — Tier 1 Pass 7: GitHub MCP env launcher — CLOSED
+
+- **Theme:** Owner/infra — stop recurring GitHub MCP discovery failures without committing tokens.
+- **Root cause:** Cursor MCP process lacked `GITHUB_PERSONAL_ACCESS_TOKEN` while `gh` keyring auth worked; bare Docker image entry omitted explicit `stdio`.
+- **Shipped:** `.cursor/hooks/github-mcp.ps1` (token from env **or** `gh auth token`; Docker `stdio`); `.cursor/mcp.json.example` + local gitignored `.cursor/mcp.json` switched to the wrapper; AGENTS / `.env.example` / testing-release-gates MCP notes.
+- **Smoke:** wrapper starts `ghcr.io/github/github-mcp-server` v1.0.4 (`starting server`). **Cursor must reload MCP / restart** for in-IDE discovery to go green.
+- **Out of scope:** 022 vacuous probe; changing GitHub PAT scopes; non-Windows launcher (PowerShell matches Semgrep MCP pattern on this host).
+- **Evidence:** local smoke OK; `npm test` / typecheck / build not required for docs+launcher (run if touching product code — none).
 
 ### 2026-07-15 — Tier 1 Pass 6: Postgres backup/restore drill — CLOSED
 
@@ -2171,7 +2180,9 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| **Remote CI** (Pass 6 `bac4135`) | 2026-07-15 | **Green** — [29464106035](https://github.com/sfh1980/Yum4Less/actions/runs/29464106035) |
+| **Remote CI** (Pass 7 — pending push) | 2026-07-16 | Docs/launcher only; CI link after push |
+| `npm test` (local) | 2026-07-16 | Not required (Pass 7 = MCP launcher/docs; no product code) |
+| GitHub MCP smoke (local) | 2026-07-16 | **OK** — wrapper starts server v1.0.4 via `gh auth token` |
 | `npm test` (local) | 2026-07-15 | **1011/1011** pass (Pass 6 +4 backup helper tests) |
 | `npm run test:integration` (local) | 2026-07-15 | Not required for Pass 6 (no schema/merge change) |
 | `npm run test:e2e:ci` (local) | 2026-07-15 | Not required for Pass 6 (no UI/flow change) |

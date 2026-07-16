@@ -51,9 +51,11 @@ Read each MCP tool schema under `mcps/<server>/tools/` before calling MCP tools.
 
 ### GitHub MCP
 
-- Official `ghcr.io/github/github-mcp-server` via Docker; requires `GITHUB_PERSONAL_ACCESS_TOKEN` (never commit it).
+- Official `ghcr.io/github/github-mcp-server` via Docker **stdio**, launched by [`.cursor/hooks/github-mcp.ps1`](../../.cursor/hooks/github-mcp.ps1) (same pattern as Semgrep MCP).
+- Token resolution (never committed): `GITHUB_PERSONAL_ACCESS_TOKEN` if set in the Cursor/process environment, else `gh auth token` after `gh auth login`.
 - **MUST** use (or `gh`) to inspect PR checks and workflow failures before claiming release readiness or CI green.
 - Prefer `gh` CLI for mutating GitHub actions unless the user explicitly wants MCP.
+- After changing `.cursor/mcp.json`, reload MCP servers or restart Cursor so discovery picks up the wrapper.
 
 ### Playwright (`@playwright/test` — CI merge gate)
 

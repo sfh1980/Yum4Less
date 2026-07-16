@@ -66,7 +66,7 @@ Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) → `.cursor/mcp.jso
 |---|---|---|
 | **postgres** | Schema/seed/`price_observations`/ingest state; DB truth claims integration tests do not settle | `npm run db:up`; port **5433**; read-only |
 | **playwright** | Exploratory UI beyond committed `e2e/` specs; codify recurring findings into `e2e/*.spec.ts` | `npm run dev`; fixture/seed data; see `e2e/README.md` |
-| **github** | PR checks, workflow failures, release-status claims | Docker + `GITHUB_PERSONAL_ACCESS_TOKEN`; prefer `gh` for writes |
+| **github** | PR checks, workflow failures, release-status claims | Docker + [`.cursor/hooks/github-mcp.ps1`](.cursor/hooks/github-mcp.ps1): uses `GITHUB_PERSONAL_ACCESS_TOKEN` if set, else `gh auth token`; prefer `gh` for writes |
 | **semgrep** | Security/dependency/secrets review; agent-written code scan | Local `semgrep` CLI; hooks advisory if missing |
 | **context7** | Current library/framework docs when API uncertainty | Optional `CONTEXT7_API_KEY` |
 

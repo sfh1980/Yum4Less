@@ -9,14 +9,13 @@
       ]
     },
     "github": {
-      "command": "docker",
+      "command": "powershell",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".cursor/hooks/github-mcp.ps1"
       ]
     },
     "playwright": {
