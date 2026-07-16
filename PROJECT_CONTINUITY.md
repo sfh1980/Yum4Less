@@ -2180,9 +2180,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| **Remote CI** (Pass 7 — pending push) | 2026-07-16 | Docs/launcher only; CI link after push |
+| **Remote CI** (Pass 7 `0eed3bf`) | 2026-07-16 | **Green** — [29501996180](https://github.com/sfh1980/Yum4Less/actions/runs/29501996180) |
 | `npm test` (local) | 2026-07-16 | Not required (Pass 7 = MCP launcher/docs; no product code) |
 | GitHub MCP smoke (local) | 2026-07-16 | **OK** — wrapper starts server v1.0.4 via `gh auth token` |
+| **Remote CI** (Pass 6 `bac4135`) | 2026-07-15 | **Green** — [29464106035](https://github.com/sfh1980/Yum4Less/actions/runs/29464106035) |
 | `npm test` (local) | 2026-07-15 | **1011/1011** pass (Pass 6 +4 backup helper tests) |
 | `npm run test:integration` (local) | 2026-07-15 | Not required for Pass 6 (no schema/merge change) |
 | `npm run test:e2e:ci` (local) | 2026-07-15 | Not required for Pass 6 (no UI/flow change) |
