@@ -2171,7 +2171,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| **Remote CI** (Pass 6 — pending push) | 2026-07-15 | Local gates green; CI link after push |
+| **Remote CI** (Pass 6 `bac4135`) | 2026-07-15 | **Green** — [29464106035](https://github.com/sfh1980/Yum4Less/actions/runs/29464106035) |
 | `npm test` (local) | 2026-07-15 | **1011/1011** pass (Pass 6 +4 backup helper tests) |
 | `npm run test:integration` (local) | 2026-07-15 | Not required for Pass 6 (no schema/merge change) |
 | `npm run test:e2e:ci` (local) | 2026-07-15 | Not required for Pass 6 (no UI/flow change) |
