@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check:identity-ssot": "node scripts/check-identity-ssot.mjs",
+    "check:compose-db-bind": "node scripts/check-compose-db-bind.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "node scripts/run-integration-tests.mjs",

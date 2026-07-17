@@ -51,6 +51,9 @@ jobs:
       - name: Identity SSOT gate
         run: npm run check:identity-ssot
 
+      - name: Compose DB bind gate
+        run: npm run check:compose-db-bind
+
       - name: Run lint
         run: npm run lint
 

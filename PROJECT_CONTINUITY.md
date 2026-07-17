@@ -8,9 +8,9 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Wave 2 Part 1 Aldi `023` heal CLOSED** (2026-07-16). **Wave 2 Part 2 Phase 0 Q1–Q3 locked** (2026-07-16) — Q1 map-align code **not started**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). Next: optional small slice **Q1 Publix locator map-merge align** when prioritized.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Wave 2 Part 1 Aldi `023` heal CLOSED** (2026-07-16). **Wave 2 Part 2 Phase 0 Q1–Q3 locked** (2026-07-16) — Q1 map-align code **not started**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). **Tier 2 comprehensive audit CLOSED (audit-only)** (2026-07-16) — see [`docs/audits/tier2-comprehensive-audit-report.md`](docs/audits/tier2-comprehensive-audit-report.md). **Tier 2 SS-1 CLOSED** (2026-07-16) — Postgres compose bind loopback-only + `check:compose-db-bind` CI gate. Next: Tier 2 sprint remaining (P1-ops freshness, P2-a pantry e2e, P2-b probe 021, P2-c TheMealDB 503); optional **Q1 Publix locator map-merge align** when prioritized.
 
-**Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware.
+**Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware. Compose Postgres is **`127.0.0.1:5433:5432`** (SS-1); local-dev `postgres:postgres` remains loopback-only.
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
@@ -245,6 +245,24 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-16 — Tier 2 SS-1: Postgres loopback bind + compose-lint gate — CLOSED
+
+- **Theme:** STOP-SHIP fix — stop publishing local Postgres on all interfaces.
+- **Shipped:** `docker-compose.yml` → `127.0.0.1:5433:5432`; `npm run check:compose-db-bind` + CI verify step; `docs/homelab-deploy.md` corrected (was falsely claiming localhost-only).
+- **Credentials:** Local-dev `postgres:postgres` retained as intentional loopback convention (`.env.example` / scripts). Homelab doc now requires rotate-away for any non-loopback deploy. No non-loopback production publish found in this repo.
+- **Proof-of-catch:** Before — `docker port` → `0.0.0.0:5433` + `[::]:5433`; `netstat` LISTENING on `0.0.0.0:5433`. After recreate — `127.0.0.1:5433` only. Gate fails on unqualified `5433:5432`, passes on loopback bind.
+- **Evidence this session:** `npm test` **1033/1033**; `check:compose-db-bind` OK; Semgrep on touched set (see commit notes / CI). CI `gh run` link required before calling merge-ready.
+
+### 2026-07-16 — Tier 2 comprehensive audit (audit-only) — CLOSED
+
+- **Theme:** Security / data integrity / efficiency / Playwright edge-case coverage sweep after Tier 1 close.
+- **Shipped (docs-only):** [`docs/audits/tier2-comprehensive-audit-report.md`](docs/audits/tier2-comprehensive-audit-report.md). **No product/code fixes.**
+- **STOP-SHIP:** Compose publishes Postgres on `0.0.0.0:5433` with default `postgres:postgres` (live `netstat`/`docker port` proof); `docs/homelab-deploy.md` incorrectly claims localhost-only.
+- **Key findings:** pantry-step false-completion (heading-only assert); older migration probes still existence-class; late TheMealDB DB read → 500 vs 503; deep e2e edge matrix largely uncovered; `yum4less_dev` still 0 fresh PO in 24h. Settings gate + Home Ingredients blank re-verified CLOSED (not reopened).
+- **Verdict:** **not** Tier-2 / unattended-homelab ready. Checkpoint before any fix sprint.
+- **Evidence this session:** typecheck **0**; identity-SSOT OK; `npm audit` 2 moderate; Semgrep 0 on scanned set; Postgres MCP identity sweep clean; backup-restore drill OK (281/308/23). Full unit/integration/e2e/CI **not** re-claimed this pass.
+
 
 ### 2026-07-16 — Identity SSOT CI gate (A+B) — CLOSED
 

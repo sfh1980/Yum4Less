@@ -52,7 +52,7 @@ Cron has no TTY; scripts must reach:
 | `overpass-api.de` / `overpass.kumi.systems` | Map catalog OSM ingest |
 | `www.themealdb.com` | Sale-driven recipe import (dev/test key in `.env.example`) |
 
-No inbound ports required for ingest itself. Postgres default `5433:5432` is localhost-only unless you expose it deliberately.
+No inbound ports required for ingest itself. Compose publishes Postgres as `127.0.0.1:5433:5432` (loopback only). Do **not** change that to an unqualified `5433:5432` or `0.0.0.0:…` publish — that binds all interfaces and is a STOP-SHIP regression (enforced by `npm run check:compose-db-bind`). For any non-loopback deploy, rotate away from the local-dev `postgres:postgres` credentials and put the secret in env, not the compose file.
 
 ### File system
 
