@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Aldi `023` seeded-method OPEN** (Wave 2). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). Next: Wave **2** Aldi `023` heal + plain-language Phase 0 decision memo.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **`yum4less_dev` Aldi `023` identity live repair CLOSED** (2026-07-16 Wave 2 Part 1). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). Next: Wave **2 Part 2** plain-language Phase 0 decision memo.
 
 **Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware.
 
@@ -245,6 +245,16 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-16 — yum4less_dev Aldi identity live repair — CLOSED (Wave 2 Part 1)
+
+- **Theme:** Manual data heal (not a code change) — align `yum4less_dev` Aldi graph with what ledger `023` already claimed.
+- **Before:** one identity `aldi-mechanicsville` with confirmed aliases `match_method=self` (canonical catalog) + `match_method=pointer` (OSM) — functionally merged, **not** seeded shape. `identitySeedEffectPresent("023")` / `migrationEffectPresent("023")` both **false**.
+- **Repair:** `npm run db:backup` → delete that identity graph only (stores / `price_observations` untouched) → apply `db/init/023_seed_aldi_mechanicsville_identity.sql` directly (not via `applyPendingMigrations`; ledger already had `023`).
+- **After:** one identity `aldi-mechanicsville` (canonical), two confirmed `seeded` aliases (`aldi-mechanicsville` canonical + `osm-node-6531578976` alias). Both probes **true**. Ledger row unchanged. Integrity counts unchanged (stores=281 / PO=308 / migrations=23).
+- **Backup (rollback):** `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql` (pre-delete).
+- **Out of scope:** Phase 0 identity design memo (Wave 2 Part 2); expand flags remain OFF — no user-facing behavior change.
+- **Evidence:** heal script used shipped `createPostgresMigrationDb` + `identitySeedEffectPresent` / `migrationEffectPresent` (same probe path as Kroger heal).
 
 ### 2026-07-16 — Wave 1c: Scale risk C portal rule docs — CLOSED (Wave 1 complete)
 
@@ -2231,6 +2241,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| Aldi `023` heal (`yum4less_dev`) | 2026-07-16 | **OK** — probes true; backup `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`; stores/PO/migrations unchanged (281/308/23) |
 | Wave 1c docs-only (portal rule) | 2026-07-16 | Docs only — `yum4less-frontend-workflow.mdc` + `web-frontend-standards.md` + Continuity; **no** product code; unit/e2e gates N/A for this slice |
 | `npm test` (Wave 1b full) | 2026-07-16 | **1030/1030** pass (183 files; +3 `assertRecommendationsHaveMeals` proof-of-catch) |
 | `npm run typecheck` (Wave 1b) | 2026-07-16 | **0 errors** |
@@ -2395,7 +2406,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | Item | Why later |
 |------|-----------|
 | **`yum4less_dev` Kroger identity live repair** | **CLOSED (2026-07-16)** — Manual data heal: deleted self-only identities, re-applied `022` seed SQL; probes true. Pre-heal backup: `backups/yum4less_dev_2026-07-16T14-45-46-486Z.sql`. |
-| **Aldi `023` seeded-method mismatch** | **OPEN (Wave 2)** — Dev/graph may be linked via `self`/`pointer` while `identitySeedEffectPresent("023")` expects confirmed `seeded` alias shape. Tracked for heal + probe honesty; **not** Wave 0. Expand flags remain OFF. |
+| **Aldi `023` seeded-method mismatch** | **CLOSED (2026-07-16 Wave 2 Part 1)** | Manual heal: deleted `self`/`pointer` graph, re-applied `023` seed SQL; probes true. Pre-heal backup: `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`. Expand flags remain OFF. |
 | **Home Ingredients silent on market-search error / empty** | **CLOSED (2026-07-16 Wave 0)** — Was blank when `ingredients` + no `scopedMarket` + not loading. Now `IngredientsMarketUnavailable` matches Deals error alert + idle “Complete Settings…” guidance. |
 | **Coverage Slice 4 weekly-ad fan-out / Slice 7 best-offer+0.55** | **CLOSED (2026-07-09)** — Triage 2026-07-16 confirmed: fan-out/dedupe = Coverage Slice 4; Slice 7 = best-offer persist + confidence 0.55. Do not reopen as “optional fan-out narrowing.” |
 | Homelab deploy + exposure | After migration-ready checklist |
