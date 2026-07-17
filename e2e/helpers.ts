@@ -1,10 +1,16 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Response } from "@playwright/test";
+import {
+  assertRecommendationsHttpOk,
+  RECOMMENDATIONS_WAIT_TIMEOUT_MS,
+} from "@/lib/test-only/assert-recommendations-response";
 
 /** CI / E2E primary coordinate anchor (geolocation-first path). */
 export const E2E_PRIMARY_COORDINATES = {
   latitude: 37.6085,
   longitude: -77.3739,
 } as const;
+
+export { RECOMMENDATIONS_WAIT_TIMEOUT_MS };
 
 /** ZIP fallback-path anchor only — not the primary geo fence. */
 export const E2E_ZIP_FALLBACK = "23111";
@@ -135,25 +141,73 @@ export async function goToPantryStep(page: Page) {
   await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
 }
 
-export async function completePantryAndSuggestRecipes(page: Page) {
-  await goToPantryStep(page);
-
+/**
+ * Shared rank-wait: Promise.all(click + wait for POST), then fail loud on non-200.
+ * Explicit timeout so pantry→rank is not fighting the rest of a fat flow for the
+ * default 90s test budget alone.
+ */
+export async function waitForRecommendationsAfterSuggest(page: Page): Promise<{
+  response: Response;
+  body: {
+    ok: boolean;
+    experience?: {
+      market: { nearbyStores: PublicNearbyStore[] };
+      recommendations?: unknown[];
+    };
+    error?: string;
+  };
+}> {
   const suggestButton = page.getByRole("button", {
     name: "Suggest recipes for my store(s)",
   });
   await expect(suggestButton).not.toBeDisabled();
 
-  const recommendationsResponse = page.waitForResponse(
-    (res) =>
-      res.url().includes("/api/recommendations") &&
-      res.request().method() === "POST" &&
-      res.status() === 200,
-  );
-  await suggestButton.click();
-  await recommendationsResponse;
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/recommendations") &&
+        res.request().method() === "POST",
+      { timeout: RECOMMENDATIONS_WAIT_TIMEOUT_MS },
+    ),
+    suggestButton.click(),
+  ]);
+
+  let body: {
+    ok?: boolean;
+    experience?: {
+      market: { nearbyStores: PublicNearbyStore[] };
+      recommendations?: unknown[];
+    };
+    error?: string;
+  } = {};
+  try {
+    body = (await response.json()) as typeof body;
+  } catch {
+    body = {};
+  }
+
+  assertRecommendationsHttpOk({
+    status: response.status(),
+    okBody: { ok: body.ok, error: body.error },
+  });
+
+  return {
+    response,
+    body: {
+      ok: body.ok === true,
+      experience: body.experience,
+      error: body.error,
+    },
+  };
+}
+
+export async function completePantryAndSuggestRecipes(page: Page) {
+  await goToPantryStep(page);
+  const result = await waitForRecommendationsAfterSuggest(page);
   await expect(page.getByRole("heading", { name: "Dinner recommendations" })).toBeVisible({
     timeout: 30_000,
   });
+  return result;
 }
 
 /** @deprecated Use goToPantryStep — rank intermediate screen removed. */
@@ -311,7 +365,12 @@ export async function assertWalmartContextOnlyOnMap(
   await closeMapOverlay(page);
 }
 
-export async function runCoreMvpFlow(page: Page) {
+export async function runCoreMvpFlow(
+  page: Page,
+  options?: { includeMapAssertions?: boolean },
+) {
+  const includeMapAssertions = options?.includeMapAssertions ?? true;
+
   await page.goto("/");
 
   await expect(
@@ -322,40 +381,22 @@ export async function runCoreMvpFlow(page: Page) {
 
   const marketBody = await completeSettingsZipFlow(page);
   await completeWelcomeFlow(page);
-  await assertMarketSearchStoreResults(page, marketBody.market.nearbyStores);
-  await assertWalmartContextOnlyOnMap(page, marketBody.market.nearbyStores);
+
+  if (includeMapAssertions) {
+    await assertMarketSearchStoreResults(page, marketBody.market.nearbyStores);
+    await assertWalmartContextOnlyOnMap(page, marketBody.market.nearbyStores);
+  }
 
   await expect(page.getByText(/^Priced$/i)).toHaveCount(0);
 
   const ingredientGate = page.getByRole("button", { name: "Use all ingredients and check pantry" });
   await expect(ingredientGate).toBeVisible({ timeout: 30_000 });
 
-  await goToPantryStep(page);
-
-  const suggestButton = page.getByRole("button", {
-    name: "Suggest recipes for my store(s)",
-  });
-  await expect(suggestButton).not.toBeDisabled();
-
-  const recommendationsResponse = page.waitForResponse(
-    (res) =>
-      res.url().includes("/api/recommendations") &&
-      res.request().method() === "POST" &&
-      res.status() === 200,
-  );
-  await suggestButton.click();
-  const recommendationsBody = (await (await recommendationsResponse).json()) as {
-    ok: boolean;
-    experience: { market: { nearbyStores: PublicNearbyStore[] } };
-  };
+  const { body: recommendationsBody } = await completePantryAndSuggestRecipes(page);
   expect(recommendationsBody.ok).toBe(true);
-  assertPublicNearbyStoresSanitized(
-    recommendationsBody.experience.market.nearbyStores,
-  );
-  assertProductionRankedRolloutGates(
-    recommendationsBody.experience.market.nearbyStores,
-    { requireKrogerInFixture: false },
-  );
+  const rankedStores = recommendationsBody.experience?.market.nearbyStores ?? [];
+  assertPublicNearbyStoresSanitized(rankedStores);
+  assertProductionRankedRolloutGates(rankedStores, { requireKrogerInFixture: false });
 
   await expect(
     page.getByRole("heading", { name: "How to read these results" }),

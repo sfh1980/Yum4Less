@@ -6,7 +6,6 @@ import {
   injectStaleSelectedStoreIds,
   readPersistedSelectedStoreIds,
   resetAppPreferences,
-  switchMainTab,
 } from "./helpers";
 
 const STALE_STORE_ID = "aldi-23111";
@@ -39,6 +38,7 @@ test.describe("Stale store selection re-sync (#14–15)", () => {
   test("drops stale store ids on rank, shows notice, and writes back effective selection", async ({
     page,
   }) => {
+    test.setTimeout(150_000);
     await completeSettingsZipFlowMultiStore(page);
     await completeWelcomeFlow(page);
     await goToPantryStep(page);
@@ -90,18 +90,20 @@ test.describe("Stale store selection re-sync (#14–15)", () => {
     expect(body.experience?.effectiveSelectedStoreIds ?? storedIds).not.toContain(STALE_STORE_ID);
 
     await page.unroute("**/api/recommendations");
+    // Auto market-search fires on hydrate as soon as Home/Welcome mounts — register
+    // before reload so we cannot miss a fast response (classic waitForResponse race).
+    const marketSearchAfterReload = page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/market-search") &&
+        res.request().method() === "POST",
+      { timeout: 120_000 },
+    );
     await page.reload();
-    await switchMainTab(page, "Home");
+    const marketResponse = await marketSearchAfterReload;
+    expect(marketResponse.status()).toBe(200);
     await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible({
       timeout: 30_000,
     });
-    await page.waitForResponse(
-      (res) =>
-        res.url().includes("/api/market-search") &&
-        res.request().method() === "POST" &&
-        res.status() === 200,
-      { timeout: 120_000 },
-    );
     await completeWelcomeFlow(page);
     await goToPantryStep(page);
 

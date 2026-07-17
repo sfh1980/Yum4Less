@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deleteProcessEnvKey } from "@/lib/test-only/process-env-test-helpers";
 import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
-import { resolveZipLocation } from "@/lib/geocoding";
+import {
+  resetZipLocationCacheForTests,
+  resolveZipLocation,
+} from "@/lib/geocoding";
 
 const originalGeocodioKey = process.env.GEOCODIO_API_KEY;
 const originalNodeEnv = process.env.NODE_ENV;
@@ -10,6 +13,7 @@ const originalGithubActions = process.env.GITHUB_ACTIONS;
 
 describe("resolveZipLocation", () => {
   afterEach(() => {
+    resetZipLocationCacheForTests();
     process.env.GEOCODIO_API_KEY = originalGeocodioKey;
     if (originalNodeEnv === undefined) {
       deleteProcessEnvKey("NODE_ENV");
@@ -40,6 +44,21 @@ describe("resolveZipLocation", () => {
       expect(result.location.source).toBe("seed");
       expect(result.location.city).toBe("Mechanicsville");
       expect(result.providerConfigured).toBe(false);
+    }
+  });
+
+  it("reuses the first resolved coords for the same ZIP within a process", async () => {
+    delete process.env.GEOCODIO_API_KEY;
+    stubTestNodeEnv("development");
+    delete process.env.CI;
+
+    const first = await resolveZipLocation("23111");
+    const second = await resolveZipLocation("23111");
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    if (first.ok && second.ok) {
+      expect(second.location).toEqual(first.location);
     }
   });
 

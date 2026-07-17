@@ -6,6 +6,7 @@ import { InternalDetailsModal } from "@/components/internal-details-modal";
 import { BottomNav } from "@/components/meal-planner/bottom-nav";
 import { DealsPanel } from "@/components/meal-planner/deals-panel";
 import { InternalDetailsDevTrigger } from "@/components/meal-planner/internal-details-dev-trigger";
+import { IngredientsMarketUnavailable } from "@/components/meal-planner/ingredients-market-unavailable";
 import { IngredientsStepPanel } from "@/components/meal-planner/ingredients-step-panel";
 import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
 import { PantryStepPanel } from "@/components/meal-planner/pantry-step-panel";
@@ -70,15 +71,11 @@ export function MealPlanner() {
               />
             ) : null}
 
-            {demo.flowStep === "ingredients" &&
-            !demo.scopedMarket &&
-            demo.marketSearchLoading ? (
-              <div className="panel panel-padding meal-planner-panel flow-panel">
-                <h2>Ingredients</h2>
-                <p className="panel-copy" role="status">
-                  Loading sale ingredients from your saved Settings…
-                </p>
-              </div>
+            {demo.flowStep === "ingredients" && !demo.scopedMarket ? (
+              <IngredientsMarketUnavailable
+                marketSearchLoading={demo.marketSearchLoading}
+                marketSearchState={demo.marketSearchState}
+              />
             ) : null}
 
             {demo.flowStep === "pantry" ? (

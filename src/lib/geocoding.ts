@@ -63,9 +63,25 @@ const seedZipLocations: Record<string, SeedZipLocation> = {
   },
 };
 
+/** Same ZIP must resolve to the same coords within a process (market-search vs rank). */
+const zipLocationCache = new Map<string, ResolvedZipLocation>();
+
+export function resetZipLocationCacheForTests() {
+  zipLocationCache.clear();
+}
+
 export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResult> {
   const normalizedZipCode = zipCode.trim();
-  const geocodioKey = process.env.GEOCODIO_API_KEY;
+  const cached = zipLocationCache.get(normalizedZipCode);
+  if (cached) {
+    return {
+      ok: true,
+      location: cached,
+      providerConfigured: Boolean(process.env.GEOCODIO_API_KEY?.trim()),
+    };
+  }
+
+  const geocodioKey = process.env.GEOCODIO_API_KEY?.trim();
 
   if (!geocodioKey) {
     if (!allowsSeedZipGeocodingFallback()) {
@@ -77,9 +93,11 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
       };
     }
 
-    return getSeedFallback(
-      normalizedZipCode,
-      "Add GEOCODIO_API_KEY to enable live ZIP lookup outside the seeded local market.",
+    return cacheZipLookupResult(
+      getSeedFallback(
+        normalizedZipCode,
+        "Add GEOCODIO_API_KEY to enable live ZIP lookup outside the seeded local market.",
+      ),
     );
   }
 
@@ -88,10 +106,12 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
     RATE_LIMITS.geocodioUpstream,
   );
   if (!rateLimit.ok) {
-    return failOrSeedFallback(
-      normalizedZipCode,
-      "Live ZIP lookup is temporarily rate limited. Using local fallback when available.",
-      true,
+    return cacheZipLookupResult(
+      failOrSeedFallback(
+        normalizedZipCode,
+        "Live ZIP lookup is temporarily rate limited. Using local fallback when available.",
+        true,
+      ),
     );
   }
 
@@ -107,16 +127,20 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
     );
 
     if (!response.ok) {
-      return failOrSeedFallback(
-        normalizedZipCode,
-        "Live ZIP lookup is temporarily unavailable, and this ZIP is not in the local fallback set.",
-        true,
+      return cacheZipLookupResult(
+        failOrSeedFallback(
+          normalizedZipCode,
+          "Live ZIP lookup is temporarily unavailable, and this ZIP is not in the local fallback set.",
+          true,
+        ),
       );
     }
 
     const payload = (await response.json()) as GeocodioResponse;
     const firstResult = payload.results?.[0];
-    const parsedLocation = firstResult ? parseGeocodioResult(firstResult, normalizedZipCode) : undefined;
+    const parsedLocation = firstResult
+      ? parseGeocodioResult(firstResult, normalizedZipCode)
+      : undefined;
 
     if (parsedLocation) {
       if (
@@ -133,6 +157,7 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
         };
       }
 
+      zipLocationCache.set(normalizedZipCode, parsedLocation);
       return {
         ok: true,
         location: parsedLocation,
@@ -140,18 +165,29 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
       };
     }
 
-    return failOrSeedFallback(
-      normalizedZipCode,
-      "Geocodio did not return a usable location for that ZIP, and no local fallback exists for it yet.",
-      true,
+    return cacheZipLookupResult(
+      failOrSeedFallback(
+        normalizedZipCode,
+        "Geocodio did not return a usable location for that ZIP, and no local fallback exists for it yet.",
+        true,
+      ),
     );
   } catch {
-    return failOrSeedFallback(
-      normalizedZipCode,
-      "Live ZIP lookup failed, and this ZIP is not available in the local fallback set.",
-      true,
+    return cacheZipLookupResult(
+      failOrSeedFallback(
+        normalizedZipCode,
+        "Live ZIP lookup failed, and this ZIP is not available in the local fallback set.",
+        true,
+      ),
     );
   }
+}
+
+function cacheZipLookupResult(result: ZipLookupResult): ZipLookupResult {
+  if (result.ok) {
+    zipLocationCache.set(result.location.zipCode, result.location);
+  }
+  return result;
 }
 
 function failOrSeedFallback(

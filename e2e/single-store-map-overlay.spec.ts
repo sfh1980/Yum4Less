@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { assertRecommendationsHaveMeals } from "@/lib/test-only/assert-recommendations-response";
 import {
+  completePantryAndSuggestRecipes,
   completeSettingsZipFlow,
   completeWelcomeFlow,
   E2E_ZIP_FALLBACK,
-  goToPantryStep,
   resetAppPreferences,
 } from "./helpers";
 
@@ -63,14 +64,14 @@ test.describe("Single-store map overlay", () => {
   });
 
   test("opens from meal card primary store pill on mobile viewport", async ({ page }) => {
+    test.setTimeout(150_000);
     await page.setViewportSize({ width: 390, height: 844 });
     await completeSettingsZipFlow(page);
     await completeWelcomeFlow(page);
-    await goToPantryStep(page);
-    await page.getByRole("button", { name: "Suggest recipes for my store(s)" }).click();
-    await expect(page.getByRole("heading", { name: "Dinner recommendations" })).toBeVisible({
-      timeout: 30_000,
-    });
+    // Couple to POST /api/recommendations — "Dinner recommendations" heading alone is not
+    // a rank-completion signal (false sync caused the historical accordion flake).
+    const { body } = await completePantryAndSuggestRecipes(page);
+    assertRecommendationsHaveMeals(body);
 
     const firstMealTrigger = page.locator(".meal-results-accordion-trigger").first();
     await expect(firstMealTrigger).toBeVisible({ timeout: 30_000 });

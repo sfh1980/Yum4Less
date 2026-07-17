@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **Still open:** `yum4less_dev` Kroger identity live repair (see Deferred backlog). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1a e2e rank-wait / ZIP geocode 409 flake family CLOSED** (2026-07-16). **Wave 1b single-store-map-overlay mobile false-sync flake CLOSED** (2026-07-16). **Aldi `023` seeded-method OPEN** (Wave 2). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). Next: Wave **1c** Scale risk C portal rule docs → Wave **2** Aldi `023`.
 
 **Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware.
 
@@ -246,11 +246,47 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 ## Changelog (newest first)
 
+### 2026-07-16 — Wave 1b: single-store-map-overlay mobile false-sync flake — CLOSED
+
+- **Theme:** CI trust — stop treating “Dinner recommendations” heading as rank completion on the meal-card map-pill mobile path.
+- **Root cause (independent of Pass 5 portal):** Test clicked Suggest, waited on heading (always mounts when `flowStep === "results"`), then waited 30s for `.meal-results-accordion-trigger` with **no** `POST /api/recommendations` coupling. Accordion only mounts when rank is ready **and** `recommendations.length > 0` → CI `element(s) not found` at `:76` (reporter `:65` = test title). Pass 5 portal/inert applies only after overlay opens — not implicated.
+- **Shipped (test-only):** Mobile path uses `completePantryAndSuggestRecipes` → shared `waitForRecommendationsAfterSuggest`; `assertRecommendationsHaveMeals` fails loud on ok-but-empty (Vitest proof-of-catch). No product UI change.
+- **Continuity cleanup:** Deferred overlay-mobile row closed; post–Pass 5 remote flake label corrected (mvp-flow/Cook-tab rank-wait was the recurring reported flake, not overlay).
+- **Out of scope:** Wave 1c Scale risk C portal rule docs; Wave 2 Aldi `023`.
+- **Evidence:** see Verification snapshot this session.
+
+### 2026-07-16 — Wave 1a: e2e rank-wait flake family — CLOSED
+
+- **Theme:** CI trust — stop `waitForResponse(... status===200)` hanging as a silent timeout on non-200 or starved budgets.
+- **Root cause:** Shared waiter predicate required HTTP 200 (non-200 completed responses ignored → 90s hang); fat `runCoreMvpFlow` shared one test budget with map asserts; duplicated wait pattern in helper vs `runCoreMvpFlow`.
+- **Shipped:** `waitForRecommendationsAfterSuggest` (`Promise.all` click+wait, explicit 60s timeout, loud assert via `assertRecommendationsHttpOk`); `completePantryAndSuggestRecipes` + `runCoreMvpFlow` single call site; mvp-flow / navigation-theme describe timeout 150s; Vitest proof-of-catch for 429/4xx/5xx/ok:false; in-process ZIP geocode memoization so market-search vs rank cannot diverge into HTTP 409 under Geocodio rate-limit/seed fallback; `stale-store-selection` reload race fixed (register market-search waiter **before** `page.reload()`).
+- **Out of scope:** Wave 1b overlay mobile flake; Scale risk C docs (1c); Wave 2 Aldi `023`.
+- **Evidence:** see Verification snapshot this session (`npm test` **1027/1027**; `test:e2e:ci` **26 passed** / 1 skipped).
+
+### 2026-07-16 — Wave 0: Home Ingredients market-search blank hole — CLOSED
+
+- **Theme:** Shopper honesty on Home Ingredients — never blank when market search fails or has no market.
+- **Shipped:** `IngredientsMarketUnavailable` mirrors Deals loading / `role="alert"` error / “Complete Settings…” idle-empty; wired from `meal-planner/index.tsx` when `flowStep === "ingredients"` and no `scopedMarket`.
+- **Tests:** `ingredients-market-unavailable.test.tsx` — error → visible alert (not blank); loading; fallback error copy; idle empty guidance.
+- **Continuity triage close-out (same slice):** Home silent market-search → Deferred **CLOSED**; Aldi `023` seeded-method mismatch → Deferred **OPEN** tracked row (heal still Wave 2); triage confirm — Coverage Slice 4 fan-out + Slice 7 (best-offer/0.55) already shipped/CLOSED; Settings-first gate bypass already **CLOSED** (Pass 5) — no reopen.
+- **Out of scope:** Deals/Settings copy; retry CTA; rank/pantry errors; Aldi `023` heal; Wave 1 flakes.
+- **Evidence:** Full close-out gates this session: `npm test` **1021/1021**; `npm run build` **pass**; `npm run typecheck` **0** (typecheck after build — stale `.next/types` alone can false-fail).
+
+### 2026-07-16 — yum4less_dev Kroger identity live repair — CLOSED
+
+- **Theme:** Manual data heal (not a code change) — align `yum4less_dev` Kroger graph with what ledger `022` already claimed.
+- **Before:** two self-only identities (`kroger-02900529`, `kroger-mechanicsville`), each `match_method=self`.
+- **Repair:** `npm run db:backup` → delete those two identity graphs only (stores / `price_observations` untouched) → apply `db/init/022_seed_kroger_mechanicsville_identity.sql` directly (not via `applyPendingMigrations`; ledger already had `022`).
+- **After:** one identity `kroger-02900529` (canonical), two confirmed `seeded` aliases (`kroger-02900529` canonical + `kroger-mechanicsville` alias). `identitySeedEffectPresent(022)` + `migrationEffectPresent("022")` both **true**. Ledger row unchanged.
+- **Backup (rollback):** `backups/yum4less_dev_2026-07-16T14-45-46-486Z.sql` (pre-delete; stores=281 / PO=308 / migrations=23).
+- **Out of scope:** Aldi `023` (separate already-flagged shape: merged but not `seeded`); expand flags remain OFF — no user-facing behavior change.
+- **Evidence:** heal probes + Postgres MCP sanity SQL this session; no product code diff.
+
 ### 2026-07-16 — 022/023 vacuous identity-seed probes — CLOSED
 
 - **Theme:** Ledger honesty — `migrationEffectPresent("022"|"023")` no longer treats “identity id exists” as success.
 - **Shipped:** Structural effect probes (canonical id, exactly 2 confirmed `seeded` aliases, correct store_id pairing); post-apply `assertIdentitySeedEffectAfterApply` throws (no ledger record) when both members exist but seed effect is still incomplete; unit matrix + migration-ledger integration proof-of-catch.
-- **Follow-up (OPEN — do not silently rediscover):** `yum4less_dev` Kroger identity is currently **unmerged** despite ledger claiming 022 applied (two self-only identities: `kroger-02900529` + `kroger-mechanicsville`). Requires **manual repair** (heal or re-seed after resolving conflicting self-identities) before this dev environment’s Kroger data can be trusted for any expand-flag testing. See Deferred backlog.
+- **Follow-up:** `yum4less_dev` Kroger live repair — **CLOSED** same day (see changelog entry above). Aldi `023` seeded-method mismatch remains a separate finding.
 - **Evidence:** close-out gates this session (`npm test`, `test:integration`, `build`, `typecheck`).
 
 ### 2026-07-16 — Tier 1 Pass 7: GitHub MCP env launcher — CLOSED
@@ -2187,6 +2223,19 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (Wave 1b full) | 2026-07-16 | **1030/1030** pass (183 files; +3 `assertRecommendationsHaveMeals` proof-of-catch) |
+| `npm run typecheck` (Wave 1b) | 2026-07-16 | **0 errors** |
+| `npm run build` (Wave 1b) | 2026-07-16 | **Pass** |
+| Isolated overlay mobile `--repeat-each=5 --retries=0` | 2026-07-16 | **5/5** pass (`meal card primary store pill`) |
+| `npm run test:e2e:ci` (Wave 1b) | 2026-07-16 | **26 passed** / 0 failed / 1 skipped (H12) |
+| `npm test` (Wave 1a full) | 2026-07-16 | **1027/1027** pass (183 files; ZIP cache + assert-recommendations proof-of-catch) |
+| `npm run typecheck` (Wave 1a) | 2026-07-16 | **0 errors** |
+| `npm run build` (Wave 1a) | 2026-07-16 | **Pass** (Next.js 15.5.19) |
+| `npm run test:e2e:ci` (Wave 1a) | 2026-07-16 | **26 passed** / 0 failed / 1 skipped (H12); stale-store + mvp-flow green after ZIP cache + reload waiter race fix |
+| `npm test` (Wave 0 full) | 2026-07-16 | **1021/1021** pass (182 files; includes IngredientsMarketUnavailable) |
+| `npm run build` (Wave 0) | 2026-07-16 | **Pass** (Next.js 15.5.19) |
+| `npm run typecheck` (Wave 0) | 2026-07-16 | **0 errors** (re-run after build) |
+| `npm test` (Wave 0 scoped) | 2026-07-16 | **9/9** — `ingredients-market-unavailable.test.tsx` (4) + `deals-panel.test.tsx` (5) |
 | **Remote CI** (022/023 probe `96824e0`) | 2026-07-16 | **Green** — [29503706147](https://github.com/sfh1980/Yum4Less/actions/runs/29503706147) |
 | `npm test` (local) | 2026-07-16 | **1017/1017** pass (022/023 structural probe + post-apply assert matrix) |
 | `npm run test:integration` (local) | 2026-07-16 | **48/48** pass (+2 proof-of-catch: broken→throw, clean→seeded) |
@@ -2335,7 +2384,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Item | Why later |
 |------|-----------|
-| **`yum4less_dev` Kroger identity live repair** | **OPEN (2026-07-16)** — Kroger identity is currently **unmerged** despite ledger claiming 022 applied (two self-only identities: `kroger-02900529` + `kroger-mechanicsville`). Vacuous-probe fix closed the mechanism; this volume still needs **manual heal / re-seed after resolving conflicting self-identities** before expand-flag testing on `yum4less_dev` can be trusted. Suggested owner: `@database-codegen-standards`. |
+| **`yum4less_dev` Kroger identity live repair** | **CLOSED (2026-07-16)** — Manual data heal: deleted self-only identities, re-applied `022` seed SQL; probes true. Pre-heal backup: `backups/yum4less_dev_2026-07-16T14-45-46-486Z.sql`. |
+| **Aldi `023` seeded-method mismatch** | **OPEN (Wave 2)** — Dev/graph may be linked via `self`/`pointer` while `identitySeedEffectPresent("023")` expects confirmed `seeded` alias shape. Tracked for heal + probe honesty; **not** Wave 0. Expand flags remain OFF. |
+| **Home Ingredients silent on market-search error / empty** | **CLOSED (2026-07-16 Wave 0)** — Was blank when `ingredients` + no `scopedMarket` + not loading. Now `IngredientsMarketUnavailable` matches Deals error alert + idle “Complete Settings…” guidance. |
+| **Coverage Slice 4 weekly-ad fan-out / Slice 7 best-offer+0.55** | **CLOSED (2026-07-09)** — Triage 2026-07-16 confirmed: fan-out/dedupe = Coverage Slice 4; Slice 7 = best-offer persist + confidence 0.55. Do not reopen as “optional fan-out narrowing.” |
 | Homelab deploy + exposure | After migration-ready checklist |
 | Walmart ranked pricing | Shopper API + Flipp matching work |
 | BJ's ranked pricing | Regional; stub ingest — see Resume for v1 production-ranked chains (Publix + Food Lion shipped 2026-06-29) |
@@ -2351,16 +2403,16 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Scale risk A — Client-trust audit across all public API routes** | From trust pass-through hardening (2026-07-01): only the rank pass-through path was hardened; other routes or client-supplied fields may still influence trust display without server-side recomputation. Systematic audit of all public API responses for client-controllable trust-sensitive fields deferred — should precede any significant traffic increase or public launch. Suggested owner: `@verifier` + `@web-backend-standards` |
 | **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
 | **General locator-vs-OSM dedupe across all v1 chains (Option A)** | **IN PROGRESS** — Slice 1–6 **CLOSED** (2026-07-11; 5a/5b/5c + onboarding); Slice D open | Alias-graph. **5c:** ingest self-alias + allowlisted Aldi→OSM pointer; flags + `AUTO_CONFIRM` **OFF**. **Safety boundary until Slice D:** no proximity/name matcher at ingest; allowlist is temporary, not permanent per-chain policy. **6:** [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md). **Not yet:** Slice D batch matcher. |
-| **e2e `single-store-map-overlay` mobile viewport flake** | **OPEN (pre-existing)** | Recurs on remote CI across Option A Slices 1–4 and Tier 1 Passes 1–4 (`:65` meal accordion not visible in 30s; passes retry). Confirmed unrelated to identity seeds. Dedicated fix still owed. |
-| **e2e Cook tab / `navigation-theme` local flake** | **OPEN (local-only; related family)** | First seen during Slice 4 local full-suite gate: `enables Cook tab…` → `completePantryAndSuggestRecipes` → `waitForResponse(/api/recommendations)` timeout (90s), passed on retry. **Not** in remote CI Cook-tab logs (Slices 1–4). Unrelated to Slice 4 by diff-scope. Isolated `--repeat-each=5` → **5/5 clean**. Same failure family as mvp-flow rank wait (below). |
-| **e2e mvp-flow rank-wait flake (`keeps inline trust copy`)** | **OPEN (new on Pass 5 SHA; triage 2026-07-15)** | First remote appearance on Pass 5 `4a6db23` / docs `898f181` ([29454283367](https://github.com/sfh1980/Yum4Less/actions/runs/29454283367), [29454674247](https://github.com/sfh1980/Yum4Less/actions/runs/29454674247)): `runCoreMvpFlow` → `waitForResponse(/api/recommendations)` 90s timeout, passes retry. **Absent** from Pass 1–4 / Slice 5c–6 e2e logs (those flaked on `single-store-map-overlay` mobile instead). **Diff-scope:** fail is at pantry Suggest — **before** meal-card `SingleStoreMapOverlay`; portal change is **not** a plausible mechanism. Tab-gate N/A after Settings complete. Inert now active on live `.meal-planner-grid` (was no-op on missing `.meal-planner-grid-col`) — weak timing coupling only; suggest button was actionable so stuck-inert unlikely. Same symptom family as Cook-tab local flake. Isolated `npx playwright test e2e/mvp-flow.spec.ts -g "keeps inline trust copy" --repeat-each=5 --retries=0` → **5/5 clean** (full-suite/CI load timing, not hard break). |
+| **e2e `single-store-map-overlay` mobile viewport flake** | **CLOSED (2026-07-16 Wave 1b)** | Historical CI: accordion not found at `:76` after false heading sync (Option A Slices 1–4 / Tier 1 Passes 1–4). **Pass 5 portal did not fix this** (pre-overlay). Post–Pass 5 remote flaky reports shifted to **mvp-flow / Cook-tab rank-wait** (closed in Wave 1a). Wave 1b: shared rank waiter + loud empty-meals assert. |
+| **e2e Cook tab / `navigation-theme` local flake** | **CLOSED (2026-07-16 Wave 1a)** | Same family as mvp-flow rank-wait — shared `waitForRecommendationsAfterSuggest` (no status-in-predicate; loud non-200; Promise.all; 60s rank timeout). |
+| **e2e mvp-flow rank-wait flake (`keeps inline trust copy`)** | **CLOSED (2026-07-16 Wave 1a)** | See changelog Wave 1a. Isolated + full `test:e2e:ci` evidence in Verification snapshot. |
 | **Scale risk C — Modal overlays nested under inert shell** | **OPEN (named debt from Pass 5)** | Pass 5 fixed `SingleStoreMapOverlay` via `createPortal(..., document.body)` so `useModalDialog` can inert `.meal-planner-grid` without hiding the dialog from AT. **Other** `useModalDialog` consumers (`StoreMapOverlay`, `RankLoadingOverlay`, `InternalDetailsModal`) today mount as siblings outside the grid — safe. **Rule:** any new or relocated overlay that both (1) uses `useModalDialog` and (2) mounts as a descendant of an inert target **must** portal to `document.body` (or an equivalent non-inerted root). Do not assume sibling placement forever. Suggested owner: `@web-frontend-standards`. |
 | **Shopping-plan `storeId` (name-join fragility)** | **DEFERRED follow-up** (explicitly out of Option A Slices 2–3) | Plans still emit `storeName` only; map/route join by name. Track separately from identity expand wiring. |
 | **Ranking path: collocated-collapse + stale selectedStoreIds** | **CLOSED** (2026-07-09) | `resolveSelectedStoreIdsForRanking` + Option (c) notices + `effectiveSelectedStoreIds` client re-sync. See [2026-07-09 store-ID integrity changelog](#2026-07-09--store-id-integrity-bundle-1415--closed). **Not** Option A. |
 | **Weekly-ad promotion gate freshness policy mismatch (FRESH-1)** | **CLOSED** on `origin/master` (`1304542` + `08f4bfb`/`aa884a1`; CI green [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318)). |
 | **INTERNAL_CATALOG chain-content bias (Phase 2a)** | **Re-measured 2026-07-09** on `yum4less_dev` (90d, in-stock, official+weekly-ad): Kroger **96/97**, Publix **34/97**, Food Lion **18/97**, Aldi **17/97**, Walmart **10/97**; **50/97** Kroger-only (was 68/97 on 2026-07-08; Publix ingest fix + coverage slices shifted numbers). Architectural call sites chain-agnostic; **content/ingest success still Kroger-heavy**. Rebalance tracked list and/or non-Kroger weekly-ad match rates. Evidence: `scripts/.investigate-internal-catalog-chain-neutrality.ts`. |
 | **e2e `assertMarketSearchStoreResults` scoped-store assertion** | **CLOSED** (2026-07-09) — Helper asserts Settings `selectedStoreIds` on map overlay; recommendations gate no longer requires Kroger in scoped body. `navigation-theme.spec.ts` **15/15** with `--repeat-each=5 --retries=0`. |
-| **Settings-first gate bypass (P1-1)** | **CLOSED** (2026-07-15 Pass 5 `4a6db23`) — `isAppTabEnabled` + BottomNav disable + `handleTabChange` guard. |
+| **Settings-first gate bypass (P1-1)** | **CLOSED** (2026-07-15 Pass 5 `4a6db23`) — `isAppTabEnabled` + BottomNav disable + `handleTabChange` guard. Triage 2026-07-16 confirmed still CLOSED — no reopen. |
 | **Geolocation denial asymmetry (P1-3)** | **CLOSED** (2026-07-10) — **`295daee`**; CI [29108969234](https://github.com/sfh1980/Yum4Less/actions/runs/29108969234). Behavioral: Site B denial → `runMarketSearchWithZipFallback` (unifies with Site A). Also clears stuck `locationValidationMode === "browser"` after denial. `enableHighAccuracy` still deferred. |
 | **M156 `save money` trust-copy gap (P2-3)** | **CLOSED** (2026-07-09) — Copy rephrased; pattern added; `help-hint-content.test.ts` guards help popovers. |
 | **Map-overlay focus trap (P2-6)** | **CLOSED** (2026-07-09) — All three overlays use `useModalDialog`; unit tests in `modal-overlay-focus-trap.test.tsx`. |

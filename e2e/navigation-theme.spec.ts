@@ -9,6 +9,8 @@ import {
 } from "./helpers";
 
 test.describe("Bottom navigation and theme", () => {
+  test.describe.configure({ timeout: 150_000 });
+
   test.beforeEach(async ({ page }) => {
     await resetAppPreferences(page);
   });

@@ -1,7 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { runCoreMvpFlow } from "./helpers";
 
+// Fat Settings → map → pantry → rank path needs headroom beyond the default 90s
+// so the dedicated 60s rank wait is not starved by earlier steps (Wave 1a).
 test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
+  test.describe.configure({ timeout: 150_000 });
+
   test("finds nearby stores and ranks dinners with trust labels", async ({ page }) => {
     await runCoreMvpFlow(page);
   });
