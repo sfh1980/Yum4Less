@@ -2227,7 +2227,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npm run typecheck` (Wave 1b) | 2026-07-16 | **0 errors** |
 | `npm run build` (Wave 1b) | 2026-07-16 | **Pass** |
 | Isolated overlay mobile `--repeat-each=5 --retries=0` | 2026-07-16 | **5/5** pass (`meal card primary store pill`) |
-| `npm run test:e2e:ci` (Wave 1b) | 2026-07-16 | **26 passed** / 0 failed / 1 skipped (H12) |
+| `npm run test:e2e:ci` (Wave 1b local) | 2026-07-16 | **26 passed** / 0 failed / 1 skipped (H12) |
+| **Remote CI** (Wave 1b `734a5bc`) | 2026-07-16 | **Green** — [29545388893](https://github.com/sfh1980/Yum4Less/actions/runs/29545388893) (verify / integration / semgrep / e2e **26 passed** / 1 skipped; no flaky) |
 | `npm test` (Wave 1a full) | 2026-07-16 | **1027/1027** pass (183 files; ZIP cache + assert-recommendations proof-of-catch) |
 | `npm run typecheck` (Wave 1a) | 2026-07-16 | **0 errors** |
 | `npm run build` (Wave 1a) | 2026-07-16 | **Pass** (Next.js 15.5.19) |
