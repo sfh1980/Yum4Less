@@ -31,6 +31,7 @@ Rules:
 3a. **Async race guards (Phase 1 audit):** market search, meal rank, and geolocation callbacks must use a request-generation token or `AbortController` — follow `multi-store-route-panel.tsx`. Stale responses must not overwrite newer user actions (C2, H4).
 3b. **Error boundaries and async mounts:** require `src/app/error.tsx`; wrap Leaflet/async map init in try/catch with visible fallback (H11, H12).
 3c. **Notice + results:** `shopperNotice` is additive — never hide non-empty recommendation carousels when a notice is present (C1).
+3d. **Modal overlays + inert shell (Scale risk C):** `useModalDialog` inerts `.meal-planner-grid` / `.meal-planner-grid-col`. Any overlay that uses `useModalDialog` **and** would mount under that inert target **MUST** `createPortal` to `document.body` (or another non-inert root), or mount as a sibling outside the shell. Reference: `single-store-map-overlay.tsx`. Do not assume today’s sibling placement forever if overlays are relocated under the grid.
 4. Treat query params, provider responses, normalized store data, and user input as untrusted.
 5. Do not hide important product truth. If prices are stale, totals are estimated, coverage is limited, or stores are unavailable, say so clearly in the UI.
 6. Explain trust concepts like source, freshness, and fallback with a dismissible explainer or modal, then keep the key signals visible on result cards.

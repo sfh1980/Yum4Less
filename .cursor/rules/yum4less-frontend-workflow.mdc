@@ -27,6 +27,19 @@ Applies when editing UI, map, carousel, forms, or trust copy. **Commands and MCP
 
 **Loading:** disable search/rank affordances while the matching request is in flight when practical, to reduce race triggers (pairs with request-generation guards).
 
+## Modal overlays + inert shell (Scale risk C — Pass 5 / Wave 1c)
+
+`useModalDialog` sets `inert` on `.meal-planner-grid` (and legacy `.meal-planner-grid-col`) while a modal is open. Descendants of an inert subtree are hidden from the accessibility tree and keyboard focus — including a dialog that mounts **inside** that shell.
+
+**MUST** when adding or relocating an overlay that both (1) uses `useModalDialog` and (2) would mount as a descendant of an inert target:
+
+- Portal the overlay with `createPortal(..., document.body)` (or another **non-inert** root), **or**
+- Mount it as a sibling **outside** the inerted shell (same pattern as today’s `StoreMapOverlay` / `RankLoadingOverlay` / `InternalDetailsModal`).
+
+**Reference:** `src/components/single-store-map-overlay.tsx` — portals to `document.body` so the meal-card map dialog stays available to AT while the grid is inerted.
+
+**Do not** assume sibling placement forever: if a future refactor nests an existing overlay under `.meal-planner-grid`, apply this rule in the same change.
+
 ## Before marking done
 
 Follow orchestration for `npm test`, Playwright MCP (coordinate-first), `@web-frontend-standards`, and `@verifier` when trust-sensitive.

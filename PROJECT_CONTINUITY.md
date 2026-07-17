@@ -8,7 +8,7 @@
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1a e2e rank-wait / ZIP geocode 409 flake family CLOSED** (2026-07-16). **Wave 1b single-store-map-overlay mobile false-sync flake CLOSED** (2026-07-16). **Aldi `023` seeded-method OPEN** (Wave 2). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). Next: Wave **1c** Scale risk C portal rule docs → Wave **2** Aldi `023`.
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Aldi `023` seeded-method OPEN** (Wave 2). **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). Next: Wave **2** Aldi `023` heal + plain-language Phase 0 decision memo.
 
 **Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware.
 
@@ -246,6 +246,14 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 ## Changelog (newest first)
 
+### 2026-07-16 — Wave 1c: Scale risk C portal rule docs — CLOSED (Wave 1 complete)
+
+- **Theme:** Document the Pass 5 overlay/inert rule so new overlays do not reintroduce AT-hidden dialogs under an inerted shell.
+- **Shipped (docs-only):** Scale risk C checklist in `.cursor/rules/yum4less-frontend-workflow.mdc` and `.cursor/agents/web-frontend-standards.md` — any `useModalDialog` overlay that would mount under `.meal-planner-grid` / `.meal-planner-grid-col` **MUST** `createPortal` to `document.body` (or a non-inert root), or mount outside the shell. Reference: `single-store-map-overlay.tsx`.
+- **No behavior change:** no product/UI code edits.
+- **Wave 1 close-out:** 1a + 1b + 1c all CLOSED — CI-trust-tax effort complete. Next: Wave 2 (Aldi `023` + Phase 0 memo).
+- **Evidence:** `git diff` docs-only for this slice; Continuity deferred Scale risk C → CLOSED.
+
 ### 2026-07-16 — Wave 1b: single-store-map-overlay mobile false-sync flake — CLOSED
 
 - **Theme:** CI trust — stop treating “Dinner recommendations” heading as rank completion on the meal-card map-pill mobile path.
@@ -253,7 +261,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Shipped (test-only):** Mobile path uses `completePantryAndSuggestRecipes` → shared `waitForRecommendationsAfterSuggest`; `assertRecommendationsHaveMeals` fails loud on ok-but-empty (Vitest proof-of-catch). No product UI change.
 - **Continuity cleanup:** Deferred overlay-mobile row closed; post–Pass 5 remote flake label corrected (mvp-flow/Cook-tab rank-wait was the recurring reported flake, not overlay).
 - **Out of scope:** Wave 1c Scale risk C portal rule docs; Wave 2 Aldi `023`.
-- **Evidence:** see Verification snapshot this session.
+- **Evidence:** Local gates this session (`npm test` **1030/1030**; typecheck **0**; build pass; isolated overlay mobile **5/5**; `test:e2e:ci` **26 passed** / 1 skipped). Remote CI green on **`734a5bc`** — [29545388893](https://github.com/sfh1980/Yum4Less/actions/runs/29545388893).
 
 ### 2026-07-16 — Wave 1a: e2e rank-wait flake family — CLOSED
 
@@ -2223,6 +2231,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| Wave 1c docs-only (portal rule) | 2026-07-16 | Docs only — `yum4less-frontend-workflow.mdc` + `web-frontend-standards.md` + Continuity; **no** product code; unit/e2e gates N/A for this slice |
 | `npm test` (Wave 1b full) | 2026-07-16 | **1030/1030** pass (183 files; +3 `assertRecommendationsHaveMeals` proof-of-catch) |
 | `npm run typecheck` (Wave 1b) | 2026-07-16 | **0 errors** |
 | `npm run build` (Wave 1b) | 2026-07-16 | **Pass** |
@@ -2407,7 +2416,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **e2e `single-store-map-overlay` mobile viewport flake** | **CLOSED (2026-07-16 Wave 1b)** | Historical CI: accordion not found at `:76` after false heading sync (Option A Slices 1–4 / Tier 1 Passes 1–4). **Pass 5 portal did not fix this** (pre-overlay). Post–Pass 5 remote flaky reports shifted to **mvp-flow / Cook-tab rank-wait** (closed in Wave 1a). Wave 1b: shared rank waiter + loud empty-meals assert. |
 | **e2e Cook tab / `navigation-theme` local flake** | **CLOSED (2026-07-16 Wave 1a)** | Same family as mvp-flow rank-wait — shared `waitForRecommendationsAfterSuggest` (no status-in-predicate; loud non-200; Promise.all; 60s rank timeout). |
 | **e2e mvp-flow rank-wait flake (`keeps inline trust copy`)** | **CLOSED (2026-07-16 Wave 1a)** | See changelog Wave 1a. Isolated + full `test:e2e:ci` evidence in Verification snapshot. |
-| **Scale risk C — Modal overlays nested under inert shell** | **OPEN (named debt from Pass 5)** | Pass 5 fixed `SingleStoreMapOverlay` via `createPortal(..., document.body)` so `useModalDialog` can inert `.meal-planner-grid` without hiding the dialog from AT. **Other** `useModalDialog` consumers (`StoreMapOverlay`, `RankLoadingOverlay`, `InternalDetailsModal`) today mount as siblings outside the grid — safe. **Rule:** any new or relocated overlay that both (1) uses `useModalDialog` and (2) mounts as a descendant of an inert target **must** portal to `document.body` (or an equivalent non-inerted root). Do not assume sibling placement forever. Suggested owner: `@web-frontend-standards`. |
+| **Scale risk C — Modal overlays nested under inert shell** | **CLOSED (2026-07-16 Wave 1c)** | Rule documented in `yum4less-frontend-workflow.mdc` + `@web-frontend-standards` checklist. Pass 5 already portaled `SingleStoreMapOverlay`; sibling overlays remain safe until relocated. Docs-only — no runtime change. |
 | **Shopping-plan `storeId` (name-join fragility)** | **DEFERRED follow-up** (explicitly out of Option A Slices 2–3) | Plans still emit `storeName` only; map/route join by name. Track separately from identity expand wiring. |
 | **Ranking path: collocated-collapse + stale selectedStoreIds** | **CLOSED** (2026-07-09) | `resolveSelectedStoreIdsForRanking` + Option (c) notices + `effectiveSelectedStoreIds` client re-sync. See [2026-07-09 store-ID integrity changelog](#2026-07-09--store-id-integrity-bundle-1415--closed). **Not** Option A. |
 | **Weekly-ad promotion gate freshness policy mismatch (FRESH-1)** | **CLOSED** on `origin/master` (`1304542` + `08f4bfb`/`aa884a1`; CI green [28820142318](https://github.com/sfh1980/Yum4Less/actions/runs/28820142318)). |
