@@ -48,6 +48,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Identity SSOT gate
+        run: npm run check:identity-ssot
+
       - name: Run lint
         run: npm run lint
 

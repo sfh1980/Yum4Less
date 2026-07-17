@@ -246,6 +246,10 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 ## Changelog (newest first)
 
+### 2026-07-16 — Identity SSOT CI gate (A+B) — CLOSED
+
+- **Shipped:** `npm run check:identity-ssot` (client pair-graph allowlist) + structural `IDENTITY_SEED_SPECS` / `migrationEffectPresent`→`identitySeedEffectPresent` meta-tests; wired into CI verify next to typecheck.
+
 ### 2026-07-16 — Wave 2 Part 2: Phase 0 identity Q1–Q3 locked — CLOSED (policy)
 
 - **Locked:** Q1=**1B** (Publix locator = Settings-selectable; align map merge/suppress — map drifted). Q2=**2A** (ephemeral search pins permanently out of identity/reconciliation; no provisional tier). Q3=**3B** (three-layer model intentional: DB / map merge / Settings).

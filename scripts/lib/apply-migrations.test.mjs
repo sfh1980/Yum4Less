@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyPendingMigrations,
@@ -341,6 +342,84 @@ describe("assertIdentitySeedEffectAfterApply", () => {
       applyPendingMigrations(db, { stopAfterVersion: "022" }),
     ).toThrow(/identity seed effect is incomplete/);
     expect(recorded.some((sql) => sql.includes("'022'"))).toBe(false);
+  });
+});
+
+describe("IDENTITY_SEED_SPECS structural contract (B meta)", () => {
+  it("requires canonical id + exactly two member store ids + distinct alias", () => {
+    const versions = Object.keys(IDENTITY_SEED_SPECS);
+    expect(versions.length).toBeGreaterThanOrEqual(2);
+    expect(versions).toContain("022");
+    expect(versions).toContain("023");
+
+    for (const version of versions) {
+      const spec = IDENTITY_SEED_SPECS[version];
+      expect(spec.version).toBe(version);
+      expect(spec.identityId.length).toBeGreaterThan(0);
+      expect(spec.canonicalStoreId).toBe(spec.identityId);
+      expect(spec.aliasStoreId.length).toBeGreaterThan(0);
+      expect(spec.aliasStoreId).not.toBe(spec.canonicalStoreId);
+      expect(spec.memberStoreIds).toHaveLength(2);
+      expect(spec.memberStoreIds[0]).toBe(spec.canonicalStoreId);
+      expect(spec.memberStoreIds[1]).toBe(spec.aliasStoreId);
+    }
+  });
+
+  it("identitySeedEffectPresent source requires two confirmed seeded aliases (not id-exists)", () => {
+    const source = readFileSync(
+      join(process.cwd(), "scripts", "lib", "apply-migrations.mjs"),
+      "utf8",
+    );
+    const start = source.indexOf("export function identitySeedEffectPresent");
+    const end = source.indexOf("export function assertIdentitySeedEffectAfterApply");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const body = source.slice(start, end);
+
+    expect(body).toMatch(/aliasTotal !== 2/);
+    expect(body).toMatch(/match_method = 'seeded'/);
+    expect(body).toMatch(/member_role = 'canonical'/);
+    expect(body).toMatch(/member_role = 'alias'/);
+    expect(body).toMatch(/link_status = 'confirmed'/);
+    // Must not be a vacuous identity-id existence check alone.
+    expect(body).not.toMatch(
+      /return\s+Number\(\s*db\.queryScalar\(\s*`select count\(\*\) from store_identities\s+where id =/,
+    );
+  });
+});
+
+describe("migrationEffectPresent identity-seed delegation (B)", () => {
+  it("delegates every IDENTITY_SEED_SPECS version to identitySeedEffectPresent", () => {
+    const source = readFileSync(
+      join(process.cwd(), "scripts", "lib", "apply-migrations.mjs"),
+      "utf8",
+    );
+    const start = source.indexOf("export function migrationEffectPresent");
+    const end = source.indexOf("/** @typedef {{");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const body = source.slice(start, end);
+
+    for (const version of Object.keys(IDENTITY_SEED_SPECS)) {
+      const caseIdx = body.indexOf(`case "${version}":`);
+      expect(caseIdx, `missing case "${version}"`).toBeGreaterThan(-1);
+      const nextCase = body.indexOf("case ", caseIdx + 1);
+      const defaultIdx = body.indexOf("default:", caseIdx + 1);
+      const caseEnd =
+        nextCase === -1
+          ? defaultIdx
+          : defaultIdx === -1
+            ? nextCase
+            : Math.min(nextCase, defaultIdx);
+      const caseBody = body.slice(caseIdx, caseEnd === -1 ? undefined : caseEnd);
+      expect(caseBody).toContain(
+        `identitySeedEffectPresent(db, IDENTITY_SEED_SPECS["${version}"])`,
+      );
+      // Forbid existence-only short-circuit for registered identity seeds.
+      expect(caseBody).not.toMatch(
+        /select count\(\*\) from store_identities\s+where id =/,
+      );
+    }
   });
 });
 

@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "check:identity-ssot": "node scripts/check-identity-ssot.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "node scripts/run-integration-tests.mjs",
