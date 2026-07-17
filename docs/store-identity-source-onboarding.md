@@ -51,6 +51,28 @@ This doc is **identity resolution only**.
 
 Documented in `.env.example`. Do not flip defaults in an onboarding slice.
 
+### Product model: three layers of “what stores exist” (Wave 2 Part 2 / Q3=3B)
+
+These layers are **intentional**, not a bug to collapse into one list:
+
+| Layer | Authority for | Notes |
+|-------|----------------|-------|
+| **Postgres `stores`** | Durable truth — pricing FKs, ingest writes, identity graph members | Cron/ingest is the write path; public search stays read-only by default |
+| **Map merge** (`mergeCatalogStoresForMap` on market-search) | Nearby-now **display** pins for one search | May include ephemeral provider/OSM extras that are **not** in DB |
+| **Settings selectable pool** | What the shopper can check | Derived from the merged market list, then filtered (ranked chains, OSM suppress, collocated collapse) — not a raw DB dump |
+
+Do **not** “fix” Settings vs map vs DB into a single source without an explicit Decision log change.
+
+### Ephemeral search pins and identity (Wave 2 Part 2 / Q2=2A)
+
+Search-time provider discovery and OSM/SNAP gap-fill pins are **display-only**. They **must not** participate in identity linking, allowlisted pointer writes, or coordinate reconciliation. Keep `YUM4LESS_STORE_IDENTITY_SEARCH_PROVISIONAL` **OFF** and unused for shopper paths — there is **no** provisional shopper tier. Matches allowlist-only / reviewed-data-only ingest linking.
+
+### Publix locator classification (Wave 2 Part 2 / Q1=1B — policy locked; map code pending)
+
+**Intent:** `publix-store-locator` rows are **Settings-selectable catalog** pins (same class as other ranked-chain catalog rows for selection/collapse).
+
+**Drift today:** `isMapContextCatalogStore` still treats Publix locator as map-context (low merge priority / OSM suppress peer). `isMapContextLikeCatalogStore` correctly does **not**. Aligning map merge/suppress is a **separate small implementation slice** — do not reclassify Publix locator as map-context-only.
+
 ### Module index
 
 | Concern | Path |
