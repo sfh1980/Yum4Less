@@ -252,7 +252,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Shipped:** `docker-compose.yml` → `127.0.0.1:5433:5432`; `npm run check:compose-db-bind` + CI verify step; `docs/homelab-deploy.md` corrected (was falsely claiming localhost-only).
 - **Credentials:** Local-dev `postgres:postgres` retained as intentional loopback convention (`.env.example` / scripts). Homelab doc now requires rotate-away for any non-loopback deploy. No non-loopback production publish found in this repo.
 - **Proof-of-catch:** Before — `docker port` → `0.0.0.0:5433` + `[::]:5433`; `netstat` LISTENING on `0.0.0.0:5433`. After recreate — `127.0.0.1:5433` only. Gate fails on unqualified `5433:5432`, passes on loopback bind.
-- **Evidence this session:** `npm test` **1033/1033**; `check:compose-db-bind` OK; Semgrep on touched set (see commit notes / CI). CI `gh run` link required before calling merge-ready.
+- **Evidence this session:** `npm test` **1033/1033**; `check:compose-db-bind` OK; Semgrep clean on `check-compose-db-bind.mjs` / compose / homelab doc / package.json (pre-existing `ci.yml` mutable-action-tag findings only). CI green: [**29550801049**](https://github.com/sfh1980/Yum4Less/actions/runs/29550801049) @ `8e1e705`.
 
 ### 2026-07-16 — Tier 2 comprehensive audit (audit-only) — CLOSED
 
