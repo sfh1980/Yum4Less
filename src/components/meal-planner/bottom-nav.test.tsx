@@ -23,11 +23,13 @@ describe("BottomNav Settings-first gate", () => {
     expect(screen.getByRole("button", { name: "Cook" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Saved" })).toBeDisabled();
 
+    expect(screen.getAllByText("Finish setup to unlock this").length).toBe(4);
+
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
     expect(onTabChange).not.toHaveBeenCalled();
   });
 
-  it("enables main tabs after setup while Cook stays recipe-gated", () => {
+  it("enables main tabs after setup while Cook stays recipe-gated with helper text", () => {
     const onTabChange = vi.fn();
     render(
       createElement(BottomNav, {
@@ -42,6 +44,8 @@ describe("BottomNav Settings-first gate", () => {
     expect(screen.getByRole("button", { name: "Deals" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Saved" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Cook" })).toBeDisabled();
+    expect(screen.getByText("Suggest recipes on Home first")).toBeInTheDocument();
+    expect(screen.queryByText("Finish setup to unlock this")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Deals" }));
     expect(onTabChange).toHaveBeenCalledWith("deals");

@@ -59,7 +59,7 @@ describe("DealsPanel", () => {
     expect(screen.getByText(/Totals are/i)).toHaveTextContent("estimated");
     expect(screen.getByText(/Totals are/i)).toHaveTextContent("directional");
     expect(screen.getByText("Chicken thighs")).toBeInTheDocument();
-    expect(screen.getByText("Est. $6.49")).toBeInTheDocument();
+    expect(screen.getByText("Lowest price we found: $6.49")).toBeInTheDocument();
     expect(screen.getAllByText("directional").length).toBeGreaterThan(0);
   });
 

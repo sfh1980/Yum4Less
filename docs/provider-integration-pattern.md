@@ -4,6 +4,8 @@ Reusable architecture for adding or auditing grocery-chain data paths. Chain-spe
 
 **When to use:** Before wiring a new chain (Publix, Food Lion, Walmart, …), or when a fallback chain “works” in code but produces empty or misleading ranked output.
 
+**Governance:** Any new external dependency (API, scrape, geocoder, routing, etc.) must also satisfy the Decision log **External API Integration Standard** in [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md#decision-log) — gap vs current sources, ToS/legal, caching, Tier C-style graceful failure, no client-side secrets, mocks in CI, and a health/heartbeat check. Supporting HTTP routes beyond the two cache-first shopper reads are allowed; do not treat “two routes forever” as an active lock.
+
 ---
 
 ## Three data-type categories

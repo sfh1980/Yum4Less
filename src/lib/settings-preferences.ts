@@ -11,6 +11,21 @@ export { parseSettingsPreferences };
 
 export const SETTINGS_PREFERENCES_STORAGE_KEY = "yum4less.settings-preferences.v1";
 
+/** Exact coordinates are session-only — never keep them in long-term prefs. */
+export function stripExactCoordinates(
+  prefs: SettingsPreferences,
+): SettingsPreferences {
+  const { latitude: _latitude, longitude: _longitude, ...rest } = prefs;
+  return rest;
+}
+
+function hasPersistedLocation(prefs: SettingsPreferences): boolean {
+  const hasZip =
+    typeof prefs.zipCode === "string" && prefs.zipCode.trim().length > 0;
+  // Geolocation mode may complete without a ZIP; coords are not persisted.
+  return hasZip || prefs.locationMode === "geolocation";
+}
+
 export function isSettingsPreferencesComplete(
   prefs: SettingsPreferences | null | undefined,
 ): boolean {
@@ -18,7 +33,7 @@ export function isSettingsPreferencesComplete(
     return false;
   }
 
-  if (!prefs.zipCode?.trim() || prefs.radiusMiles === undefined) {
+  if (prefs.radiusMiles === undefined || !hasPersistedLocation(prefs)) {
     return false;
   }
 
@@ -48,7 +63,8 @@ export function readSettingsPreferences(): SettingsPreferences | null {
       return null;
     }
 
-    return parseSettingsPreferences(JSON.parse(raw));
+    const parsed = parseSettingsPreferences(JSON.parse(raw));
+    return parsed ? stripExactCoordinates(parsed) : null;
   } catch {
     return null;
   }
@@ -59,7 +75,10 @@ export function writeSettingsPreferences(prefs: SettingsPreferences): void {
     return;
   }
 
-  window.localStorage.setItem(SETTINGS_PREFERENCES_STORAGE_KEY, JSON.stringify(prefs));
+  window.localStorage.setItem(
+    SETTINGS_PREFERENCES_STORAGE_KEY,
+    JSON.stringify(stripExactCoordinates(prefs)),
+  );
 }
 
 export function clearSettingsPreferences(): void {
@@ -83,15 +102,18 @@ export function buildSettingsPreferencesPatch(input: {
   markSetupComplete?: boolean;
 }): SettingsPreferences {
   const existing = readSettingsPreferences() ?? {};
-  const merged: SettingsPreferences = {
+  const merged: SettingsPreferences = stripExactCoordinates({
     ...existing,
     ...input,
-  };
+  });
+
+  // Explicit empty ZIP clears a prior stored value (e.g. form default then geolocation-only).
+  if (input.zipCode !== undefined && input.zipCode.trim() === "") {
+    delete merged.zipCode;
+  }
 
   const hasLocation =
-    typeof merged.zipCode === "string" &&
-    merged.zipCode.trim().length > 0 &&
-    typeof merged.radiusMiles === "number";
+    typeof merged.radiusMiles === "number" && hasPersistedLocation(merged);
   const hasStores =
     Array.isArray(merged.selectedStoreIds) && merged.selectedStoreIds.length > 0;
   const storeCountValid =

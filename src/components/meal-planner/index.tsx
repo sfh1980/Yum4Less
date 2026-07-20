@@ -109,7 +109,21 @@ export function MealPlanner() {
           />
         ) : null}
 
-        {demo.activeTab === "cook" && demo.cookEnabled ? resultsPanel : null}
+        {demo.activeTab === "cook" ? (
+          <MealResultsPanel
+            activeLocationRequest={demo.activeLocationRequest}
+            form={demo.form}
+            market={demo.scopedMarket}
+            marketBlocked={demo.marketBlocked}
+            marketSearchState={demo.marketSearchState}
+            recommendationState={demo.recommendationState}
+            recommendations={demo.recommendations}
+            shopperNotice={demo.shopperNotice}
+            supplementaryShopperNotices={demo.supplementaryShopperNotices}
+            suppressInlineLoading={demo.rankLoading}
+            surface="cook"
+          />
+        ) : null}
 
         {demo.activeTab === "saved" ? <SavedPlaceholderPanel /> : null}
 

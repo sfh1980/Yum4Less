@@ -4,7 +4,10 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 import type { SaleIngredientChoice } from "@/lib/sale-ingredient-offers";
 import { formatIngredientPriceAge } from "@/lib/sale-ingredient-offers";
-import { formatEstimatedCurrency } from "@/lib/format-estimated-currency";
+import {
+  formatShopperPriceWording,
+  shopperPriceTierFromOfferFields,
+} from "@/lib/shopper-price-wording";
 import { RANKED_PRICE_DAILY_REFRESH_USER_MESSAGE } from "@/lib/ranked-price-cache-policy";
 import type { IngredientCategory } from "@/lib/ingredient-category";
 import { inferIngredientCategory } from "@/lib/ingredient-category";
@@ -27,6 +30,8 @@ type PickerRow = {
   trustLabel: "directional" | "estimated";
   saleLabel?: string;
   freshnessHoursAgo?: number;
+  freshnessDaysAgo: number;
+  priceSource?: string;
   category: IngredientCategory | null;
 };
 
@@ -63,6 +68,8 @@ function buildPickerRows(choices: SaleIngredientChoice[]): PickerRow[] {
       trustLabel: offer.trustLabel,
       saleLabel: offer.saleLabel ?? choice.saleLabel,
       freshnessHoursAgo: offer.freshnessHoursAgo ?? choice.freshnessHoursAgo,
+      freshnessDaysAgo: offer.freshnessDaysAgo,
+      priceSource: offer.priceSource,
       category,
     }));
   });
@@ -250,6 +257,16 @@ function renderRow(
   const priceAgeLabel = formatIngredientPriceAge({
     freshnessHoursAgo: row.freshnessHoursAgo,
   });
+  const priceLabel = formatShopperPriceWording(
+    row.price,
+    shopperPriceTierFromOfferFields({
+      saleLabel: row.saleLabel,
+      freshnessDaysAgo: row.freshnessDaysAgo,
+      freshnessHoursAgo: row.freshnessHoursAgo,
+      priceSource: row.priceSource,
+      trustLabel: row.trustLabel,
+    }),
+  );
 
   return (
     <li key={`${row.ingredientId}-${row.storeId}`}>
@@ -264,7 +281,7 @@ function renderRow(
           <span className="sale-ingredient-list-item-topline">
             <strong>{row.ingredientName}</strong>
             <span className="sale-ingredient-price">
-              {formatEstimatedCurrency(row.price)}
+              {priceLabel}
             </span>
           </span>
           <span className="field-hint">

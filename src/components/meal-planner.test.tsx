@@ -128,7 +128,7 @@ describe("MealPlanner", () => {
       screen.getByRole("button", { name: "Weeknight Lemon Chicken" }),
     );
 
-    expect(screen.getByText("Est. $13.42")).toBeInTheDocument();
+    expect(screen.getByText("Lowest price we found: $13.42")).toBeInTheDocument();
     expect(
       document.querySelector(".meal-card-price-age"),
     ).toHaveTextContent(/Prices from ~24 hours ago/i);
@@ -143,7 +143,7 @@ describe("MealPlanner", () => {
       ),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Shopping plan" }));
-    expect(screen.getAllByText(/Est\. \$6\.49/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Lowest price we found: \$6\.49|Estimated lowest price: \$6\.49/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(1);
     expect(screen.getAllByText(/Treat totals as estimates/i)).toHaveLength(1);
     expect(await screen.findByText("Sale price — estimate only")).toBeInTheDocument();

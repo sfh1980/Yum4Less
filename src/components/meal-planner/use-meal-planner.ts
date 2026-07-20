@@ -126,17 +126,13 @@ function persistLocationPreferences(
 
   writeSettingsPreferences(
     buildSettingsPreferencesPatch({
-      zipCode: form.zipCode.trim(),
+      ...(form.zipCode.trim() ? { zipCode: form.zipCode.trim() } : {}),
       radiusMiles,
       shoppingStyle: form.shoppingStyle,
       selectedStoreIds: canonicalizeStoreIdsForSettings(form.selectedStoreIds),
       theme: form.theme,
       ...(request?.mode === "browser"
-        ? {
-            locationMode: "geolocation" as const,
-            latitude: request.latitude,
-            longitude: request.longitude,
-          }
+        ? { locationMode: "geolocation" as const }
         : request?.mode === "zip"
           ? { locationMode: "zip" as const }
           : {}),
@@ -299,7 +295,7 @@ export function useMealPlanner() {
 
     writeSettingsPreferences(
       buildSettingsPreferencesPatch({
-        zipCode: form.zipCode.trim(),
+        ...(form.zipCode.trim() ? { zipCode: form.zipCode.trim() } : {}),
         radiusMiles,
         shoppingStyle: form.shoppingStyle,
         selectedStoreIds: canonicalizeStoreIdsForSettings(form.selectedStoreIds),
@@ -321,10 +317,14 @@ export function useMealPlanner() {
       return;
     }
 
+    invalidateRankedResults();
+  }, [form.selectedStoreIds]);
+
+  function invalidateRankedResults() {
     rankedStoreScopeRef.current = null;
     rankRequestRef.current += 1;
     setRecommendationState(initialRecommendationState);
-  }, [form.selectedStoreIds]);
+  }
 
   function resetLocationDependentState() {
     marketSearchRequestRef.current += 1;
@@ -357,26 +357,14 @@ export function useMealPlanner() {
       return;
     }
 
-    if (
-      saved?.locationMode === "geolocation" &&
-      saved.latitude !== undefined &&
-      saved.longitude !== undefined
-    ) {
+    // Exact coords are not persisted — re-request geolocation each visit.
+    if (saved?.locationMode === "geolocation") {
       setLocationValidationMode("browser");
 
       if (!("geolocation" in navigator)) {
-        void runMarketSearch(
-          {
-            zipCode: "",
-            radiusMiles,
-            latitude: saved.latitude,
-            longitude: saved.longitude,
-          },
-          {
-            mode: "browser",
-            latitude: saved.latitude,
-            longitude: saved.longitude,
-          },
+        void runMarketSearchWithZipFallback(
+          "Browser location is unavailable — using your saved ZIP instead.",
+          radiusMiles,
         );
         return;
       }
@@ -394,7 +382,7 @@ export function useMealPlanner() {
 
           void runMarketSearch(
             {
-              zipCode: "",
+              zipCode: form.zipCode.trim(),
               radiusMiles,
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
@@ -698,7 +686,13 @@ export function useMealPlanner() {
       return;
     }
 
-    if (Object.keys(validateLocationFields(form, true)).length > 0) {
+    const hasBrowserCoordinates =
+      activeLocationRequest?.mode === "browser" &&
+      Number.isFinite(activeLocationRequest.latitude) &&
+      Number.isFinite(activeLocationRequest.longitude);
+    const requireZipCode = !hasBrowserCoordinates;
+
+    if (Object.keys(validateLocationFields(form, requireZipCode)).length > 0) {
       return;
     }
 
@@ -717,12 +711,8 @@ export function useMealPlanner() {
       shoppingStyle: form.shoppingStyle,
       selectedStoreIds: canonicalizeStoreIdsForSettings(form.selectedStoreIds),
       theme: form.theme,
-      ...(activeLocationRequest?.mode === "browser"
-        ? {
-            locationMode: "geolocation" as const,
-            latitude: activeLocationRequest.latitude,
-            longitude: activeLocationRequest.longitude,
-          }
+      ...(hasBrowserCoordinates
+        ? { locationMode: "geolocation" as const }
         : { locationMode: "zip" as const }),
       markSetupComplete: true,
     });
@@ -744,6 +734,7 @@ export function useMealPlanner() {
       }));
     }
     autoMarketSearchAttemptedRef.current = true;
+    invalidateRankedResults();
     setActiveTab("home");
     setFlowStep("welcome");
   }
@@ -768,6 +759,7 @@ export function useMealPlanner() {
       return;
     }
 
+    invalidateRankedResults();
     setFlowStep("ingredients");
     setIngredientPickMode("unset");
     setSelectedIngredientIds([]);
@@ -1035,7 +1027,9 @@ export function useMealPlanner() {
         if (Number.isFinite(radiusMiles)) {
           writeSettingsPreferences(
             buildSettingsPreferencesPatch({
-              zipCode: preferences.zipCode.trim(),
+              ...(preferences.zipCode.trim()
+                ? { zipCode: preferences.zipCode.trim() }
+                : {}),
               radiusMiles,
               shoppingStyle: preferences.shoppingStyle,
               selectedStoreIds: syncedSelectedStoreIds,

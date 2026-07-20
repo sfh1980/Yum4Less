@@ -25,6 +25,7 @@ test.describe("Bottom navigation and theme", () => {
     await expect(mainNav.getByRole("button", { name: "Deals" })).toBeDisabled();
     await expect(mainNav.getByRole("button", { name: "Saved" })).toBeDisabled();
     await expect(mainNav.getByRole("button", { name: "Cook" })).toBeDisabled();
+    await expect(mainNav.getByText("Finish setup to unlock this").first()).toBeVisible();
   });
 
   test("routes across main tabs and disables Cook until recipes exist", async ({ page }) => {

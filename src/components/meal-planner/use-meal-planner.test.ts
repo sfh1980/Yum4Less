@@ -3,7 +3,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
-import { clearSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
+import { clearSettingsPreferences, readSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
 
 vi.mock("@/lib/analytics/track-client-event", () => ({
   trackClientEvent: vi.fn(),
@@ -338,15 +338,13 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(result.current.recommendations).toHaveLength(0);
   });
 
-  it("auto-loads geolocation market search from saved coordinates on mount", async () => {
+  it("auto-loads geolocation market search by re-requesting location (no stored coords)", async () => {
     writeSettingsPreferences({
       zipCode: "23111",
       radiusMiles: 5,
       shoppingStyle: "single-store",
       selectedStoreIds: ["kroger-1"],
       locationMode: "geolocation",
-      latitude: 37.6085,
-      longitude: -77.3739,
       setupComplete: true,
     });
 
@@ -391,8 +389,9 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     };
     expect(requestBody.latitude).toBeCloseTo(37.61, 2);
     expect(requestBody.longitude).toBeCloseTo(-77.37, 2);
-    expect(requestBody.zipCode).toBe("");
     expect(result.current.activeLocationRequest?.mode).toBe("browser");
+    expect(readSettingsPreferences()?.latitude).toBeUndefined();
+    expect(readSettingsPreferences()?.longitude).toBeUndefined();
   });
 
   it("falls back to form ZIP when Use my location is denied (Site B)", async () => {
@@ -496,8 +495,6 @@ describe("useMealPlanner request generation (C2, H4)", () => {
       shoppingStyle: "single-store",
       selectedStoreIds: ["kroger-1"],
       locationMode: "geolocation",
-      latitude: 37.6085,
-      longitude: -77.3739,
       setupComplete: true,
     });
 
@@ -546,6 +543,191 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(requestBody.zipCode).toBe("23111");
     expect(requestBody.latitude).toBeUndefined();
     expect(requestBody.longitude).toBeUndefined();
+  });
+
+  it("proof-of-catch: Settings save succeeds on browser coordinates without ZIP", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(marketPayload("Geo save market", "23111")), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const geolocationMock = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          latitude: 37.6085,
+          longitude: -77.3739,
+          accuracy: 10,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as GeolocationPosition);
+    });
+    vi.stubGlobal("navigator", {
+      ...globalThis.navigator,
+      geolocation: { getCurrentPosition: geolocationMock },
+    });
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.setForm((current) => ({
+        ...current,
+        zipCode: "",
+        selectedStoreIds: ["kroger-1"],
+      }));
+    });
+
+    await act(async () => {
+      result.current.handleBrowserLocationSearch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.handleSaveSettings();
+    });
+
+    expect(result.current.settingsSaveError).toBeUndefined();
+    expect(result.current.settingsComplete).toBe(true);
+    expect(result.current.activeTab).toBe("home");
+
+    const prefs = readSettingsPreferences();
+    expect(prefs?.setupComplete).toBe(true);
+    expect(prefs?.locationMode).toBe("geolocation");
+    expect(prefs?.latitude).toBeUndefined();
+    expect(prefs?.longitude).toBeUndefined();
+    expect(prefs?.zipCode).toBeUndefined();
+  });
+
+  it("proof-of-catch: Settings save still requires ZIP when geolocation is unavailable", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(marketPayload("ZIP-only market", "23111")), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.setForm((current) => ({
+        ...current,
+        zipCode: "23111",
+        selectedStoreIds: ["kroger-1"],
+      }));
+      result.current.handleFindStores();
+    });
+
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.setForm((current) => ({ ...current, zipCode: "" }));
+    });
+
+    await act(async () => {
+      result.current.handleSaveSettings();
+    });
+
+    expect(result.current.settingsComplete).toBe(false);
+    expect(result.current.activeTab).toBe("settings");
+  });
+
+  it("clears ranked results when Settings are saved after a successful rank (C5)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(marketPayload("Save market", "23111")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(recommendationPayload("Pre-save meal")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.handleFindStores();
+    });
+
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.handleRankMeals();
+    });
+
+    await waitFor(() => {
+      expect(result.current.recommendationState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.handleSaveSettings();
+    });
+
+    expect(result.current.recommendationState.status).toBe("idle");
+    expect(result.current.recommendations).toHaveLength(0);
+    expect(result.current.cookEnabled).toBe(false);
+  });
+
+  it("clears ranked results when Welcome continues after a prior rank (C5)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(marketPayload("Welcome market", "23111")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(recommendationPayload("Pre-welcome meal")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.handleFindStores();
+    });
+
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.handleRankMeals();
+    });
+
+    await waitFor(() => {
+      expect(result.current.recommendationState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.handleCompleteWelcome();
+    });
+
+    expect(result.current.recommendationState.status).toBe("idle");
+    expect(result.current.flowStep).toBe("ingredients");
   });
 });
 

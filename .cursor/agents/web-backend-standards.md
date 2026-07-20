@@ -13,7 +13,8 @@ Focus:
 - nearby store discovery, pricing ingestion, ingredient normalization, dinner ranking, and shopping-plan generation
 - cache-first behavior with refresh when new search results differ materially
 - **Postgres MCP** for verifying persisted market, provider cache, and `price_observations` rows after ingest or API changes
-- forbidden architecture (M156): no combined `/api/meal-planner` endpoint, no `marketContextToken`, no public API write routes, no fixture ingest on `yum4less_dev` — two routes (`market-search`, `recommendations`) forever
+- forbidden architecture (M156): no combined `/api/meal-planner` endpoint, no `marketContextToken`, no public API write routes, no fixture ingest on `yum4less_dev`
+- route count is not capped at two handlers — supporting routes are fine; new **external** dependencies follow the Decision log **External API Integration Standard** (document gap, ToS, cache, graceful Tier C degradation, no client secrets, mock in CI, health monitoring). Core shopper ranked reads stay cache-first on `/api/market-search` + `/api/recommendations`
 - client sends `market` in recommendations request body; server returns `marketFreshAt`/`marketStale`, not the full market object (Q27/Q28)
 - `src/contracts/` + Zod is the eventual source of truth for request/response shapes; `recommendation-types.ts` becomes a thin re-export
 

@@ -296,6 +296,33 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows Cook-surface idle copy when rankings were cleared (B5)", () => {
+    const marketSearchState: MarketSearchState = {
+      status: "ready",
+      market,
+    };
+    const recommendationState: RecommendationState = { status: "idle" };
+
+    render(
+      createElement(MealResultsPanel, {
+        form,
+        marketSearchState,
+        recommendationState,
+        market,
+        recommendations: [],
+        marketBlocked: false,
+        surface: "cook",
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Suggest recipes on Home first" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/After store or preference changes, suggest recipes again on Home/i),
+    ).toBeInTheDocument();
+  });
+
   it("does not render the removed trust explainer modal trigger", () => {
     const marketSearchState: MarketSearchState = {
       status: "ready",

@@ -7,7 +7,11 @@ import { HelpHint } from "@/components/help-hint";
 import { formatDifficulty } from "@/components/meal-planner/form-validation";
 import { MultiStoreRoutePanel } from "@/components/meal-planner/multi-store-route-panel";
 import type { ActiveLocationRequest, FormState } from "@/components/meal-planner/types";
-import { formatEstimatedCurrency } from "@/lib/format-estimated-currency";
+import {
+  formatShopperPriceWording,
+  shopperPriceTierFromSaleConfidenceLevel,
+  shopperPriceTierFromShoppingPlan,
+} from "@/lib/shopper-price-wording";
 import {
   formatMealPriceAgeFromShoppingPlan,
 } from "@/lib/sale-ingredient-offers";
@@ -74,6 +78,8 @@ export function MealRecommendationCard({
   );
   const hasPantryLines = meal.shoppingPlan.some((item) => item.sourcedFromPantry);
   const nearbyStores = market.nearbyStores;
+  const mealPriceTier = shopperPriceTierFromShoppingPlan(meal.shoppingPlan);
+  const mealPriceLabel = formatShopperPriceWording(meal.estimatedTotal, mealPriceTier);
 
   return (
     <article className="card recommendation-card">
@@ -85,10 +91,10 @@ export function MealRecommendationCard({
         {hideTitle ? null : <h3 className="card-title">{meal.title}</h3>}
         <span className="price-with-hint">
           <span
-            aria-label={`Estimated total ${formatEstimatedCurrency(meal.estimatedTotal)}`}
+            aria-label={mealPriceLabel}
             className="price"
           >
-            {formatEstimatedCurrency(meal.estimatedTotal)}
+            {mealPriceLabel}
           </span>
           <HelpHint
             id={`${meal.title}-total-help`}
@@ -190,8 +196,8 @@ export function MealRecommendationCard({
                 storeName={store.storeName}
               />
               <span>
-                {formatEstimatedCurrency(store.subtotal)} · {store.itemCount}{" "}
-                item(s)
+                {formatShopperPriceWording(store.subtotal, mealPriceTier)} ·{" "}
+                {store.itemCount} item(s)
               </span>
             </div>
           ))}
@@ -226,7 +232,13 @@ export function MealRecommendationCard({
             ) : (
               <li key={`${meal.title}-${item.ingredientId}-${item.storeName}`}>
                 <strong>{item.ingredient}</strong> from {item.storeName} for{" "}
-                {formatEstimatedCurrency(item.price)} ({item.quantityNote})
+                {formatShopperPriceWording(
+                  item.price,
+                  shopperPriceTierFromSaleConfidenceLevel(
+                    item.saleConfidence.level,
+                  ),
+                )}{" "}
+                ({item.quantityNote})
                 {item.saleLabel ? ` · ${item.saleLabel}` : ""}
                 <div>
                   <span className="sale-confidence-label">

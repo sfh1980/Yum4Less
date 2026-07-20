@@ -33,6 +33,8 @@ type MealResultsPanelProps = {
   activeLocationRequest?: ActiveLocationRequest;
   /** Full-screen overlay owns loading copy during rank (slice 5). */
   suppressInlineLoading?: boolean;
+  /** Cook tab uses clearer idle copy when rankings were cleared. */
+  surface?: "home" | "cook";
 };
 
 export function MealResultsPanel({
@@ -46,6 +48,7 @@ export function MealResultsPanel({
   marketBlocked,
   activeLocationRequest,
   suppressInlineLoading = false,
+  surface = "home",
 }: MealResultsPanelProps) {
   const [storeMapTarget, setStoreMapTarget] = useState<NearbyStoreSummary | null>(null);
   const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
@@ -150,8 +153,16 @@ export function MealResultsPanel({
           />
         ) : recommendationState.status !== "ready" ? (
           <StatusCard
-            title="Ready when you are"
-            body="Finish pantry check on the Home tab, then tap Suggest recipes for my store(s)."
+            title={
+              surface === "cook"
+                ? "Suggest recipes on Home first"
+                : "Ready when you are"
+            }
+            body={
+              surface === "cook"
+                ? "Cook shows dinners from your latest ranking. After store or preference changes, suggest recipes again on Home — this tab updates when new results are ready."
+                : "Finish pantry check on the Home tab, then tap Suggest recipes for my store(s)."
+            }
           />
         ) : (
           <>

@@ -1,7 +1,10 @@
 "use client";
 
 import type { RecommendationExperience } from "@/lib/recommendation-service";
-import { formatEstimatedCurrency } from "@/lib/format-estimated-currency";
+import {
+  formatShopperPriceWording,
+  shopperPriceTierFromOfferFields,
+} from "@/lib/shopper-price-wording";
 import { formatIngredientPriceAge } from "@/lib/sale-ingredient-offers";
 import type { MarketSearchState } from "@/components/meal-planner/types";
 
@@ -72,13 +75,25 @@ export function DealsPanel({
             const priceAgeLabel = formatIngredientPriceAge({
               freshnessHoursAgo: choice.freshnessHoursAgo,
             });
+            const primaryOffer = choice.offers[0];
+            const priceTier = shopperPriceTierFromOfferFields({
+              saleLabel: choice.saleLabel ?? primaryOffer?.saleLabel,
+              freshnessDaysAgo: primaryOffer?.freshnessDaysAgo ?? 0,
+              freshnessHoursAgo:
+                choice.freshnessHoursAgo ?? primaryOffer?.freshnessHoursAgo,
+              priceSource: primaryOffer?.priceSource,
+              trustLabel: choice.trustLabel,
+            });
 
             return (
               <li key={choice.ingredientId} className="deals-list-item">
                 <div className="deals-list-item-main">
                   <strong>{choice.ingredientName}</strong>
                   <span className="sale-ingredient-price">
-                    {formatEstimatedCurrency(choice.lowestEstimatedPrice)}
+                    {formatShopperPriceWording(
+                      choice.lowestEstimatedPrice,
+                      priceTier,
+                    )}
                   </span>
                 </div>
                 <div className="deals-list-item-meta">

@@ -107,6 +107,10 @@ select {
 
 .bottom-nav-button {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
   padding: 0.55rem 0.35rem;
   border: none;
   border-radius: 12px;
@@ -115,6 +119,19 @@ select {
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+.bottom-nav-button-label {
+  line-height: 1.1;
+}
+
+.bottom-nav-button-hint {
+  max-width: 100%;
+  font-size: 0.58rem;
+  font-weight: 500;
+  line-height: 1.15;
+  color: var(--muted);
+  text-wrap: balance;
 }
 
 .bottom-nav-button:hover:not(:disabled),
@@ -133,6 +150,10 @@ select {
 .bottom-nav-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.bottom-nav-button:disabled .bottom-nav-button-hint {
+  opacity: 1;
 }
 
 .deals-list {
