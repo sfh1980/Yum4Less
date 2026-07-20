@@ -412,7 +412,13 @@ export async function runCoreMvpFlow(
   await expect(firstMealTrigger).toHaveAttribute("aria-expanded", "true");
 
   const expandedPanel = page.locator(".meal-results-accordion-panel").first();
-  await expect(expandedPanel.getByText(/Est\. \$\d+\.\d{2}/).first()).toBeVisible();
+  await expect(
+    expandedPanel
+      .getByText(
+        /(?:Lowest price we found|Estimated lowest price): \$\d+\.\d{2}|Price estimate — worth verifying in store/,
+      )
+      .first(),
+  ).toBeVisible();
   await expect(
     page
       .getByText(
