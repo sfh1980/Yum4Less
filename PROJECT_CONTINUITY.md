@@ -246,13 +246,13 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 ## Changelog (newest first)
 
-### 2026-07-20 — Vision-gap sprint items 1–6 (privacy, geo completion, Cook empty, price wording) — local-green; CI pending push
+### 2026-07-20 — Vision-gap sprint items 1–6 (privacy, geo completion, Cook empty, price wording) — CLOSED
 
 - **Theme:** Confirmed Sean decisions from vision-gap report; separate from open P1-ops freshness.
-- **Items 1–4 (prior session + this commit):** External API Integration Standard; no exact-coord persistence; geolocation-only Settings completion; bottom-nav finish-setup hints.
+- **Items 1–4:** External API Integration Standard; no exact-coord persistence; geolocation-only Settings completion; bottom-nav finish-setup hints.
 - **Item 5:** Central `invalidateRankedResults` on Settings save, Welcome continue, and store-scope change; Cook always mounts results panel with honest idle copy (“Suggest recipes on Home first”) — **no auto-redirect**.
-- **Item 6:** Shopper price wording keyed off `getSaleConfidence` levels; **`directional-provider-match` → Low** (weak matchConfidence &lt; 0.7 — dollar exists but product identity unreliable). High/Medium keep flexed `$X` copy; Low has no bare dollar.
-- **Evidence this session:** `npm test` **1052/1052**; Semgrep clean on touched product files. Remote `gh run` after push.
+- **Item 6:** Shopper price wording keyed off `getSaleConfidence` levels; **`directional-provider-match` → Low** (weak `matchConfidence` &lt; 0.7). High/Medium keep flexed `$X` copy; Low has no bare dollar.
+- **Evidence:** `npm test` **1052/1052**; Semgrep clean on touched product files; remote CI green [**29770945822**](https://github.com/sfh1980/Yum4Less/actions/runs/29770945822) @ `adf0a62` (e2e assert follow-up after `61f72bb`).
 - **Not claimed:** P1-ops freshness closed; Settings ZIP-first visual layout rewrite (flagged separately).
 
 ### 2026-07-17 — Vision-gap sprint items 1–4 (docs + privacy + geo completion + nav hints) — local-green; CI pending commit
