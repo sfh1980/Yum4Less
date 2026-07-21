@@ -421,20 +421,16 @@ TrueNAS Apps “Install via YAML” **pulls** a pre-built image — it does not 
 
 - **SHA tag** (first 7 chars of the commit that passed CI) is the source of truth — same discipline as tracing bugs to a real commit/`gh` run.
 - **`latest`** moves on every green `master` push. Pinning TrueNAS to `latest` is silent-drift risk; always set the YAML `image:` to a SHA tag.
-- **Visibility:** the package is kept **private** by default (privacy-first; also avoids inheriting public visibility from the public GitHub repo via package↔repo linking). Making it public later is a one-click change on the package settings if you want to skip registry auth on TrueNAS.
+- **Visibility:** Actions-published packages from this **public** GitHub repo inherit **public** visibility (confirmed on first publish). That means TrueNAS can pull **without** a GitHub PAT. Making the package private later is a package-settings / unlink change if you want PAT-gated pulls — not required for the TrueNAS YAML step.
 
-### Pull credentials (private package)
-
-TrueNAS (or any host) needs a GitHub credential that can read packages:
-
-1. Create a fine-grained or classic PAT with **`read:packages`** (and SSO authorize if applicable).
-2. On TrueNAS, configure registry auth for `ghcr.io` with username = your GitHub username and password = that PAT.
-3. Pull example (local proof):
+### Pull example
 
 ```bash
-echo "$GHCR_READ_TOKEN" | docker login ghcr.io -u sfh1980 --password-stdin
+# Public package — no docker login required while visibility stays public
 docker pull ghcr.io/sfh1980/yum4less-app:<git-sha7>
 ```
+
+If the package is later flipped to **private**, TrueNAS will need a GitHub PAT with **`read:packages`** configured as `ghcr.io` registry auth.
 
 Local Compose still **builds** from source (`build:` in `docker-compose.yml`). Switching Compose to `image: ghcr.io/sfh1980/yum4less-app:<sha>` is optional for day-to-day dev; required for TrueNAS YAML.
 
@@ -464,7 +460,7 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
-| 2026-07-20 | CI `publish-image` job: after verify/integration/e2e/semgrep on `master`, push `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest` (private); SHA pin for TrueNAS, `latest` convenience-only |
+| 2026-07-20 | CI `publish-image` job: after verify/integration/e2e/semgrep on `master`, push `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest` (**public** — inherits public repo); SHA pin for TrueNAS, `latest` convenience-only |
 | 2026-07-20 | App containerized: multi-stage `Dockerfile` + Compose `app` service (`depends_on` db healthy); host `next start` superseded for deploy path; TrueNAS still out of scope |
 | 2026-07-15 | Pass 6: Postgres backup/restore runbook + `db:backup` / `db:restore` / `db:backup-restore-drill` (disposable drill DB) |
 | 2026-07-15 | Pass 1 ops truth: ranked-price freshness heartbeat (fail closed on 0-in-24h) + exit-policy doc aligned with any-chain fail-loud |

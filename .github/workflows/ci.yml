@@ -154,8 +154,8 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}
             ${{ steps.meta.outputs.image }}:latest
-          # Omit org.opencontainers.image.source so GHCR does not auto-link this package to the
-          # public GitHub repo (linked packages inherit public visibility and cannot be private).
+          # Omit org.opencontainers.image.source to avoid an extra public-repo link signal;
+          # Actions-published packages from this public repo are still public by inheritance.
           labels: |
             org.opencontainers.image.title=yum4less-app
             org.opencontainers.image.description=Yum4Less shopper app (Next.js standalone)
@@ -164,27 +164,22 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Keep GHCR package private
+      - name: Report GHCR package visibility
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Default posture: private package (TrueNAS will need a PAT with read:packages).
-          # Repo is public; package stays private because it is not linked to the repo.
+          # Actions-published packages from a public repo inherit public visibility.
+          # GITHUB_TOKEN cannot flip that to private (PUT /visibility → 404). Keeping the
+          # job green and reporting truth is required; private would be a manual package
+          # admin / unlink change if Sean wants PAT-gated pulls later.
           package_name="yum4less-app"
           encoded_name="$(printf '%s' "${package_name}" | jq -sRr @uri)"
-          if gh api --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            "/user/packages/container/${encoded_name}/visibility" \
-            -f visibility=private; then
-            echo "Package visibility set to private."
-          else
-            echo "WARN: could not PUT visibility with GITHUB_TOKEN; checking current state..."
-            vis="$(gh api "/user/packages/container/${encoded_name}" --jq .visibility)"
-            echo "Current visibility: ${vis}"
-            if [ "${vis}" != "private" ]; then
-              echo "::error::Package is '${vis}'; expected private. Set private in GitHub Packages UI or grant a packages admin token."
-              exit 1
-            fi
-          fi
-          echo "Published ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }} (private)"
+          vis="$(gh api "/user/packages/container/${encoded_name}" --jq .visibility)"
+          echo "Package visibility: ${vis}"
+          echo "Published ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}"
           echo "Also tagged :latest (convenience only — pin deploys to the SHA tag)."
+          if [ "${vis}" = "public" ]; then
+            echo "TrueNAS can pull without a GitHub PAT while the package stays public."
+          else
+            echo "Private package — TrueNAS will need a PAT with read:packages."
+          fi
