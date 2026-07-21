@@ -20,5 +20,43 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yum4less-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Loopback only for this local/containerize pass (same discipline as db / SS-1).
+      # LAN/public bind is a later homelab-deployment decision.
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      # Internal Compose DNS — not localhost (that only worked for host-side npm run dev).
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/yum4less_dev
+      # Punch-list defaults: debug dumps and public-API writes stay OFF in the container.
+      YUM4LESS_DEBUG_ROUTES_ENABLED: "0"
+      YUM4LESS_ENABLE_API_DB_WRITES: "0"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
 volumes:
   postgres-data:

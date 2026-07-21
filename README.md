@@ -22,9 +22,26 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 **Normal owner path:** Postgres + **daily live ingest** (scheduled scripts write retailer/OSM data; public APIs stay cache-only on reads).
 
+### Production-like stack (app + db via Compose) — preferred for demo / homelab prep
+
+Both the Next.js app and Postgres run as containers. App listens on **loopback only** (`127.0.0.1:3000`); Postgres on `127.0.0.1:5433` (SS-1).
+
+```bash
+# Copy .env.example → .env.local and set GEOCODIO_API_KEY + KROGER_CLIENT_ID + KROGER_CLIENT_SECRET
+# (Compose loads .env.local when present; DATABASE_URL inside the app container points at service `db`)
+docker compose up --build
+# or: npm run compose:up
+```
+
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Ingest still runs on the **host** (Node + Playwright) against `localhost:5433` — see [Daily pricing refresh](#daily-pricing-refresh-24-hour-cache) and [`docs/homelab-deploy.md`](docs/homelab-deploy.md).
+
+### Local hot-reload development (superseded for full-stack / demo; still valid for UI iteration)
+
+Use this when you need `next dev` HMR. Postgres stays in Docker; the app process runs on the host.
+
 ```bash
 npm install
-# Copy .env.example → .env.local and set GEOCODIO_API_KEY + KROGER_CLIENT_ID + KROGER_CLIENT_SECRET
+# Copy .env.example → .env.local (DATABASE_URL → localhost:5433)
 npm run setup:local   # .env.local, db:up, live scheduled ingest when keys are set
 npm run dev
 ```
@@ -40,7 +57,7 @@ npm run dev -- -p 3001
 # PowerShell: $env:PORT="3001"; $env:PLAYWRIGHT_SKIP_WEBSERVER="1"; $env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:3001"; npm run test:e2e
 ```
 
-**Manual equivalent (live):** `npm run db:up` → copy `.env.example` to `.env.local` with keys → `npm run ingest:weekly-ads:scheduled` → `npm run dev`.
+**Manual equivalent (live, host app):** `npm run db:up` → copy `.env.example` to `.env.local` with keys → `npm run ingest:weekly-ads:scheduled` → `npm run dev`.
 
 **Without live ingest keys:** `setup:local` starts Postgres only. Run `npm run ingest:weekly-ads:scheduled` after adding keys, or use **CI/rehearsal** fixture ingest (`npm run ingest:weekly-ads:fixture`) — deterministic tests only, not the daily owner workflow.
 
@@ -48,9 +65,9 @@ Without Postgres + ingest, ranked pricing stays empty and map pins remain bootst
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js **22.x** (matches CI / `package.json` `engines` / app Docker image)
 - npm
-- Docker Desktop (or compatible runtime) for Postgres-backed demo
+- Docker Desktop (or compatible runtime) for Compose (`app` + `db`)
 
 ---
 
@@ -66,7 +83,7 @@ Without Postgres + ingest, ranked pricing stays empty and map pins remain bootst
 
 **v1 production-ranked chains:** Kroger family (official API + weekly-ad fallback), Aldi, Publix, and Food Lion (weekly-ad). Walmart and other unsupported chains remain map context only.
 
-**Not shipped:** homelab hosting automation, user accounts, live checkout prices, Saved tab persistence, cuisine chips (R11).
+**Not shipped:** TrueNAS Apps translation, reverse-proxy/TLS automation, user accounts, live checkout prices, Saved tab persistence, cuisine chips (R11). Local Compose **`app`+`db`** is shipped (2026-07-20); dedicated-hardware migrate still queued.
 
 Current snapshot and gaps → [`PROJECT_CONTINUITY.md` → Resume](PROJECT_CONTINUITY.md#resume-as-of-2026-06-25).
 
@@ -126,17 +143,18 @@ Full list and ingest flags → `.env.example`.
 | Command | Purpose |
 |---------|---------|
 | `npm run setup:local` | First-run: `.env.local`, `db:up`, SNAP auto-ensure when enabled, live scheduled ingest when keys set |
-| `npm run dev` | Development server (auto-ensures SNAP context when `YUM4LESS_MAP_SNAP_CONTEXT=1` and table is empty) |
+| `npm run compose:up` / `compose:down` / `compose:logs` | Production-like **app + db** via Docker Compose (loopback `3000` + `5433`) |
+| `npm run dev` | Host-side hot-reload server (Postgres via `db:up`; auto-ensures SNAP when enabled) |
 | `npm run ensure:snap-context` | Idempotent SNAP load — skips when rows exist; use `--force` to re-ingest |
 | `npm run dev:clean` | Clear `.next` then dev (after build/webpack glitches) |
-| `npm run build` / `npm run start` | Production build / serve |
+| `npm run build` / `npm run start` | Host-side production build / serve (prefer Compose `app` for containerized stack) |
 | `npm run lint` | ESLint |
 | `npm test` | Unit tests (mocked DB) |
 | `npm run test:integration` | Postgres integration tests (starts Docker if needed) |
 | `npm run test:integration:reset` | Recreate DB volume, then integration tests |
 | `npm run test:all` | Unit + integration |
 | `npm run test:e2e` / `npm run test:e2e:ci` | Playwright browser suite — CI uses port **3100**; see [`e2e/README.md`](e2e/README.md) |
-| `npm run db:up` / `db:down` / `db:reset` / `db:logs` | Local Postgres on host port **5433** |
+| `npm run db:up` / `db:down` / `db:reset` / `db:logs` | Postgres **only** on host port **5433** (Compose `db` service) |
 | `npm run db:backup` / `db:restore` / `db:backup-restore-drill` | Logical `pg_dump`/`psql` backup + disposable restore drill (see [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §4.4) |
 | `npm run ingest:weekly-ads:fixture` | **CI/rehearsal only** — deterministic weekly ads → Postgres |
 | `npm run ingest:weekly-ads` | Live weekly-ad fetch (HTTP + browser fallback) |

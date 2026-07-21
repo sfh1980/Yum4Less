@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Minimal production image via `next build` → `.next/standalone` (Docker).
+  output: "standalone",
   reactStrictMode: true,
   async headers() {
     return [

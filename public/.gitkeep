@@ -1,0 +1,1 @@
+# Present so the Docker runner stage can COPY ./public (Next may add assets later).

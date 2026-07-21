@@ -4,17 +4,17 @@
 
 ---
 
-## Resume (as of 2026-07-17)
+## Resume (as of 2026-07-20)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
 **Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Wave 2 Part 1 Aldi `023` heal CLOSED** (2026-07-16). **Wave 2 Part 2 Phase 0 Q1–Q3 locked** (2026-07-16) — Q1 map-align code **not started**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). **Tier 2 comprehensive audit CLOSED (audit-only)** (2026-07-16) — see [`docs/audits/tier2-comprehensive-audit-report.md`](docs/audits/tier2-comprehensive-audit-report.md). **Tier 2 SS-1 CLOSED** (2026-07-16) — Postgres compose bind loopback-only + `check:compose-db-bind` CI gate. **Vision-gap + UI stub sweep CLOSED (investigation checkpoint)** (2026-07-17). **Vision-gap sprint items 1–6 CLOSED** (2026-07-20) — External API Integration Standard; exact-coord privacy; geo-only Settings completion; nav finish-setup hints; Cook honest empty + rank invalidation; confidence-flexed price wording (`directional-provider-match` → Low). CI [**29770945822**](https://github.com/sfh1980/Yum4Less/actions/runs/29770945822) @ `adf0a62`. P1-ops freshness (`fresh_24h=0` on `yum4less_dev`) remains **open** (ops).
 
-**Homelab prep:** Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware. Compose Postgres is **`127.0.0.1:5433:5432`** (SS-1); local-dev `postgres:postgres` remains loopback-only.
+**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db` (`npm run compose:up`); local proof-of-catch on this machine. Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped (code); cron/TLS/TrueNAS Apps translation still host ops. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware. Compose publishes **`127.0.0.1:3000`** (app) and **`127.0.0.1:5433`** (db / SS-1); local-dev `postgres:postgres` remains loopback-only.
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted homelab (target); owner preparing dedicated Linux box — ingest cron wiring documented, not live on hardware yet.
+**Hosting:** Self-hosted homelab (target); owner preparing dedicated Linux box — **Compose `app`+`db` proven locally**; ingest cron wiring documented, not live on hardware yet; TrueNAS Apps migration next.
 
 **Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
@@ -245,6 +245,24 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-20 — App containerized (Compose `app` + `db`) — local proof
+
+- **Theme:** Close the silent homelab gap — TrueNAS Apps only run containers; the shopper app had never been Dockerized (Postgres-only compose before).
+- **Shipped:** Multi-stage `Dockerfile` (Node **22** bookworm-slim, `output: "standalone"`, non-root `node`, HTTP healthcheck); Compose **`app`** service with `depends_on: db` + `condition: service_healthy`; loopback publish `127.0.0.1:3000`; `DATABASE_URL` → `db:5432`; debug/API-write flags forced OFF; `package.json` `engines` + `compose:*` scripts; docs (README, `.env.example`, `docs/homelab-deploy.md`) mark host `next start` / `npm run dev` as hot-reload-only where superseded.
+- **Proof-of-catch (this machine):** `docker compose build` OK; `docker compose up` — db healthy before app start; app **healthy**; `GET /` 200; `POST /api/market-search` with `37.6085,-77.3739` returned `ok: true` / `dataSource=database` (DB over Compose network).
+- **Evidence this session:** `npm test` **1052/1052**; `npm run test:integration` **48/48**; `check:compose-db-bind` OK; Semgrep clean on Dockerfile / compose / next.config / package.json / `.dockerignore`.
+- **Out of scope:** TrueNAS YAML, reverse proxy/TLS, LAN bind.
+- **Not claimed:** deploy-ready / CI green until owner commits and inspects a `gh` run.
+
+### 2026-07-20 — Homelab readiness convergence verdict — CLOSED (audit)
+
+- **Theme:** Consolidate Tier 1 / Tier 2 / vision-gap / Decision log; re-verify CLOSED; strict OPEN-BLOCKS bar for real-user homelab testing. **No product fixes.**
+- **Deliverable:** [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md).
+- **Verdict:** **READY WITH CONDITIONS** — OPEN-BLOCKS **empty**. Conditions = host ops (loopback confirm, cron+heartbeat, first ingest, backup drill on target, TLS if beyond LAN).
+- **Agents:** `@senior-auditor` + `@verifier` (both READY WITH CONDITIONS).
+- **CI at HEAD:** [**29771363076**](https://github.com/sfh1980/Yum4Less/actions/runs/29771363076) @ `1b23b0c` success.
+- **Not claimed:** unattended cron proven on hardware; live `docker port` / Postgres freshness this session (Docker Desktop down).
 
 ### 2026-07-20 — Vision-gap sprint items 1–6 (privacy, geo completion, Cook empty, price wording) — CLOSED
 
@@ -2220,6 +2238,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-07-20 | **Compose app + db:** production path is `docker compose up` (multi-stage Dockerfile, Next standalone). Host `npm run dev` / `next start` remain for hot-reload / debug only — not the documented full-stack or homelab-prep model. TrueNAS Apps translation is a separate later pass. | **Active** |
 | 2026-07-20 | **Shopper price confidence wording:** map existing `SaleConfidenceLevel` → high/medium/low shopper copy. High=`advertised-recent` → “Lowest price we found: $X”; Medium=`advertised-aging` → “Estimated lowest price: $X”; Low=`advertised-stale` / `regular-price` / `no-sale-data` / **`directional-provider-match`** → “Price estimate — worth verifying in store” (no bare $). `directional-provider-match` is weak match (`matchConfidence` &lt; 0.7), not merely aging data. | **Active** |
 | 2026-07-17 | **External API Integration Standard** (replaces retired “two API routes forever”): Supporting App Router handlers beyond `/api/market-search` + `/api/recommendations` are allowed when they serve a real product need (today: pantry-coverage, shopping-route, geocode/zip, analytics/events, feedback, debug/pipeline). Adding **any** new external dependency requires: (1) document the gap vs current sources; (2) confirm ToS/legal (rate limits, caching, no-scrape); (3) cache appropriately; (4) fail gracefully with Tier C-style honest degradation — never a hard break on quota/outage; (5) no secrets client-side; (6) mock in tests — CI must not depend on a live third party; (7) monitoring/heartbeat for the dependency’s health (same philosophy as ranked-price freshness). Cache-first ranked reads on the two core shopper routes remain the product default. See also [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). | **Active** |
 | 2026-07-17 | ~~**Two API routes forever**~~ (literal or implied hard cap on HTTP handlers) | **Superseded** (2026-07-17 External API Integration Standard) |
@@ -2279,7 +2298,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | 2026-06 | Beta v1 = continental US entry + Tier C default | **Active** |
 | 2026-06 | v1 ranked chains: Kroger family + Aldi only | **Superseded** (2026-06-29: + Publix + Food Lion shopper-ranked) |
 | 2026-06 | Walmart ranked pricing deferred | **Active** |
-| 2026-06 | Homelab hosting; deploy when migration-ready | **Active** |
+| 2026-06 | Homelab hosting via Docker Compose (`app` + `db`); TrueNAS/DNS/TLS when migration-ready | **Active** (2026-07-20: app containerized locally; supersedes host-only `next start` deploy sketch) |
 | 2026-06 | v1 = beta; keep estimate/directional/verify-in-store wording | **Active** |
 | 2026-06 | No user accounts in v1 | **Active** |
 | 2026-05 | Public API DB writes opt-in only; blocked in production | **Active** |
@@ -2304,6 +2323,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| Compose `app`+`db` containerize | 2026-07-20 | **Local proof** — build OK; db healthy→app start; `GET /` 200; market-search `dataSource=database`; unit **1052/1052**; integration **48/48**; Semgrep clean on Dockerfile/compose; **no** remote CI until commit |
 | Aldi `023` heal (`yum4less_dev`) | 2026-07-16 | **OK** — probes true; backup `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`; stores/PO/migrations unchanged (281/308/23) |
 | Wave 1c docs-only (portal rule) | 2026-07-16 | Docs only — `yum4less-frontend-workflow.mdc` + `web-frontend-standards.md` + Continuity; **no** product code; unit/e2e gates N/A for this slice |
 | `npm test` (Wave 1b full) | 2026-07-16 | **1030/1030** pass (183 files; +3 `assertRecommendationsHaveMeals` proof-of-catch) |
@@ -2438,7 +2458,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 **Historical note:** the old `coordinate-first.spec.ts` cold-path timeout was fixed on 2026-07-03 by bounding search-time OSM gap-fill and warming the cache in the background. True cold verification on `37.675, -77.280` (zero `openstreetmap-overpass` rows in `yum4less_test` after fixture prep) stayed bounded at **3227ms** response / **3486ms** full flow, and committed regression coverage now lives in `e2e/coordinate-first-cold.spec.ts`.
 
-**Local demo:** `npm run db:up` → `ingest:weekly-ads:fixture` → `ingest:map-catalog:fixture` → `npm run build` → `npm run start` (ZIP `23111`).
+**Local demo:** `docker compose up --build` (or host `npm run db:up` → ingest → `npm run start`) with ZIP `23111` / coords `37.6085,-77.3739`.
 
 **Optional probes (not merge gates):** `npm run probe:kroger-api`, `npm run probe:publix-live-ingest`, live weekly-ad ingest scripts.
 

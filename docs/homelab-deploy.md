@@ -1,8 +1,8 @@
 # Homelab deploy — scheduled ingest runbook
 
-Copy-paste guide for a **dedicated Linux box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Assumes a generic Linux host with **Docker** and **Node.js** — not a specific distro or hardware profile.
+Copy-paste guide for a **dedicated Linux box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Assumes a generic Linux host with **Docker** (Compose) and **Node.js** (for ingest scripts / Playwright) — not a specific distro or hardware profile.
 
-**Scope:** wiring `npm run ingest:weekly-ads:scheduled` to run unattended. App hosting (`next start`, reverse proxy, TLS) is outlined briefly; ingest is the focus.
+**Scope:** wiring `npm run ingest:weekly-ads:scheduled` to run unattended. **App + Postgres** run as Compose services (`Dockerfile` + `docker-compose.yml`). Reverse proxy / TLS / TrueNAS Apps translation are **out of scope** here — next after local Compose is proven.
 
 **Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths).
 
@@ -33,9 +33,9 @@ Copy-paste guide for a **dedicated Linux box** running Postgres, the Yum4Less ap
 
 | Requirement | Notes |
 |-------------|--------|
-| **Node.js 22.x LTS** (or current repo-supported LTS) | `node -v` on the cron user. No `engines` pin in `package.json`; match dev CI. |
-| **npm** | Bundled with Node. |
-| **Docker Engine + Compose plugin** | `ensure-test-db.mjs` expects container `yum4less-postgres` from repo `docker-compose.yml`. |
+| **Node.js 22.x** (`package.json` `engines`: `>=22 <23`) | Required on the **host** for ingest/cron (`node -v`). App container uses `node:22-bookworm-slim`. |
+| **npm** | Bundled with Node (host ingest path). |
+| **Docker Engine + Compose plugin** | `app` + `db` from repo `docker-compose.yml`. `ensure-test-db.mjs` expects container `yum4less-postgres`. |
 | **Git** | Clone the repo; cron runs from repo root. |
 | **Playwright Chromium** (recommended before first live ingest) | Kroger/Publix/Walmart use headless browser fallbacks when Flipp/HTTP is empty. After `npm ci`: `npx playwright install chromium` and on Linux typically `npx playwright install-deps chromium` (or install distro libs Playwright documents). |
 
@@ -63,7 +63,9 @@ No inbound ports required for ingest itself. Compose publishes Postgres as `127.
 
 ## 2. First-time host setup
 
-### 2.1 Clone and install
+### 2.1 Clone and install (host Node — ingest only)
+
+Host Node/npm are still required for **scheduled ingest** (Playwright Chromium, `tsx` scripts). The **shopper app** no longer needs a host `next start` process.
 
 ```bash
 git clone <your-repo-url> /opt/yum4less   # choose your path
@@ -74,26 +76,34 @@ npx playwright install chromium
 npx playwright install-deps chromium
 ```
 
-### 2.2 Start Postgres (persistent volume)
+### 2.2 Start app + Postgres (Compose)
+
+**Supersedes** the older “`npm run db:up` then host `next start`” app path. For this pass, both services are containers; TrueNAS/Apps-specific volume paths come later.
 
 ```bash
 cd /opt/yum4less
-npm run db:up
-docker ps --filter name=yum4less-postgres
+docker compose up --build -d
+# or: npm run compose:up
+docker ps --filter name=yum4less-
 ```
 
-Schema is applied from `db/init/` on first container start (physical SQL only — the ledger table is created but **not populated** until the first migration pass). **`schema_migrations` is the source of truth** for which init files have been applied; `npm run db:migrate` or any path that runs `ensure-test-db.mjs` reconciles the ledger (backfill on existing volumes, apply missing files such as `015`/`016` on long-lived dev DBs).
+- **`db`** (`yum4less-postgres`): healthy before **`app`** starts (`depends_on` + `condition: service_healthy`).
+- **`app`** (`yum4less-app`): Next.js standalone image; `DATABASE_URL` → `postgresql://postgres:postgres@db:5432/yum4less_dev` (Compose DNS). Host publish: `127.0.0.1:3000` and `127.0.0.1:5433` (loopback only — SS-1).
+- Debug / public-API write flags are forced **OFF** in compose (`YUM4LESS_DEBUG_ROUTES_ENABLED=0`, `YUM4LESS_ENABLE_API_DB_WRITES=0`).
+
+Schema is applied from `db/init/` on first **db** container start (physical SQL only — the ledger table is created but **not populated** until the first migration pass). **`schema_migrations` is the source of truth** for which init files have been applied; `npm run db:migrate` or any path that runs `ensure-test-db.mjs` reconciles the ledger (backfill on existing volumes, apply missing files such as `015`/`016` on long-lived dev DBs).
 
 After each deploy that adds or changes files under `db/init/`, run:
 
 ```bash
-npm run db:up
+docker compose up -d db
+# or keep using: npm run db:up
 npm run db:migrate
 ```
 
 Verify ledger rows: `docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "select version, filename, applied_at from schema_migrations order by version;"`
 
-**Decision:** This runbook assumes **Docker Compose Postgres** on the same box. A standalone Postgres install works if `DATABASE_URL` points at it, but `ensure-test-db.mjs` still tries to manage the Docker container — see [Pre-go-live gaps](#pre-go-live-gaps-flag-dont-fix-in-this-pass) below.
+**Decision:** This runbook assumes **Docker Compose `app` + `db`** on the same box. A standalone Postgres install works if host ingest `DATABASE_URL` points at it, but `ensure-test-db.mjs` still tries to manage the Docker container — see [Pre-go-live gaps](#pre-go-live-gaps-flag-dont-fix-in-this-pass) below.
 
 ### 2.3 Configure `.env.local`
 
@@ -118,9 +128,10 @@ Edit `.env.local`. **Required for live scheduled ingest** (enforced by `assert-l
 
 **Database:**
 
-| Variable | Example |
-|----------|---------|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5433/yum4less_dev` |
+| Context | `DATABASE_URL` |
+|---------|----------------|
+| Host ingest / `npm run dev` / Vitest | `postgresql://postgres:postgres@localhost:5433/yum4less_dev` (Compose publish) |
+| Compose **`app`** container | Set by compose to `postgresql://postgres:postgres@db:5432/yum4less_dev` — do **not** point the container at `localhost` |
 
 **Your actual market(s) — do not leave default:**
 
@@ -375,19 +386,21 @@ Treat **cron exit + `[freshness]` lines + optional webhook** as the owner alert 
 
 ---
 
-## 6. App on the same box (brief)
+## 6. App on the same box (Compose)
 
-After ingest is reliable:
+**Current path (containerized):** after `docker compose up --build -d`, the shopper UI is served by `yum4less-app` on `127.0.0.1:3000`. Confirm with:
 
 ```bash
-cd /opt/yum4less
-npm run build
-NODE_ENV=production npm run start   # default port 3000
+curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/
+# Optional DB proof (coords = CI anchor):
+curl -sS -X POST http://127.0.0.1:3000/api/market-search \
+  -H "content-type: application/json" \
+  -d '{"latitude":37.6085,"longitude":-77.3739,"radiusMiles":8}'
 ```
 
-Use a reverse proxy (Caddy, nginx) for TLS. Set `TRUST_PROXY_HEADERS=1` only when the proxy strips client `X-Forwarded-For`. Continental US ZIP search in production requires `GEOCODIO_API_KEY` in `.env.local`.
+**Superseded for production-like / homelab prep:** host-side `npm run build` + `NODE_ENV=production npm run start`. That remains valid for local debugging only — not the documented deploy model.
 
-Process supervision (systemd, pm2) is host-specific — pick one and restart on boot.
+Reverse proxy / TLS / LAN bind remain a **later** pass. Set `TRUST_PROXY_HEADERS=1` only when a trusted proxy strips client `X-Forwarded-For`. Continental US ZIP search in production requires `GEOCODIO_API_KEY` in `.env.local` (loaded into the `app` service when present).
 
 ---
 
@@ -421,6 +434,7 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
+| 2026-07-20 | App containerized: multi-stage `Dockerfile` + Compose `app` service (`depends_on` db healthy); host `next start` superseded for deploy path; TrueNAS still out of scope |
 | 2026-07-15 | Pass 6: Postgres backup/restore runbook + `db:backup` / `db:restore` / `db:backup-restore-drill` (disposable drill DB) |
 | 2026-07-15 | Pass 1 ops truth: ranked-price freshness heartbeat (fail closed on 0-in-24h) + exit-policy doc aligned with any-chain fail-loud |
 | 2026-06-29 | Initial homelab scheduled-ingest runbook |
