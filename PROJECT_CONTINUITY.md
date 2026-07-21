@@ -252,7 +252,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Shipped:** Downstream CI job `publish-image` in `.github/workflows/ci.yml` — `needs: [verify, integration, e2e, semgrep]`, **master push only**; builds existing `Dockerfile`; pushes `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest`. Docs: [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8.
 - **Pin rule:** SHA tag = deploy/rollback source of truth; `latest` = convenience only.
 - **Visibility:** Intended private by default, but Actions-published packages from the **public** GitHub repo inherit **public** visibility (`GITHUB_TOKEN` cannot flip to private). Tradeoff: TrueNAS pulls **without** a PAT. Private later = manual package admin / unlink if desired.
-- **Partial evidence @ `931b1fa`:** [**29792431759**](https://github.com/sfh1980/Yum4Less/actions/runs/29792431759) — verify/integration/e2e/semgrep **success**; `publish-image` built+pushed image then failed on private-visibility enforce. Image pullable: `ghcr.io/sfh1980/yum4less-app:931b1fa` (public, unauthenticated `docker pull` OK). Follow-up commit drops fail-closed private enforce → report-only.
+- **Evidence:** Full pipeline green [**29792952906**](https://github.com/sfh1980/Yum4Less/actions/runs/29792952906) @ `f38ce73` — verify / integration / e2e / semgrep / **publish-image** all success. Image: `ghcr.io/sfh1980/yum4less-app:f38ce73` (**public**; unauthenticated `docker pull` OK). Prior partial @ `931b1fa` / [29792431759](https://github.com/sfh1980/Yum4Less/actions/runs/29792431759) (push OK, private-enforce failed).
 - **Out of scope:** TrueNAS YAML, reverse proxy/TLS, Dockerfile changes.
 
 ### 2026-07-20 — App containerized (Compose `app` + `db`) — local proof
@@ -2332,7 +2332,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| GHCR `publish-image` (CI) | 2026-07-20 | **Pending** first green `master` run after workflow land — expect `ghcr.io/sfh1980/yum4less-app:<sha7>` private + `:latest` |
+| GHCR `publish-image` (CI) | 2026-07-20 | **Green** — [29792952906](https://github.com/sfh1980/Yum4Less/actions/runs/29792952906) @ `f38ce73`; image `ghcr.io/sfh1980/yum4less-app:f38ce73` + `:latest`; visibility **public** (repo-inherited); unauthenticated pull OK |
 | Compose `app`+`db` containerize | 2026-07-20 | **Local proof** — build OK; db healthy→app start; `GET /` 200; market-search `dataSource=database`; unit **1052/1052**; integration **48/48**; Semgrep clean on Dockerfile/compose; remote CI later green on containerize commit |
 | Aldi `023` heal (`yum4less_dev`) | 2026-07-16 | **OK** — probes true; backup `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`; stores/PO/migrations unchanged (281/308/23) |
 | Wave 1c docs-only (portal rule) | 2026-07-16 | Docs only — `yum4less-frontend-workflow.mdc` + `web-frontend-standards.md` + Continuity; **no** product code; unit/e2e gates N/A for this slice |
