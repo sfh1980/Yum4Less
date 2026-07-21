@@ -111,3 +111,80 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5433/yum4less_dev
           CI: "1"
           GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY }}
+
+  # Downstream of all merge gates — never builds/pushes an image from ungated code.
+  # Master-push only (same trigger as the rest of CI). Tag/release-only publishing
+  # is a later option if TrueNAS pin ceremony prefers it; SHA tags already pin builds.
+  publish-image:
+    runs-on: ubuntu-latest
+    needs: [verify, integration, e2e, semgrep]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set short SHA tag
+        id: meta
+        run: |
+          short_sha="$(echo "${GITHUB_SHA}" | cut -c1-7)"
+          echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER}/yum4less-app" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          # SHA tag = deploy/rollback pin. latest = convenience only (do not pin TrueNAS to it).
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}
+            ${{ steps.meta.outputs.image }}:latest
+          # Omit org.opencontainers.image.source so GHCR does not auto-link this package to the
+          # public GitHub repo (linked packages inherit public visibility and cannot be private).
+          labels: |
+            org.opencontainers.image.title=yum4less-app
+            org.opencontainers.image.description=Yum4Less shopper app (Next.js standalone)
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.short_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Keep GHCR package private
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Default posture: private package (TrueNAS will need a PAT with read:packages).
+          # Repo is public; package stays private because it is not linked to the repo.
+          package_name="yum4less-app"
+          encoded_name="$(printf '%s' "${package_name}" | jq -sRr @uri)"
+          if gh api --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/user/packages/container/${encoded_name}/visibility" \
+            -f visibility=private; then
+            echo "Package visibility set to private."
+          else
+            echo "WARN: could not PUT visibility with GITHUB_TOKEN; checking current state..."
+            vis="$(gh api "/user/packages/container/${encoded_name}" --jq .visibility)"
+            echo "Current visibility: ${vis}"
+            if [ "${vis}" != "private" ]; then
+              echo "::error::Package is '${vis}'; expected private. Set private in GitHub Packages UI or grant a packages admin token."
+              exit 1
+            fi
+          fi
+          echo "Published ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }} (private)"
+          echo "Also tagged :latest (convenience only — pin deploys to the SHA tag)."

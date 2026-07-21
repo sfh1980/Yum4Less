@@ -2,7 +2,7 @@
 
 Copy-paste guide for a **dedicated Linux box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Assumes a generic Linux host with **Docker** (Compose) and **Node.js** (for ingest scripts / Playwright) — not a specific distro or hardware profile.
 
-**Scope:** wiring `npm run ingest:weekly-ads:scheduled` to run unattended. **App + Postgres** run as Compose services (`Dockerfile` + `docker-compose.yml`). Reverse proxy / TLS / TrueNAS Apps translation are **out of scope** here — next after local Compose is proven.
+**Scope:** wiring `npm run ingest:weekly-ads:scheduled` to run unattended. **App + Postgres** run as Compose services (`Dockerfile` + `docker-compose.yml`). CI publishes a pre-built app image to GHCR for TrueNAS “Install via YAML” (see [§8](#8-ghcr-app-image-for-truenas)). Reverse proxy / TLS / TrueNAS Apps YAML itself remain **out of scope** here — next after the image path is proven.
 
 **Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths).
 
@@ -410,6 +410,36 @@ As of this doc, **shopper-facing ranked meal totals** use **Kroger family, Aldi,
 
 ---
 
+## 8. GHCR app image (for TrueNAS)
+
+TrueNAS Apps “Install via YAML” **pulls** a pre-built image — it does not `docker compose build` from this repo the way local Compose does. After every successful `master` CI run (`verify` → `integration` → `e2e` → `semgrep`, then `publish-image`), GitHub Actions builds the existing `Dockerfile` and pushes:
+
+| Reference | Image |
+|-----------|--------|
+| **Deploy / rollback pin (use this)** | `ghcr.io/sfh1980/yum4less-app:<git-sha7>` |
+| Convenience only (do **not** pin production) | `ghcr.io/sfh1980/yum4less-app:latest` |
+
+- **SHA tag** (first 7 chars of the commit that passed CI) is the source of truth — same discipline as tracing bugs to a real commit/`gh` run.
+- **`latest`** moves on every green `master` push. Pinning TrueNAS to `latest` is silent-drift risk; always set the YAML `image:` to a SHA tag.
+- **Visibility:** the package is kept **private** by default (privacy-first; also avoids inheriting public visibility from the public GitHub repo via package↔repo linking). Making it public later is a one-click change on the package settings if you want to skip registry auth on TrueNAS.
+
+### Pull credentials (private package)
+
+TrueNAS (or any host) needs a GitHub credential that can read packages:
+
+1. Create a fine-grained or classic PAT with **`read:packages`** (and SSO authorize if applicable).
+2. On TrueNAS, configure registry auth for `ghcr.io` with username = your GitHub username and password = that PAT.
+3. Pull example (local proof):
+
+```bash
+echo "$GHCR_READ_TOKEN" | docker login ghcr.io -u sfh1980 --password-stdin
+docker pull ghcr.io/sfh1980/yum4less-app:<git-sha7>
+```
+
+Local Compose still **builds** from source (`build:` in `docker-compose.yml`). Switching Compose to `image: ghcr.io/sfh1980/yum4less-app:<sha>` is optional for day-to-day dev; required for TrueNAS YAML.
+
+---
+
 ## Pre-go-live gaps (flag — don’t fix in this pass)
 
 Issues to resolve **before** relying on unattended cron:
@@ -434,6 +464,7 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
+| 2026-07-20 | CI `publish-image` job: after verify/integration/e2e/semgrep on `master`, push `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest` (private); SHA pin for TrueNAS, `latest` convenience-only |
 | 2026-07-20 | App containerized: multi-stage `Dockerfile` + Compose `app` service (`depends_on` db healthy); host `next start` superseded for deploy path; TrueNAS still out of scope |
 | 2026-07-15 | Pass 6: Postgres backup/restore runbook + `db:backup` / `db:restore` / `db:backup-restore-drill` (disposable drill DB) |
 | 2026-07-15 | Pass 1 ops truth: ranked-price freshness heartbeat (fail closed on 0-in-24h) + exit-policy doc aligned with any-chain fail-loud |

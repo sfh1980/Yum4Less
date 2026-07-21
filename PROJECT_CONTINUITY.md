@@ -10,11 +10,11 @@
 
 **Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Wave 2 Part 1 Aldi `023` heal CLOSED** (2026-07-16). **Wave 2 Part 2 Phase 0 Q1–Q3 locked** (2026-07-16) — Q1 map-align code **not started**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). **Tier 2 comprehensive audit CLOSED (audit-only)** (2026-07-16) — see [`docs/audits/tier2-comprehensive-audit-report.md`](docs/audits/tier2-comprehensive-audit-report.md). **Tier 2 SS-1 CLOSED** (2026-07-16) — Postgres compose bind loopback-only + `check:compose-db-bind` CI gate. **Vision-gap + UI stub sweep CLOSED (investigation checkpoint)** (2026-07-17). **Vision-gap sprint items 1–6 CLOSED** (2026-07-20) — External API Integration Standard; exact-coord privacy; geo-only Settings completion; nav finish-setup hints; Cook honest empty + rank invalidation; confidence-flexed price wording (`directional-provider-match` → Low). CI [**29770945822**](https://github.com/sfh1980/Yum4Less/actions/runs/29770945822) @ `adf0a62`. P1-ops freshness (`fresh_24h=0` on `yum4less_dev`) remains **open** (ops).
 
-**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db` (`npm run compose:up`); local proof-of-catch on this machine. Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md). Freshness heartbeat + backup/restore drill shipped (code); cron/TLS/TrueNAS Apps translation still host ops. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware. Compose publishes **`127.0.0.1:3000`** (app) and **`127.0.0.1:5433`** (db / SS-1); local-dev `postgres:postgres` remains loopback-only.
+**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db` (`npm run compose:up`); local proof-of-catch on this machine. **GHCR publish (2026-07-20):** CI `publish-image` (gated on verify/integration/e2e/semgrep, `master` push) pushes `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest` — **private** package; SHA tag is the TrueNAS pin, `latest` convenience-only. Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8. Freshness heartbeat + backup/restore drill shipped (code); cron/TLS/TrueNAS Apps YAML still host ops. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware. Compose publishes **`127.0.0.1:3000`** (app) and **`127.0.0.1:5433`** (db / SS-1); local-dev `postgres:postgres` remains loopback-only.
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted homelab (target); owner preparing dedicated Linux box — **Compose `app`+`db` proven locally**; ingest cron wiring documented, not live on hardware yet; TrueNAS Apps migration next.
+**Hosting:** Self-hosted homelab (target); owner preparing dedicated Linux box — **Compose `app`+`db` proven locally**; **CI publishes private GHCR app image** (TrueNAS pull prerequisite); ingest cron wiring documented, not live on hardware yet; TrueNAS Apps YAML next.
 
 **Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
@@ -245,6 +245,15 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-20 — CI publishes app image to GHCR (TrueNAS prerequisite)
+
+- **Theme:** TrueNAS “Install via YAML” needs a **pre-built** image; local `docker compose build` is not enough for that path.
+- **Shipped:** Downstream CI job `publish-image` in `.github/workflows/ci.yml` — `needs: [verify, integration, e2e, semgrep]`, **master push only**; builds existing `Dockerfile`; pushes `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest`; keeps package **private** (no repo-link label so public GitHub repo does not force public package). Docs: [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8.
+- **Pin rule:** SHA tag = deploy/rollback source of truth; `latest` = convenience only.
+- **TrueNAS note:** private package → need GitHub PAT with `read:packages` on the host; public package is a one-setting tradeoff later if desired.
+- **Evidence:** fill after green `gh` run with publish-image + visible SHA tag (see Verification snapshot).
+- **Out of scope:** TrueNAS YAML, reverse proxy/TLS, Dockerfile changes.
 
 ### 2026-07-20 — App containerized (Compose `app` + `db`) — local proof
 
@@ -2298,7 +2307,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | 2026-06 | Beta v1 = continental US entry + Tier C default | **Active** |
 | 2026-06 | v1 ranked chains: Kroger family + Aldi only | **Superseded** (2026-06-29: + Publix + Food Lion shopper-ranked) |
 | 2026-06 | Walmart ranked pricing deferred | **Active** |
-| 2026-06 | Homelab hosting via Docker Compose (`app` + `db`); TrueNAS/DNS/TLS when migration-ready | **Active** (2026-07-20: app containerized locally; supersedes host-only `next start` deploy sketch) |
+| 2026-06 | Homelab hosting via Docker Compose (`app` + `db`); TrueNAS/DNS/TLS when migration-ready | **Active** (2026-07-20: app containerized locally; CI publishes private `ghcr.io/sfh1980/yum4less-app:<sha7>`; TrueNAS YAML next) |
 | 2026-06 | v1 = beta; keep estimate/directional/verify-in-store wording | **Active** |
 | 2026-06 | No user accounts in v1 | **Active** |
 | 2026-05 | Public API DB writes opt-in only; blocked in production | **Active** |
@@ -2323,7 +2332,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| Compose `app`+`db` containerize | 2026-07-20 | **Local proof** — build OK; db healthy→app start; `GET /` 200; market-search `dataSource=database`; unit **1052/1052**; integration **48/48**; Semgrep clean on Dockerfile/compose; **no** remote CI until commit |
+| GHCR `publish-image` (CI) | 2026-07-20 | **Pending** first green `master` run after workflow land — expect `ghcr.io/sfh1980/yum4less-app:<sha7>` private + `:latest` |
+| Compose `app`+`db` containerize | 2026-07-20 | **Local proof** — build OK; db healthy→app start; `GET /` 200; market-search `dataSource=database`; unit **1052/1052**; integration **48/48**; Semgrep clean on Dockerfile/compose; remote CI later green on containerize commit |
 | Aldi `023` heal (`yum4less_dev`) | 2026-07-16 | **OK** — probes true; backup `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`; stores/PO/migrations unchanged (281/308/23) |
 | Wave 1c docs-only (portal rule) | 2026-07-16 | Docs only — `yum4less-frontend-workflow.mdc` + `web-frontend-standards.md` + Continuity; **no** product code; unit/e2e gates N/A for this slice |
 | `npm test` (Wave 1b full) | 2026-07-16 | **1030/1030** pass (183 files; +3 `assertRecommendationsHaveMeals` proof-of-catch) |
