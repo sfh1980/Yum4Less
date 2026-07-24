@@ -65,6 +65,12 @@ declare module "@scripts-lib/apply-migrations" {
 }
 
 declare module "@scripts-lib/spawn-safe" {
+  /** Homelab ingest container: TCP `psql` instead of `docker exec`. */
+  export function isExternalPostgresMode(): boolean;
+
+  /** Rewrite DATABASE_URL pathname to the given database for host `psql`. */
+  export function resolveExternalConnectionUrl(databaseName: string): string;
+
   export function tableExists(
     table: string,
     databaseName?: string,
