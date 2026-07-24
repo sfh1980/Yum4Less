@@ -5,6 +5,41 @@ import { dirname, join } from "node:path";
 export const YUM4LESS_POSTGRES_CONTAINER = "yum4less-postgres";
 
 const SQL_IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+const DEFAULT_DATABASE_URL =
+  "postgresql://postgres:postgres@localhost:5433/yum4less_dev";
+
+/**
+ * Homelab / ingest-container mode: talk to Postgres over TCP via host `psql`
+ * (postgresql-client) instead of `docker exec yum4less-postgres`.
+ * Set `YUM4LESS_EXTERNAL_POSTGRES=1` and a reachable `DATABASE_URL`.
+ */
+export function isExternalPostgresMode() {
+  const normalized = process.env.YUM4LESS_EXTERNAL_POSTGRES?.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
+
+function resolveBaseDatabaseUrl() {
+  return process.env.DATABASE_URL?.trim() || DEFAULT_DATABASE_URL;
+}
+
+export function resolveExternalConnectionUrl(databaseName) {
+  assertSafeSqlIdentifier(databaseName, "database name");
+  const parsed = new URL(resolveBaseDatabaseUrl());
+  parsed.pathname = `/${databaseName}`;
+  return parsed.toString();
+}
+
+function externalPsql(args, options = {}) {
+  return execFileSync("psql", args, {
+    shell: false,
+    env: {
+      ...process.env,
+      // Avoid hanging forever when DATABASE_URL points at a dead host.
+      PGCONNECT_TIMEOUT: process.env.PGCONNECT_TIMEOUT?.trim() || "10",
+    },
+    ...options,
+  });
+}
 
 function npmCommand() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
@@ -113,6 +148,19 @@ export function containerHealthStatus(
 
 export function psqlQueryScalar(databaseName, sql) {
   assertSafeSqlIdentifier(databaseName, "database name");
+  if (isExternalPostgresMode()) {
+    return externalPsql(
+      [
+        resolveExternalConnectionUrl(databaseName),
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-tAc",
+        sql,
+      ],
+      { encoding: "utf8" },
+    ).trim();
+  }
+
   return dockerExecFile(
     [
       "exec",
@@ -131,23 +179,37 @@ export function psqlQueryScalar(databaseName, sql) {
 
 export function psqlQueryRows(databaseName, sql) {
   assertSafeSqlIdentifier(databaseName, "database name");
-  const raw = dockerExecFile(
-    [
-      "exec",
-      YUM4LESS_POSTGRES_CONTAINER,
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      databaseName,
-      "-tA",
-      "-F",
-      "\t",
-      "-c",
-      sql,
-    ],
-    { encoding: "utf8" },
-  ).trim();
+  const raw = isExternalPostgresMode()
+    ? externalPsql(
+        [
+          resolveExternalConnectionUrl(databaseName),
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-tA",
+          "-F",
+          "\t",
+          "-c",
+          sql,
+        ],
+        { encoding: "utf8" },
+      ).trim()
+    : dockerExecFile(
+        [
+          "exec",
+          YUM4LESS_POSTGRES_CONTAINER,
+          "psql",
+          "-U",
+          "postgres",
+          "-d",
+          databaseName,
+          "-tA",
+          "-F",
+          "\t",
+          "-c",
+          sql,
+        ],
+        { encoding: "utf8" },
+      ).trim();
 
   if (!raw) {
     return [];
@@ -161,6 +223,21 @@ export function psqlQueryRows(databaseName, sql) {
 
 export function psqlApplySqlContent(databaseName, sqlContent) {
   assertSafeSqlIdentifier(databaseName, "database name");
+  if (isExternalPostgresMode()) {
+    externalPsql(
+      [
+        resolveExternalConnectionUrl(databaseName),
+        "-v",
+        "ON_ERROR_STOP=1",
+      ],
+      {
+        input: sqlContent,
+        stdio: ["pipe", "inherit", "inherit"],
+      },
+    );
+    return;
+  }
+
   dockerExecFile(
     [
       "exec",
@@ -180,10 +257,28 @@ export function psqlApplySqlContent(databaseName, sqlContent) {
 }
 
 export function psqlAdminCommand(sql) {
+  if (isExternalPostgresMode()) {
+    externalPsql(
+      [resolveExternalConnectionUrl("postgres"), "-v", "ON_ERROR_STOP=1", "-c", sql],
+      { stdio: "inherit" },
+    );
+    return;
+  }
+
   dockerExecFile(
     ["exec", YUM4LESS_POSTGRES_CONTAINER, "psql", "-U", "postgres", "-c", sql],
     { stdio: "inherit" },
   );
+}
+
+/** TCP readiness for ingest-container / external Postgres (no Docker socket). */
+export function externalPostgresReady(databaseName = "yum4less_dev") {
+  try {
+    const result = psqlQueryScalar(databaseName, "select 1;");
+    return result === "1";
+  } catch {
+    return false;
+  }
 }
 
 export function createDatabase(databaseName) {

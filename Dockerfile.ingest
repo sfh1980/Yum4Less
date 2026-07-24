@@ -1,0 +1,36 @@
+# Yum4Less scheduled ingest image — separate from the shopper app (Dockerfile).
+# Node major matches CI / package.json engines (>=22 <23).
+# Includes Playwright Chromium + postgresql-client for TCP DB prep
+# (YUM4LESS_EXTERNAL_POSTGRES=1 — no Docker socket required).
+ARG NODE_VERSION=22-bookworm
+
+FROM node:${NODE_VERSION}
+
+WORKDIR /app
+
+# cron: in-container daily schedule (0 3 * * *)
+# postgresql-client: host `psql` for external-Postgres ensure/migrate path
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends cron postgresql-client ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+# Browser fallbacks for weekly-ad scrapes (Kroger/Publix/Walmart paths).
+RUN npx playwright install --with-deps chromium
+
+COPY . .
+
+RUN chmod 0644 /app/docker/ingest/crontab \
+  && cp /app/docker/ingest/crontab /etc/cron.d/yum4less-ingest \
+  && chmod +x /app/docker/ingest/entrypoint.sh \
+  && ln -sf /app/docker/ingest/entrypoint.sh /entrypoint.sh \
+  && mkdir -p /var/log/yum4less \
+  && touch /var/log/yum4less/ingest.log
+
+# Homelab / TrueNAS default: TCP to Compose/Apps `db` service (no docker CLI).
+ENV YUM4LESS_EXTERNAL_POSTGRES=1
+ENV NODE_ENV=production
+
+ENTRYPOINT ["/entrypoint.sh"]

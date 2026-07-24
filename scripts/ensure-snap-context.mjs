@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   containerHealthStatus,
+  externalPostgresReady,
+  isExternalPostgresMode,
   psqlQueryScalar,
   spawnNpm,
   YUM4LESS_POSTGRES_CONTAINER,
@@ -60,10 +62,23 @@ function isSnapAutoEnsureEnabled() {
   return true;
 }
 
+function resolveSnapDatabaseName() {
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) {
+    return "yum4less_dev";
+  }
+  try {
+    const name = new URL(url).pathname.replace(/^\//, "").trim();
+    return name || "yum4less_dev";
+  } catch {
+    return "yum4less_dev";
+  }
+}
+
 function snapRowCount() {
   try {
     const count = psqlQueryScalar(
-      "yum4less_dev",
+      resolveSnapDatabaseName(),
       "select count(*) from snap_retailer_locations;",
     );
     return Number(count) || 0;
@@ -75,13 +90,20 @@ function snapRowCount() {
 function snapTableExists() {
   try {
     const count = psqlQueryScalar(
-      "yum4less_dev",
+      resolveSnapDatabaseName(),
       "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'snap_retailer_locations';",
     );
     return count === "1";
   } catch {
     return false;
   }
+}
+
+function postgresReadyForSnap() {
+  if (isExternalPostgresMode()) {
+    return externalPostgresReady(resolveSnapDatabaseName());
+  }
+  return containerHealthStatus(YUM4LESS_POSTGRES_CONTAINER) === "healthy";
 }
 
 function shouldUseFixtureMode() {
@@ -123,9 +145,12 @@ function main() {
     return;
   }
 
-  const health = containerHealthStatus(YUM4LESS_POSTGRES_CONTAINER);
-  if (health !== "healthy") {
-    log(`Postgres not ready (${health}) — skipping SNAP auto-ensure. Run npm run db:up first.`);
+  if (!postgresReadyForSnap()) {
+    log(
+      isExternalPostgresMode()
+        ? "External Postgres not ready — skipping SNAP auto-ensure. Check DATABASE_URL / db network."
+        : "Postgres not ready — skipping SNAP auto-ensure. Run npm run db:up first.",
+    );
     return;
   }
 

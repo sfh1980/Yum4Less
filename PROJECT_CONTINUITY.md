@@ -4,17 +4,17 @@
 
 ---
 
-## Resume (as of 2026-07-20)
+## Resume (as of 2026-07-23)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
 **Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Wave 2 Part 1 Aldi `023` heal CLOSED** (2026-07-16). **Wave 2 Part 2 Phase 0 Q1–Q3 locked** (2026-07-16) — Q1 map-align code **not started**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). **Tier 2 comprehensive audit CLOSED (audit-only)** (2026-07-16) — see [`docs/audits/tier2-comprehensive-audit-report.md`](docs/audits/tier2-comprehensive-audit-report.md). **Tier 2 SS-1 CLOSED** (2026-07-16) — Postgres compose bind loopback-only + `check:compose-db-bind` CI gate. **Vision-gap + UI stub sweep CLOSED (investigation checkpoint)** (2026-07-17). **Vision-gap sprint items 1–6 CLOSED** (2026-07-20) — External API Integration Standard; exact-coord privacy; geo-only Settings completion; nav finish-setup hints; Cook honest empty + rank invalidation; confidence-flexed price wording (`directional-provider-match` → Low). CI [**29770945822**](https://github.com/sfh1980/Yum4Less/actions/runs/29770945822) @ `adf0a62`. P1-ops freshness (`fresh_24h=0` on `yum4less_dev`) remains **open** (ops).
 
-**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db` (`npm run compose:up`); local proof-of-catch on this machine. **GHCR publish (2026-07-20):** CI `publish-image` (gated on verify/integration/e2e/semgrep, `master` push) pushes `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest` — **public** package (inherits public GitHub repo); SHA tag is the TrueNAS pin, `latest` convenience-only. Scheduled-ingest runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8. Freshness heartbeat + backup/restore drill shipped (code); cron/TLS/TrueNAS Apps YAML still host ops. GitHub MCP launcher uses `gh auth token` fallback (Pass 7). **Still not** owner-run on dedicated hardware. Compose publishes **`127.0.0.1:3000`** (app) and **`127.0.0.1:5433`** (db / SS-1); local-dev `postgres:postgres` remains loopback-only.
+**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db`. **GHCR:** `yum4less-app` + **`yum4less-ingest`** (2026-07-23) — SHA + `:homelab` + `:latest`. **TrueNAS Apps `app`+`db` CLOSED (2026-07-22)** @ `f38ce73`. **Ingest container + Watchtower YAML/docs (2026-07-23):** runbook §10–§11 — **not** yet proven live on hardware (dry-run / first cron / backup drill / TLS still owner ops). Compose local still **`127.0.0.1:3000`** / **`127.0.0.1:5433`** (SS-1).
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted homelab (target); owner preparing dedicated Linux box — **Compose `app`+`db` proven locally**; **CI publishes public GHCR app image** (TrueNAS pull prerequisite); ingest cron wiring documented, not live on hardware yet; TrueNAS Apps YAML next.
+**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `app`+`db` healthy**; ingest/Watchtower **YAML ready, hardware enablement pending**; reverse proxy + TLS **not** set up (LAN only).
 
 **Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
@@ -84,7 +84,8 @@
 
 - **Tier B ranked estimates** in most US ZIPs until daily ingest runs for that market (Tier C is normal)
 - **Walmart** ranked pricing deferred
-- **Homelab deploy**, DNS/TLS, user accounts — deferred
+- **Homelab TrueNAS Custom App (`app`+`db`)** — **CLOSED** (2026-07-22); see [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §9
+- **Homelab ingest container + Watchtower YAML** — **docs/CI ready** (2026-07-23); hardware dry-run / first cron / backup drill / TLS still open (§4 leftovers)
 - **M128/M151 scrape automation** (robots.txt checks, auto-pause on block signals, automated per-chain kill switches) — homelab slice; manual owner-pause only today
 - **Semgrep CI** — runs when GitHub repo secret `SEMGREP_APP_TOKEN` is set (not a `.env.local` var); local hooks use optional `semgrep` CLI
 
@@ -98,7 +99,7 @@
 6. ~~**Deferred D1–D6** — 5-tab shell, theme tokens, ingredient gate/chips, map-as-link overlay, session pantry UI~~ **done (2026-06-25)** — Saved persistence + cuisine chips (R11) still deferred
 7. ~~**D7 — Color/tokens port** — Theme C (dark) + Theme D (light) from `.private/tokens.css`; flat page bg; system font; light default first visit; recolor buttons/panels/nav/map~~ **done (2026-06-26)** — owner browser verify pending
 
-**Later (when reprioritized):** homelab deploy, Saved tab persistence, cuisine chips (R11), optional SNAP CSV ingest, Walmart ranked path.
+**Later (when reprioritized):** homelab ingest cron + TLS/WAN exposure, Saved tab persistence, cuisine chips (R11), optional SNAP CSV ingest, Walmart ranked path.
 
 ---
 
@@ -245,6 +246,23 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-07-23 — Homelab ingest container + Watchtower (docs/CI)
+
+- **Theme:** Separate TrueNAS ingest service (not baked into app image) + label-scoped Watchtower; TCP `ensure-test-db` path for containers without Docker socket.
+- **Shipped:** `Dockerfile.ingest` (Node 22 + Playwright Chromium + cron + `postgresql-client`); `docker/ingest/entrypoint.sh` (`YUM4LESS_INGEST_ONCE` dry-run, in-container `0 3 * * *`, or `YUM4LESS_INGEST_CRON=0` + host exec); `YUM4LESS_EXTERNAL_POSTGRES=1` TCP/`psql` backend in `spawn-safe` + ensure/migrate/snap; CI `publish-ingest-image` + app/ingest `:homelab` float tags; TrueNAS YAML in [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §10–§11; fragments in `docker/truenas/custom-app-fragments.yml`. App YAML gains Watchtower enable label only (db unlabeled on purpose).
+- **Honest limits:** Images publish only after merge to `master`. Hardware dry-run / first cron / ranked window / backup drill / TLS **not** claimed. Watchtower needs mutable `:homelab` (SHA tags do not auto-update). TrueNAS Apps vs Watchtower lifecycle caveat documented (§11.4). Readiness §4 items 1/3/4/5 still owner ops.
+- **Evidence:** `npm test` **1054/1054** this session (includes spawn-safe external-Postgres cases); full suite + GHCR push after merge to `master`.
+
+### 2026-07-22 — TrueNAS Apps Custom App deploy CLOSED (docs)
+
+- **Theme:** Record successful TrueNAS SCALE Custom App deploy and the two ops root causes that blocked earlier attempts — documentation only; no application code changes.
+- **Shipped (ops + docs):** Working Custom App YAML + runbook in [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §9 — pin `ghcr.io/sfh1980/yum4less-app:f38ce73`; datasets `appPool/yum4less` / `repo` / `postgres-data`; db **no** host port; app **`3000:3000`** (LAN, not WAN); app healthcheck via Node `fetch` (wget absent in image → false unhealthy); `truenas_admin` needs `sudo docker`; use `sudo docker logs` (not only `/var/log/app_lifecycle.log`).
+- **Closed issues:**
+  1. **`postgres-data` permissions** — must be **UID:GID 999:999**, mode **700**, before first deploy (Postgres runs as 999).
+  2. **`repo/db/init` unreadable by UID 999** — **`chmod -R a+rX`** on init tree (actual root cause of repeated `yum4less-postgres is unhealthy` / dependency-failed lifecycle errors).
+- **Still open (host ops):** scheduled ingest cron on the box, backup/restore drill on target, reverse proxy + TLS before public exposure.
+- **Not claimed:** deploy-ready / production-ready / WAN-exposed / unattended cron proven.
 
 ### 2026-07-20 — CI publishes app image to GHCR (TrueNAS prerequisite)
 
@@ -2247,7 +2265,9 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 | Date | Decision | Status |
 |------|----------|--------|
-| 2026-07-20 | **Compose app + db:** production path is `docker compose up` (multi-stage Dockerfile, Next standalone). Host `npm run dev` / `next start` remain for hot-reload / debug only — not the documented full-stack or homelab-prep model. TrueNAS Apps translation is a separate later pass. | **Active** |
+| 2026-07-23 | **Homelab ingest container + Watchtower:** dedicated `yum4less-ingest` GHCR image (`Dockerfile.ingest`); in-container cron `0 3 * * *` or host `docker exec`; `YUM4LESS_EXTERNAL_POSTGRES` TCP path; Watchtower label-scoped hourly updates on app+ingest only (db never labeled); `:homelab` float tag for auto-update, SHA for rollback. Docs: [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8/§10–§11. | **Active** (YAML/CI ready; hardware enablement pending) |
+| 2026-07-22 | **TrueNAS Apps Custom App:** dedicated-hardware path is Custom App YAML (not host `next start`). Pin SHA image (`f38ce73` working); never pin `:latest` for rollback. Datasets under `appPool/yum4less`. App LAN `3000:3000`; db unpublished on host. Pre-deploy: `postgres-data` **999:999**/700; `db/init` **`chmod -R a+rX`**. App healthcheck = Node `fetch`, not wget. Docs: [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §9. | **Closed** (stack healthy; ingest/TLS still open) |
+| 2026-07-20 | **Compose app + db:** local / CI-adjacent path is `docker compose up` (multi-stage Dockerfile, Next standalone). Host `npm run dev` / `next start` remain for hot-reload / debug only. TrueNAS Apps Custom App is the dedicated-hardware translation (see 2026-07-22). | **Active** |
 | 2026-07-20 | **Shopper price confidence wording:** map existing `SaleConfidenceLevel` → high/medium/low shopper copy. High=`advertised-recent` → “Lowest price we found: $X”; Medium=`advertised-aging` → “Estimated lowest price: $X”; Low=`advertised-stale` / `regular-price` / `no-sale-data` / **`directional-provider-match`** → “Price estimate — worth verifying in store” (no bare $). `directional-provider-match` is weak match (`matchConfidence` &lt; 0.7), not merely aging data. | **Active** |
 | 2026-07-17 | **External API Integration Standard** (replaces retired “two API routes forever”): Supporting App Router handlers beyond `/api/market-search` + `/api/recommendations` are allowed when they serve a real product need (today: pantry-coverage, shopping-route, geocode/zip, analytics/events, feedback, debug/pipeline). Adding **any** new external dependency requires: (1) document the gap vs current sources; (2) confirm ToS/legal (rate limits, caching, no-scrape); (3) cache appropriately; (4) fail gracefully with Tier C-style honest degradation — never a hard break on quota/outage; (5) no secrets client-side; (6) mock in tests — CI must not depend on a live third party; (7) monitoring/heartbeat for the dependency’s health (same philosophy as ranked-price freshness). Cache-first ranked reads on the two core shopper routes remain the product default. See also [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). | **Active** |
 | 2026-07-17 | ~~**Two API routes forever**~~ (literal or implied hard cap on HTTP handlers) | **Superseded** (2026-07-17 External API Integration Standard) |
@@ -2307,7 +2327,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | 2026-06 | Beta v1 = continental US entry + Tier C default | **Active** |
 | 2026-06 | v1 ranked chains: Kroger family + Aldi only | **Superseded** (2026-06-29: + Publix + Food Lion shopper-ranked) |
 | 2026-06 | Walmart ranked pricing deferred | **Active** |
-| 2026-06 | Homelab hosting via Docker Compose (`app` + `db`); TrueNAS/DNS/TLS when migration-ready | **Active** (2026-07-20: app containerized locally; CI publishes public `ghcr.io/sfh1980/yum4less-app:<sha7>`; TrueNAS YAML next) |
+| 2026-06 | Homelab hosting via Docker Compose (`app` + `db`); TrueNAS/DNS/TLS when migration-ready | **Active** (2026-07-22: TrueNAS Custom App `app`+`db` healthy on hardware @ `f38ce73`; DNS/TLS + ingest cron still open) |
 | 2026-06 | v1 = beta; keep estimate/directional/verify-in-store wording | **Active** |
 | 2026-06 | No user accounts in v1 | **Active** |
 | 2026-05 | Public API DB writes opt-in only; blocked in production | **Active** |
@@ -2332,6 +2352,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| Homelab ingest + Watchtower (docs/CI) | 2026-07-23 | **Partial** — `npm test` **1054/1054**; `YUM4LESS_EXTERNAL_POSTGRES` unit cases; YAML/Dockerfile/CI jobs in-repo. GHCR ingest image + hardware dry-run **not** run this session (publishes on `master` merge) |
 | GHCR `publish-image` (CI) | 2026-07-20 | **Green** — [29792952906](https://github.com/sfh1980/Yum4Less/actions/runs/29792952906) @ `f38ce73`; image `ghcr.io/sfh1980/yum4less-app:f38ce73` + `:latest`; visibility **public** (repo-inherited); unauthenticated pull OK |
 | Compose `app`+`db` containerize | 2026-07-20 | **Local proof** — build OK; db healthy→app start; `GET /` 200; market-search `dataSource=database`; unit **1052/1052**; integration **48/48**; Semgrep clean on Dockerfile/compose; remote CI later green on containerize commit |
 | Aldi `023` heal (`yum4less_dev`) | 2026-07-16 | **OK** — probes true; backup `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`; stores/PO/migrations unchanged (281/308/23) |
@@ -2502,7 +2523,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Aldi `023` seeded-method mismatch** | **CLOSED (2026-07-16 Wave 2 Part 1)** | Manual heal: deleted `self`/`pointer` graph, re-applied `023` seed SQL; probes true. Pre-heal backup: `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`. Expand flags remain OFF. |
 | **Home Ingredients silent on market-search error / empty** | **CLOSED (2026-07-16 Wave 0)** — Was blank when `ingredients` + no `scopedMarket` + not loading. Now `IngredientsMarketUnavailable` matches Deals error alert + idle “Complete Settings…” guidance. |
 | **Coverage Slice 4 weekly-ad fan-out / Slice 7 best-offer+0.55** | **CLOSED (2026-07-09)** — Triage 2026-07-16 confirmed: fan-out/dedupe = Coverage Slice 4; Slice 7 = best-offer persist + confidence 0.55. Do not reopen as “optional fan-out narrowing.” |
-| Homelab deploy + exposure | After migration-ready checklist |
+| Homelab deploy + exposure | **Partial:** TrueNAS Custom App `app`+`db` **CLOSED** (2026-07-22). Ingest + Watchtower **YAML/CI ready** (2026-07-23) — hardware dry-run/cron, backup drill, reverse proxy + TLS before WAN still open |
 | Walmart ranked pricing | Shopper API + Flipp matching work |
 | BJ's ranked pricing | Regional; stub ingest — see Resume for v1 production-ranked chains (Publix + Food Lion shipped 2026-06-29) |
 | Lidl / DG | Stub ingest |

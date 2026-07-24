@@ -1,0 +1,42 @@
+# Dockerignore for Dockerfile.ingest (CI copies this over .dockerignore before build).
+# Keeps scripts/, src/, db/ — required for scheduled ingest + migrations.
+# App image continues to use the root .dockerignore (excludes scripts/db).
+
+node_modules
+.next
+out
+
+.git
+.github
+.cursor
+.private
+.vscode
+
+.env
+.env.*
+!.env.example
+
+e2e
+coverage
+playwright-report
+test-results
+blob-report
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+vitest.config.*
+playwright.config.*
+
+backups
+captures
+.playwright-mcp
+semgrep-full.json
+*.png
+.tmp-*
+live-probe-*.txt
+.tsc-*.txt
+.cursor-tsc-*.txt
+
+docs
+*.md
+!README.md

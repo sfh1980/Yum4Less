@@ -33,7 +33,7 @@ docker compose up --build
 # or: npm run compose:up
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Ingest still runs on the **host** (Node + Playwright) against `localhost:5433` — see [Daily pricing refresh](#daily-pricing-refresh-24-hour-cache) and [`docs/homelab-deploy.md`](docs/homelab-deploy.md).
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Local Compose ingest still runs on the **host** (Node + Playwright) against `localhost:5433`. TrueNAS uses a **dedicated ingest container** — see [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §10.
 
 ### Local hot-reload development (superseded for full-stack / demo; still valid for UI iteration)
 
@@ -179,7 +179,7 @@ Public `/api/market-search` and `/api/recommendations` reads are **cache-only fo
 
 Schedule one daily ingest on your host (homelab cron, Task Scheduler, etc.). **Set `YUM4LESS_INGEST_ZIPS` in `.env.local` to your real market ZIP(s)** — do not rely on the `23111` default (CI anchor only).
 
-**Homelab/Linux step-by-step:** [`docs/homelab-deploy.md`](docs/homelab-deploy.md) (cron line, logs, Postgres freshness checks, pre-go-live gaps).
+**Homelab/Linux step-by-step:** [`docs/homelab-deploy.md`](docs/homelab-deploy.md) — TrueNAS ingest container (§10), Watchtower (§11), host cron fallback (§3), freshness SQL (§4).
 
 ```bash
 # Example: markets are usually set in .env.local, not inline

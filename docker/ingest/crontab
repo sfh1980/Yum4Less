@@ -1,0 +1,7 @@
+# Yum4Less daily scheduled ingest (container-local cron).
+# Runs as root inside the ingest image; logs append to /var/log/yum4less/ingest.log.
+# Timezone = container TZ (set TZ=America/New_York or your market TZ in the Custom App env).
+# Env vars come from /etc/yum4less/ingest.env (written by entrypoint from Docker environment).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 3 * * * root . /etc/yum4less/ingest.env && cd /app && /usr/local/bin/npm run ingest:weekly-ads:scheduled >> /var/log/yum4less/ingest.log 2>&1

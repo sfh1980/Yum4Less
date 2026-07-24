@@ -1,0 +1,2 @@
+docker/ingest/entrypoint.sh text eol=lf
+docker/ingest/crontab text eol=lf

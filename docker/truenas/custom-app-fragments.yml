@@ -1,0 +1,49 @@
+# Reference TrueNAS Custom App fragments — copy into the working stack YAML
+# documented in docs/homelab-deploy.md §9–§11. Not used by local docker compose.
+
+# ---------------------------------------------------------------------------
+# ingest — add alongside existing `db` + `app` in the SAME Custom App so
+# DATABASE_URL host `db` resolves on the Apps network. Do not publish ports.
+# ---------------------------------------------------------------------------
+#
+#   ingest:
+#     image: ghcr.io/sfh1980/yum4less-ingest:homelab   # Watchtower float; rollback = :<sha7>
+#     container_name: yum4less-ingest
+#     restart: unless-stopped
+#     depends_on:
+#       db:
+#         condition: service_healthy
+#     environment:
+#       YUM4LESS_EXTERNAL_POSTGRES: "1"
+#       DATABASE_URL: postgresql://postgres:postgres@db:5432/yum4less_dev
+#       YUM4LESS_INGEST_ZIPS: "REPLACE_WITH_REAL_ZIPS"   # NOT 23111 default
+#       GEOCODIO_API_KEY: "REPLACE"
+#       KROGER_CLIENT_ID: "REPLACE"
+#       KROGER_CLIENT_SECRET: "REPLACE"
+#       KROGER_API_ENV: production
+#       TZ: America/New_York
+#       # Optional: YUM4LESS_FRESHNESS_WEBHOOK_URL: "https://..."
+#       # Dry-run once: set YUM4LESS_INGEST_ONCE=1 (container exits after one run)
+#     labels:
+#       - "com.centurylinklabs.watchtower.enable=true"
+#
+# ---------------------------------------------------------------------------
+# watchtower — may be same stack or a sibling Custom App with docker.sock.
+# Only updates containers labeled com.centurylinklabs.watchtower.enable=true.
+# Do NOT label `db` (postgres stays manual).
+# ---------------------------------------------------------------------------
+#
+#   watchtower:
+#     image: containrrr/watchtower:1.7.1
+#     container_name: yum4less-watchtower
+#     restart: unless-stopped
+#     volumes:
+#       - /var/run/docker.sock:/var/run/docker.sock
+#     environment:
+#       WATCHTOWER_LABEL_ENABLE: "true"
+#       WATCHTOWER_POLL_INTERVAL: "3600"
+#       WATCHTOWER_CLEANUP: "true"
+#       WATCHTOWER_NOTIFICATION_REPORT: "true"
+#       # Discord example (Shoutrrr): discord://TOKEN@WEBHOOK_ID
+#       # Generic webhook: generic+https://example.com/hooks/yum4less-watchtower
+#       WATCHTOWER_NOTIFICATION_URL: "REPLACE_WITH_SHOUTRRR_URL"

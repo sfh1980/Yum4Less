@@ -10,6 +10,8 @@ import {
   createDatabase,
   dockerAvailable,
   dropDatabaseIfExists,
+  externalPostgresReady,
+  isExternalPostgresMode,
   psqlApplySqlContent,
   psqlQueryScalar,
   runNpmScript,
@@ -62,6 +64,23 @@ async function waitForHealthyContainer() {
     if (attempt === MAX_HEALTH_ATTEMPTS) {
       throw new Error(
         `Timed out waiting for ${YUM4LESS_POSTGRES_CONTAINER} to become healthy (last status: ${status}).`,
+      );
+    }
+
+    await sleep(HEALTH_POLL_MS);
+  }
+}
+
+async function waitForExternalPostgres() {
+  for (let attempt = 1; attempt <= MAX_HEALTH_ATTEMPTS; attempt += 1) {
+    if (externalPostgresReady(activeDatabaseName)) {
+      return;
+    }
+
+    if (attempt === MAX_HEALTH_ATTEMPTS) {
+      throw new Error(
+        `Timed out waiting for external Postgres at DATABASE_URL (last target DB: ${activeDatabaseName}). ` +
+          "Confirm the ingest container shares a Docker network with the db service and DATABASE_URL uses host `db` (not localhost).",
       );
     }
 
@@ -186,6 +205,24 @@ function seedMatchesCurrentMvp() {
 }
 
 async function resetTargetDatabase() {
+  if (isExternalPostgresMode()) {
+    if (activeDatabaseName === "yum4less_dev") {
+      throw new Error(
+        "External Postgres mode refuses destructive reset of yum4less_dev. " +
+          "Apply migrations with `npm run db:migrate` (or fix schema ops manually). " +
+          "Do not set YUM4LESS_ALLOW_DB_RESET / YUM4LESS_TEST_DB_RESET on the homelab ingest container.",
+      );
+    }
+
+    console.log(
+      `Recreating Postgres database ${activeDatabaseName} over TCP (external mode)...`,
+    );
+    dropDatabaseIfExists(activeDatabaseName);
+    createDatabase(activeDatabaseName);
+    applyAllInitSqlFiles(activeDatabaseName);
+    return;
+  }
+
   if (activeDatabaseName === "yum4less_dev") {
     console.log("Resetting Yum4Less test database volume...");
     runNpmScript("db:reset");
@@ -209,10 +246,13 @@ export async function ensureTestDatabase() {
   }
 
   activeDatabaseName = resolveTargetDatabaseName();
+  const externalMode = isExternalPostgresMode();
 
-  if (!dockerAvailable()) {
+  if (!externalMode && !dockerAvailable()) {
     throw new Error(
-      "Docker is not available. Start Docker Desktop, then rerun this command. Use `npm test` only for the non-DB suite.",
+      "Docker is not available. Start Docker Desktop, then rerun this command. " +
+        "For ingest containers that only have TCP to Postgres, set YUM4LESS_EXTERNAL_POSTGRES=1. " +
+        "Use `npm test` only for the non-DB suite.",
     );
   }
 
@@ -223,11 +263,18 @@ export async function ensureTestDatabase() {
     return;
   }
 
-  const health = containerHealthStatus();
-  if (health !== "healthy") {
-    console.log(`Starting Yum4Less Postgres container (previous status: ${health})...`);
-    runNpmScript("db:up");
-    await waitForHealthyContainer();
+  if (externalMode) {
+    console.log(
+      `External Postgres mode — connecting over TCP (DB ${activeDatabaseName}; no Docker socket).`,
+    );
+    await waitForExternalPostgres();
+  } else {
+    const health = containerHealthStatus();
+    if (health !== "healthy") {
+      console.log(`Starting Yum4Less Postgres container (previous status: ${health})...`);
+      runNpmScript("db:up");
+      await waitForHealthyContainer();
+    }
   }
 
   ensureTargetDatabaseExists();
@@ -238,7 +285,11 @@ export async function ensureTestDatabase() {
   if (!seedMatchesCurrentMvp()) {
     if (!canResetDatabaseAutomatically()) {
       throw new Error(
-        "Local Postgres seed looks stale (missing expected schema, recipe catalog, or provider cache tables from db/init). Start Docker Desktop if needed, then run `npm run db:reset` only after confirming you are okay recreating the local dev database volume.",
+        externalMode
+          ? "External Postgres seed/schema looks stale (missing expected tables from db/init). " +
+              "Reconcile with `npm run db:migrate` from a host/Node path or a one-shot ingest container; " +
+              "do not auto-reset the shared homelab volume."
+          : "Local Postgres seed looks stale (missing expected schema, recipe catalog, or provider cache tables from db/init). Start Docker Desktop if needed, then run `npm run db:reset` only after confirming you are okay recreating the local dev database volume.",
       );
     }
 

@@ -1,8 +1,8 @@
-# Homelab deploy — scheduled ingest runbook
+# Homelab deploy — scheduled ingest + TrueNAS Apps runbook
 
-Copy-paste guide for a **dedicated Linux box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Assumes a generic Linux host with **Docker** (Compose) and **Node.js** (for ingest scripts / Playwright) — not a specific distro or hardware profile.
+Copy-paste guide for a **dedicated Linux / TrueNAS SCALE box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Local proof uses **Docker Compose**; the production-like host path on this project is **TrueNAS Apps “Custom App” YAML** (see [§9](#9-truenas-apps-custom-app--working-deploy)).
 
-**Scope:** wiring `npm run ingest:weekly-ads:scheduled` to run unattended. **App + Postgres** run as Compose services (`Dockerfile` + `docker-compose.yml`). CI publishes a pre-built app image to GHCR for TrueNAS “Install via YAML” (see [§8](#8-ghcr-app-image-for-truenas)). Reverse proxy / TLS / TrueNAS Apps YAML itself remain **out of scope** here — next after the image path is proven.
+**Scope:** (1) App + Postgres on the box, (2) wiring `npm run ingest:weekly-ads:scheduled` to run unattended via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) optional Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **Reverse proxy + TLS for public/WAN exposure** is still **not** set up — required before any internet-facing publish; LAN reachability alone is not that.
 
 **Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths).
 
@@ -33,11 +33,11 @@ Copy-paste guide for a **dedicated Linux box** running Postgres, the Yum4Less ap
 
 | Requirement | Notes |
 |-------------|--------|
-| **Node.js 22.x** (`package.json` `engines`: `>=22 <23`) | Required on the **host** for ingest/cron (`node -v`). App container uses `node:22-bookworm-slim`. |
-| **npm** | Bundled with Node (host ingest path). |
-| **Docker Engine + Compose plugin** | `app` + `db` from repo `docker-compose.yml`. `ensure-test-db.mjs` expects container `yum4less-postgres`. |
-| **Git** | Clone the repo; cron runs from repo root. |
-| **Playwright Chromium** (recommended before first live ingest) | Kroger/Publix/Walmart use headless browser fallbacks when Flipp/HTTP is empty. After `npm ci`: `npx playwright install chromium` and on Linux typically `npx playwright install-deps chromium` (or install distro libs Playwright documents). |
+| **Node.js 22.x** (`package.json` `engines`: `>=22 <23`) | Required on the **host** only for the legacy host-cron path (§3). **TrueNAS path:** Node lives inside `yum4less-app` / `yum4less-ingest` images (`node:22-bookworm` / slim). |
+| **npm** | Bundled with Node (host ingest path only). |
+| **Docker Engine + Compose plugin** | Local: `app` + `db` from `docker-compose.yml`. TrueNAS: Custom App YAML (§9–§11). Host `ensure-test-db` still expects container `yum4less-postgres` unless `YUM4LESS_EXTERNAL_POSTGRES=1`. |
+| **Git** | Clone under `appPool/yum4less/repo` for `db/init` mounts; ingest image does **not** need a host `npm ci`. |
+| **Playwright Chromium** | Host path: `npx playwright install chromium` (+ Linux deps). **Ingest image:** Chromium + deps are baked into `Dockerfile.ingest`. |
 
 ### Network egress (outbound HTTPS)
 
@@ -63,9 +63,9 @@ No inbound ports required for ingest itself. Compose publishes Postgres as `127.
 
 ## 2. First-time host setup
 
-### 2.1 Clone and install (host Node — ingest only)
+### 2.1 Clone and install (host Node — optional)
 
-Host Node/npm are still required for **scheduled ingest** (Playwright Chromium, `tsx` scripts). The **shopper app** no longer needs a host `next start` process.
+**Preferred on TrueNAS:** use the **ingest container** ([§10](#10-ingest-cron-container-truenas)) — no host `npm ci` / Playwright. Host Node/npm remain valid for local Compose debugging and the legacy cron wrapper in §3. The **shopper app** does not need a host `next start` process.
 
 ```bash
 git clone <your-repo-url> /opt/yum4less   # choose your path
@@ -78,7 +78,7 @@ npx playwright install-deps chromium
 
 ### 2.2 Start app + Postgres (Compose)
 
-**Supersedes** the older “`npm run db:up` then host `next start`” app path. For this pass, both services are containers; TrueNAS/Apps-specific volume paths come later.
+**Supersedes** the older “`npm run db:up` then host `next start`” app path. For local/dev, both services are Compose containers. For the dedicated TrueNAS box, use Custom App YAML — [§9](#9-truenas-apps-custom-app--working-deploy).
 
 ```bash
 cd /opt/yum4less
@@ -386,9 +386,9 @@ Treat **cron exit + `[freshness]` lines + optional webhook** as the owner alert 
 
 ---
 
-## 6. App on the same box (Compose)
+## 6. App on the same box (Compose vs TrueNAS)
 
-**Current path (containerized):** after `docker compose up --build -d`, the shopper UI is served by `yum4less-app` on `127.0.0.1:3000`. Confirm with:
+**Local Compose path:** after `docker compose up --build -d`, the shopper UI is served by `yum4less-app` on **`127.0.0.1:3000`** (loopback only — same discipline as Postgres SS-1). Confirm with:
 
 ```bash
 curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/
@@ -398,9 +398,11 @@ curl -sS -X POST http://127.0.0.1:3000/api/market-search \
   -d '{"latitude":37.6085,"longitude":-77.3739,"radiusMiles":8}'
 ```
 
-**Superseded for production-like / homelab prep:** host-side `npm run build` + `NODE_ENV=production npm run start`. That remains valid for local debugging only — not the documented deploy model.
+**TrueNAS Apps path (working):** see [§9](#9-truenas-apps-custom-app--working-deploy). App is published as **`3000:3000`** (no loopback restriction) so household LAN clients can reach it. That is **deliberately LAN-reachable** and is **not** equivalent to public/WAN reachability. Put a reverse proxy + TLS in front before any public exposure.
 
-Reverse proxy / TLS / LAN bind remain a **later** pass. Set `TRUST_PROXY_HEADERS=1` only when a trusted proxy strips client `X-Forwarded-For`. Continental US ZIP search in production requires `GEOCODIO_API_KEY` in `.env.local` (loaded into the `app` service when present).
+**Superseded for production-like / homelab:** host-side `npm run build` + `NODE_ENV=production npm run start`. That remains valid for local debugging only — not the documented deploy model.
+
+Set `TRUST_PROXY_HEADERS=1` only when a trusted proxy strips client `X-Forwarded-For`. Continental US ZIP search in production requires `GEOCODIO_API_KEY` (Compose: `.env.local`; TrueNAS: app env / secret as configured in the Custom App).
 
 ---
 
@@ -410,29 +412,396 @@ As of this doc, **shopper-facing ranked meal totals** use **Kroger family, Aldi,
 
 ---
 
-## 8. GHCR app image (for TrueNAS)
+## 8. GHCR images (app + ingest) for TrueNAS
 
-TrueNAS Apps “Install via YAML” **pulls** a pre-built image — it does not `docker compose build` from this repo the way local Compose does. After every successful `master` CI run (`verify` → `integration` → `e2e` → `semgrep`, then `publish-image`), GitHub Actions builds the existing `Dockerfile` and pushes:
+TrueNAS Apps “Install via YAML” **pulls** pre-built images — it does not `docker compose build` from this repo the way local Compose does. After every successful `master` CI run (`verify` → `integration` → `e2e` → `semgrep`), GitHub Actions publishes:
 
-| Reference | Image |
-|-----------|--------|
-| **Deploy / rollback pin (use this)** | `ghcr.io/sfh1980/yum4less-app:<git-sha7>` |
-| Convenience only (do **not** pin production) | `ghcr.io/sfh1980/yum4less-app:latest` |
+| Package | Dockerfile | Jobs |
+|---------|------------|------|
+| `yum4less-app` | `Dockerfile` (Next.js standalone) | `publish-image` |
+| `yum4less-ingest` | `Dockerfile.ingest` (Node 22 + Playwright + cron) | `publish-ingest-image` |
 
-- **SHA tag** (first 7 chars of the commit that passed CI) is the source of truth — same discipline as tracing bugs to a real commit/`gh` run.
-- **`latest`** moves on every green `master` push. Pinning TrueNAS to `latest` is silent-drift risk; always set the YAML `image:` to a SHA tag.
-- **Visibility:** Actions-published packages from this **public** GitHub repo inherit **public** visibility (confirmed on first publish). That means TrueNAS can pull **without** a GitHub PAT. Making the package private later is a package-settings / unlink change if you want PAT-gated pulls — not required for the TrueNAS YAML step.
+| Tag | Purpose |
+|-----|---------|
+| **`<git-sha7>`** | **Rollback / audit pin** — immutable digest for that green commit |
+| **`:homelab`** | **Watchtower float** — moved to the same digest as that commit’s SHA on every green `master` publish |
+| **`:latest`** | Convenience only — same float as `:homelab`; do not use for rollback pins |
 
-### Pull example
+**Important (Watchtower):** Immutable SHA tags never “update.” Auto-update only works on a **mutable** tag (`:homelab` or `:latest`). Prefer `:homelab` on labeled app/ingest services; keep the SHA handy for manual rollback.
+
+- **Visibility:** Actions-published packages from this **public** GitHub repo inherit **public** visibility. TrueNAS can pull **without** a GitHub PAT while that stays true.
+- Ingest is **never** baked into the app image — separate package on purpose.
+
+### Pull examples
 
 ```bash
-# Public package — no docker login required while visibility stays public
 docker pull ghcr.io/sfh1980/yum4less-app:<git-sha7>
+docker pull ghcr.io/sfh1980/yum4less-ingest:<git-sha7>
+# Watchtower-managed float:
+docker pull ghcr.io/sfh1980/yum4less-app:homelab
+docker pull ghcr.io/sfh1980/yum4less-ingest:homelab
 ```
 
-If the package is later flipped to **private**, TrueNAS will need a GitHub PAT with **`read:packages`** configured as `ghcr.io` registry auth.
+If a package is later flipped to **private**, TrueNAS will need a GitHub PAT with **`read:packages`**.
 
-Local Compose still **builds** from source (`build:` in `docker-compose.yml`). Switching Compose to `image: ghcr.io/sfh1980/yum4less-app:<sha>` is optional for day-to-day dev; required for TrueNAS YAML.
+Local Compose still **builds** the app from source. The ingest image is TrueNAS/homelab-oriented; local scheduled ingest can stay on host Node (§2–§3).
+
+**Working TrueNAS app pin (2026-07-22, pre-Watchtower):** `ghcr.io/sfh1980/yum4less-app:f38ce73` — see §9. After the first green `publish-ingest-image` / `:homelab` publish, prefer §10–§11 for app+ingest float tags.
+---
+
+## 9. TrueNAS Apps Custom App — working deploy
+
+**Status (2026-07-22):** App + Postgres Custom App stack is **up and healthy** on the TrueNAS SCALE box. This section is the copy-paste source of truth for the **db + app** baseline. Add ingest ([§10](#10-ingest-cron-container-truenas)) and Watchtower ([§11](#11-watchtower-auto-update)) as follow-on YAML. Backup drill on target and reverse proxy + TLS remain open (see punch list in [`docs/audits/homelab-readiness-verdict.md`](audits/homelab-readiness-verdict.md) §4 — items this work does **not** fully close).
+### 9.1 Datasets (real paths used)
+
+| Dataset | Role |
+|---------|------|
+| `appPool/yum4less` | Parent dataset |
+| `appPool/yum4less/repo` | Git clone of this repository (provides `db/init` for first Postgres start) |
+| `appPool/yum4less/postgres-data` | Postgres data directory (`/var/lib/postgresql/data` in the db container) |
+
+Host mount paths (SCALE default): `/mnt/appPool/yum4less/...`.
+
+### 9.2 Required setup steps / permissions (do before first deploy)
+
+Two real root causes blocked multiple deploy attempts. Fix both **before** Install / Update — top-level dataset ACLs looking “fine” is not enough.
+
+#### A. `postgres-data` ownership (Postgres UID 999)
+
+Postgres Official image runs as **UID 999** (GID 999). The data dir must be owned accordingly and mode **700** before first start:
+
+```bash
+sudo chown -R 999:999 /mnt/appPool/yum4less/postgres-data
+sudo chmod 700 /mnt/appPool/yum4less/postgres-data
+```
+
+If ownership is wrong, the db container fails init / stays unhealthy.
+
+#### B. `repo/db/init` world-readable / traversable (actual “postgres unhealthy” root cause)
+
+Even when `postgres-data` ownership is correct, **UID 999 cannot read init scripts** if `db/init` (or parents) deny other-read / other-execute. That produced repeated **`container yum4less-postgres is unhealthy`** failures across deploy attempts.
+
+```bash
+# Make init tree readable/traversable by the Postgres container user
+sudo chmod -R a+rX /mnt/appPool/yum4less/repo/db/init
+# If parents block traversal, also ensure execute on the path:
+# sudo chmod a+rx /mnt/appPool/yum4less /mnt/appPool/yum4less/repo /mnt/appPool/yum4less/repo/db
+```
+
+Confirm from a throwaway check after deploy (or before, as root):
+
+```bash
+sudo docker exec yum4less-postgres ls -la /docker-entrypoint-initdb.d
+```
+
+#### C. Docker CLI on this TrueNAS box
+
+`truenas_admin` does **not** have direct Docker socket access. Plain `docker …` returns **permission denied**. Use **`sudo docker …`** (or root) for `ps`, `logs`, `exec`, and any other CLI against Apps-managed containers.
+
+```bash
+sudo docker ps --filter name=yum4less-
+sudo docker logs yum4less-postgres --tail 100
+sudo docker logs yum4less-app --tail 100
+```
+
+### 9.3 Port / exposure decisions
+
+| Service | Host publish | Intent |
+|---------|--------------|--------|
+| **db** | **None** | Postgres stays on the Compose/Apps network only (`db:5432` from the app). Do not publish `5432`/`5433` on the host for this deploy. |
+| **app** | **`3000:3000`** (no `127.0.0.1` restriction) | Deliberately **LAN-reachable** for household testers. **Not** public/WAN. |
+
+**Before any public exposure:** put a reverse proxy (Caddy/nginx/Traefik) + **TLS** in front; set `TRUST_PROXY_HEADERS=1` only behind that trusted proxy. That proxy/TLS layer has **not** been set up yet.
+
+### 9.4 Image pin
+
+| Use | Image |
+|-----|--------|
+| **Baseline working deploy (2026-07-22)** | `ghcr.io/sfh1980/yum4less-app:f38ce73` |
+| **Watchtower float (after §11)** | `ghcr.io/sfh1980/yum4less-app:homelab` |
+| Rollback | `ghcr.io/sfh1980/yum4less-app:<sha7>` from a green `publish-image` job |
+| Do **not** use for rollback | `:latest` alone (no audit trail) |
+
+### 9.5 Final working Custom App YAML
+
+Paste into TrueNAS Apps → Custom App → YAML (adjust absolute host paths only if your pool/dataset names differ). **db** healthcheck stays `pg_isready`. **app** healthcheck uses Node `fetch` — **not** `wget`/`curl` (those binaries are **not** in the slim app image; a wget-based check marked the app unhealthy even while HTTP was serving correctly).
+
+```yaml
+services:
+  db:
+    image: postgres:17
+    container_name: yum4less-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: yum4less_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    # No host ports — Postgres is internal to the app stack only.
+    volumes:
+      - /mnt/appPool/yum4less/postgres-data:/var/lib/postgresql/data
+      - /mnt/appPool/yum4less/repo/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d yum4less_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ghcr.io/sfh1980/yum4less-app:f38ce73
+    container_name: yum4less-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # LAN-reachable (not loopback-restricted). Not equivalent to public/WAN.
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/yum4less_dev
+      YUM4LESS_DEBUG_ROUTES_ENABLED: "0"
+      YUM4LESS_ENABLE_API_DB_WRITES: "0"
+    # Required for Watchtower (§11). Do NOT put this label on `db`.
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(()=>process.exit(0)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+```
+
+**Notes:**
+
+- Rotate away from `postgres:postgres` before any non-LAN or multi-tenant exposure; keep secrets out of git.
+- Add `GEOCODIO_API_KEY` / Kroger keys to the **ingest** service env (§10) when you need live scheduled ingest — not required for a bare “containers healthy” smoke. ZIP geocode on the app still needs `GEOCODIO_API_KEY` on **app** when `NODE_ENV=production`.
+- After first successful init, `db/init` is only needed again for **new empty** data dirs; long-lived volumes use `schema_migrations` + migrate from the ingest container (`YUM4LESS_EXTERNAL_POSTGRES=1`) when SQL files change.
+- When enabling Watchtower (§11), switch `app.image` (and ingest) to `:homelab` so the float can move; keep `f38ce73` / SHA tags for rollback.
+### 9.6 Troubleshooting — orchestration log vs container logs
+
+`/var/log/app_lifecycle.log` only shows **orchestration-level** errors (e.g. `dependency failed to start`). It does **not** include the failing container’s stdout/stderr.
+
+To see the real error:
+
+```bash
+sudo docker logs yum4less-postgres --tail 200
+sudo docker logs yum4less-app --tail 200
+```
+
+If Apps tears the container down quickly on failure, poll while retrying Install/Update:
+
+```bash
+# Example polling loop (Ctrl+C when done)
+while true; do
+  sudo docker logs yum4less-postgres --tail 50 2>&1 | tail -n 50
+  sleep 2
+done
+```
+
+Common signatures seen during this deploy:
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| `yum4less-postgres` unhealthy; lifecycle says dependency failed | Init scripts unreadable by UID 999 | §9.2 B — `chmod -R a+rX` on `repo/db/init` (+ path traverse) |
+| Postgres permission / data dir errors | Wrong ownership on `postgres-data` | §9.2 A — `chown 999:999` + mode `700` |
+| App serving HTTP but marked unhealthy | Healthcheck used `wget`/`curl` missing from image | Use Node `fetch` healthcheck in §9.5 |
+| `docker: permission denied` as `truenas_admin` | No socket access for that user | Prefix with `sudo docker` (§9.2 C) |
+
+### 9.7 Smoke check after healthy deploy
+
+From a LAN machine (or the NAS itself):
+
+```bash
+curl -sS -o /dev/null -w "%{http_code}\n" http://<truenas-lan-ip>:3000/
+```
+
+Expect `200`. Then proceed to the ingest container (§10) and freshness checks (§4 / §10.4) when ready for ranked dinners.
+
+---
+
+## 10. Ingest cron container (TrueNAS)
+
+**Goal:** Run `npm run ingest:weekly-ads:scheduled` daily at **`0 3 * * *`** without baking ingest into `yum4less-app`, and without requiring host Node/Playwright on the NAS.
+
+**Image:** `ghcr.io/sfh1980/yum4less-ingest:<sha7>` (rollback) or `:homelab` (Watchtower float). Built from `Dockerfile.ingest` (Node 22 bookworm, Playwright Chromium, `cron`, `postgresql-client`).
+
+**Why a separate image:** Shopper runtime stays small (Next standalone). Ingest needs browsers, `tsx` scripts, `db/init` for migration reconcile, and a scheduler.
+
+### 10.1 Scheduler choice
+
+| Approach | Recommendation |
+|----------|----------------|
+| **In-container cron (default)** | More portable — schedule travels with the image. Entrypoint runs `cron -f`; job in `/etc/cron.d/yum4less-ingest` at `0 3 * * *`. Set `TZ` to your market (e.g. `America/New_York`). Entrypoint dumps Docker `environment:` into `/etc/yum4less/ingest.env` so the cron job sees `DATABASE_URL` / API keys (cron does not inherit container env by default). |
+| **TrueNAS / host `docker exec`** | Slightly more visible in host crontab; set `YUM4LESS_INGEST_CRON=0` so the container only stays up (`tail -F` log). Then schedule: `0 3 * * * sudo docker exec yum4less-ingest npm run ingest:weekly-ads:scheduled`. |
+
+Default = in-container cron. Use host exec if you prefer all schedules in one TrueNAS place.
+
+### 10.2 Required environment (explicit — do not rely on defaults)
+
+Set these on the **ingest** service (Custom App env). Do **not** leave `YUM4LESS_INGEST_ZIPS` unset (code falls back to **`23111`**).
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `YUM4LESS_EXTERNAL_POSTGRES` | **Yes** (`1`) | Baked into the image; keeps ensure/migrate on TCP `psql` (no Docker socket). |
+| `DATABASE_URL` | **Yes** | `postgresql://postgres:postgres@db:5432/yum4less_dev` — host **`db`**, port **5432** (Apps network). Not `localhost:5433`. |
+| `YUM4LESS_INGEST_ZIPS` | **Yes** | Real comma-separated 5-digit ZIPs for your markets. |
+| `GEOCODIO_API_KEY` | **Yes** (live) | Enforced by `assert-live-ingest-env`. |
+| `KROGER_CLIENT_ID` | **Yes** (live) | OAuth |
+| `KROGER_CLIENT_SECRET` | **Yes** (live) | OAuth |
+| `KROGER_API_ENV` | **Strongly yes** | Set `production` or official Kroger sync no-ops. |
+| `TZ` | Recommended | Container-local cron timezone. |
+| `YUM4LESS_FRESHNESS_WEBHOOK_URL` | Optional | POST on freshness fail (native fetch). |
+| `YUM4LESS_INGEST_ONCE` | Dry-run only | `1` = run once and exit (see §10.3). |
+| `YUM4LESS_INGEST_CRON` | Optional | `0` = disable in-container cron (host `docker exec` path). |
+
+Also recommended (same as host `.env.local`): `YUM4LESS_PROVIDER_SYNC_RADIUS_MILES`, `YUM4LESS_MAP_CATALOG_RADIUS_MILES`, `THEMEALDB_API_KEY` as needed. Full list → [`.env.example`](../.env.example).
+
+**Network:** `ingest` **must** share the Custom App compose network with `db` (same YAML stack). Do not publish ingest ports.
+
+### 10.3 Manual dry-run (before enabling daily cron)
+
+**Option A — one-shot container (preferred first proof):**
+
+```bash
+# From the NAS (sudo docker). Use the Apps network name if running outside the stack:
+#   sudo docker network ls | grep yum4less
+sudo docker run --rm \
+  --network <yum4less_app_network> \
+  -e YUM4LESS_EXTERNAL_POSTGRES=1 \
+  -e YUM4LESS_INGEST_ONCE=1 \
+  -e DATABASE_URL=postgresql://postgres:postgres@db:5432/yum4less_dev \
+  -e YUM4LESS_INGEST_ZIPS=REPLACE_WITH_REAL_ZIPS \
+  -e GEOCODIO_API_KEY=... \
+  -e KROGER_CLIENT_ID=... \
+  -e KROGER_CLIENT_SECRET=... \
+  -e KROGER_API_ENV=production \
+  ghcr.io/sfh1980/yum4less-ingest:homelab
+echo "Exit code: $?"
+```
+
+Expect trailing `Scheduled pricing ingest completed.` and exit **0**. Investigate non-zero before leaving cron enabled.
+
+**Option B — exec into a deployed ingest service** (cron temporarily disabled or before 03:00):
+
+```bash
+sudo docker exec yum4less-ingest npm run ingest:weekly-ads:scheduled
+echo "Exit code: $?"
+```
+
+### 10.4 Freshness check after first scheduled run
+
+Scheduled ingest already ends with fatal `npm run check:ranked-price-freshness`. Mid-day re-check without re-ingesting:
+
+```bash
+sudo docker exec yum4less-ingest npm run check:ranked-price-freshness
+```
+
+Also use §4.2 SQL via `sudo docker exec yum4less-postgres psql ...`.
+
+### 10.5 Custom App YAML block (`ingest`)
+
+Add to the **same** Custom App as `db` / `app` (after `app:`). Replace secrets and ZIPs. Fragments also live in [`docker/truenas/custom-app-fragments.yml`](../docker/truenas/custom-app-fragments.yml).
+
+```yaml
+  ingest:
+    image: ghcr.io/sfh1980/yum4less-ingest:homelab
+    container_name: yum4less-ingest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      YUM4LESS_EXTERNAL_POSTGRES: "1"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/yum4less_dev
+      YUM4LESS_INGEST_ZIPS: "REPLACE_WITH_REAL_ZIPS"
+      GEOCODIO_API_KEY: "REPLACE"
+      KROGER_CLIENT_ID: "REPLACE"
+      KROGER_CLIENT_SECRET: "REPLACE"
+      KROGER_API_ENV: production
+      TZ: America/New_York
+      # YUM4LESS_FRESHNESS_WEBHOOK_URL: "https://hooks.example.local/yum4less-freshness"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+```
+
+Logs: `sudo docker logs yum4less-ingest` (cron stdout is limited; job appends `/var/log/yum4less/ingest.log` inside the container — `sudo docker exec yum4less-ingest tail -n 80 /var/log/yum4less/ingest.log`).
+
+---
+
+## 11. Watchtower auto-update
+
+**Goal:** Hourly poll of GHCR; **only** recreate containers labeled for Watchtower (`app` + `ingest`). **Never** touch `db` (Postgres updates stay manual — no label).
+
+### 11.1 Tag model (required reading)
+
+Watchtower updates when the **configured tag’s digest** changes. SHA tags are immutable → **no auto-update**. Use:
+
+- **Running image tag:** `:homelab` on labeled `app` and `ingest`
+- **Rollback:** retag YAML to `:<sha7>` and redeploy
+
+CI moves `:homelab` (and `:latest`) to each green `master` publish digest.
+
+### 11.2 Label scoping
+
+```yaml
+# On app + ingest only:
+labels:
+  - "com.centurylinklabs.watchtower.enable=true"
+
+# On db: omit the label entirely (WATCHTOWER_LABEL_ENABLE=true means unlabeled = ignored)
+```
+
+### 11.3 Custom App YAML block (`watchtower`)
+
+May live in the **same** stack or a sibling Custom App. Needs the Docker socket.
+
+```yaml
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    container_name: yum4less-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_POLL_INTERVAL: "3600"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_NOTIFICATION_REPORT: "true"
+      # Full auto-update (no approval gate) — default Watchtower behavior.
+      # Notifications via Shoutrrr (pick one; replace placeholders):
+      #   Discord:  discord://TOKEN@WEBHOOK_ID
+      #   Slack:    slack://TOKEN@CHANNEL
+      #   Generic:  generic+https://example.com/hooks/yum4less-watchtower
+      WATCHTOWER_NOTIFICATION_URL: "REPLACE_WITH_SHOUTRRR_URL"
+```
+
+No Watchtower label on the watchtower service itself (optional self-update is out of scope).
+
+### 11.4 TrueNAS Apps caveat
+
+TrueNAS SCALE Apps middleware also owns container lifecycle. Watchtower recreating labeled containers **can** desync Apps UI state. If that happens: fall back to manual SHA / `:homelab` bumps in Custom App YAML, or run Watchtower only against compose-managed stacks outside Apps. This runbook still ships the YAML because it matches the requested ops model — validate on your SCALE version after first update.
+
+### 11.5 Punch-list honesty (§4 leftovers)
+
+Wiring ingest + Watchtower addresses readiness verdict §4 items **2** (scheduled ingest + freshness fail path) and supports **3** (one successful ingest) once you dry-run with real keys/ZIPs. It does **not** close:
+
+| §4 item | Still open? |
+|---------|-------------|
+| 1. Confirm Postgres listens `127.0.0.1:5433` only (Compose) / no host publish (TrueNAS) | Ops confirm on box — TrueNAS db already unpublished |
+| 2. Wire scheduled ingest + freshness | **YAML/image ready** — not closed until dry-run exit 0 + cron observed on hardware |
+| 3. One successful ingest (non-empty ranked window) | **Owner run** with real keys/ZIPs |
+| 4. `db:backup-restore-drill` on target | **Still open** |
+| 5. TLS / reverse proxy before WAN | **Still open** |
+| 6. Prod env flags on app | Already in §9.5 YAML — confirm still set after Watchtower recreates |
 
 ---
 
@@ -442,16 +811,17 @@ Issues to resolve **before** relying on unattended cron:
 
 | Gap | Risk under cron | Mitigation until code changes |
 |-----|-----------------|-------------------------------|
-| **`ensure-test-db.mjs` requires Docker** | Cron fails if Docker stopped or user lacks permission | `restart: unless-stopped` on compose; add cron user to `docker` group; consider a second cron line `*/5 * * * * cd /opt/yum4less && docker compose up -d db` |
-| **Stale schema detection throws** (no auto-reset without `YUM4LESS_ALLOW_DB_RESET=1`) | After pulling migrations, cron may exit until manual `db:reset` or migrate | After each deploy with `db/init` changes, run `npm run db:up` && `npm run db:migrate` and verify `schema_migrations` |
-| **`assert-live-ingest-env` does not require `KROGER_API_ENV=production`** | Cron exits 0 but Kroger official API sync no-ops | Set `KROGER_API_ENV=production` explicitly in `.env.local` |
-| **`YUM4LESS_INGEST_ZIPS` defaults to 23111** | Ingest warms wrong market silently | Set real ZIPs in `.env.local`; verify stores in §4.2 SQL |
-| **Map catalog failure is non-fatal** | Cron exit 0 with degraded OSM/catalog | Read warnings in log; rerun `npm run ingest:map-catalog` manually |
+| **`ensure-test-db.mjs` requires Docker** (host path) | Cron fails if Docker stopped or user lacks permission | Host path: `restart: unless-stopped`; docker group. **Ingest container:** set `YUM4LESS_EXTERNAL_POSTGRES=1` (image default) — TCP `psql`, no socket |
+| **Stale schema detection throws** (no auto-reset without `YUM4LESS_ALLOW_DB_RESET=1`) | After pulling migrations, cron may exit until manual migrate | After each deploy with `db/init` changes, run migrate via ingest once-shot or `npm run db:migrate`; never enable auto-reset on shared homelab `yum4less_dev` |
+| **`assert-live-ingest-env` does not require `KROGER_API_ENV=production`** | Cron exits 0 but Kroger official API sync no-ops | Set `KROGER_API_ENV=production` explicitly on ingest env |
+| **`YUM4LESS_INGEST_ZIPS` defaults to 23111** | Ingest warms wrong market silently | Set real ZIPs on ingest env; verify stores in §4.2 SQL |
+| **Map catalog failure is non-fatal** | Cron exit 0 with degraded OSM/catalog | Read warnings in log; rerun `ingest:map-catalog` manually |
 | **Partial weekly-ad chain failure** | Exit **non-zero** if **any** chain errors or any persist failure (code is fail-loud; other chains may still have written) | Scan per-chain `[kroger]` / `[aldi]` lines in log; fix the failed chain |
-| **Playwright / headless deps on Linux** | Kroger scrape fallback fails with browser launch errors | Run `playwright install-deps` once; test manual ingest |
+| **Playwright / headless deps on Linux** | Kroger scrape fallback fails with browser launch errors | Host: `playwright install-deps`. **Ingest image:** deps baked in |
 | **No interactive prompts in scheduled path** | ✅ None found — safe for no-TTY cron | — |
-| **Parent wrapper does not load `.env.local` before `ensure-test-db`** | ✅ Child TS scripts load it; DB URL defaults match compose | Set `DATABASE_URL` in `.env.local` anyway |
+| **Parent wrapper does not load `.env.local` before `ensure-test-db`** | ✅ Child TS scripts load it; DB URL defaults match compose | Ingest container: pass env explicitly in Custom App YAML |
 | **M128 automated per-chain kill switches** | Not implemented — manual pause only | Watch for 403/WAF strings in logs; pause chains operationally |
+| **Watchtower vs TrueNAS Apps ownership** | Apps UI may desync after Watchtower recreate | §11.4 — validate; fall back to manual YAML pin bumps |
 | **README step order was wrong** | Confusion only | Fixed — see README link to this doc |
 
 ---
@@ -460,8 +830,10 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
+| 2026-07-23 | §10 ingest container (`Dockerfile.ingest`, GHCR `yum4less-ingest`, `YUM4LESS_EXTERNAL_POSTGRES` TCP path); §11 Watchtower label-scoped hourly updates + Shoutrrr notifications; §8 adds `:homelab` float tag for app+ingest; §9.5 app Watchtower label; §4 leftovers explicitly flagged |
+| 2026-07-22 | §9 TrueNAS Apps Custom App: working YAML (`ghcr.io/sfh1980/yum4less-app:f38ce73`), datasets under `appPool/yum4less`, Node `fetch` app healthcheck (no wget), LAN `3000:3000` / no db host port, permissions root causes (999:999 + `chmod -R a+rX` on `db/init`), `sudo docker` + `app_lifecycle.log` troubleshooting |
 | 2026-07-20 | CI `publish-image` job: after verify/integration/e2e/semgrep on `master`, push `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest` (**public** — inherits public repo); SHA pin for TrueNAS, `latest` convenience-only |
-| 2026-07-20 | App containerized: multi-stage `Dockerfile` + Compose `app` service (`depends_on` db healthy); host `next start` superseded for deploy path; TrueNAS still out of scope |
+| 2026-07-20 | App containerized: multi-stage `Dockerfile` + Compose `app` service (`depends_on` db healthy); host `next start` superseded for deploy path; TrueNAS YAML later |
 | 2026-07-15 | Pass 6: Postgres backup/restore runbook + `db:backup` / `db:restore` / `db:backup-restore-drill` (disposable drill DB) |
 | 2026-07-15 | Pass 1 ops truth: ranked-price freshness heartbeat (fail closed on 0-in-24h) + exit-policy doc aligned with any-chain fail-loud |
 | 2026-06-29 | Initial homelab scheduled-ingest runbook |
