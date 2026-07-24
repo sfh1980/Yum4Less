@@ -15,6 +15,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
+# Must run before NODE_ENV=production — tsx/playwright are devDependencies required at runtime.
 RUN npm ci --no-audit --no-fund
 
 # Browser fallbacks for weekly-ad scrapes (Kroger/Publix/Walmart paths).
@@ -31,6 +32,7 @@ RUN chmod 0644 /app/docker/ingest/crontab \
 
 # Homelab / TrueNAS default: TCP to Compose/Apps `db` service (no docker CLI).
 ENV YUM4LESS_EXTERNAL_POSTGRES=1
+# Keep after npm ci (see comment above).
 ENV NODE_ENV=production
 
 ENTRYPOINT ["/entrypoint.sh"]

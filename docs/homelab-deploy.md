@@ -634,6 +634,8 @@ Expect `200`. Then proceed to the ingest container (§10) and freshness checks (
 
 **Image:** `ghcr.io/sfh1980/yum4less-ingest:<sha7>` (rollback) or `:homelab` (Watchtower float). Built from `Dockerfile.ingest` (Node 22 bookworm, Playwright Chromium, `cron`, `postgresql-client`).
 
+**Local build only (not TrueNAS):** CI copies `.dockerignore.ingest` → `.dockerignore` before build so `scripts/` and `db/` stay in the context. Root `.dockerignore` strips those for the app image — a bare `docker build -f Dockerfile.ingest .` without that swap produces a dead ingest image. Prefer pulling from GHCR on the NAS.
+
 **Why a separate image:** Shopper runtime stays small (Next standalone). Ingest needs browsers, `tsx` scripts, `db/init` for migration reconcile, and a scheduler.
 
 ### 10.1 Scheduler choice
