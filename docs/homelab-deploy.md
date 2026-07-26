@@ -2,7 +2,7 @@
 
 Copy-paste guide for a **dedicated Linux / TrueNAS SCALE box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Local proof uses **Docker Compose**; the production-like host path on this project is **TrueNAS Apps “Custom App” YAML** (see [§9](#9-truenas-apps-custom-app--working-deploy)).
 
-**Scope:** (1) App + Postgres on the box, (2) wiring `npm run ingest:weekly-ads:scheduled` to run unattended via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) optional Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **Reverse proxy + TLS for public/WAN exposure** is still **not** set up — required before any internet-facing publish; LAN reachability alone is not that.
+**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower are deployed and verified on TrueNAS** (manual one-shot dry-run + Watchtower startup logs — see those sections). **Public/WAN exposure is still not set up** — plan has shifted from a traditional reverse proxy + TLS to **Cloudflare Tunnel**; that work has **not** started. LAN reachability alone is not internet-facing publish.
 
 **Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths).
 
@@ -451,7 +451,7 @@ Local Compose still **builds** the app from source. The ingest image is TrueNAS/
 
 ## 9. TrueNAS Apps Custom App — working deploy
 
-**Status (2026-07-22):** App + Postgres Custom App stack is **up and healthy** on the TrueNAS SCALE box. This section is the copy-paste source of truth for the **db + app** baseline. Add ingest ([§10](#10-ingest-cron-container-truenas)) and Watchtower ([§11](#11-watchtower-auto-update)) as follow-on YAML. Backup drill on target and reverse proxy + TLS remain open (see punch list in [`docs/audits/homelab-readiness-verdict.md`](audits/homelab-readiness-verdict.md) §4 — items this work does **not** fully close).
+**Status (2026-07-22; ingest/Watchtower recorded 2026-07-26):** App + Postgres Custom App stack is **up and healthy** on the TrueNAS SCALE box. This section is the copy-paste source of truth for the **db + app** baseline. **Ingest** ([§10](#10-ingest-cron-container-truenas)) is in the **same** `yum4less` Custom App stack; **Watchtower** ([§11](#11-watchtower-auto-update)) is a **sibling** Custom App. App image runs `:homelab` with the Watchtower enable label. Still open: unattended 3am cron confirmation, Watchtower’s first hourly scan, backup drill on target, and **Cloudflare Tunnel** for WAN (see §11.5).
 ### 9.1 Datasets (real paths used)
 
 | Dataset | Role |
@@ -630,6 +630,15 @@ Expect `200`. Then proceed to the ingest container (§10) and freshness checks (
 
 ## 10. Ingest cron container (TrueNAS)
 
+**Status (recorded 2026-07-26): Deployed and verified (manual one-shot dry-run).** Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. App image switched to **`:homelab`** with the Watchtower enable label. **Not yet confirmed:** the unattended in-container **3am** cron run — only the manual `YUM4LESS_INGEST_ONCE=1` dry-run has succeeded so far.
+
+**Evidence (owner TrueNAS session, ZIP `23111`):**
+- One-shot dry-run (`YUM4LESS_INGEST_ONCE=1`) completed against production data.
+- Live scrapes observed for **Kroger**, **Aldi**, **Publix**, **Food Lion**, and **Walmart**.
+- Synced **33** Publix price observations to PostgreSQL; imported **15** TheMealDB meals.
+- `check:ranked-price-freshness` passed clean at **246/246** fresh observations across all six sources.
+- Run ended with the success line: `Scheduled pricing ingest completed.`
+
 **Goal:** Run `npm run ingest:weekly-ads:scheduled` daily at **`0 3 * * *`** without baking ingest into `yum4less-app`, and without requiring host Node/Playwright on the NAS.
 
 **Image:** `ghcr.io/sfh1980/yum4less-ingest:<sha7>` (rollback) or `:homelab` (Watchtower float). Built from `Dockerfile.ingest` (Node 22 bookworm, Playwright Chromium, `cron`, `postgresql-client`).
@@ -668,6 +677,8 @@ Set these on the **ingest** service (Custom App env). Do **not** leave `YUM4LESS
 Also recommended (same as host `.env.local`): `YUM4LESS_PROVIDER_SYNC_RADIUS_MILES`, `YUM4LESS_MAP_CATALOG_RADIUS_MILES`, `THEMEALDB_API_KEY` as needed. Full list → [`.env.example`](../.env.example).
 
 **Network:** `ingest` **must** share the Custom App compose network with `db` (same YAML stack). Do not publish ingest ports.
+
+**Troubleshooting (zsh / TrueNAS shell):** If `DATABASE_URL` contains `!` (common in passwords), wrap the whole URL in **single quotes**, not double quotes. On zsh, history expansion mangles `!` inside double-quoted strings and can silently corrupt the command.
 
 ### 10.3 Manual dry-run (before enabling daily cron)
 
@@ -741,6 +752,13 @@ Logs: `sudo docker logs yum4less-ingest` (cron stdout is limited; job appends `/
 
 ## 11. Watchtower auto-update
 
+**Status (recorded 2026-07-26): Deployed and verified (startup logs).** Watchtower runs as its **own sibling Custom App** (not part of the `yum4less` stack — it only needs `docker.sock`). **Not yet confirmed:** Watchtower’s first scheduled scan (~1 hour after deploy) running clean.
+
+**Evidence (owner TrueNAS session — `sudo docker logs yum4less-watchtower`):**
+- `Using notifications: discord`
+- `Only checking containers using enable label`
+- Scoped correctly to **app + ingest** only; **db** unlabeled and excluded by design (Postgres updates stay manual).
+
 **Goal:** Hourly poll of GHCR; **only** recreate containers labeled for Watchtower (`app` + `ingest`). **Never** touch `db` (Postgres updates stay manual — no label).
 
 ### 11.1 Tag model (required reading)
@@ -794,16 +812,17 @@ TrueNAS SCALE Apps middleware also owns container lifecycle. Watchtower recreati
 
 ### 11.5 Punch-list honesty (§4 leftovers)
 
-Wiring ingest + Watchtower addresses readiness verdict §4 items **2** (scheduled ingest + freshness fail path) and supports **3** (one successful ingest) once you dry-run with real keys/ZIPs. It does **not** close:
+Ingest + Watchtower are **deployed** on TrueNAS. Manual one-shot dry-run closed the “first successful ingest” proof for ZIP `23111`. The following remain **open** — do not fold them into the closed deploy:
 
-| §4 item | Still open? |
-|---------|-------------|
+| §4 / ops item | Status |
+|---------------|--------|
 | 1. Confirm Postgres listens `127.0.0.1:5433` only (Compose) / no host publish (TrueNAS) | Ops confirm on box — TrueNAS db already unpublished |
-| 2. Wire scheduled ingest + freshness | **YAML/image ready** — not closed until dry-run exit 0 + cron observed on hardware |
-| 3. One successful ingest (non-empty ranked window) | **Owner run** with real keys/ZIPs |
-| 4. `db:backup-restore-drill` on target | **Still open** |
-| 5. TLS / reverse proxy before WAN | **Still open** |
+| 2. Wire scheduled ingest + freshness path | **Partially closed** — container + freshness path deployed; **unattended 3am cron not yet confirmed** |
+| 3. One successful ingest (non-empty ranked window) | **Closed (manual dry-run)** — 246/246 fresh @ ZIP `23111`; see §10 Status |
+| 4. `db:backup-restore-drill` on TrueNAS target | **Still open** |
+| 5. Public/WAN exposure | **Still open** — plan is **Cloudflare Tunnel** (not traditional reverse proxy + TLS); work **not started** |
 | 6. Prod env flags on app | Already in §9.5 YAML — confirm still set after Watchtower recreates |
+| Watchtower first hourly scan | **Still open** — startup logs verified; first scheduled poll not yet confirmed |
 
 ---
 
@@ -832,6 +851,7 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
+| 2026-07-26 | §10 / §11 marked **deployed and verified** on TrueNAS (same-stack ingest; sibling Watchtower Custom App; `:homelab` + enable label on app; one-shot dry-run 246/246 @ ZIP `23111`; Watchtower Discord + label-scope logs). Still open: 3am cron, Watchtower first hourly scan, backup drill, Cloudflare Tunnel WAN. Added zsh `!` / single-quote `DATABASE_URL` troubleshooting note. |
 | 2026-07-23 | §10 ingest container (`Dockerfile.ingest`, GHCR `yum4less-ingest`, `YUM4LESS_EXTERNAL_POSTGRES` TCP path); §11 Watchtower label-scoped hourly updates + Shoutrrr notifications; §8 adds `:homelab` float tag for app+ingest; §9.5 app Watchtower label; §4 leftovers explicitly flagged |
 | 2026-07-22 | §9 TrueNAS Apps Custom App: working YAML (`ghcr.io/sfh1980/yum4less-app:f38ce73`), datasets under `appPool/yum4less`, Node `fetch` app healthcheck (no wget), LAN `3000:3000` / no db host port, permissions root causes (999:999 + `chmod -R a+rX` on `db/init`), `sudo docker` + `app_lifecycle.log` troubleshooting |
 | 2026-07-20 | CI `publish-image` job: after verify/integration/e2e/semgrep on `master`, push `ghcr.io/sfh1980/yum4less-app:<sha7>` + `:latest` (**public** — inherits public repo); SHA pin for TrueNAS, `latest` convenience-only |
