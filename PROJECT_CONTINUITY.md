@@ -14,7 +14,7 @@
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`** — last published rollback pin **`732cd22`** ([CI **30928503594**](https://github.com/sfh1980/Yum4Less/actions/runs/30928503594)); ZIP-picker + GPS button copy lands on next green `master` `publish-image` (Watchtower float).
+**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`** — last published rollback pin **`eaee42a`** ([CI **30944198468**](https://github.com/sfh1980/Yum4Less/actions/runs/30944198468)); includes ZIP search-center picker + GPS-first Settings CTAs.
 
 **Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
@@ -254,7 +254,9 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 - **Theme:** ZIP store search uses a shopper-picked map pin as the radius center; Settings CTAs emphasize GPS first.
 - **Shipped:** “Find stores based on my ZIP” opens modal map + confirm (“Use this as your search center?”); cancel notice; `yum4less.zip-search-centers.v1` cache; `resolveLocationInput` honors ZIP+coords (pin center, ZIP label); radius re-search from cached pin. GPS button label **For Better Results, Use My GPS Location** (left); ZIP Find (right, primary).
 - **Evidence this session:** `npm test` **1060/1060**; `npm run test:e2e:ci` **27 passed / 1 skipped**.
-- **Honest limits:** Live site updates after this commit’s CI `publish-image` + Watchtower pull; single-ZIP beta makes multi-ZIP pin cache hard to exercise live.
+- **CI / GHCR:** [**30944198468**](https://github.com/sfh1980/Yum4Less/actions/runs/30944198468) @ **`eaee42a`** — verify / integration / e2e / semgrep / **publish-image** / **publish-ingest-image** all **success**. App: `ghcr.io/sfh1980/yum4less-app:{eaee42a,homelab,latest}` digest `sha256:380841bc…`.
+- **Rollback pin:** **`eaee42a`** (supersedes `732cd22`). Watchtower floats on `:homelab`.
+- **Honest limits:** Confirm TrueNAS Watchtower pull + ZIP picker / GPS button copy on `https://yum4less.com/`; single-ZIP beta makes multi-ZIP pin cache hard to exercise live.
 
 ### 2026-08-04 — CI high-audit unblock for Watchtower image (`732cd22`)
 
@@ -2399,8 +2401,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| Homelab ingest + Watchtower (GHCR) | 2026-07-24 | **Green** — [30104150018](https://github.com/sfh1980/Yum4Less/actions/runs/30104150018) @ `54e7b60`; verify / integration / e2e / semgrep / **publish-image** / **publish-ingest-image** success; `yum4less-ingest:{54e7b60,homelab,latest}` + `yum4less-app:{54e7b60,homelab}` manifests confirmed. Hardware dry-run still open |
-| GHCR `publish-image` (CI) | 2026-07-24 | **Green** — [30104150018](https://github.com/sfh1980/Yum4Less/actions/runs/30104150018) @ `54e7b60` (`:homelab` + SHA). Prior app-only green [29792952906](https://github.com/sfh1980/Yum4Less/actions/runs/29792952906) @ `f38ce73` |
+| Homelab ingest + Watchtower (GHCR) | 2026-08-04 | **Green** — [30944198468](https://github.com/sfh1980/Yum4Less/actions/runs/30944198468) @ `eaee42a`; verify / integration / e2e / semgrep / **publish-image** / **publish-ingest-image** success; `yum4less-app:{eaee42a,homelab,latest}` digest `sha256:380841bc…`. Watchtower pull on TrueNAS still owner-confirm |
+| GHCR `publish-image` (CI) | 2026-08-04 | **Green** — [30944198468](https://github.com/sfh1980/Yum4Less/actions/runs/30944198468) @ `eaee42a` (`:homelab` + SHA + `:latest`). Prior: [30928503594](https://github.com/sfh1980/Yum4Less/actions/runs/30928503594) @ `732cd22`; [30104150018](https://github.com/sfh1980/Yum4Less/actions/runs/30104150018) @ `54e7b60` |
 | Compose `app`+`db` containerize | 2026-07-20 | **Local proof** — build OK; db healthy→app start; `GET /` 200; market-search `dataSource=database`; unit **1052/1052**; integration **48/48**; Semgrep clean on Dockerfile/compose; remote CI later green on containerize commit |
 | Aldi `023` heal (`yum4less_dev`) | 2026-07-16 | **OK** — probes true; backup `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`; stores/PO/migrations unchanged (281/308/23) |
 | Wave 1c docs-only (portal rule) | 2026-07-16 | Docs only — `yum4less-frontend-workflow.mdc` + `web-frontend-standards.md` + Continuity; **no** product code; unit/e2e gates N/A for this slice |
