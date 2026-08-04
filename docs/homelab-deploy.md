@@ -446,7 +446,7 @@ If a package is later flipped to **private**, TrueNAS will need a GitHub PAT wit
 
 Local Compose still **builds** the app from source. The ingest image is TrueNAS/homelab-oriented; local scheduled ingest can stay on host Node (§2–§3).
 
-**Working TrueNAS image pins (2026-07-24):** `ghcr.io/sfh1980/yum4less-app:54e7b60` and `ghcr.io/sfh1980/yum4less-ingest:54e7b60` (rollback); Watchtower float `:homelab` on both — see §10–§11. Prior pre-Watchtower app-only pin `f38ce73` remains pullable.
+**Working TrueNAS image pins (2026-08-04):** rollback SHA **`732cd22`** for app + ingest (UI-trim + analytics bake + audit overrides); Watchtower float `:homelab` on both — see §10–§11. Prior pins `54e7b60` / `f38ce73` remain pullable.
 ---
 
 ## 9. TrueNAS Apps Custom App — working deploy

@@ -14,7 +14,7 @@
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`** (rollback pin last green SHA after this push).
+**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`** — UI-trim + analytics build-arg @ `2af7b81`; audit unblock + GHCR publish @ **`732cd22`** ([CI **30928503594**](https://github.com/sfh1980/Yum4Less/actions/runs/30928503594) — `publish-image` + `publish-ingest-image` success). Rollback pin: **`732cd22`**.
 
 **Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
@@ -248,6 +248,14 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-08-04 — CI high-audit unblock for Watchtower image (`732cd22`)
+
+- **Theme:** Unblock `npm audit --audit-level=high` so master CI can finish `publish-image` / `publish-ingest-image` after the UI-trim + Tunnel docs push.
+- **Shipped:** `package.json` overrides — `brace-expansion@1` → `1.1.18`, `brace-expansion@5` → `5.0.9`, `undici` → `7.29.0`, `postcss` → `8.5.25` (keep `sharp` `0.35.3`). Local `npm audit --audit-level=high` → **0 vulnerabilities**.
+- **CI evidence:** Prior run [**30927963041**](https://github.com/sfh1980/Yum4Less/actions/runs/30927963041) @ `2af7b81` failed on audit. Follow-up [**30928503594**](https://github.com/sfh1980/Yum4Less/actions/runs/30928503594) @ **`732cd22`** — verify / integration / e2e / semgrep / **publish-image** / **publish-ingest-image** all **success**. App image: `ghcr.io/sfh1980/yum4less-app:{732cd22,homelab,latest}` digest `sha256:4f55282c…`.
+- **Rollback pin:** **`732cd22`**. Watchtower floats on `:homelab` (and ingest `:homelab` / `:latest` as configured).
+- **Honest limits:** Confirm TrueNAS Watchtower pull + trimmed shopper UI on `https://yum4less.com/`; browser analytics rows need the new app image (build-time `NEXT_PUBLIC_*`).
 
 ### 2026-08-04 — Shopper UI copy trim (feedback + trust expand)
 
