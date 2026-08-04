@@ -44,6 +44,8 @@ export type ActiveLocationRequest =
   | {
       mode: "zip";
       zipCode: string;
+      latitude: number;
+      longitude: number;
     }
   | {
       mode: "browser";

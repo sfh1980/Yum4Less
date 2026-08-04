@@ -33,7 +33,9 @@ test.describe("Coordinate-first location (primary anchor)", () => {
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
     await page.locator("#settings-zip-code").fill("");
 
-    const useLocationButton = page.getByRole("button", { name: "Use my location" });
+    const useLocationButton = page.getByRole("button", {
+      name: "For Better Results, Use My GPS Location",
+    });
     await expect(useLocationButton).toBeEnabled({ timeout: 120_000 });
     const [response] = await Promise.all([
       page.waitForResponse(

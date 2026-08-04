@@ -14,6 +14,7 @@ import { RankLoadingOverlay } from "@/components/meal-planner/rank-loading-overl
 import { SavedPlaceholderPanel } from "@/components/meal-planner/saved-placeholder-panel";
 import { SettingsPanel } from "@/components/meal-planner/settings-panel";
 import { StoreMapOverlay } from "@/components/meal-planner/store-map-overlay";
+import { ZipSearchCenterPickerOverlay } from "@/components/meal-planner/zip-search-center-picker-overlay";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
 import { WelcomePanel } from "@/components/meal-planner/welcome-panel";
 import { isInternalDetailsUiEnabled } from "@/lib/show-internal-details-ui";
@@ -135,15 +136,25 @@ export function MealPlanner() {
             marketSearchLoading={demo.marketSearchLoading}
             marketSearchState={demo.marketSearchState}
             settingsSaveError={demo.settingsSaveError}
+            zipCenterCancelNotice={demo.zipCenterCancelNotice}
             storeCatalog={demo.market}
             onBrowserSearch={demo.handleBrowserLocationSearch}
             onFactoryReset={demo.handleFactoryReset}
             onFindStores={demo.handleFindStores}
-            onResetLocationState={demo.resetLocationDependentState}
+            onRadiusMilesChange={demo.handleRadiusMilesChange}
             onSaveSettings={demo.handleSaveSettings}
+            onZipCodeChange={demo.handleZipCodeChange}
             setForm={demo.setForm}
           />
         ) : null}
+
+        <ZipSearchCenterPickerOverlay
+          isOpen={demo.isZipCenterPickerOpen}
+          zipCode={demo.form.zipCode.trim()}
+          radiusMiles={Number(demo.form.radiusMiles) || 5}
+          onCancel={demo.handleZipCenterPickerCancel}
+          onConfirm={demo.handleZipCenterPickerConfirm}
+        />
 
         <RankLoadingOverlay open={demo.rankLoading} />
 

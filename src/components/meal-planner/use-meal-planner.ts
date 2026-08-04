@@ -24,6 +24,14 @@ import {
   writeSettingsPreferences,
 } from "@/lib/settings-preferences";
 import {
+  clearAllZipSearchCenters,
+  clearZipSearchCenter,
+  readZipSearchCenter,
+  writeZipSearchCenter,
+  type ZipSearchCenter,
+} from "@/lib/zip-search-centers";
+import { ZIP_SEARCH_CENTER_CANCEL_NOTICE } from "@/lib/zip-search-center-copy";
+import {
   canonicalizeStoreIdsForSettings,
   filterSelectedStoreIdsAgainstSelectable,
 } from "@/lib/store-identity-settings-lookup";
@@ -165,6 +173,8 @@ export function useMealPlanner() {
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
   const [ingredientPickMode, setIngredientPickMode] = useState<IngredientPickMode>("unset");
   const [isMapOverlayOpen, setIsMapOverlayOpen] = useState(false);
+  const [isZipCenterPickerOpen, setIsZipCenterPickerOpen] = useState(false);
+  const [zipCenterCancelNotice, setZipCenterCancelNotice] = useState<string>();
   const [pantryIngredientIds, setPantryIngredientIds] = useState<string[]>([]);
   const [pantryItemSources, setPantryItemSources] = useState<
     Record<string, PantryItemSource>
@@ -347,7 +357,36 @@ export function useMealPlanner() {
     pantryCoverageRateLimitedUntilRef.current = null;
     pantryCatalogLoadedRef.current = false;
     setIsMapOverlayOpen(false);
+    setIsZipCenterPickerOpen(false);
     setForm((current) => ({ ...current, selectedStoreIds: [] }));
+  }
+
+  function runZipMarketSearch(
+    zipCode: string,
+    radiusMiles: number,
+    center: ZipSearchCenter,
+    options?: { notice?: string },
+  ) {
+    void runMarketSearch(
+      {
+        zipCode,
+        radiusMiles,
+        latitude: center.latitude,
+        longitude: center.longitude,
+      },
+      {
+        mode: "zip",
+        zipCode,
+        latitude: center.latitude,
+        longitude: center.longitude,
+      },
+      options,
+    );
+  }
+
+  function openZipCenterPicker() {
+    setZipCenterCancelNotice(undefined);
+    setIsZipCenterPickerOpen(true);
   }
 
   function runMarketSearchFromSavedPreferences() {
@@ -413,13 +452,14 @@ export function useMealPlanner() {
       return;
     }
 
-    void runMarketSearch(
-      {
-        zipCode: form.zipCode.trim(),
-        radiusMiles,
-      },
-      { mode: "zip", zipCode: form.zipCode.trim() },
-    );
+    const zipCode = form.zipCode.trim();
+    const cachedCenter = readZipSearchCenter(zipCode);
+    if (!cachedCenter) {
+      // Avoid silently searching from ZIP centroid — require a pin (or Find).
+      return;
+    }
+
+    runZipMarketSearch(zipCode, radiusMiles, cachedCenter);
   }
 
   function runMarketSearchWithZipFallback(notice: string, radiusMiles: number) {
@@ -433,14 +473,19 @@ export function useMealPlanner() {
       return;
     }
 
-    void runMarketSearch(
-      {
-        zipCode: form.zipCode.trim(),
-        radiusMiles,
-      },
-      { mode: "zip", zipCode: form.zipCode.trim() },
-      { notice },
-    );
+    const zipCode = form.zipCode.trim();
+    const cachedCenter = readZipSearchCenter(zipCode);
+    if (cachedCenter) {
+      runZipMarketSearch(zipCode, radiusMiles, cachedCenter, { notice });
+      return;
+    }
+
+    setZipCenterCancelNotice(undefined);
+    setMarketSearchState({
+      status: "error",
+      error: notice,
+    });
+    openZipCenterPicker();
   }
 
   async function runMarketSearch(
@@ -506,7 +551,14 @@ export function useMealPlanner() {
         ...(options?.notice ? { notice: options.notice } : {}),
       });
       setActiveLocationRequest(request);
-      persistLocationPreferences(form, request);
+      persistLocationPreferences(
+        {
+          ...form,
+          zipCode: payload.zipCode || form.zipCode,
+          radiusMiles: String(payload.radiusMiles),
+        },
+        request,
+      );
       setSelectedStoreId(undefined);
       setSelectedIngredientIds([]);
       setForm((current) => {
@@ -604,6 +656,7 @@ export function useMealPlanner() {
 
   function handleFindStores() {
     setSettingsSaveError(undefined);
+    setZipCenterCancelNotice(undefined);
     setLocationValidationMode("zip");
     setHasAttemptedLocationSearch(true);
     geolocationRequestRef.current += 1;
@@ -612,13 +665,72 @@ export function useMealPlanner() {
       return;
     }
 
-    void runMarketSearch(
-      {
-        zipCode: form.zipCode.trim(),
-        radiusMiles: Number(form.radiusMiles),
-      },
-      { mode: "zip", zipCode: form.zipCode.trim() },
-    );
+    const zipCode = form.zipCode.trim();
+    const radiusMiles = Number(form.radiusMiles);
+    const cachedCenter = readZipSearchCenter(zipCode);
+    if (cachedCenter) {
+      runZipMarketSearch(zipCode, radiusMiles, cachedCenter);
+      return;
+    }
+
+    openZipCenterPicker();
+  }
+
+  function handleZipCenterPickerConfirm(center: ZipSearchCenter) {
+    const zipCode = form.zipCode.trim();
+    const radiusMiles = Number(form.radiusMiles);
+    writeZipSearchCenter(zipCode, center);
+    setIsZipCenterPickerOpen(false);
+    setZipCenterCancelNotice(undefined);
+    setHasAttemptedLocationSearch(true);
+    setLocationValidationMode("zip");
+    runZipMarketSearch(zipCode, radiusMiles, center);
+  }
+
+  function handleZipCenterPickerCancel() {
+    setIsZipCenterPickerOpen(false);
+    setZipCenterCancelNotice(ZIP_SEARCH_CENTER_CANCEL_NOTICE);
+  }
+
+  function handleZipCodeChange(zipCode: string) {
+    setForm((current) => {
+      const previous = current.zipCode.trim();
+      if (/^\d{5}$/.test(previous) && previous !== zipCode.trim()) {
+        clearZipSearchCenter(previous);
+      }
+      return { ...current, zipCode };
+    });
+    setZipCenterCancelNotice(undefined);
+    resetLocationDependentState();
+  }
+
+  function handleRadiusMilesChange(radiusMiles: string) {
+    setForm((current) => ({ ...current, radiusMiles }));
+    setZipCenterCancelNotice(undefined);
+
+    const zipCode = form.zipCode.trim();
+    const parsedRadius = Number(radiusMiles);
+    const marketReady = marketSearchState.status === "ready";
+    const cachedCenter = readZipSearchCenter(zipCode);
+
+    if (!marketReady) {
+      return;
+    }
+
+    if (!Number.isFinite(parsedRadius)) {
+      resetLocationDependentState();
+      return;
+    }
+
+    if (cachedCenter) {
+      rankedStoreScopeRef.current = null;
+      setRecommendationState(initialRecommendationState);
+      runZipMarketSearch(zipCode, parsedRadius, cachedCenter);
+      return;
+    }
+
+    resetLocationDependentState();
+    openZipCenterPicker();
   }
 
   function handleBrowserLocationSearch() {
@@ -741,9 +853,11 @@ export function useMealPlanner() {
 
   function handleFactoryReset() {
     clearSettingsPreferences();
+    clearAllZipSearchCenters();
     resetLocationDependentState();
     setForm(defaultFormState);
     setSettingsSaveError(undefined);
+    setZipCenterCancelNotice(undefined);
     setHasAttemptedLocationSearch(false);
     setHasAttemptedWelcome(false);
     setHasAttemptedRanking(false);
@@ -796,13 +910,12 @@ export function useMealPlanner() {
         ...(pantryIds.length > 0 ? { pantryIngredientIds: pantryIds } : {}),
         ...(options?.includeIngredientCatalog ? { includeIngredientCatalog: true } : {}),
         market: trimMarketForRankingPassThrough(scopedMarket ?? market),
-        ...(activeLocationRequest.mode === "zip"
-          ? { zipCode: activeLocationRequest.zipCode }
-          : {
-              zipCode: "",
-              latitude: activeLocationRequest.latitude,
-              longitude: activeLocationRequest.longitude,
-            }),
+        zipCode:
+          activeLocationRequest.mode === "zip"
+            ? activeLocationRequest.zipCode
+            : "",
+        latitude: activeLocationRequest.latitude,
+        longitude: activeLocationRequest.longitude,
       };
 
       try {
@@ -967,13 +1080,12 @@ export function useMealPlanner() {
       ...(selectedIngredientIds.length > 0 ? { selectedIngredientIds } : {}),
       ...(pantryIngredientIds.length > 0 ? { pantryIngredientIds } : {}),
       market: trimMarketForRankingPassThrough(scopedMarket ?? market),
-      ...(activeLocationRequest.mode === "zip"
-        ? { zipCode: activeLocationRequest.zipCode }
-        : {
-            zipCode: "",
-            latitude: activeLocationRequest.latitude,
-            longitude: activeLocationRequest.longitude,
-          }),
+      zipCode:
+        activeLocationRequest.mode === "zip"
+          ? activeLocationRequest.zipCode
+          : "",
+      latitude: activeLocationRequest.latitude,
+      longitude: activeLocationRequest.longitude,
     };
 
     try {
@@ -1194,11 +1306,17 @@ export function useMealPlanner() {
     pantryRows,
     ingredientCatalog,
     settingsSaveError,
+    zipCenterCancelNotice,
+    isZipCenterPickerOpen,
     isInternalDetailsOpen,
     setIsInternalDetailsOpen,
     selectedStoreId,
     handleStoreSelect,
     handleFindStores,
+    handleZipCenterPickerConfirm,
+    handleZipCenterPickerCancel,
+    handleZipCodeChange,
+    handleRadiusMilesChange,
     handleBrowserLocationSearch,
     handleSaveSettings,
     handleFactoryReset,

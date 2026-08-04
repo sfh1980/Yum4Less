@@ -15,6 +15,80 @@ export { RECOMMENDATIONS_WAIT_TIMEOUT_MS };
 /** ZIP fallback-path anchor only — not the primary geo fence. */
 export const E2E_ZIP_FALLBACK = "23111";
 
+/**
+ * Default ZIP search-center pin for e2e cache seeding.
+ * Use the CI primary coordinates (not the ZIP geocode seed table alone) so
+ * ranked-chain fixtures stay in the 5mi radius under Geocodio-backed local DBs.
+ */
+export const E2E_ZIP_FALLBACK_CENTER = {
+  latitude: E2E_PRIMARY_COORDINATES.latitude,
+  longitude: E2E_PRIMARY_COORDINATES.longitude,
+} as const;
+
+export const FIND_STORES_BASED_ON_ZIP_LABEL = "Find stores based on my ZIP";
+
+export const USE_GPS_LOCATION_LABEL =
+  "For Better Results, Use My GPS Location";
+
+const ZIP_SEARCH_CENTERS_STORAGE_KEY = "yum4less.zip-search-centers.v1";
+
+/** Skip the ZIP center-pick modal by seeding a cached pin for the ZIP. */
+export async function seedZipSearchCenter(
+  page: Page,
+  zipCode = E2E_ZIP_FALLBACK,
+  center = E2E_ZIP_FALLBACK_CENTER,
+) {
+  await page.evaluate(
+    ({ storageKey, zip, latitude, longitude }) => {
+      const existingRaw = window.localStorage.getItem(storageKey);
+      let map: Record<string, { latitude: number; longitude: number }> = {};
+      if (existingRaw) {
+        try {
+          const parsed = JSON.parse(existingRaw) as unknown;
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            map = parsed as Record<string, { latitude: number; longitude: number }>;
+          }
+        } catch {
+          map = {};
+        }
+      }
+      map[zip] = { latitude, longitude };
+      window.localStorage.setItem(storageKey, JSON.stringify(map));
+    },
+    {
+      storageKey: ZIP_SEARCH_CENTERS_STORAGE_KEY,
+      zip: zipCode,
+      latitude: center.latitude,
+      longitude: center.longitude,
+    },
+  );
+}
+
+/**
+ * Seed the ZIP search-center cache using the same geocode the server would use
+ * for ZIP-only lookup — keeps e2e ranked coverage aligned with pre-picker behavior.
+ */
+export async function seedZipSearchCenterFromGeocode(
+  page: Page,
+  zipCode = E2E_ZIP_FALLBACK,
+) {
+  const response = await page.request.get(
+    `/api/geocode/zip?zip=${encodeURIComponent(zipCode)}`,
+  );
+  expect(response.ok(), `geocode ZIP ${zipCode} should succeed for e2e seed`).toBeTruthy();
+  const body = (await response.json()) as {
+    ok?: boolean;
+    location?: { latitude: number; longitude: number };
+  };
+  expect(body.ok).toBe(true);
+  expect(body.location?.latitude).toEqual(expect.any(Number));
+  expect(body.location?.longitude).toEqual(expect.any(Number));
+  await seedZipSearchCenter(page, zipCode, {
+    latitude: body.location!.latitude,
+    longitude: body.location!.longitude,
+  });
+}
+
 export type PublicNearbyStore = {
   id: string;
   chain: string;
@@ -77,7 +151,10 @@ export async function completeSettingsZipFlow(
 ): Promise<MarketSearchBody> {
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   await page.getByRole("textbox", { name: "ZIP code" }).fill(zipCode);
-  const findStoresButton = page.getByRole("button", { name: "Find stores for this area" });
+  await seedZipSearchCenterFromGeocode(page, zipCode);
+  const findStoresButton = page.getByRole("button", {
+    name: FIND_STORES_BASED_ON_ZIP_LABEL,
+  });
   const [response] = await Promise.all([
     page.waitForResponse(
       (res) =>
@@ -90,6 +167,14 @@ export async function completeSettingsZipFlow(
   expect(response.status(), "market-search should succeed for ZIP flow").toBe(200);
   const body = (await response.json()) as MarketSearchBody;
   expect(body.ok).toBe(true);
+  const requestBody = response.request().postDataJSON() as {
+    latitude?: number;
+    longitude?: number;
+    zipCode?: string;
+  };
+  expect(requestBody.zipCode).toBe(zipCode);
+  expect(typeof requestBody.latitude).toBe("number");
+  expect(typeof requestBody.longitude).toBe("number");
   assertPublicNearbyStoresSanitized(body.market.nearbyStores);
   assertProductionRankedRolloutGates(body.market.nearbyStores);
   await page.getByRole("button", { name: "Save settings and continue" }).click();
@@ -99,7 +184,9 @@ export async function completeSettingsZipFlow(
 
 export async function completeSettingsGeolocationFlow(page: Page): Promise<MarketSearchBody> {
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  const useLocationButton = page.getByRole("button", { name: "Use my location" });
+  const useLocationButton = page.getByRole("button", {
+    name: USE_GPS_LOCATION_LABEL,
+  });
   await expect(useLocationButton).toBeEnabled({ timeout: 120_000 });
   const [response] = await Promise.all([
     page.waitForResponse(

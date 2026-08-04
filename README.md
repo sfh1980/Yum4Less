@@ -75,7 +75,7 @@ Without Postgres + ingest, ranked pricing stays empty and map pins remain bootst
 
 *Redesign slices 1–5 + D1–D7 shipped — see [Active redesign](#active-redesign-2026-06-25) for deferred items.*
 
-1. **Settings** (tab): ZIP and/or browser location, radius, shopping style, **Kroger / Aldi / Publix / Food Lion store** selection, theme — required on first visit or after factory reset.
+1. **Settings** (tab): GPS (**For Better Results, Use My GPS Location**) and/or ZIP (**Find stores based on my ZIP** → map center-pin confirm), radius, shopping style, **Kroger / Aldi / Publix / Food Lion store** selection, theme — required on first visit or after factory reset.
 2. **Home:** welcome budget + dietary → sale ingredients at selected stores (all-sale default or manual narrow) → tap rank.
 3. Yum4Less discovers nearby stores (map overlay link on ingredients step) and scopes UI to **selected stores only**.
 4. The recommendation engine ranks **merged** internal + TheMealDB recipes against ingested prices where gates allow.

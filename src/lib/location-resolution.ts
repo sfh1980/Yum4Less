@@ -38,6 +38,9 @@ export async function resolveLocationInput(input: {
   const hasCoordinates =
     typeof input.latitude === "number" && typeof input.longitude === "number";
 
+  const zipCode = input.zipCode?.trim();
+  const hasValidZip = Boolean(zipCode && /^\d{5}$/.test(zipCode));
+
   if (hasCoordinates) {
     if (
       input.latitude! < -90 ||
@@ -66,6 +69,25 @@ export async function resolveLocationInput(input: {
       };
     }
 
+    // ZIP + coordinates = shopper-picked reference pin: use pin as search
+    // center, ZIP geocode for city/state label (not "Current location").
+    if (hasValidZip && zipCode) {
+      const zipResult = await resolveZipLocation(zipCode);
+      if (!zipResult.ok) {
+        return zipResult;
+      }
+
+      return {
+        ok: true,
+        location: {
+          ...zipResult.location,
+          latitude: input.latitude!,
+          longitude: input.longitude!,
+        },
+        providerConfigured: zipResult.providerConfigured,
+      };
+    }
+
     return {
       ok: true,
       location: {
@@ -79,8 +101,7 @@ export async function resolveLocationInput(input: {
     };
   }
 
-  const zipCode = input.zipCode?.trim();
-  if (!zipCode || !/^\d{5}$/.test(zipCode)) {
+  if (!hasValidZip || !zipCode) {
     return {
       ok: false,
       error: "Enter a valid 5-digit ZIP code or use browser location.",

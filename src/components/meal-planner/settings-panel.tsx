@@ -16,6 +16,10 @@ import {
 import { formatSettingsStoreOptionLabel } from "@/lib/store-display-labels";
 import { buildMultiStoreCoverageSummary } from "@/lib/chain-coverage-honesty";
 import { radiusHelp, zipCodeHelp } from "@/lib/help-hint-content";
+import {
+  FIND_STORES_BASED_ON_ZIP_LABEL,
+  USE_GPS_LOCATION_LABEL,
+} from "@/lib/zip-search-center-copy";
 import type { FieldErrors, FormState, MarketSearchState } from "@/components/meal-planner/types";
 import type { RecommendationExperience } from "@/lib/recommendation-service";
 import type { ThemePreference } from "@/lib/settings-preferences";
@@ -29,11 +33,13 @@ type SettingsPanelProps = {
   marketSearchLoading: boolean;
   marketSearchState: MarketSearchState;
   settingsSaveError?: string;
+  zipCenterCancelNotice?: string;
   onFindStores: () => void;
   onBrowserSearch: () => void;
   onSaveSettings: () => void;
   onFactoryReset: () => void;
-  onResetLocationState: () => void;
+  onZipCodeChange: (zipCode: string) => void;
+  onRadiusMilesChange: (radiusMiles: string) => void;
 };
 
 export function SettingsPanel({
@@ -45,11 +51,13 @@ export function SettingsPanel({
   marketSearchLoading,
   marketSearchState,
   settingsSaveError,
+  zipCenterCancelNotice,
   onFindStores,
   onBrowserSearch,
   onSaveSettings,
   onFactoryReset,
-  onResetLocationState,
+  onZipCodeChange,
+  onRadiusMilesChange,
 }: SettingsPanelProps) {
   const selectableStores = filterSettingsSelectableStores(
     (storeCatalog ?? market)?.nearbyStores ?? [],
@@ -156,12 +164,7 @@ export function SettingsPanel({
             id="settings-zip-code"
             aria-invalid={displayedErrors.zipCode ? true : undefined}
             value={form.zipCode}
-            onChange={(event) =>
-              setForm((current) => {
-                onResetLocationState();
-                return { ...current, zipCode: event.target.value };
-              })
-            }
+            onChange={(event) => onZipCodeChange(event.target.value)}
           />
         </FormField>
 
@@ -179,12 +182,7 @@ export function SettingsPanel({
             step={1}
             type="number"
             value={form.radiusMiles}
-            onChange={(event) =>
-              setForm((current) => {
-                onResetLocationState();
-                return { ...current, radiusMiles: event.target.value };
-              })
-            }
+            onChange={(event) => onRadiusMilesChange(event.target.value)}
           />
         </FormField>
 
@@ -342,23 +340,29 @@ export function SettingsPanel({
         </p>
       ) : null}
 
+      {zipCenterCancelNotice ? (
+        <p className="field-hint" role="status">
+          {zipCenterCancelNotice}
+        </p>
+      ) : null}
+
       {!storesReady ? (
         <div className="action-row">
-          <button
-            className="primary-button"
-            type="button"
-            onClick={onFindStores}
-            disabled={marketSearchLoading}
-          >
-            Find stores for this area
-          </button>
           <button
             className="secondary-button"
             type="button"
             onClick={onBrowserSearch}
             disabled={marketSearchLoading}
           >
-            Use my location
+            {USE_GPS_LOCATION_LABEL}
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={onFindStores}
+            disabled={marketSearchLoading}
+          >
+            {FIND_STORES_BASED_ON_ZIP_LABEL}
           </button>
         </div>
       ) : (

@@ -5,6 +5,7 @@ import {
   completeWelcomeFlow,
   E2E_ZIP_FALLBACK,
   resetAppPreferences,
+  seedZipSearchCenterFromGeocode,
   switchMainTab,
 } from "./helpers";
 
@@ -52,6 +53,7 @@ test.describe("Bottom navigation and theme", () => {
     await resetAppPreferences(page);
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
     await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
+    await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
     const [response] = await Promise.all([
       page.waitForResponse(
         (res) =>
@@ -59,7 +61,7 @@ test.describe("Bottom navigation and theme", () => {
           res.request().method() === "POST",
         { timeout: 120_000 },
       ),
-      page.getByRole("button", { name: "Find stores for this area" }).click(),
+      page.getByRole("button", { name: "Find stores based on my ZIP" }).click(),
     ]);
     expect(response.status()).toBe(200);
     const marketBody = (await response.json()) as {

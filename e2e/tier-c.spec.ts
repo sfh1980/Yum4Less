@@ -7,6 +7,7 @@ import {
   E2E_ZIP_FALLBACK,
   openMapOverlay,
   resetAppPreferences,
+  seedZipSearchCenterFromGeocode,
   switchMainTab,
 } from "./helpers";
 
@@ -28,7 +29,8 @@ test.describe("Tier C — map context without ranked meals", () => {
 
   test("blocks ranking and shows honest limited-coverage copy", async ({ page }) => {
     await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-    await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
+    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
     await page.getByRole("button", { name: "Save settings and continue" }).click();
     await completeWelcomeFlow(page);
 

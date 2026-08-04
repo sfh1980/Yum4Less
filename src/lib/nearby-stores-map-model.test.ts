@@ -7,6 +7,7 @@ import {
 import {
   buildDiscoveryMapModel,
   buildSingleStoreMapModel,
+  buildZipCenterPickMapModel,
   getMapBounds,
 } from "@/lib/nearby-stores-map-model";
 import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
@@ -179,6 +180,24 @@ describe("nearby stores map model", () => {
       kind: "center",
       center: [37.6153, -77.3491],
       zoom: 14,
+    });
+  });
+
+  it("builds a ZIP center-pick model and bounds around the ZIP focus", () => {
+    const model = buildZipCenterPickMapModel({
+      latitude: 37.6085,
+      longitude: -77.3321,
+      label: "Mechanicsville, VA",
+      radiusMiles: 5,
+      pendingCenter: { latitude: 37.61, longitude: -77.34 },
+    });
+
+    expect(model.kind).toBe("zip-center-pick");
+    expect(model.pendingCenter).toEqual({ latitude: 37.61, longitude: -77.34 });
+    expect(getMapBounds(model)).toEqual({
+      kind: "center",
+      center: [37.6085, -77.3321],
+      zoom: 12,
     });
   });
 });

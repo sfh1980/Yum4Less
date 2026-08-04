@@ -4,6 +4,10 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
 import { clearSettingsPreferences, readSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
+import {
+  clearAllZipSearchCenters,
+  writeZipSearchCenter,
+} from "@/lib/zip-search-centers";
 
 vi.mock("@/lib/analytics/track-client-event", () => ({
   trackClientEvent: vi.fn(),
@@ -163,12 +167,27 @@ async function loadMarketAndOpenPantry(
 describe("useMealPlanner request generation (C2, H4)", () => {
   beforeEach(() => {
     clearSettingsPreferences();
+    clearAllZipSearchCenters();
+    writeZipSearchCenter("23111", { latitude: 37.6085, longitude: -77.3321 });
   });
 
   afterEach(() => {
     clearSettingsPreferences();
+    clearAllZipSearchCenters();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it("opens the ZIP center picker when no cached pin exists", async () => {
+    clearAllZipSearchCenters();
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.handleFindStores();
+    });
+
+    expect(result.current.isZipCenterPickerOpen).toBe(true);
+    expect(result.current.marketSearchState.status).toBe("idle");
   });
 
   it("ignores stale market search responses when a newer search starts", async () => {
@@ -192,11 +211,17 @@ describe("useMealPlanner request generation (C2, H4)", () => {
 
     await act(async () => {
       result.current.setForm((current) => ({ ...current, zipCode: "11111" }));
+    });
+    writeZipSearchCenter("11111", { latitude: 37.6, longitude: -77.3 });
+    await act(async () => {
       result.current.handleFindStores();
     });
 
     await act(async () => {
       result.current.setForm((current) => ({ ...current, zipCode: "90210" }));
+    });
+    writeZipSearchCenter("90210", { latitude: 34.09, longitude: -118.41 });
+    await act(async () => {
       result.current.handleFindStores();
     });
 
@@ -261,7 +286,10 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(result.current.recommendationState.status).toBe("loading");
 
     await act(async () => {
-      result.current.setForm((current) => ({ ...current, zipCode: "90210" }));
+      result.current.handleZipCodeChange("90210");
+    });
+    writeZipSearchCenter("90210", { latitude: 34.09, longitude: -118.41 });
+    await act(async () => {
       result.current.handleFindStores();
     });
 
@@ -435,6 +463,8 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(result.current.activeLocationRequest).toEqual({
       mode: "zip",
       zipCode: "23111",
+      latitude: 37.6085,
+      longitude: -77.3321,
     });
 
     const requestBody = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string) as {
@@ -443,8 +473,8 @@ describe("useMealPlanner request generation (C2, H4)", () => {
       longitude?: number;
     };
     expect(requestBody.zipCode).toBe("23111");
-    expect(requestBody.latitude).toBeUndefined();
-    expect(requestBody.longitude).toBeUndefined();
+    expect(requestBody.latitude).toBe(37.6085);
+    expect(requestBody.longitude).toBe(-77.3321);
   });
 
   it("surfaces denial notice as error when Use my location is denied and ZIP is invalid (Site B)", async () => {
@@ -533,6 +563,8 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(result.current.activeLocationRequest).toEqual({
       mode: "zip",
       zipCode: "23111",
+      latitude: 37.6085,
+      longitude: -77.3321,
     });
 
     const requestBody = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string) as {
@@ -541,8 +573,8 @@ describe("useMealPlanner request generation (C2, H4)", () => {
       longitude?: number;
     };
     expect(requestBody.zipCode).toBe("23111");
-    expect(requestBody.latitude).toBeUndefined();
-    expect(requestBody.longitude).toBeUndefined();
+    expect(requestBody.latitude).toBe(37.6085);
+    expect(requestBody.longitude).toBe(-77.3321);
   });
 
   it("proof-of-catch: Settings save succeeds on browser coordinates without ZIP", async () => {
@@ -734,10 +766,13 @@ describe("useMealPlanner request generation (C2, H4)", () => {
 describe("useMealPlanner pantry coverage debounce", () => {
   beforeEach(() => {
     clearSettingsPreferences();
+    clearAllZipSearchCenters();
+    writeZipSearchCenter("23111", { latitude: 37.6085, longitude: -77.3321 });
   });
 
   afterEach(() => {
     clearSettingsPreferences();
+    clearAllZipSearchCenters();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     vi.useRealTimers();

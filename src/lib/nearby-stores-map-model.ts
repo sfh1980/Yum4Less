@@ -47,6 +47,24 @@ export type SingleStoreMapModel = {
   usesOsmCatalogData: boolean;
 };
 
+/**
+ * ZIP search-center picker: ZIP geocode as map focus; optional pending pin +
+ * radius preview. Not a discovery or single-store surface.
+ */
+export type ZipCenterPickMapModel = {
+  kind: "zip-center-pick";
+  zipFocus: {
+    latitude: number;
+    longitude: number;
+    label: string;
+  };
+  radiusMiles: number;
+  pendingCenter?: {
+    latitude: number;
+    longitude: number;
+  };
+};
+
 export type StoresMapModel = DiscoveryMapModel | SingleStoreMapModel;
 
 /** @deprecated Use `DiscoveryMapModel`. */
@@ -113,6 +131,26 @@ export function buildSingleStoreMapModel(
   };
 }
 
+/** ZIP reference-pin picker (`ZipSearchCenterPickerOverlay`). */
+export function buildZipCenterPickMapModel(input: {
+  latitude: number;
+  longitude: number;
+  label: string;
+  radiusMiles: number;
+  pendingCenter?: { latitude: number; longitude: number };
+}): ZipCenterPickMapModel {
+  return {
+    kind: "zip-center-pick",
+    zipFocus: {
+      latitude: input.latitude,
+      longitude: input.longitude,
+      label: input.label,
+    },
+    radiusMiles: input.radiusMiles,
+    ...(input.pendingCenter ? { pendingCenter: input.pendingCenter } : {}),
+  };
+}
+
 /** @deprecated Use `buildDiscoveryMapModel`. */
 export const buildNearbyStoresMapModel = buildDiscoveryMapModel;
 
@@ -142,12 +180,22 @@ export type MapBoundsResult =
       northEast: [number, number];
     };
 
-export function getMapBounds(model: StoresMapModel): MapBoundsResult {
+export function getMapBounds(
+  model: StoresMapModel | ZipCenterPickMapModel,
+): MapBoundsResult {
   if (model.kind === "single-store") {
     return {
       kind: "center",
       center: [model.store.latitude, model.store.longitude],
       zoom: 14,
+    };
+  }
+
+  if (model.kind === "zip-center-pick") {
+    return {
+      kind: "center",
+      center: [model.zipFocus.latitude, model.zipFocus.longitude],
+      zoom: 12,
     };
   }
 

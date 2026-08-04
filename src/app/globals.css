@@ -361,6 +361,55 @@ select {
   margin: 0;
 }
 
+.zip-search-center-picker-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  max-height: min(100dvh - 2rem, 900px);
+  height: min(100dvh - 2rem, 900px);
+  overflow: hidden;
+}
+
+.zip-search-center-picker-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.35;
+}
+
+.zip-search-center-picker-instruction {
+  margin: 0 0 0.75rem;
+}
+
+.zip-search-center-picker-map {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.zip-search-center-picker-map .nearby-stores-map-shell,
+.zip-search-center-picker-map .nearby-stores-map {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.zip-search-center-picker-map .nearby-stores-map {
+  min-height: 240px;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.zip-search-center-picker-confirm {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--panel-border);
+}
+
+.zip-search-center-picker-confirm .panel-copy {
+  margin: 0 0 0.75rem;
+}
+
 .store-map-tap-button {
   display: inline-flex;
   align-items: center;

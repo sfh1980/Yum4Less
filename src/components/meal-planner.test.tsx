@@ -9,13 +9,23 @@ vi.mock("@/components/nearby-stores-map", () => ({
   NearbyStoresMap: () => createElement("div", { "data-testid": "nearby-stores-map-stub" }),
 }));
 
+vi.mock("@/components/zip-center-pick-map", () => ({
+  ZipCenterPickMap: () => createElement("div", { "data-testid": "zip-center-pick-map-stub" }),
+}));
+
 import { MealPlanner } from "@/components/meal-planner";
 import { clearSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
+import {
+  clearAllZipSearchCenters,
+  writeZipSearchCenter,
+} from "@/lib/zip-search-centers";
+import { FIND_STORES_BASED_ON_ZIP_LABEL } from "@/lib/zip-search-center-copy";
 
 const fetchMock = vi.fn();
 
 async function completeSettingsFlow(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Find stores for this area" }));
+  writeZipSearchCenter("23111", { latitude: 37.6085, longitude: -77.3321 });
+  await user.click(screen.getByRole("button", { name: FIND_STORES_BASED_ON_ZIP_LABEL }));
   await screen.findByRole("combobox", { name: "Store" });
   await user.click(screen.getByRole("button", { name: "Save settings and continue" }));
   await screen.findByRole("heading", { name: "Welcome" });
@@ -56,9 +66,11 @@ const pantryCoveragePayload = {
 describe("MealPlanner", () => {
   beforeEach(() => {
     clearSettingsPreferences();
+    clearAllZipSearchCenters();
   });
 
   afterEach(() => {
+    clearAllZipSearchCenters();
     fetchMock.mockReset();
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
@@ -165,6 +177,7 @@ describe("MealPlanner", () => {
       selectedStoreIds: ["kroger-1"],
       setupComplete: true,
     });
+    writeZipSearchCenter("23111", { latitude: 37.6085, longitude: -77.3321 });
 
     fetchMock.mockResolvedValueOnce(
       new Response(

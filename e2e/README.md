@@ -6,11 +6,11 @@ Committed browser tests (`@playwright/test`) gate merge via `npm run test:e2e:ci
 
 | File | Responsibility |
 |------|----------------|
-| `helpers.ts` | Shared flows (Settings → rank), trust assertions, tab navigation |
+| `helpers.ts` | Shared flows (Settings → rank), ZIP center-pin seed helpers, trust assertions, tab navigation |
 | `fixtures/api-mocks.ts` | Deterministic Tier C and API error payloads |
 | `mvp-flow.spec.ts` | Happy path, accordion, beta/trust copy, trust disclosure |
 | `settings-stores.spec.ts` | Multi-store scoping, four-chain Settings, ZIP validation |
-| `coordinate-first.spec.ts` | Geolocation-primary anchor (`37.6085`, `-77.3739`) |
+| `coordinate-first.spec.ts` | GPS-primary Settings CTA (`For Better Results, Use My GPS Location`) |
 | `coordinate-first-cold.spec.ts` | Cold-start geolocation path before Settings cache warms |
 | `single-store-map-overlay.spec.ts` | Single-store map overlay from ingredients step |
 | `tier-c.spec.ts` | Map context without ranked meals (mocked Tier C) |

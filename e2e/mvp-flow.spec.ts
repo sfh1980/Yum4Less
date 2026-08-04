@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { runCoreMvpFlow } from "./helpers";
+import { runCoreMvpFlow, seedZipSearchCenterFromGeocode } from "./helpers";
 
 // Fat Settings → map → pantry → rank path needs headroom beyond the default 90s
 // so the dedicated 60s rank wait is not starved by earlier steps (Wave 1a).
@@ -69,7 +69,8 @@ test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
   test("expands pricing trust disclosure on the map", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("textbox", { name: "ZIP code" }).fill("23111");
-    await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await seedZipSearchCenterFromGeocode(page, "23111");
+    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
     await page.getByRole("button", { name: "Save settings and continue" }).click();
     await page.getByRole("button", { name: "Continue to ingredients" }).click();
     await page.getByRole("button", { name: "Do you want to see store locations?" }).click();

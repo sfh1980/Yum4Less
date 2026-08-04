@@ -6,6 +6,7 @@ import {
   injectStaleSelectedStoreIds,
   readPersistedSelectedStoreIds,
   resetAppPreferences,
+  seedZipSearchCenterFromGeocode,
 } from "./helpers";
 
 const STALE_STORE_ID = "aldi-23111";
@@ -14,6 +15,7 @@ async function completeSettingsZipFlowMultiStore(page: import("@playwright/test"
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
   await page.getByRole("combobox", { name: "Shopping style" }).selectOption("Multiple stores allowed");
+  await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
 
   const [response] = await Promise.all([
     page.waitForResponse(
@@ -22,7 +24,7 @@ async function completeSettingsZipFlowMultiStore(page: import("@playwright/test"
         res.request().method() === "POST",
       { timeout: 120_000 },
     ),
-    page.getByRole("button", { name: "Find stores for this area" }).click(),
+    page.getByRole("button", { name: "Find stores based on my ZIP" }).click(),
   ]);
   expect(response.status()).toBe(200);
 

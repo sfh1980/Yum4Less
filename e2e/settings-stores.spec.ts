@@ -3,6 +3,7 @@ import {
   completeWelcomeFlow,
   E2E_ZIP_FALLBACK,
   resetAppPreferences,
+  seedZipSearchCenterFromGeocode,
 } from "./helpers";
 
 test.describe("Settings store selection", () => {
@@ -12,7 +13,8 @@ test.describe("Settings store selection", () => {
 
   test("scopes the map to the stores selected in Settings (ranked-chain subset)", async ({ page }) => {
     await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-    await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
+    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
     await expect(page.getByRole("button", { name: "Save settings and continue" })).toBeVisible({
       timeout: 30_000,
     });
@@ -52,7 +54,8 @@ test.describe("Settings store selection", () => {
     page,
   }) => {
     await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-    await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
+    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
     await expect(page.getByRole("combobox", { name: "Store" })).toBeVisible({
       timeout: 30_000,
     });
@@ -72,7 +75,7 @@ test.describe("Settings validation", () => {
 
   test("shows ZIP validation error for invalid input", async ({ page }) => {
     await page.getByRole("textbox", { name: "ZIP code" }).fill("abc");
-    await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
     await expect(page.getByText("Enter a valid 5-digit ZIP code.")).toBeVisible();
   });
 });

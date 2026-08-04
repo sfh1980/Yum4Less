@@ -87,7 +87,9 @@ test.describe("Coordinate-first location (cold OSM gap-fill)", () => {
     ).toBe(0);
 
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-    const useLocationButton = page.getByRole("button", { name: "Use my location" });
+    const useLocationButton = page.getByRole("button", {
+      name: "For Better Results, Use My GPS Location",
+    });
     await expect(useLocationButton).toBeEnabled({ timeout: 120_000 });
 
     const startedAtMs = Date.now();

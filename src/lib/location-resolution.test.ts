@@ -79,6 +79,36 @@ describe("resolveLocationInput", () => {
     expect(resolveZipLocation).not.toHaveBeenCalled();
   });
 
+  it("uses ZIP reference pin coordinates with ZIP label metadata", async () => {
+    resolveZipLocation.mockResolvedValue({
+      ok: true,
+      location: {
+        zipCode: "23111",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.6085,
+        longitude: -77.3321,
+        source: "seed",
+      },
+      providerConfigured: true,
+    });
+
+    const result = await resolveLocationInput({
+      zipCode: "23111",
+      latitude: 37.62,
+      longitude: -77.35,
+    });
+
+    expect(resolveZipLocation).toHaveBeenCalledWith("23111");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.location.source).toBe("seed");
+      expect(result.location.city).toBe("Mechanicsville");
+      expect(result.location.latitude).toBe(37.62);
+      expect(result.location.longitude).toBe(-77.35);
+    }
+  });
+
   it("delegates valid ZIP codes to resolveZipLocation", async () => {
     resolveZipLocation.mockResolvedValue({
       ok: true,

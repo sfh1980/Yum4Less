@@ -8,6 +8,7 @@ import {
   completeWelcomeFlow,
   goToPantryStep,
   resetAppPreferences,
+  seedZipSearchCenter,
   switchMainTab,
 } from "./helpers";
 
@@ -38,7 +39,11 @@ test.describe("API error surfaces in the UI", () => {
     await switchMainTab(page, "Settings");
     // Clearing location re-shows Find so we can force a failed search after setup.
     await page.getByRole("textbox", { name: "ZIP code" }).fill("00000");
-    await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await seedZipSearchCenter(page, "00000", {
+      latitude: 37.6085,
+      longitude: -77.3739,
+    });
+    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
     await expect(page.getByText(/ZIP must be five digits/i)).toBeVisible({
       timeout: 30_000,
     });
@@ -65,7 +70,11 @@ test.describe("API error surfaces in the UI", () => {
 
     await switchMainTab(page, "Settings");
     await page.getByRole("textbox", { name: "ZIP code" }).fill("00000");
-    await page.getByRole("button", { name: "Find stores for this area" }).click();
+    await seedZipSearchCenter(page, "00000", {
+      latitude: 37.6085,
+      longitude: -77.3739,
+    });
+    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
     await expect(
       page.getByText(/Internal server error|temporarily unavailable/i),
     ).toBeVisible({ timeout: 30_000 });

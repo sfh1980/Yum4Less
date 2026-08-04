@@ -47,33 +47,35 @@ flowchart TD
 
 ---
 
-## Tree 2 — Location resolution (Find stores / Use my location)
+## Tree 2 — Location resolution (GPS / ZIP Find stores)
+
+Settings CTAs (left → right): **For Better Results, Use My GPS Location** · **Find stores based on my ZIP** (ZIP path opens a map center-pin confirm before market-search).
 
 ```mermaid
 flowchart TD
-  A[Find stores clicked] --> B{Input valid?}
+  A[Location search started] --> B{Input valid?}
   B -->|ZIP not 5 digits / radius not 1–25| C[Client validation error]
-  B -->|OK| D{Coordinates or ZIP?}
+  B -->|OK| D{GPS coords or ZIP pin?}
 
-  D -->|Browser geolocation| E{In continental US bounds?}
+  D -->|Browser / GPS geolocation| E{In continental US bounds?}
   E -->|No| F[404: outside supported beta area]
   E -->|Yes| G[source=browser]
 
-  D -->|ZIP| H{GEOCODIO_API_KEY set?}
-  H -->|Yes| I[Geocodio API lookup]
-  I -->|Success| J[source=geocodio]
+  D -->|ZIP + confirmed map pin| H{GEOCODIO_API_KEY set for ZIP label?}
+  H -->|Yes| I[Geocodio ZIP label + pin as search center]
+  I -->|Success| J[source=geocodio; coords=pin]
   I -->|Fail| K[404]
 
   H -->|No| L{Seed ZIP fallback allowed?}
   L -->|Production without key| M[404: GEOCODIO required]
   L -->|Dev/CI| N{ZIP in seed table?}
-  N -->|Yes e.g. 23111, 23223| O[source=seed]
+  N -->|Yes e.g. 23111, 23223| O[source=seed; coords=pin]
   N -->|No| P[404: ZIP not in seed list]
 ```
 
-**Practical implication:** Local dev without Geocodio only resolves **seed ZIPs** unless `GEOCODIO_API_KEY` is set. Geolocation bypasses ZIP geocoding but must be inside continental US bounds.
+**Practical implication:** Local dev without Geocodio only resolves **seed ZIPs** unless `GEOCODIO_API_KEY` is set. GPS bypasses ZIP geocoding but must be inside continental US bounds. ZIP Find uses a shopper-picked pin (cached in `yum4less.zip-search-centers.v1`) as the radius center.
 
-**Key files:** `src/lib/location-resolution.ts`, `src/lib/geocoding.ts`
+**Key files:** `src/lib/location-resolution.ts`, `src/lib/geocoding.ts`, `src/lib/zip-search-centers.ts`, `src/components/meal-planner/zip-search-center-picker-overlay.tsx`
 
 ---
 
