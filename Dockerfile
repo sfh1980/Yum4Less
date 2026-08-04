@@ -23,6 +23,10 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Client analytics flag is inlined at build time (runtime env alone is not enough).
+# CI publish-image passes NEXT_PUBLIC_YUM4LESS_ANALYTICS=1 for :homelab / SHA tags.
+ARG NEXT_PUBLIC_YUM4LESS_ANALYTICS=
+ENV NEXT_PUBLIC_YUM4LESS_ANALYTICS=$NEXT_PUBLIC_YUM4LESS_ANALYTICS
 
 RUN npm run build
 

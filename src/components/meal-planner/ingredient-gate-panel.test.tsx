@@ -18,7 +18,7 @@ describe("IngredientGatePanel", () => {
 
     expect(screen.getByText(/estimated/i)).toBeInTheDocument();
     expect(screen.getByText(/directional/i)).toBeInTheDocument();
-    expect(screen.getByText(/verify price, package size/i)).toBeInTheDocument();
+    expect(screen.getByText(/verify in store/i)).toBeInTheDocument();
   });
 
   it("calls onUseAll when the primary action is clicked", async () => {

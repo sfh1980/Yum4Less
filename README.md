@@ -83,7 +83,7 @@ Without Postgres + ingest, ranked pricing stays empty and map pins remain bootst
 
 **v1 production-ranked chains:** Kroger family (official API + weekly-ad fallback), Aldi, Publix, and Food Lion (weekly-ad). Walmart and other unsupported chains remain map context only.
 
-**Not shipped:** TrueNAS Apps translation, reverse-proxy/TLS automation, user accounts, live checkout prices, Saved tab persistence, cuisine chips (R11). Local Compose **`app`+`db`** is shipped (2026-07-20); dedicated-hardware migrate still queued.
+**Not shipped:** user accounts, live checkout prices, Saved tab persistence, cuisine chips (R11). **Shipped on hardware:** TrueNAS Custom App (`db`+`app`+`ingest`), Watchtower, Cloudflare Tunnel at [`https://yum4less.com`](https://yum4less.com) — see [`docs/homelab-deploy.md`](docs/homelab-deploy.md).
 
 Current snapshot and gaps → [`PROJECT_CONTINUITY.md` → Resume](PROJECT_CONTINUITY.md#resume-as-of-2026-06-25).
 
@@ -277,7 +277,7 @@ Agent checklists, Playwright MCP flow, and MCP setup → [`AGENTS.md`](AGENTS.md
 
 ## Development status
 
-Runnable **local beta v1** with daily live ingest + Postgres — **not deployed**; homelab cron wiring documented, not yet owner-run in production. **Redesign slices 1–5 + D1–D7** shipped; **Saved persistence** and cuisine chips (R11) still deferred.
+Runnable **beta v1** on TrueNAS with daily ingest path + Postgres — **public HTTPS live** at `https://yum4less.com` (Cloudflare Tunnel). Unattended 3am cron / backup drill still open. **Redesign slices 1–5 + D1–D7** shipped; **Saved persistence** and cuisine chips (R11) still deferred.
 
 Verification snapshot (test counts, CI link) → [`PROJECT_CONTINUITY.md` → Appendix](PROJECT_CONTINUITY.md#appendix).
 

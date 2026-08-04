@@ -157,6 +157,10 @@ jobs:
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}
             ${{ steps.meta.outputs.image }}:latest
             ${{ steps.meta.outputs.image }}:homelab
+          # Bake client analytics into the shopper bundle (NEXT_PUBLIC_* is build-time only).
+          # Server still requires YUM4LESS_ENABLE_ANALYTICS=1 (+ optional YUM4LESS_ANALYTICS_SINK).
+          build-args: |
+            NEXT_PUBLIC_YUM4LESS_ANALYTICS=1
           # Omit org.opencontainers.image.source to avoid an extra public-repo link signal;
           # Actions-published packages from this public repo are still public by inheritance.
           labels: |

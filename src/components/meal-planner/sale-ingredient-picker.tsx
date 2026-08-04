@@ -156,9 +156,8 @@ export function SaleIngredientPicker({
     <div className="sale-ingredient-picker">
       <div className="sale-ingredient-picker-header">
         <p className="panel-copy">
-          Narrow to specific sale items if you want. Leave none checked to rank with
-          all sale ingredients at your selected store(s). Totals stay{" "}
-          <strong>estimated</strong> or <strong>directional</strong>.
+          Optional: pick specific sale items, or leave none checked to use all.
+          Totals stay <strong>estimated</strong> or <strong>directional</strong>.
         </p>
         <div className="action-row sale-ingredient-picker-actions">
           <button className="secondary-button" type="button" onClick={onSelectAll}>

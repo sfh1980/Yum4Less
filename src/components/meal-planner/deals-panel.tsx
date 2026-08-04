@@ -59,9 +59,8 @@ export function DealsPanel({
     <div className="panel panel-padding meal-planner-panel flow-panel flow-panel--deals">
       <h2>Deals</h2>
       <p className="panel-copy">
-        Browse sale and cached prices at your selected store(s) only. Totals are{" "}
-        <strong>estimated</strong> or <strong>directional</strong> — verify in
-        store before checkout.
+        Sale items at your selected store(s). Prices are{" "}
+        <strong>estimated</strong> or <strong>directional</strong> — verify in store.
       </p>
 
       {choices.length === 0 ? (

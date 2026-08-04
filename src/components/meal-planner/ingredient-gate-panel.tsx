@@ -31,7 +31,7 @@ export function IngredientGatePanel({
 
       <p className="field-hint ingredient-gate-trust">
         Totals stay <strong>estimated</strong> or <strong>directional</strong> —
-        verify price, package size, and tags in store before checkout.
+        verify in store.
       </p>
     </div>
   );

@@ -61,7 +61,7 @@ describe("PricingTrustHeadsUpBanner expanded disclosure", () => {
     expect(getTrustDetails(container).open).toBe(false);
   });
 
-  it("reveals recovered modal sections when expanded", async () => {
+  it("reveals shortened trust sections when expanded", async () => {
     const user = userEvent.setup();
     const { container } = render(
       createElement(PricingTrustHeadsUpBanner, {
@@ -76,26 +76,15 @@ describe("PricingTrustHeadsUpBanner expanded disclosure", () => {
     expect(details.open).toBe(true);
 
     expect(
-      screen.getByRole("heading", { name: "Chain coverage" }),
+      screen.getByRole("heading", { name: "What these prices mean" }),
     ).toBeInTheDocument();
     expect(
-      within(
-        screen.getByRole("region", { name: "Chain coverage depth" }),
-      ).getByText(/weekly-ad sales only/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Freshness" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/24-hour cache/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Sale confidence" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Fallback" }),
+      screen.getByRole("heading", { name: "Which stores" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/limited coverage/i)).toBeInTheDocument();
+    expect(screen.getByText(/Walmart/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Walmart and other map pins" }),
+      screen.getByRole("heading", { name: "Before you shop" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Send feedback or report a wrong price" }),

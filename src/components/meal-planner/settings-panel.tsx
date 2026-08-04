@@ -140,9 +140,8 @@ export function SettingsPanel({
     <div className="panel panel-padding meal-planner-panel meal-planner-panel--inputs flow-panel flow-panel--settings">
       <h2>Settings</h2>
       <p className="panel-copy">
-        Set your location, search radius, shopping style, and store(s). Yum4Less
-        saves these preferences locally. Dinner price estimates come from the
-        store(s) you select — totals are estimates; always verify in store.
+        Set location, radius, and store(s). Preferences stay on this device.
+        Meal totals are estimates — verify in store.
       </p>
 
       <div className="form-grid">

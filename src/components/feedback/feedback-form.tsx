@@ -97,8 +97,8 @@ export function FeedbackForm({ enabled }: FeedbackFormProps) {
           ))}
         </select>
         <p className="field-hint">
-          For wrong prices or missing items, include the store chain and what you saw.
-          Do not include your ZIP code, address, or exact location.
+          For wrong prices or missing items, name the chain and what you saw — not your
+          location.
         </p>
       </div>
 
@@ -113,7 +113,7 @@ export function FeedbackForm({ enabled }: FeedbackFormProps) {
           type="text"
           value={chainLabel}
         />
-        <p className="field-hint">Use the chain name only — not an internal store ID.</p>
+        <p className="field-hint">Chain name only (e.g. Kroger, Aldi).</p>
       </div>
 
       <div className="field">
@@ -147,9 +147,7 @@ export function FeedbackForm({ enabled }: FeedbackFormProps) {
 
       {!enabled ? (
         <p className="field-error" role="status">
-          Feedback storage is disabled on this server. Set YUM4LESS_FEEDBACK_ENABLED=1 in
-          .env.local (with DATABASE_URL and the customer_feedback migration applied), then
-          restart npm run dev.
+          Feedback is temporarily unavailable. Please try again later.
         </p>
       ) : null}
 
