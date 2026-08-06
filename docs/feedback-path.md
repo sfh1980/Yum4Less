@@ -8,10 +8,12 @@ Yum4Less keeps **first-party analytics** separate from customer feedback. Analyt
 | --- | --- | --- |
 | In-app feedback form (`/feedback`) | Bug reports, wrong-price reports, general product feedback | Implemented (disabled by default; enable with `YUM4LESS_FEEDBACK_ENABLED=1`) |
 | Admin list API (`GET /api/feedback`) | Owner reads recent rows with `YUM4LESS_FEEDBACK_ADMIN_KEY` | Implemented |
+| Owner console (`/owner`) | Key-gated UI for recent feedback + Postgres analytics events | Implemented (same admin key; not linked from shopper nav; `noindex`) |
 | Public recent-feedback feed on `/feedback` | — | **Removed** from shopper UI (2026-08-04) |
 | Analytics transparency panel on `/feedback` | — | **Removed** from shopper UI (2026-08-04); ops detail stays in this doc / env |
 | Email or support inbox | Complaints and account-free MVP contact | Planned (owner choice) |
-| Analytics (`/api/analytics/events`) | Product usage signals only | Implemented, off by default (client flag is **build-time** `NEXT_PUBLIC_…`) |
+| Analytics (`POST /api/analytics/events`) | Product usage signals only | Implemented, off by default (client flag is **build-time** `NEXT_PUBLIC_…`) |
+| Analytics list API (`GET /api/analytics/events`) | Owner reads recent Postgres rows with the feedback admin key | Implemented |
 
 ## Wrong-price and store-item reports
 
@@ -29,10 +31,26 @@ Do **not** store full shopping carts, checkout receipts, geolocation, ZIP codes,
 ```env
 # Enable anonymous Postgres-backed feedback (POST /api/feedback)
 # YUM4LESS_FEEDBACK_ENABLED=1
-# YUM4LESS_FEEDBACK_ADMIN_KEY=<secret for GET /api/feedback>
+# YUM4LESS_FEEDBACK_ADMIN_KEY=<secret for GET /api/feedback, GET /api/analytics/events, and /owner unlock>
 ```
 
 Apply `db/init/007_customer_feedback.sql` before enabling feedback in deployed environments.
+
+### Owner console
+
+Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FEEDBACK_ADMIN_KEY` into the unlock field. The key is stored in **sessionStorage for that tab only** and sent as `Authorization: Bearer …` to:
+
+- `GET /api/feedback?limit=50`
+- `GET /api/analytics/events?limit=50`
+
+Curl still works:
+
+```bash
+curl -sS https://yum4less.com/api/feedback -H "X-Yum4Less-Admin-Key: <secret>"
+curl -sS https://yum4less.com/api/analytics/events -H "X-Yum4Less-Admin-Key: <secret>"
+```
+
+Analytics list reads **Postgres** only (`YUM4LESS_ANALYTICS_SINK=postgres`). Other sinks return an empty list with a notice.
 
 Analytics remain separate and require both client and server flags:
 

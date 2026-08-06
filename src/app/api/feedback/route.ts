@@ -7,7 +7,9 @@ import {
   insertCustomerFeedback,
   listRecentCustomerFeedback,
 } from "@/lib/feedback/feedback-repository";
+import { FEEDBACK_LIMITS } from "@/lib/feedback/feedback-types";
 import { validateFeedbackPayload } from "@/lib/feedback/feedback-validation";
+import { clampListLimit } from "@/lib/list-limit";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
 
 export async function GET(request: Request) {
@@ -24,8 +26,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
+  const url = new URL(request.url);
+  const limit = clampListLimit(
+    url.searchParams.get("limit"),
+    FEEDBACK_LIMITS.recentFeedLimit,
+    FEEDBACK_LIMITS.listLimitMax,
+  );
+
   try {
-    const feedback = await listRecentCustomerFeedback();
+    const feedback = await listRecentCustomerFeedback(limit);
     return NextResponse.json({ ok: true, feedback });
   } catch (error) {
     return publicApiErrorResponse(

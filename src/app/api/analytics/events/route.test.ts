@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { POST } from "@/app/api/analytics/events/route";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { GET, POST } from "@/app/api/analytics/events/route";
 import {
   getMemoryAnalyticsEventsForTests,
   resetMemoryAnalyticsEventsForTests,
@@ -8,6 +8,19 @@ import { resetRateLimitsForTests } from "@/lib/rate-limit";
 
 const originalAnalyticsEnabled = process.env.YUM4LESS_ENABLE_ANALYTICS;
 const originalAnalyticsSink = process.env.YUM4LESS_ANALYTICS_SINK;
+const originalFeedbackAdminKey = process.env.YUM4LESS_FEEDBACK_ADMIN_KEY;
+
+const listRecentAnalyticsEvents = vi.fn();
+
+vi.mock("@/lib/analytics/analytics-repository", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/analytics/analytics-repository")>();
+  return {
+    ...actual,
+    listRecentAnalyticsEvents: (...args: unknown[]) =>
+      listRecentAnalyticsEvents(...args),
+  };
+});
 
 describe("POST /api/analytics/events", () => {
   afterEach(() => {
@@ -97,6 +110,102 @@ describe("POST /api/analytics/events", () => {
       error: "Analytics event property is not supported.",
     });
     expect(getMemoryAnalyticsEventsForTests()).toHaveLength(0);
+  });
+});
+
+describe("GET /api/analytics/events", () => {
+  afterEach(() => {
+    resetRateLimitsForTests();
+    listRecentAnalyticsEvents.mockReset();
+    restoreEnv("YUM4LESS_FEEDBACK_ADMIN_KEY", originalFeedbackAdminKey);
+  });
+
+  it("returns 401 without admin auth", async () => {
+    delete process.env.YUM4LESS_FEEDBACK_ADMIN_KEY;
+
+    const response = await GET(new Request("http://localhost/api/analytics/events"));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Unauthorized.",
+    });
+    expect(listRecentAnalyticsEvents).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 with the wrong admin key", async () => {
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "expected-key";
+
+    const response = await GET(
+      new Request("http://localhost/api/analytics/events", {
+        headers: { Authorization: "Bearer wrong-key" },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(listRecentAnalyticsEvents).not.toHaveBeenCalled();
+  });
+
+  it("returns events when admin auth is valid", async () => {
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
+    listRecentAnalyticsEvents.mockResolvedValue({
+      events: [
+        {
+          id: 1,
+          receivedAt: "2026-08-05T12:00:00.000Z",
+          eventName: "location_search_completed",
+          sessionId: "abc",
+          properties: { mode: "zip" },
+          appEnv: "production",
+        },
+      ],
+    });
+
+    const response = await GET(
+      new Request("http://localhost/api/analytics/events?limit=50", {
+        headers: { Authorization: "Bearer test-admin-key" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      events: [
+        {
+          id: 1,
+          receivedAt: "2026-08-05T12:00:00.000Z",
+          eventName: "location_search_completed",
+          sessionId: "abc",
+          properties: { mode: "zip" },
+          appEnv: "production",
+        },
+      ],
+    });
+    expect(listRecentAnalyticsEvents).toHaveBeenCalledWith({
+      limit: 50,
+      eventName: undefined,
+    });
+  });
+
+  it("passes notice through when the repository returns one", async () => {
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
+    listRecentAnalyticsEvents.mockResolvedValue({
+      events: [],
+      notice: "Analytics list reads from Postgres only.",
+    });
+
+    const response = await GET(
+      new Request("http://localhost/api/analytics/events", {
+        headers: { "X-Yum4Less-Admin-Key": "test-admin-key" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      events: [],
+      notice: "Analytics list reads from Postgres only.",
+    });
   });
 });
 

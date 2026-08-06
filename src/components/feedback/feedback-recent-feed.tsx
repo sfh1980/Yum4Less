@@ -2,6 +2,8 @@ import type { PublicFeedbackRow } from "@/lib/feedback/feedback-types";
 
 type FeedbackRecentFeedProps = {
   rows: PublicFeedbackRow[];
+  /** Owner console uses quieter empty copy than the old public feed. */
+  emptyMessage?: string;
 };
 
 const ISSUE_TYPE_LABELS: Record<PublicFeedbackRow["issueType"], string> = {
@@ -13,11 +15,12 @@ const ISSUE_TYPE_LABELS: Record<PublicFeedbackRow["issueType"], string> = {
   other: "Other",
 };
 
-export function FeedbackRecentFeed({ rows }: FeedbackRecentFeedProps) {
+export function FeedbackRecentFeed({ rows, emptyMessage }: FeedbackRecentFeedProps) {
   if (rows.length === 0) {
     return (
       <p className="panel-copy">
-        No recent public feedback yet. Submissions appear here after they are saved.
+        {emptyMessage ??
+          "No recent public feedback yet. Submissions appear here after they are saved."}
       </p>
     );
   }

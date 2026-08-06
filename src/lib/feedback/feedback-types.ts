@@ -14,6 +14,9 @@ export const FEEDBACK_LIMITS = {
   productDescriptionMax: 200,
   noteMax: 500,
   recentFeedLimit: 20,
+  /** Owner console / optional ?limit= on GET /api/feedback */
+  ownerListDefault: 50,
+  listLimitMax: 100,
 } as const;
 
 export type FeedbackInput = {

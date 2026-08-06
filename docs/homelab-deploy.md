@@ -857,6 +857,7 @@ YUM4LESS_ANALYTICS_SINK: "postgres"
 # NEXT_PUBLIC_YUM4LESS_ANALYTICS is baked at image *build* time (CI passes =1) — runtime alone is not enough
 ```
 
+**Owner console (2026-08-06):** after Watchtower pulls an image that includes `/owner`, open `https://yum4less.com/owner` and paste `YUM4LESS_FEEDBACK_ADMIN_KEY` to browse recent feedback + Postgres analytics. Not linked from shopper nav; see [`docs/feedback-path.md`](feedback-path.md). Curl still works for `GET /api/feedback` and `GET /api/analytics/events` with the same key.
 ### 12.2 `cloudflared` Custom App shape
 
 ```yaml

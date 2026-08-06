@@ -148,6 +148,22 @@ describe("GET /api/feedback", () => {
         },
       ],
     });
+    expect(listRecentCustomerFeedback).toHaveBeenCalledWith(20);
+  });
+
+  it("clamps optional limit for owner console requests", async () => {
+    process.env.YUM4LESS_FEEDBACK_ENABLED = "1";
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
+    listRecentCustomerFeedback.mockResolvedValue([]);
+
+    const response = await GET(
+      new Request("http://localhost/api/feedback?limit=999", {
+        headers: { Authorization: "Bearer test-admin-key" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(listRecentCustomerFeedback).toHaveBeenCalledWith(100);
   });
 });
 
