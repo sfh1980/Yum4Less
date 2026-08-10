@@ -14,7 +14,7 @@
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`** — last published rollback pin **`f337317`** ([CI **31070957928**](https://github.com/sfh1980/Yum4Less/actions/runs/31070957928)); includes owner console `/owner` (feedback + analytics).
+**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`** — last published rollback pin **`800c450`** ([CI **31426780947**](https://github.com/sfh1980/Yum4Less/actions/runs/31426780947)); includes owner `/owner` pagination + session-grouped analytics.
 
 **Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
@@ -2417,8 +2417,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| Homelab ingest + Watchtower (GHCR) | 2026-08-06 | **Green** — [31070957928](https://github.com/sfh1980/Yum4Less/actions/runs/31070957928) @ `f337317`; verify / integration / e2e / semgrep / **publish-image** / **publish-ingest-image** success. Owner `/owner` console. Watchtower pull on TrueNAS still owner-confirm |
-| GHCR `publish-image` (CI) | 2026-08-06 | **Green** — [31070957928](https://github.com/sfh1980/Yum4Less/actions/runs/31070957928) @ `f337317` (`:homelab` + SHA + `:latest`). Prior: [30944198468](https://github.com/sfh1980/Yum4Less/actions/runs/30944198468) @ `eaee42a` |
+| Homelab ingest + Watchtower (GHCR) | 2026-08-10 | **Green** — [31426780947](https://github.com/sfh1980/Yum4Less/actions/runs/31426780947) @ `800c450`; verify / integration / e2e / semgrep / **publish-image** / **publish-ingest-image** success. Owner `/owner` pagination. Watchtower pull on TrueNAS still owner-confirm |
+| GHCR `publish-image` (CI) | 2026-08-10 | **Green** — [31426780947](https://github.com/sfh1980/Yum4Less/actions/runs/31426780947) @ `800c450` (`:homelab` + SHA + `:latest`). Prior: [31070957928](https://github.com/sfh1980/Yum4Less/actions/runs/31070957928) @ `f337317` |
 | Compose `app`+`db` containerize | 2026-07-20 | **Local proof** — build OK; db healthy→app start; `GET /` 200; market-search `dataSource=database`; unit **1052/1052**; integration **48/48**; Semgrep clean on Dockerfile/compose; remote CI later green on containerize commit |
 | Aldi `023` heal (`yum4less_dev`) | 2026-07-16 | **OK** — probes true; backup `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`; stores/PO/migrations unchanged (281/308/23) |
 | Wave 1c docs-only (portal rule) | 2026-07-16 | Docs only — `yum4less-frontend-workflow.mdc` + `web-frontend-standards.md` + Continuity; **no** product code; unit/e2e gates N/A for this slice |
