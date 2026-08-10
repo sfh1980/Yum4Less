@@ -34,8 +34,11 @@ export async function insertCustomerFeedback(feedback: FeedbackInput) {
 
 export async function listRecentCustomerFeedback(
   limit: number = FEEDBACK_LIMITS.recentFeedLimit,
-): Promise<PublicFeedbackRow[]> {
+  offset: number = 0,
+): Promise<{ feedback: PublicFeedbackRow[]; hasMore: boolean }> {
   const pool = getDbPool();
+  const safeLimit = Math.max(1, Math.floor(limit));
+  const safeOffset = Math.max(0, Math.floor(offset));
   const result = await pool.query<{
     id: number;
     received_at: Date;
@@ -53,18 +56,24 @@ export async function listRecentCustomerFeedback(
         product_description,
         note
       from customer_feedback
-      order by received_at desc
-      limit $1
+      order by received_at desc, id desc
+      limit $1 offset $2
     `,
-    [limit],
+    [safeLimit + 1, safeOffset],
   );
 
-  return result.rows.map((row) => ({
-    id: Number(row.id),
-    receivedAt: row.received_at.toISOString(),
-    issueType: row.issue_type,
-    chainLabel: row.chain_label,
-    productDescription: row.product_description,
-    note: row.note,
-  }));
+  const hasMore = result.rows.length > safeLimit;
+  const pageRows = hasMore ? result.rows.slice(0, safeLimit) : result.rows;
+
+  return {
+    feedback: pageRows.map((row) => ({
+      id: Number(row.id),
+      receivedAt: row.received_at.toISOString(),
+      issueType: row.issue_type,
+      chainLabel: row.chain_label,
+      productDescription: row.product_description,
+      note: row.note,
+    })),
+    hasMore,
+  };
 }

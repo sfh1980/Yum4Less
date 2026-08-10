@@ -40,14 +40,16 @@ Apply `db/init/007_customer_feedback.sql` before enabling feedback in deployed e
 
 Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FEEDBACK_ADMIN_KEY` into the unlock field. The key is stored in **sessionStorage for that tab only** and sent as `Authorization: Bearer …` to:
 
-- `GET /api/feedback?limit=50`
-- `GET /api/analytics/events?limit=50`
+- `GET /api/feedback?limit=50&offset=0` (then `offset=50`, `100`, … via **Show next 50**)
+- `GET /api/analytics/events?limit=50&offset=0` (same load-more pattern)
+
+Analytics are shown **grouped by session** (all loaded events for each `session_id`). Responses include `hasMore` so the console can offer the next page without dumping the full table at once.
 
 Curl still works:
 
 ```bash
-curl -sS https://yum4less.com/api/feedback -H "X-Yum4Less-Admin-Key: <secret>"
-curl -sS https://yum4less.com/api/analytics/events -H "X-Yum4Less-Admin-Key: <secret>"
+curl -sS "https://yum4less.com/api/feedback?limit=50&offset=0" -H "X-Yum4Less-Admin-Key: <secret>"
+curl -sS "https://yum4less.com/api/analytics/events?limit=50&offset=0" -H "X-Yum4Less-Admin-Key: <secret>"
 ```
 
 Analytics list reads **Postgres** only (`YUM4LESS_ANALYTICS_SINK=postgres`). Other sinks return an empty list with a notice.

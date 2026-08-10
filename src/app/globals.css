@@ -1993,6 +1993,33 @@ body.modal-open {
   font-size: 0.85rem;
 }
 
+.owner-analytics-sessions {
+  display: grid;
+  gap: 1rem;
+}
+
+.owner-analytics-session {
+  padding: 0.85rem 1rem;
+}
+
+.owner-analytics-session-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.owner-analytics-session-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.owner-load-more-row {
+  margin-top: 0.85rem;
+}
+
 .owner-analytics-properties {
   margin: 0.45rem 0 0;
   padding: 0.65rem 0.75rem;

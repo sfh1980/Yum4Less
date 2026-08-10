@@ -9,7 +9,7 @@ import {
 import { appendAnalyticsEvent } from "@/lib/analytics/analytics-sink";
 import { validateAnalyticsEventPayload } from "@/lib/analytics/analytics-validation";
 import { isFeedbackListAuthorized } from "@/lib/feedback/feedback-admin-auth";
-import { clampListLimit } from "@/lib/list-limit";
+import { clampListLimit, clampListOffset } from "@/lib/list-limit";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
 
 /** Owner console: list recent Postgres analytics rows (same admin key as feedback). */
@@ -29,16 +29,21 @@ export async function GET(request: Request) {
     ANALYTICS_LIST_LIMITS.default,
     ANALYTICS_LIST_LIMITS.max,
   );
+  const offset = clampListOffset(url.searchParams.get("offset"));
   const eventName = url.searchParams.get("eventName")?.trim() || undefined;
 
   try {
-    const { events, notice } = await listRecentAnalyticsEvents({
+    const { events, hasMore, notice } = await listRecentAnalyticsEvents({
       limit,
+      offset,
       eventName,
     });
     return NextResponse.json({
       ok: true,
       events,
+      hasMore,
+      limit,
+      offset,
       ...(notice ? { notice } : {}),
     });
   } catch (error) {

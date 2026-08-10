@@ -159,10 +159,11 @@ describe("GET /api/analytics/events", () => {
           appEnv: "production",
         },
       ],
+      hasMore: false,
     });
 
     const response = await GET(
-      new Request("http://localhost/api/analytics/events?limit=50", {
+      new Request("http://localhost/api/analytics/events?limit=50&offset=0", {
         headers: { Authorization: "Bearer test-admin-key" },
       }),
     );
@@ -180,9 +181,13 @@ describe("GET /api/analytics/events", () => {
           appEnv: "production",
         },
       ],
+      hasMore: false,
+      limit: 50,
+      offset: 0,
     });
     expect(listRecentAnalyticsEvents).toHaveBeenCalledWith({
       limit: 50,
+      offset: 0,
       eventName: undefined,
     });
   });
@@ -191,6 +196,7 @@ describe("GET /api/analytics/events", () => {
     process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
     listRecentAnalyticsEvents.mockResolvedValue({
       events: [],
+      hasMore: false,
       notice: "Analytics list reads from Postgres only.",
     });
 
@@ -204,6 +210,9 @@ describe("GET /api/analytics/events", () => {
     await expect(response.json()).resolves.toEqual({
       ok: true,
       events: [],
+      hasMore: false,
+      limit: 50,
+      offset: 0,
       notice: "Analytics list reads from Postgres only.",
     });
   });

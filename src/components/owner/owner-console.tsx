@@ -10,7 +10,7 @@ import {
 } from "@/lib/feedback/feedback-types";
 
 const OWNER_ADMIN_KEY_STORAGE = "yum4less.owner-admin-key.v1";
-const OWNER_LIST_LIMIT = FEEDBACK_LIMITS.ownerListDefault;
+const OWNER_PAGE_SIZE = FEEDBACK_LIMITS.ownerListDefault;
 
 type LoadState = "idle" | "loading" | "ready" | "error";
 
@@ -43,13 +43,32 @@ function authHeaders(key: string): HeadersInit {
   };
 }
 
+function mergeById<T extends { id: number }>(existing: T[], incoming: T[]): T[] {
+  const seen = new Set(existing.map((row) => row.id));
+  const merged = [...existing];
+  for (const row of incoming) {
+    if (!seen.has(row.id)) {
+      merged.push(row);
+      seen.add(row.id);
+    }
+  }
+  return merged;
+}
+
 export function OwnerConsole() {
   const [draftKey, setDraftKey] = useState("");
   const [activeKey, setActiveKey] = useState("");
   const [loadState, setLoadState] = useState<LoadState>("idle");
+  const [loadingMore, setLoadingMore] = useState<"feedback" | "analytics" | null>(
+    null,
+  );
   const [error, setError] = useState<string | undefined>();
   const [feedback, setFeedback] = useState<PublicFeedbackRow[]>([]);
   const [events, setEvents] = useState<PublicAnalyticsEventRow[]>([]);
+  const [feedbackHasMore, setFeedbackHasMore] = useState(false);
+  const [analyticsHasMore, setAnalyticsHasMore] = useState(false);
+  const [feedbackNextOffset, setFeedbackNextOffset] = useState(0);
+  const [analyticsNextOffset, setAnalyticsNextOffset] = useState(0);
   const [analyticsNotice, setAnalyticsNotice] = useState<string | undefined>();
 
   useEffect(() => {
@@ -60,82 +79,149 @@ export function OwnerConsole() {
     }
   }, []);
 
-  const loadLists = useCallback(async (key: string) => {
-    if (!key.trim()) {
-      setLoadState("idle");
-      setError(undefined);
-      setFeedback([]);
-      setEvents([]);
-      setAnalyticsNotice(undefined);
-      return;
-    }
-
-    setLoadState("loading");
-    setError(undefined);
-
-    try {
-      const [feedbackResponse, analyticsResponse] = await Promise.all([
-        fetch(`/api/feedback?limit=${OWNER_LIST_LIMIT}`, {
-          headers: authHeaders(key),
-          cache: "no-store",
-        }),
-        fetch(`/api/analytics/events?limit=${OWNER_LIST_LIMIT}`, {
-          headers: authHeaders(key),
-          cache: "no-store",
-        }),
-      ]);
-
-      if (feedbackResponse.status === 401 || analyticsResponse.status === 401) {
-        setLoadState("error");
-        setError(
-          "Wrong or missing admin key, or YUM4LESS_FEEDBACK_ADMIN_KEY is not set on the server.",
-        );
+  const loadPage = useCallback(
+    async (
+      key: string,
+      options: {
+        reset: boolean;
+        feedbackOffset: number;
+        analyticsOffset: number;
+        which?: "both" | "feedback" | "analytics";
+      },
+    ) => {
+      if (!key.trim()) {
+        setLoadState("idle");
+        setError(undefined);
         setFeedback([]);
         setEvents([]);
+        setFeedbackHasMore(false);
+        setAnalyticsHasMore(false);
+        setFeedbackNextOffset(0);
+        setAnalyticsNextOffset(0);
         setAnalyticsNotice(undefined);
         return;
       }
 
-      const feedbackJson = (await feedbackResponse.json()) as {
-        ok?: boolean;
-        feedback?: PublicFeedbackRow[];
-        error?: string;
-      };
-      const analyticsJson = (await analyticsResponse.json()) as {
-        ok?: boolean;
-        events?: PublicAnalyticsEventRow[];
-        notice?: string;
-        error?: string;
-      };
-
-      if (!feedbackResponse.ok || !feedbackJson.ok) {
-        setLoadState("error");
-        setError(feedbackJson.error ?? "Could not load feedback.");
-        return;
+      const which = options.which ?? "both";
+      if (options.reset) {
+        setLoadState("loading");
+      } else if (which === "feedback") {
+        setLoadingMore("feedback");
+      } else if (which === "analytics") {
+        setLoadingMore("analytics");
       }
+      setError(undefined);
 
-      if (!analyticsResponse.ok || !analyticsJson.ok) {
+      try {
+        const fetches: Promise<Response>[] = [];
+        const fetchKinds: Array<"feedback" | "analytics"> = [];
+
+        if (which === "both" || which === "feedback") {
+          fetchKinds.push("feedback");
+          fetches.push(
+            fetch(
+              `/api/feedback?limit=${OWNER_PAGE_SIZE}&offset=${options.feedbackOffset}`,
+              { headers: authHeaders(key), cache: "no-store" },
+            ),
+          );
+        }
+        if (which === "both" || which === "analytics") {
+          fetchKinds.push("analytics");
+          fetches.push(
+            fetch(
+              `/api/analytics/events?limit=${OWNER_PAGE_SIZE}&offset=${options.analyticsOffset}`,
+              { headers: authHeaders(key), cache: "no-store" },
+            ),
+          );
+        }
+
+        const responses = await Promise.all(fetches);
+        if (responses.some((response) => response.status === 401)) {
+          setLoadState("error");
+          setError(
+            "Wrong or missing admin key, or YUM4LESS_FEEDBACK_ADMIN_KEY is not set on the server.",
+          );
+          setFeedback([]);
+          setEvents([]);
+          setFeedbackHasMore(false);
+          setAnalyticsHasMore(false);
+          setFeedbackNextOffset(0);
+          setAnalyticsNextOffset(0);
+          setAnalyticsNotice(undefined);
+          return;
+        }
+
+        for (let index = 0; index < responses.length; index += 1) {
+          const kind = fetchKinds[index]!;
+          const response = responses[index]!;
+          const json = (await response.json()) as {
+            ok?: boolean;
+            feedback?: PublicFeedbackRow[];
+            events?: PublicAnalyticsEventRow[];
+            hasMore?: boolean;
+            limit?: number;
+            offset?: number;
+            notice?: string;
+            error?: string;
+          };
+
+          if (!response.ok || !json.ok) {
+            setLoadState("error");
+            setError(
+              json.error ??
+                (kind === "feedback"
+                  ? "Could not load feedback."
+                  : "Could not load analytics."),
+            );
+            return;
+          }
+
+          const pageOffset = json.offset ?? 0;
+
+          if (kind === "feedback") {
+            const page = json.feedback ?? [];
+            setFeedback((current) =>
+              options.reset ? page : mergeById(current, page),
+            );
+            setFeedbackHasMore(Boolean(json.hasMore));
+            setFeedbackNextOffset(pageOffset + page.length);
+          } else {
+            const page = json.events ?? [];
+            setEvents((current) =>
+              options.reset ? page : mergeById(current, page),
+            );
+            setAnalyticsHasMore(Boolean(json.hasMore));
+            setAnalyticsNextOffset(pageOffset + page.length);
+            if (options.reset || json.notice) {
+              setAnalyticsNotice(json.notice);
+            }
+          }
+        }
+
+        setLoadState("ready");
+      } catch {
         setLoadState("error");
-        setError(analyticsJson.error ?? "Could not load analytics.");
-        return;
+        setError(
+          "Owner lists could not be loaded. Check the network and try again.",
+        );
+      } finally {
+        setLoadingMore(null);
       }
-
-      setFeedback(feedbackJson.feedback ?? []);
-      setEvents(analyticsJson.events ?? []);
-      setAnalyticsNotice(analyticsJson.notice);
-      setLoadState("ready");
-    } catch {
-      setLoadState("error");
-      setError("Owner lists could not be loaded. Check the network and try again.");
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!activeKey) {
       return;
     }
-    void loadLists(activeKey);
-  }, [activeKey, loadLists]);
+    void loadPage(activeKey, {
+      reset: true,
+      feedbackOffset: 0,
+      analyticsOffset: 0,
+      which: "both",
+    });
+  }, [activeKey, loadPage]);
 
   function handleUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,9 +238,48 @@ export function OwnerConsole() {
     setError(undefined);
     setFeedback([]);
     setEvents([]);
+    setFeedbackHasMore(false);
+    setAnalyticsHasMore(false);
+    setFeedbackNextOffset(0);
+    setAnalyticsNextOffset(0);
     setAnalyticsNotice(undefined);
   }
 
+  function handleRefresh() {
+    if (!activeKey) {
+      return;
+    }
+    void loadPage(activeKey, {
+      reset: true,
+      feedbackOffset: 0,
+      analyticsOffset: 0,
+      which: "both",
+    });
+  }
+
+  function handleLoadMoreFeedback() {
+    if (!activeKey || !feedbackHasMore) {
+      return;
+    }
+    void loadPage(activeKey, {
+      reset: false,
+      feedbackOffset: feedbackNextOffset,
+      analyticsOffset: analyticsNextOffset,
+      which: "feedback",
+    });
+  }
+
+  function handleLoadMoreAnalytics() {
+    if (!activeKey || !analyticsHasMore) {
+      return;
+    }
+    void loadPage(activeKey, {
+      reset: false,
+      feedbackOffset: feedbackNextOffset,
+      analyticsOffset: analyticsNextOffset,
+      which: "analytics",
+    });
+  }
   return (
     <div className="owner-console">
       <section className="panel panel-padding">
@@ -192,7 +317,7 @@ export function OwnerConsole() {
               <button
                 className="secondary-button"
                 disabled={loadState === "loading"}
-                onClick={() => void loadLists(activeKey)}
+                onClick={handleRefresh}
                 type="button"
               >
                 Refresh
@@ -217,22 +342,52 @@ export function OwnerConsole() {
           <section className="panel panel-padding">
             <h2>Customer feedback</h2>
             <p className="panel-copy">
-              Recent rows from <code>customer_feedback</code> (up to {OWNER_LIST_LIMIT}
-              ).
+              Rows from <code>customer_feedback</code>, newest first. Loaded{" "}
+              {feedback.length}
+              {feedbackHasMore ? "+" : ""}.
             </p>
             <FeedbackRecentFeed
-              emptyMessage="No recent feedback."
+              emptyMessage="No feedback yet."
               rows={feedback}
             />
+            {feedbackHasMore ? (
+              <div className="action-row owner-load-more-row">
+                <button
+                  className="secondary-button"
+                  disabled={loadingMore === "feedback"}
+                  onClick={handleLoadMoreFeedback}
+                  type="button"
+                >
+                  {loadingMore === "feedback"
+                    ? "Loading…"
+                    : `Show next ${OWNER_PAGE_SIZE} feedback`}
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section className="panel panel-padding">
-            <h2>Analytics events</h2>
+            <h2>Analytics by session</h2>
             <p className="panel-copy">
-              Recent Postgres rows from <code>analytics_events</code> (coarse,
-              allowlisted properties only).
+              Events from <code>analytics_events</code>, grouped by session.
+              Loaded {events.length}
+              {analyticsHasMore ? "+" : ""} (pages of {OWNER_PAGE_SIZE}).
             </p>
             <OwnerAnalyticsFeed notice={analyticsNotice} rows={events} />
+            {analyticsHasMore ? (
+              <div className="action-row owner-load-more-row">
+                <button
+                  className="secondary-button"
+                  disabled={loadingMore === "analytics"}
+                  onClick={handleLoadMoreAnalytics}
+                  type="button"
+                >
+                  {loadingMore === "analytics"
+                    ? "Loading…"
+                    : `Show next ${OWNER_PAGE_SIZE} events`}
+                </button>
+              </div>
+            ) : null}
           </section>
         </div>
       ) : null}

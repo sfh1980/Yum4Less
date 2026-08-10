@@ -22,9 +22,10 @@ describe("customer_feedback repository (integration)", () => {
 
     expect(id).toBeGreaterThan(0);
 
-    const rows = await listRecentCustomerFeedback(5);
-    const saved = rows.find((row) => row.id === id);
+    const { feedback, hasMore } = await listRecentCustomerFeedback(5);
+    const saved = feedback.find((row) => row.id === id);
 
+    expect(hasMore).toBe(false);
     expect(saved).toMatchObject({
       issueType: "wrong_price",
       chainLabel: "Kroger",

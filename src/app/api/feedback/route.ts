@@ -9,7 +9,7 @@ import {
 } from "@/lib/feedback/feedback-repository";
 import { FEEDBACK_LIMITS } from "@/lib/feedback/feedback-types";
 import { validateFeedbackPayload } from "@/lib/feedback/feedback-validation";
-import { clampListLimit } from "@/lib/list-limit";
+import { clampListLimit, clampListOffset } from "@/lib/list-limit";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
 
 export async function GET(request: Request) {
@@ -19,7 +19,13 @@ export async function GET(request: Request) {
   }
 
   if (!isFeedbackEnabled()) {
-    return NextResponse.json({ ok: true, feedback: [] });
+    return NextResponse.json({
+      ok: true,
+      feedback: [],
+      hasMore: false,
+      limit: FEEDBACK_LIMITS.recentFeedLimit,
+      offset: 0,
+    });
   }
 
   if (!isFeedbackListAuthorized(request)) {
@@ -32,10 +38,11 @@ export async function GET(request: Request) {
     FEEDBACK_LIMITS.recentFeedLimit,
     FEEDBACK_LIMITS.listLimitMax,
   );
+  const offset = clampListOffset(url.searchParams.get("offset"));
 
   try {
-    const feedback = await listRecentCustomerFeedback(limit);
-    return NextResponse.json({ ok: true, feedback });
+    const { feedback, hasMore } = await listRecentCustomerFeedback(limit, offset);
+    return NextResponse.json({ ok: true, feedback, hasMore, limit, offset });
   } catch (error) {
     return publicApiErrorResponse(
       "api.feedback.GET",

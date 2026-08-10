@@ -15,3 +15,17 @@ export function clampListLimit(
 
   return Math.min(maxLimit, Math.max(1, Math.floor(parsed)));
 }
+
+/** Clamp a query-string offset (0+). Invalid → 0. */
+export function clampListOffset(raw: string | null): number {
+  if (raw == null || raw.trim() === "") {
+    return 0;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
+
+  return Math.floor(parsed);
+}

@@ -96,7 +96,13 @@ describe("GET /api/feedback", () => {
     const response = await GET(new Request("http://localhost/api/feedback"));
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true, feedback: [] });
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      feedback: [],
+      hasMore: false,
+      limit: 20,
+      offset: 0,
+    });
     expect(listRecentCustomerFeedback).not.toHaveBeenCalled();
   });
 
@@ -117,16 +123,19 @@ describe("GET /api/feedback", () => {
   it("returns recent rows when feedback is enabled and admin auth is valid", async () => {
     process.env.YUM4LESS_FEEDBACK_ENABLED = "1";
     process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
-    listRecentCustomerFeedback.mockResolvedValue([
-      {
-        id: 1,
-        receivedAt: "2026-06-04T12:00:00.000Z",
-        issueType: "general",
-        chainLabel: null,
-        productDescription: null,
-        note: "Nice work",
-      },
-    ]);
+    listRecentCustomerFeedback.mockResolvedValue({
+      feedback: [
+        {
+          id: 1,
+          receivedAt: "2026-06-04T12:00:00.000Z",
+          issueType: "general",
+          chainLabel: null,
+          productDescription: null,
+          note: "Nice work",
+        },
+      ],
+      hasMore: false,
+    });
 
     const response = await GET(
       new Request("http://localhost/api/feedback", {
@@ -147,23 +156,35 @@ describe("GET /api/feedback", () => {
           note: "Nice work",
         },
       ],
+      hasMore: false,
+      limit: 20,
+      offset: 0,
     });
-    expect(listRecentCustomerFeedback).toHaveBeenCalledWith(20);
+    expect(listRecentCustomerFeedback).toHaveBeenCalledWith(20, 0);
   });
 
-  it("clamps optional limit for owner console requests", async () => {
+  it("clamps optional limit and passes offset for owner console requests", async () => {
     process.env.YUM4LESS_FEEDBACK_ENABLED = "1";
     process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
-    listRecentCustomerFeedback.mockResolvedValue([]);
+    listRecentCustomerFeedback.mockResolvedValue({
+      feedback: [],
+      hasMore: true,
+    });
 
     const response = await GET(
-      new Request("http://localhost/api/feedback?limit=999", {
+      new Request("http://localhost/api/feedback?limit=999&offset=50", {
         headers: { Authorization: "Bearer test-admin-key" },
       }),
     );
 
     expect(response.status).toBe(200);
-    expect(listRecentCustomerFeedback).toHaveBeenCalledWith(100);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      hasMore: true,
+      limit: 100,
+      offset: 50,
+    });
+    expect(listRecentCustomerFeedback).toHaveBeenCalledWith(100, 50);
   });
 });
 

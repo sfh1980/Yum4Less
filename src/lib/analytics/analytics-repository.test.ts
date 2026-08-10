@@ -16,6 +16,7 @@ describe("listRecentAnalyticsEvents", () => {
     const result = await listRecentAnalyticsEvents({ limit: 10 });
 
     expect(result.events).toEqual([]);
+    expect(result.hasMore).toBe(false);
     expect(result.notice).toMatch(/Postgres only/i);
   });
 });
