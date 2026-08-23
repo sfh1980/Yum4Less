@@ -8,7 +8,7 @@ Yum4Less keeps **first-party analytics** separate from customer feedback. Analyt
 | --- | --- | --- |
 | In-app feedback form (`/feedback`) | Bug reports, wrong-price reports, general product feedback | Implemented (disabled by default; enable with `YUM4LESS_FEEDBACK_ENABLED=1`) |
 | Admin list API (`GET /api/feedback`) | Owner reads recent rows with `YUM4LESS_FEEDBACK_ADMIN_KEY` | Implemented |
-| Owner console (`/owner`) | Key-gated UI for recent feedback + Postgres analytics events | Implemented (same admin key; not linked from shopper nav; `noindex`) |
+| Owner console (`/owner`) | Key-gated UI for recent feedback, Postgres analytics events, and weekly-ad ingredient Yes/No review | Implemented (same admin key; not linked from shopper nav; `noindex`) |
 | Public recent-feedback feed on `/feedback` | — | **Removed** from shopper UI (2026-08-04) |
 | Analytics transparency panel on `/feedback` | — | **Removed** from shopper UI (2026-08-04); ops detail stays in this doc / env |
 | Email or support inbox | Complaints and account-free MVP contact | Planned (owner choice) |
@@ -31,7 +31,7 @@ Do **not** store full shopping carts, checkout receipts, geolocation, ZIP codes,
 ```env
 # Enable anonymous Postgres-backed feedback (POST /api/feedback)
 # YUM4LESS_FEEDBACK_ENABLED=1
-# YUM4LESS_FEEDBACK_ADMIN_KEY=<secret for GET /api/feedback, GET /api/analytics/events, and /owner unlock>
+# YUM4LESS_FEEDBACK_ADMIN_KEY=<secret for GET /api/feedback, GET /api/analytics/events, GET/POST /api/owner/ingredient-reviews, and /owner unlock>
 ```
 
 Apply `db/init/007_customer_feedback.sql` before enabling feedback in deployed environments.
@@ -42,6 +42,7 @@ Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FE
 
 - `GET /api/feedback?limit=50&offset=0` (then `offset=50`, `100`, … via **Show next 50**)
 - `GET /api/analytics/events?limit=50&offset=0` (same load-more pattern)
+- `GET /api/owner/ingredient-reviews` and `POST /api/owner/ingredient-reviews` (Yes writes a nickname alias; No writes a skip)
 
 Analytics are shown **grouped by session** (all loaded events for each `session_id`). Responses include `hasMore` so the console can offer the next page without dumping the full table at once.
 
@@ -50,6 +51,7 @@ Curl still works:
 ```bash
 curl -sS "https://yum4less.com/api/feedback?limit=50&offset=0" -H "X-Yum4Less-Admin-Key: <secret>"
 curl -sS "https://yum4less.com/api/analytics/events?limit=50&offset=0" -H "X-Yum4Less-Admin-Key: <secret>"
+curl -sS "https://yum4less.com/api/owner/ingredient-reviews" -H "X-Yum4Less-Admin-Key: <secret>"
 ```
 
 Analytics list reads **Postgres** only (`YUM4LESS_ANALYTICS_SINK=postgres`). Other sinks return an empty list with a notice.

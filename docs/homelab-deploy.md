@@ -93,7 +93,7 @@ docker ps --filter name=yum4less-
 
 Schema is applied from `db/init/` on first **db** container start (physical SQL only — the ledger table is created but **not populated** until the first migration pass). **`schema_migrations` is the source of truth** for which init files have been applied; `npm run db:migrate` or any path that runs `ensure-test-db.mjs` reconciles the ledger (backfill on existing volumes, apply missing files such as `015`/`016` on long-lived dev DBs).
 
-After each deploy that adds or changes files under `db/init/`, run:
+After each deploy that adds or changes files under `db/init/` (including **`024_ingredient_match_catalog.sql`** for weekly-ad skip/review tables), run:
 
 ```bash
 docker compose up -d db
@@ -857,7 +857,8 @@ YUM4LESS_ANALYTICS_SINK: "postgres"
 # NEXT_PUBLIC_YUM4LESS_ANALYTICS is baked at image *build* time (CI passes =1) — runtime alone is not enough
 ```
 
-**Owner console (2026-08-06):** after Watchtower pulls an image that includes `/owner`, open `https://yum4less.com/owner` and paste `YUM4LESS_FEEDBACK_ADMIN_KEY` to browse recent feedback + Postgres analytics. Not linked from shopper nav; see [`docs/feedback-path.md`](feedback-path.md). Curl still works for `GET /api/feedback` and `GET /api/analytics/events` with the same key.
+**Owner console (2026-08-06; ingredient review 2026-08-22):** after Watchtower pulls an image that includes `/owner`, open `https://yum4less.com/owner` and paste `YUM4LESS_FEEDBACK_ADMIN_KEY` to browse recent feedback, Postgres analytics, and **weekly-ad ingredient Yes/No**. Not linked from shopper nav; see [`docs/feedback-path.md`](feedback-path.md). Curl still works for `GET /api/feedback` and `GET /api/analytics/events` with the same key. Image pull alone does **not** create `ingredient_match_skips` / `ingredient_match_reviews` — apply `024` on the live Postgres volume after this catalog-expansion image lands.
+
 ### 12.2 `cloudflared` Custom App shape
 
 ```yaml

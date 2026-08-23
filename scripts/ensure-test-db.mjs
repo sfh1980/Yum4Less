@@ -117,6 +117,17 @@ function ensureTargetDatabaseExists() {
   applyAllInitSqlFiles(activeDatabaseName);
 }
 
+function applyCiThemealdbRankSeedClones(databaseName) {
+  const sqlPath = join(
+    process.cwd(),
+    "db",
+    "ci",
+    "024_themealdb_rank_seed_clones.sql",
+  );
+  const sql = readFileSync(sqlPath, "utf8");
+  psqlApplySqlContent(databaseName, sql);
+}
+
 function applyCiBootstrapStoresIfNeeded() {
   if (
     process.env.YUM4LESS_CI_BOOTSTRAP_STORES !== "1" &&
@@ -132,6 +143,7 @@ function applyCiBootstrapStoresIfNeeded() {
     const sqlPath = join(process.cwd(), "db", "ci", "014_ci_bootstrap_stores.sql");
     const sql = readFileSync(sqlPath, "utf8");
     psqlApplySqlContent(activeDatabaseName, sql);
+    applyCiThemealdbRankSeedClones(activeDatabaseName);
   } catch (error) {
     console.warn(
       "CI bootstrap store seed skipped or failed:",

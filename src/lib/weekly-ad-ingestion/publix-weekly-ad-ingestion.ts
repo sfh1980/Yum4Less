@@ -5,7 +5,10 @@ import { fetchPublixWeeklyAdPage } from "@/lib/weekly-ad-ingestion/publix-weekly
 import { buildPublixWeeklyAdUrl } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-url";
 import { resolvePublixStoreForZip } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-store";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
-import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import {
+  matchWeeklyAdOffers,
+  weeklyAdMatchFieldsFromIngest,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import { parsePublixWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-publix-weekly-ad";
 import type {
   WeeklyAdIngestionClient,
@@ -99,7 +102,7 @@ async function ingestPublixWeeklyAd(
       sourceUrl,
       observedAt: fetchedAt,
       rawOffers,
-      trackedIngredientIds: input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input),
     });
     const supplementalResult = await resolvePublixFlippSupplementalOffers({
       input,
@@ -168,7 +171,7 @@ async function resolvePublixFlippSupplementalOffers(input: {
       chain: "publix",
       zipCode: input.input.zipCode,
       merchantName: PUBLIX_FLIPP_MERCHANT,
-      trackedIngredientIds: input.input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input.input),
     });
 
     if (flippResult.rawOffers.length === 0) {
@@ -181,7 +184,7 @@ async function resolvePublixFlippSupplementalOffers(input: {
       sourceUrl: `${input.sourceUrl}#flipp-supplemental`,
       observedAt: input.fetchedAt,
       rawOffers: flippResult.rawOffers,
-      trackedIngredientIds: input.input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input.input),
     });
 
     return {

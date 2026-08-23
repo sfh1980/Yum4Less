@@ -12,7 +12,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 **Slices 1–5** and shell **D1–D6** are **shipped**. Full locks and history → [`PROJECT_CONTINUITY.md` → Redesign plan](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25).
 
-**What shipped:** Settings-first gate; **5-tab** bottom nav (Home, Deals, Cook, Saved, Settings); welcome **budget + dietary** → ingredients → tap rank → **stacked accordion** results; **merged** internal + TheMealDB ranking; store scope from Settings (**Kroger, Aldi, Publix, and Food Lion** dropdown); ingredient gate + category chips; map **link + overlay**; session pantry prompt; light/dark/system theme with **mockup Theme C/D tokens** (D7, 2026-06-26).
+**What shipped:** Settings-first gate; **6-tab** bottom nav (Home, Deals, Cook, Saved, Feedback, Settings); welcome **budget + dietary** → ingredients → pantry → rank → **stacked accordion** results; **TheMealDB** dinners with a full recipe page (short internal writeups are not ranked); store scope from Settings (**Kroger, Aldi, Publix, and Food Lion** dropdown); ingredient gate + category chips; map **link + overlay**; session pantry prompt; light/dark theme with **mockup Theme C/D tokens** (D7, 2026-06-26).
 
 **Still deferred:** Saved persistence, cuisine filters (R11).
 
@@ -75,10 +75,10 @@ Without Postgres + ingest, ranked pricing stays empty and map pins remain bootst
 
 *Redesign slices 1–5 + D1–D7 shipped — see [Active redesign](#active-redesign-2026-06-25) for deferred items.*
 
-1. **Settings** (tab): GPS (**For Better Results, Use My GPS Location**) and/or ZIP (**Find stores based on my ZIP** → map center-pin confirm), radius, shopping style, **Kroger / Aldi / Publix / Food Lion store** selection, theme — required on first visit or after factory reset.
-2. **Home:** welcome budget + dietary → sale ingredients at selected stores (all-sale default or manual narrow) → tap rank.
+1. **Setup wizard** (first visit or factory reset): splash → GPS or ZIP (ZIP places a map pin) → radius → shopping style → store checkboxes. Theme toggle is in the chrome. **Feedback** is a sixth bottom-nav tab and stays available during setup.
+2. **Home:** budget → dietary → sale ingredients at selected stores (all-sale default or manual narrow) → pantry → rank. After setup, Settings reopens the same wizard screens.
 3. Yum4Less discovers nearby stores (map overlay link on ingredients step) and scopes UI to **selected stores only**.
-4. The recommendation engine ranks **merged** internal + TheMealDB recipes against ingested prices where gates allow.
+4. The recommendation engine ranks **TheMealDB** recipes that have a full recipe page against ingested prices where gates allow.
 5. Results show **Est.** totals, trust labels, and shopping plans in a **stacked accordion** (one card expanded at a time). **Cook** tab opens results when a rank session exists.
 
 **v1 production-ranked chains:** Kroger family (official API + weekly-ad fallback), Aldi, Publix, and Food Lion (weekly-ad). Walmart and other unsupported chains remain map context only.
@@ -112,7 +112,7 @@ Expired sale rows stay in `price_observations` as history; unchanged sales with 
 
 **Kroger:** set `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`; verify with `npm run probe:kroger-api`. Certification API omits store-specific prices.
 
-**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **Owner console:** `/owner` (admin key; feedback + analytics lists).
+**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; feedback + analytics lists + weekly-ad ingredient Yes/No review).
 
 **Semgrep:** CI runs `semgrep ci` when the GitHub repository secret `SEMGREP_APP_TOKEN` is set (Settings → Secrets → Actions). Local Cursor hooks use the optional `semgrep` CLI — not the same token. Lint, unit tests, build, integration, and E2E remain merge gates.
 
@@ -162,7 +162,7 @@ Full list and ingest flags → `.env.example`.
 | `npm run sync:provider-prices` | Sync official provider prices into `price_observations` |
 | `npm run ingest:map-catalog` | **Cron primary** — OSM Overpass + Kroger-family Location API + nearest OSM Aldi + Publix locator context → Postgres `stores` rows; complements search-time ephemeral OSM merge |
 | `npm run ingest:map-catalog:fixture` | Deterministic OSM-style map catalog for CI/rehearsal (ZIP 23111; skips live Kroger/Publix locators) |
-| `npm run ingest:weekly-ads:scheduled` | **Daily cron wrapper** — map catalog → weekly-ad ingest → provider sync → TheMealDB import |
+| `npm run ingest:weekly-ads:scheduled` | **Daily cron wrapper** — map catalog → weekly-ad ingest (live matching vs Postgres `ingredients`; unmatched lines skip / auto-create / `/owner` review) → provider sync → TheMealDB import |
 | `npm run ingest:weekly-ads:scheduled:fixture` | Rehearsal cron path (CI/tests — fixture weekly ads only) |
 | `npm run probe:kroger-api` | Kroger OAuth + store pricing probe (owner-only, not CI) |
 | `npm run probe:publix-api` | Publix store-locator probe (owner-only, not CI) |
@@ -270,7 +270,7 @@ Agent checklists, Playwright MCP flow, and MCP setup → [`AGENTS.md`](AGENTS.md
 
 ## Recipe sources
 
-- **Rankings:** internal Postgres recipe library **merged** with TheMealDB imports in one ranked list (scheduled ingest — cache-first, not live on every search).
+- **Rankings:** TheMealDB imports with a full recipe page (scheduled ingest — cache-first, not live on every search). Short internal-library writeups are not ranked.
 - **Research only:** Spoonacular / Edamam — not in shopper UI.
 
 ---

@@ -1,13 +1,27 @@
+import type { CatalogIngredient } from "@/lib/ingredient-category";
 import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
 import { scoreProviderProductMatch } from "@/lib/providers/provider-price-matching";
 import { getWeeklyAdIngredientSearchTerms } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-search-terms";
 import { shouldRejectWeeklyAdIngredientMatch } from "@/lib/weekly-ad-ingestion/weekly-ad-match-guards";
 import type {
+  WeeklyAdIngestionInput,
   WeeklyAdOffer,
   WeeklyAdRawOffer,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 export const MIN_WEEKLY_AD_MATCH_CONFIDENCE = 0.55;
+
+export function weeklyAdMatchFieldsFromIngest(input: WeeklyAdIngestionInput): {
+  trackedIngredientIds: string[];
+  catalogIngredients?: CatalogIngredient[];
+  extraSearchTermsByIngredientId?: Record<string, string[]>;
+} {
+  return {
+    trackedIngredientIds: input.trackedIngredientIds,
+    catalogIngredients: input.catalogIngredients,
+    extraSearchTermsByIngredientId: input.extraSearchTermsByIngredientId,
+  };
+}
 
 export function matchWeeklyAdOffers(input: {
   chain: WeeklyAdOffer["chain"];
@@ -16,8 +30,11 @@ export function matchWeeklyAdOffers(input: {
   observedAt: string;
   rawOffers: WeeklyAdRawOffer[];
   trackedIngredientIds: string[];
+  catalogIngredients?: CatalogIngredient[];
+  extraSearchTermsByIngredientId?: Record<string, string[]>;
 }): WeeklyAdOffer[] {
-  const trackedIngredients = INTERNAL_CATALOG_INGREDIENTS.filter((ingredient) =>
+  const catalog = input.catalogIngredients ?? INTERNAL_CATALOG_INGREDIENTS;
+  const trackedIngredients = catalog.filter((ingredient) =>
     input.trackedIngredientIds.includes(ingredient.id),
   );
 
@@ -32,7 +49,12 @@ export function matchWeeklyAdOffers(input: {
       | undefined;
 
     for (const ingredient of trackedIngredients) {
-      for (const searchTerm of getWeeklyAdIngredientSearchTerms(ingredient)) {
+      const extraTerms = input.extraSearchTermsByIngredientId?.[ingredient.id] ?? [];
+      const searchTerms = [
+        ...getWeeklyAdIngredientSearchTerms(ingredient),
+        ...extraTerms,
+      ];
+      for (const searchTerm of [...new Set(searchTerms)]) {
         if (
           shouldRejectWeeklyAdIngredientMatch({
             ingredientId: ingredient.id,

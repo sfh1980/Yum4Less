@@ -1,3 +1,4 @@
+import type { CatalogIngredient } from "@/lib/ingredient-category";
 import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
 import {
   fetchFlippSearchOffersForMerchant,
@@ -21,6 +22,8 @@ export async function resolveFlippWeeklyAdOffersForChain(input: {
   zipCode: string;
   merchantName: FlippWeeklyAdMerchantName;
   trackedIngredientIds: string[];
+  catalogIngredients?: CatalogIngredient[];
+  extraSearchTermsByIngredientId?: Record<string, string[]>;
 }): Promise<{ rawOffers: WeeklyAdRawOffer[]; retrievalLabel: string }> {
   const merchantOffers = await fetchFlippSearchOffersForMerchant({
     zipCode: input.zipCode,
@@ -41,11 +44,14 @@ export async function resolveFlippWeeklyAdOffersForChain(input: {
     input.chain,
     rawOffers,
     input.trackedIngredientIds,
+    input.catalogIngredients,
+    input.extraSearchTermsByIngredientId,
   );
 
   if (unmatchedIngredientIds.length > 0) {
     const supplementalSearchTerms = buildSupplementalFlippSearchTermsForIngredients(
       unmatchedIngredientIds,
+      input.catalogIngredients,
     );
     if (supplementalSearchTerms.length > 0) {
       const supplementalOffers = await fetchFlippWeeklyAdOffersForSearchTerms({
@@ -65,6 +71,7 @@ export async function resolveFlippWeeklyAdOffersForChain(input: {
 
 export function buildSupplementalFlippSearchTermsForIngredients(
   unmatchedIngredientIds: string[],
+  catalogIngredients: CatalogIngredient[] = INTERNAL_CATALOG_INGREDIENTS,
 ) {
   const terms: string[] = [];
   const seen = new Set<string>();
@@ -74,7 +81,7 @@ export function buildSupplementalFlippSearchTermsForIngredients(
       break;
     }
 
-    const ingredient = INTERNAL_CATALOG_INGREDIENTS.find(
+    const ingredient = catalogIngredients.find(
       (entry) => entry.id === ingredientId,
     );
     if (!ingredient) {
@@ -104,6 +111,8 @@ function listUnmatchedTrackedIngredientIds(
   chain: WeeklyAdChain,
   rawOffers: WeeklyAdRawOffer[],
   trackedIngredientIds: string[],
+  catalogIngredients?: CatalogIngredient[],
+  extraSearchTermsByIngredientId?: Record<string, string[]>,
 ) {
   const matchedOffers = matchWeeklyAdOffers({
     chain,
@@ -112,6 +121,8 @@ function listUnmatchedTrackedIngredientIds(
     observedAt: new Date().toISOString(),
     rawOffers,
     trackedIngredientIds,
+    catalogIngredients,
+    extraSearchTermsByIngredientId,
   });
 
   const matchedIds = new Set(

@@ -7,7 +7,10 @@ import {
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
-import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import {
+  matchWeeklyAdOffers,
+  weeklyAdMatchFieldsFromIngest,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import { getWeeklyAdIngredientSearchTerms } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-search-terms";
 import { parseWalmartWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-walmart-weekly-ad";
 import { fetchWalmartWeeklyAdPage } from "@/lib/weekly-ad-ingestion/walmart-weekly-ad-fetcher";
@@ -77,9 +80,7 @@ async function ingestWalmartWeeklyAd(
     let matchedCount = countMatchedOffers(rawOffers, input);
 
     if (matchedCount === 0) {
-      const supplementalSearchTerms = buildSupplementalFlippSearchTerms(
-        input.trackedIngredientIds,
-      );
+      const supplementalSearchTerms = buildSupplementalFlippSearchTerms(input);
       if (supplementalSearchTerms.length > 0) {
         const supplementalOffers = await fetchFlippWeeklyAdOffersForSearchTerms({
           zipCode: input.zipCode,
@@ -151,7 +152,7 @@ async function ingestWalmartWeeklyAd(
       sourceUrl,
       observedAt: fetchedAt,
       rawOffers,
-      trackedIngredientIds: input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input),
     });
     matchedCount = offers.filter((offer) => offer.ingredientId).length;
 
@@ -196,15 +197,21 @@ async function ingestWalmartWeeklyAd(
   }
 }
 
-function buildSupplementalFlippSearchTerms(trackedIngredientIds: string[]) {
+function buildSupplementalFlippSearchTerms(input: WeeklyAdIngestionInput) {
+  const catalog = input.catalogIngredients ?? INTERNAL_CATALOG_INGREDIENTS;
   const terms = new Set<string>();
-  for (const ingredient of INTERNAL_CATALOG_INGREDIENTS) {
-    if (!trackedIngredientIds.includes(ingredient.id)) {
+  for (const ingredient of catalog) {
+    if (!input.trackedIngredientIds.includes(ingredient.id)) {
       continue;
     }
     for (const searchTerm of getWeeklyAdIngredientSearchTerms(ingredient)) {
       if (searchTerm.length >= 4) {
         terms.add(searchTerm);
+      }
+    }
+    for (const extra of input.extraSearchTermsByIngredientId?.[ingredient.id] ?? []) {
+      if (extra.length >= 4) {
+        terms.add(extra);
       }
     }
   }
@@ -223,6 +230,6 @@ function countMatchedOffers(
     }),
     observedAt: new Date().toISOString(),
     rawOffers,
-    trackedIngredientIds: input.trackedIngredientIds,
+    ...weeklyAdMatchFieldsFromIngest(input),
   }).filter((offer) => offer.ingredientId).length;
 }

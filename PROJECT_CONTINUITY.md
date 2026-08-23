@@ -4,17 +4,17 @@
 
 ---
 
-## Resume (as of 2026-08-04)
+## Resume (as of 2026-08-23)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
-**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Wave 2 Part 1 Aldi `023` heal CLOSED** (2026-07-16). **Wave 2 Part 2 Phase 0 Q1–Q3 locked** (2026-07-16) — Q1 map-align code **not started**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). **Tier 2 comprehensive audit CLOSED (audit-only)** (2026-07-16) — see [`docs/audits/tier2-comprehensive-audit-report.md`](docs/audits/tier2-comprehensive-audit-report.md). **Tier 2 SS-1 CLOSED** (2026-07-16) — Postgres compose bind loopback-only + `check:compose-db-bind` CI gate. **Vision-gap + UI stub sweep CLOSED (investigation checkpoint)** (2026-07-17). **Vision-gap sprint items 1–6 CLOSED** (2026-07-20) — External API Integration Standard; exact-coord privacy; geo-only Settings completion; nav finish-setup hints; Cook honest empty + rank invalidation; confidence-flexed price wording (`directional-provider-match` → Low). CI [**29770945822**](https://github.com/sfh1980/Yum4Less/actions/runs/29770945822) @ `adf0a62`. P1-ops freshness (`fresh_24h=0` on `yum4less_dev`) remains **open** (ops).
+**Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Onboarding wizard setup UI** is on branch **`feat/onboarding-wizard`** (not merged to `master` `389db47`). Section H visual restyle of Home/Deals/Cook/Saved and Q34/Q35 remain out of scope. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Wave 2 Part 1 Aldi `023` heal CLOSED** (2026-07-16). **Wave 2 Part 2 Phase 0 Q1–Q3 locked** (2026-07-16) — Q1 map-align code **not started**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). **Tier 2 comprehensive audit CLOSED (audit-only)** (2026-07-16) — see [`docs/audits/tier2-comprehensive-audit-report.md`](docs/audits/tier2-comprehensive-audit-report.md). **Tier 2 SS-1 CLOSED** (2026-07-16) — Postgres compose bind loopback-only + `check:compose-db-bind` CI gate. **Vision-gap + UI stub sweep CLOSED (investigation checkpoint)** (2026-07-17). **Vision-gap sprint items 1–6 CLOSED** (2026-07-20) — External API Integration Standard; exact-coord privacy; geo-only Settings completion; nav finish-setup hints; Cook honest empty + rank invalidation; confidence-flexed price wording (`directional-provider-match` → Low). CI [**29770945822**](https://github.com/sfh1980/Yum4Less/actions/runs/29770945822) @ `adf0a62`. P1-ops freshness (`fresh_24h=0` on `yum4less_dev`) remains **open** (ops).
 
-**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db`. **GHCR published (2026-07-24):** `yum4less-app` + `yum4less-ingest` — SHA **`54e7b60`** + `:homelab` + `:latest` ([CI **30104150018**](https://github.com/sfh1980/Yum4Less/actions/runs/30104150018)). **TrueNAS Apps `app`+`db` CLOSED (2026-07-22)**; **Ingest + Watchtower CLOSED (2026-07-26)**. **Cloudflare Tunnel WAN CLOSED (2026-08-03/04)** — `https://yum4less.com/` via `cloudflared` Custom App + tunnel `truenas-homelab`; app `TRUST_PROXY_*` set; feedback + analytics (postgres sink) enabled on box. **Shopper UI copy trim (2026-08-04)** — feedback analytics panel + public feed removed; trust expand shortened; CI bakes `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` into published app images. **ZIP search-center picker + Settings button order (2026-08-04)** — GPS left / ZIP Find right; ZIP path opens map pin confirm before search. **Owner console (`/owner`, 2026-08-06; pagination 2026-08-10)** — key-gated feedback + Postgres analytics by session with **Show next 50** load-more. Runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8–§12. **Still open:** unattended **3am** cron confirmation, Watchtower first hourly scan, backup/restore drill. Compose local still **`127.0.0.1:3000`** / **`127.0.0.1:5433`** (SS-1).
+**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db`. **GHCR published (2026-07-24):** `yum4less-app` + `yum4less-ingest` — SHA **`54e7b60`** + `:homelab` + `:latest` ([CI **30104150018**](https://github.com/sfh1980/Yum4Less/actions/runs/30104150018)). **TrueNAS Apps `app`+`db` CLOSED (2026-07-22)**; **Ingest + Watchtower CLOSED (2026-07-26)**. **Cloudflare Tunnel WAN CLOSED (2026-08-03/04)** — `https://yum4less.com/` via `cloudflared` Custom App + tunnel `truenas-homelab`; app `TRUST_PROXY_*` set; feedback + analytics (postgres sink) enabled on box. **Shopper UI copy trim (2026-08-04)** — feedback analytics panel + public feed removed; trust expand shortened; CI bakes `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` into published app images. **ZIP search-center picker + Settings button order (2026-08-04)** — GPS left / ZIP Find right; ZIP path opens map pin confirm before search. **Owner console (`/owner`, 2026-08-06; pagination 2026-08-10; ingredient review 2026-08-22)** — key-gated feedback, Postgres analytics by session with **Show next 50** load-more, and weekly-ad ingredient Yes/No review. Runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8–§12. **Still open:** unattended **3am** cron confirmation, Watchtower first hourly scan, backup/restore drill. Compose local still **`127.0.0.1:3000`** / **`127.0.0.1:5433`** (SS-1).
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`** — last published rollback pin **`800c450`** ([CI **31426780947**](https://github.com/sfh1980/Yum4Less/actions/runs/31426780947)); includes owner `/owner` pagination + session-grouped analytics.
+**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`** — last published rollback pin **`800c450`** ([CI **31426780947**](https://github.com/sfh1980/Yum4Less/actions/runs/31426780947)); catalog-expansion + `/owner` ingredient review land after this master push publishes a new `:homelab` digest. TrueNAS must apply `024_ingredient_match_catalog.sql` on the live volume (`npm run db:migrate` / ingest migrate) — Watchtower image pull does not by itself create the new tables.
 
 **Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
@@ -30,6 +30,7 @@
 
 ### Working today (honest)
 
+- **Weekly-ad catalog expansion (2026-08-22, first live run 2026-08-23):** live ingest matches against Postgres `ingredients` (97-id `internal-catalog.ts` remains seed/fallback and fixture SSOT). Unmatched flyer lines skip, auto-create simple foods, or queue on private `/owner` for Yes (nickname) / No (skip). **Local scheduled ingest 2026-08-23** (ZIP **23111**): `ingredients` **295 → 319**; **17** `weekly-ad-catalog` foods; **22** `weekly-ad` aliases; **112** junk skips; **743** pending `/owner` reviews; TheMealDB sale-driven import saw **115** sale ingredients and imported **15** meals (**7** new catalog ingredients). Auto-create is looser than the pears/oranges examples (brand SKUs became foods). Shopper pantry leftovers stay **1–4**. Do **not** claim more dinners — eligible dinner count was not measured (several imports were desserts/sandwiches). Live TrueNAS does not have this path until Watchtower pulls the post-merge `:homelab` image **and** `024` is applied.
 - **Pipeline debug:** local-only `GET /api/debug/pipeline?zip=23111` or `?lat=&lng=` with `YUM4LESS_DEBUG_ROUTES_ENABLED=1` **and** `YUM4LESS_DEBUG_ADMIN_KEY` (`Authorization: Bearer` or `X-Yum4Less-Admin-Key`) — stores, ranked observations, 24h freshness, missing tracked ingredients (404 in production; 401 without key)
 - **Phase B price/store alignment:** `resolveInternalKrogerStoreId` maps locationId via `source_store_id` / canonical `kroger-{locationId}` / name heuristics — **no** single-store guess fallback (H8); ingest prefers catalog `source_store_id` for Kroger weekly-ad URLs; `sync:provider-prices` resolves nearest Kroger-family numeric `locationId` via `resolvePreferredKrogerLocationIdForZip` (Postgres + haversine; optional `KROGER_LOCATION_ID` escape hatch) and logs `skip_reason`
 - **Phase C location trust:** `store-location-reconciliation` — ranked coord updates need agreeing witnesses (Kroger API + Geocodio address; optional USDA SNAP corroboration); change-only when delta ≥ `YUM4LESS_LOCATION_CHANGE_THRESHOLD_METERS` (default 50); single provider witness still promotes bootstrap → API
@@ -53,15 +54,15 @@
 - **Daily ingest path:** `npm run ingest:weekly-ads:scheduled` (+ fixture rehearsal variant) runs **map-catalog before weekly-ad**, then provider sync + TheMealDB
 - **Weekly-ad chain status:** Aldi and Food Lion remain Flipp-first; Publix scrape stays primary with Flipp supplemental ingredient backfill; Lidl is now wired Flipp-first for ingest rehearsal but remains **coming soon / context only** for shopper meal pricing until a live coverage re-measure clears promotion review
 - **Store scope:** shopping style + store picker (single/multi); unselected stores hidden from map, ingredients, and rank; prefs persisted in localStorage (`setupComplete` marker — slice 5 routes on this)
-- **Recipe ranking:** internal library + sale-matched TheMealDB imports in **one merged list** (default path); shopper opt-in UI **deleted (slice 5)**
-- **TheMealDB on search:** merged ranking reads Postgres imports cache-first; **search-time refresh removed** — cron/script only (`npm run ingest:themealdb:from-sales`); scheduled-refresh notice when imports stale/empty; attribution + meal link on cards when saved imports rank
+- **Recipe ranking:** TheMealDB dinners with a numeric meal-page id and enough sale overlap; short internal-library writeups stay in the catalog but are **not** ranked
+- **TheMealDB on search:** ranking reads Postgres imports cache-first; **search-time refresh removed** — cron/script only (`npm run ingest:themealdb:from-sales`); scheduled-refresh notice when imports stale/empty; full-recipe link on cards when `source_recipe_id` is numeric
 - **Ingredient row trust (D/E):** `Est.` / directional labels; `Prices from ~N hours ago` on ingredient rows **and meal cards** when metadata present; honest empty state (daily scheduled refresh, not live on search)
-- **Redesign UX (slices 1–5 + D1–D7):** Settings-first gate (localStorage `setupComplete`); **5-tab shell** (Home, Deals, Cook, Saved, Settings); welcome budget/dietary → ingredients → **pantry → suggest recipes** → **stacked accordion** results (rank intermediate screen removed 2026-07-09); **merged** internal + TheMealDB ranking (no shopper opt-in); no `dinnersWanted` cap; store scope from Settings dropdown; ingredient gate (all vs manual) + category chips; map **link + overlay** on ingredients step; session **pantry** prompt on results; light/dark/**system** theme with **mockup Theme C/D tokens** (warm pantry light default on first visit)
+- **Redesign UX (slices 1–5 + D1–D7 + onboarding wizard on `feat/onboarding-wizard`):** sequential setup (splash → GPS or ZIP+pin → radius → shopping style → stores → budget → dietary → ingredients → pantry → rank). **6-tab shell** (Home, Deals, Cook, Saved, **Feedback**, Settings). Locked Home/Deals/Cook/Saved tabs are tappable message pages until setup. After `setupComplete`, Settings reuses the same wizard screens. Theme is a chrome moon/sun toggle (light↔dark). Home/Deals/Cook/Saved **content restyle (Section H)** is not in this slice. **Stacked accordion** results; TheMealDB-only ranking with full recipe links; no `dinnersWanted` cap.
 - **Settings store dropdown:** `settings-store-selection.ts` — Kroger, Aldi, Publix, and Food Lion always listed for selection (not gated on `recommendationEnabled`); prefers non-OSM catalog rows; **excludes `fixture-osm-*` / legacy `osm-node-90000*`**; live OSM kept only when no same-chain catalog pin within 1.5 mi; **same-chain collocated catalog twins collapsed** via `collapseSameChainCollocatedCatalogStores` (0.05 mi default; Kroger 0.15 mi exception); auto market search on Settings when setup incomplete
 - **SSR tab hydration:** `SSR_DEFAULT_APP_TAB` + post-mount `resolveAppTabFromPreferences()` — fixes React hydration mismatch when saved Settings route to Home
 - Continental US ZIP + browser geolocation; dev seed ZIPs when `GEOCODIO_API_KEY` unset
 - v1 ranked chains when gates pass: **Kroger family**, **Aldi**, **Publix**, and **Food Lion**; Walmart and other unsupported chains remain map/context only
-- Trust UI: `Est.`, directional, limited coverage, verify-in-store — **inline on results/deals/cards** (`PricingTrustHeadsUpBanner` with expandable detail from removed modal copy, help hints, hero copy); map pins use “Coming soon” / context-only for unsupported chains; **no trust explainer modal** (removed 2026-06-26 audit)
+- Trust UI: short estimate line on results plus `?` links to `/faq` articles; `/terms` is a short beta disclaimer. Open dinner cards show total, cook time, confidence/freshness/difficulty pills, Save, and nested Store/Shopping/Recipe sections. Map pins use “Coming soon” / context-only for unsupported chains; **no trust explainer modal** (removed 2026-06-26 audit)
 - Fixture weekly-ad ingest for **CI/rehearsal and automated tests only** (not owner daily workflow)
 - **`npm run setup:local`:** provisions `yum4less_dev` + `yum4less_test`, runs post-setup `npm test` smoke, fixture `DATABASE_URL_TEST` guidance, geolocation-or-ZIP next-step copy; SNAP ensure stays non-fatal inside `ensureTestDatabase()` only
 - Public APIs read-only by default in production; response sanitization; route validation + rate limits
@@ -98,10 +99,10 @@
 3. ~~**Slice 3** — Settings store scope + remove **40-ingredient POST cap** + prefs persistence~~ **done (2026-06-25)**
 4. ~~**Slice 4** — **Stacked** accordion meal cards (title-only collapsed; **one expanded at a time**); delete carousel component/CSS/tests~~ **done (2026-06-25)**
 5. ~~**Slice 5** — Welcome **budget + dietary** → straight to **ingredients**; **Settings-first gate**; tap steps; full-screen rank loading; **delete hidden TheMealDB opt-in dead code**~~ **done (2026-06-25)**
-6. ~~**Deferred D1–D6** — 5-tab shell, theme tokens, ingredient gate/chips, map-as-link overlay, session pantry UI~~ **done (2026-06-25)** — Saved persistence + cuisine chips (R11) still deferred
+6. ~~**Deferred D1–D6** — 5-tab shell, theme tokens, ingredient gate/chips, map-as-link overlay, session pantry UI~~ **done (2026-06-25)** — cuisine chips (R11) still deferred. Device-local Saved meals shipped 2026-08-20 (no accounts; cross-device still deferred).
 7. ~~**D7 — Color/tokens port** — Theme C (dark) + Theme D (light) from `.private/tokens.css`; flat page bg; system font; light default first visit; recolor buttons/panels/nav/map~~ **done (2026-06-26)** — owner browser verify pending
 
-**Later (when reprioritized):** confirm unattended 3am ingest cron + Watchtower first hourly scan; backup/restore drill on TrueNAS; GYAM Cloudflare hostname on same tunnel; Saved tab persistence; cuisine chips (R11); optional SNAP CSV ingest; Walmart ranked path.
+**Later (when reprioritized):** Section H restyle of Home/Deals/Cook/Saved + Q34/Q35 compact Settings; confirm unattended 3am ingest cron + Watchtower first hourly scan; backup/restore drill on TrueNAS; GYAM Cloudflare hostname on same tunnel; Saved tab persistence; cuisine chips (R11); optional SNAP CSV ingest; Walmart ranked path.
 
 ---
 
@@ -155,11 +156,12 @@ Under **Shopping style**:
 
 ### Recipes / TheMealDB
 
-- **Merge** internal library + TheMealDB imports into **one ranked list** (single sort). No separate quota per source.
-- **UI:** merged ranking only; **delete** hidden opt-in UI + shopper `recipeSourceOptIn` path in **slice 5** (keep merged default + zero-import tests).
+- **Shopper ranking (2026-08-20 lock):** TheMealDB imports with a **numeric meal-page id** only. Short internal-library writeups stay in the catalog for matching; they are **not** listed.
+- **Sale overlap** still required (at least three overlapping sale ingredients) plus a priced shopping plan, budget, and `maxIngredients`.
+- **UI:** no shopper recipe-source picker; hidden opt-in / `recipeSourceOptIn` already deleted (slice 5).
 - **Zero TheMealDB meals in results:** tests must prove empty is from workflow/settings/eligibility, not a bug.
-- **Stale/empty imports:** internal meals still rank; show scheduled-refresh `shopperNotice` when catalog refresh is due (cron/script path — no search-time import in production).
-- **Attribution** on cards when TheMealDB meals rank. Loading copy: list is **not exhaustive**; honest TheMealDB sourcing.
+- **Stale/empty imports:** do **not** fall back to internal 3-step recipes. Show scheduled-refresh `shopperNotice` when catalog refresh is due (cron/script path — no search-time import in production).
+- **Attribution** + “Open full recipe instructions” on cards when a meal-page URL exists. Loading copy: list is **not exhaustive**.
 
 ### Ingredient scope and API
 
@@ -182,7 +184,7 @@ Under **Shopping style**:
 ### Flow and session (shipped)
 
 - **Flow reset** = return to welcome and/or wipe **session** data (ingredient scope, results) without clearing saved Settings.
-- **Factory reset (Settings)** = clear saved Settings preference data → **Settings-first gate** runs again (same as first visit).
+- **Reset Preferences (Settings)** = clear saved Settings preference data → **Settings-first gate** runs again (same as first visit).
 - **Session:** derived state (`cookEnabled`, pantry items), not a DB row.
 
 ### Map (shipped D5)
@@ -243,11 +245,124 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 **Discipline:** One slice per PR/session when possible. After each slice: changelog + decision log updates in this file.
 
-**TheMealDB opt-in cleanup:** **done (slice 5)** — removed hidden UI, `externalRecipeOptIn`, and shopper `recipeSourceOptIn` API path; public API accepts `internal-library` only; merged ranking default unchanged.
+**TheMealDB opt-in cleanup:** **done (slice 5)** — hidden UI and shopper `recipeSourceOptIn` path removed. **Superseded 2026-08-20:** shopper ranking is TheMealDB-with-full-recipe-page only; short internal writeups are not ranked.
 
 ---
 
 ## Changelog (newest first)
+
+### 2026-08-23 — First live catalog-expansion ingest (local) + docs for Watchtower
+
+**Shipped (docs + pending master publish):** Recorded the first live `ingest:weekly-ads:scheduled` run that used Postgres `ingredients` as the matching SSOT (code from 2026-08-22). Public docs now describe `/owner` ingredient Yes/No, skip/alias tables, and the TrueNAS migrate step Watchtower does not perform.
+
+**Local ingest evidence (ZIP 23111, 2026-08-23 ~15:28–15:38Z):** Map catalog OSM=261 / ranked=10 / Publix locator=10. Tracked weekly-ad matches: Kroger 41, Aldi 35, Publix 222, Food Lion 51, Lidl 26, Walmart 22. Freshness **772/772** ranked in-stock in 24h. Catalog tables on `yum4less_dev`: `ingredients` **319** (97 internal + 205 TheMealDB + **17** `weekly-ad-catalog`); **22** `ingredient_aliases` source `weekly-ad`; **112** `ingredient_match_skips` (junk-heuristic); **743** pending `ingredient_match_reviews` (Publix 329, Walmart 101, Food Lion 97, Kroger 90, Aldi 88, Lidl 38). TheMealDB from-sales: sale ingredients=**115**, imported=**15**, aliases saved=9, new catalog ingredients=**7**.
+
+**Limits:** Auto-create wrote brand/prepared SKUs (Yoplait, bakery apple pie, onion rings). Walmart non-food (laptops, patio) landed in review, not skip. Eligible dinner count not measured — do not claim more shopper dinners. This run was **local Docker Postgres**, not TrueNAS. Live site updates only after green `master` CI `publish-image` / `publish-ingest-image` and Watchtower pull **plus** `024` migrate on the live volume.
+
+**Evidence:** Prior slice gates 2026-08-22 (`npm test` **1117/1117**, integration **50/50**, build pass). This session: Postgres MCP counts above. Remote CI / Watchtower pull not yet run at doc write time.
+
+### 2026-08-22 — Ingest food catalog expansion
+
+**Shipped:** Weekly-ad matching loads food ids from Postgres `ingredients` (`024_ingredient_match_catalog.sql`: skip table + owner review queue). Fixture ingest still uses the 97-id seed. Flyer titles can become nicknames (`ingredient_aliases` source `weekly-ad`); junk is skipped; unclear lines wait on private `/owner` Yes/No (`GET/POST /api/owner/ingredient-reviews`, same admin key as feedback). Public `/api/recommendations` stays read-only. Pantry leftovers remain 1–4; TheMealDB ≥3 sale-overlap rule unchanged.
+
+**Limits:** This does not by itself mean shoppers see more dinners. Eligible-recipe count only grows after ingest actually persists more sale ids and TheMealDB import runs. Homelab image is not this branch.
+
+**Evidence:** `npm test` **1117/1117** (198 files). `npm run test:integration` **50/50**. `npm run build` pass (includes `/api/owner/ingredient-reviews`). Postgres MCP: `ingredient_match_skips` + `ingredient_match_reviews` present on `yum4less_dev`. e2e not run (shopper flow unchanged). Semgrep MCP timed out this session.
+
+### 2026-08-21 — Settings FAQ/Terms, Reset Preferences, legal-page return
+
+**Shipped:** The Settings tab (the “Let’s get started” screen after setup) now has FAQ and Terms of use links; Feedback still has them. `/faq` no longer links to Terms. The wipe-setup control is labeled **Reset Preferences**. Client navigation back from `/faq` or `/terms` restores the last tab and chrome theme and does not replay splash or wipe saved prefs. A full reload still does splash → budget.
+
+**Evidence:** `npm test` **1105/1105**. Playwright against the wizard on `http://localhost:3000`: **24 passed** / **8 failed** / **2 skipped**. All four `faq-terms` cases passed, including Settings/Feedback links and Back-from-Terms theme/tab restore. The eight failures were empty ranked recipes / missing `kroger-mechanicsville` on `yum4less_dev`, not this UI slice. Isolated `npm run test:e2e:ci` (`next start` on **3100**) did not complete a clean gate this session (`output: standalone` warning; `127.0.0.1:3000` is the Compose app).
+
+### 2026-08-21 — Slim dinner cards + FAQ/Terms pages
+
+**Shipped:** Open dinner cards keep estimated total, cook time, confidence/freshness/difficulty pills, Save, and nested Store/Shopping/Recipe sections. Extra chrome stays in code behind `MEAL_CARD_SHOW_EXTENDED_CHROME`. Circle `?` controls link to `/faq/[slug]` articles. `/faq` and `/terms` are real pages. Last ready dinners restore from `sessionStorage` when Home remounts after FAQ (skipped on full reload so splash → budget still applies).
+
+**Evidence:** `npm test` **1099/1099**. `npm run test:e2e:ci` **30 passed** / 2 skipped.
+
+### 2026-08-21 — Ingredients gate in plain language
+
+**Shipped:** The Ingredients choice screen no longer says “scope ranking.” It states how many items are on sale, then two choices: **Use everything on sale** and **Choose specific sale items**. Both share the same pantry follow-up: extra items at home can unlock more dinner options.
+
+**Evidence:** `npm test` **1097/1097**. `npm run test:e2e:ci` **28 passed** / 2 skipped.
+
+### 2026-08-21 — Docs + Obsidian sync after TheMealDB ranking lock
+
+**Shipped (docs):** README, Resume, Decision log, redesign locked plan, application overview, decision trees, product-and-trust rule, e2e README, and redesign handoff now say shopper ranking is TheMealDB-with-full-recipe-page only. Pantry sticky count is documented as rank-aligned.
+
+**Ingest (local `yum4less_dev` this session):** `npm run ingest:themealdb:from-sales` imported **15** new meals; catalog **150** TheMealDB rows with numeric meal ids. Not a weekly-ad/map-catalog run.
+
+**Limits:** Homelab `yum4less.com` image is not this branch. CI still clones short seed dinners as TheMealDB rows with fake ids `900001+` on `yum4less_test` only.
+
+### 2026-08-20 — Sticky pantry dinner count; TheMealDB-only ranking
+
+**Shipped:** Pantry “dinners we can show next” stays pinned while the checklist scrolls. That count now uses the same budget / plan / ingredient-limit gates as ranking, so checking every pantry item should not jump from ~30 to ~17 on the next screen. Shopper ranking is TheMealDB-only when the meal has a numeric full-recipe page id; short internal-library writeups stay in the catalog for matching but are not listed.
+
+**Limits:** TheMealDB still needs at least three overlapping sale ingredients and a priced shopping plan. CI/e2e clones seed dinners as linked TheMealDB rows (`db/ci/024_themealdb_rank_seed_clones.sql`) so `yum4less_test` is not empty; owner `yum4less_dev` uses real imports. Fake CI meal ids `900001+` are not shopper URLs.
+
+**Evidence:** `npm test` **1097/1097** this session. `npm run test:e2e:ci` **28 passed** / 2 skipped. Build inside the e2e gate passed.
+
+### 2026-08-20 — Dinner results: price ? + full-recipe link
+
+- **Theme:** Price heads-up on Dinner recommendations is no longer a full banner. Recipe steps can link out to fuller TheMealDB instructions.
+- **Shipped:** Lone `?` next to the Dinner recommendations title (same HelpHint pattern as store coverage). Map/discovery still uses the full heads-up banner. Expanded meals with a TheMealDB attribution URL show **Open full recipe instructions**. Internal library dinners have no invented outbound link.
+- **Honest limits:** TheMealDB is a text blob (`strInstructions`), not a structured cook plan. Quality varies. Original blog `strSource` URLs are not stored yet. Internal recipes remain short curated steps.
+- **Evidence this session:** `npm test` **1093/1093**. `npm run test:e2e:ci` **28 passed** / 2 skipped (after cleaning a mixed `.next` cache). `npm run build` ran inside e2e:ci (pass).
+
+### 2026-08-20 — Store picker coverage behind help hint
+
+- **Theme:** Sale-coverage ratios on “Which stores should we use?” are no longer always-visible shopper copy.
+- **Shipped:** Small `?` next to the heading (same HelpHint pattern as ZIP/radius). Modal: tracked dinner-ingredient count + per-store estimated-price counts. Same help on the leftover Settings store fields if that panel is mounted.
+- **Honest limits:** The tracked count is unique ingredients used in the current recipe library (often ~250 locally), not a promise of that many priced items this week. Expanding recipes is a catalog/ingest slice, not this UI change.
+- **Evidence this session:** `npm test` **1089/1089**. `npm run test:e2e:ci` not run (no e2e spec or navigation wiring change).
+
+### 2026-08-20 — Pantry checklist jump, accordion scroll, device-local Saved
+
+- **Theme:** Pantry picking no longer drops checked rows; dinner cards scroll into view; Save meal uses this-browser storage (no user accounts).
+- **Shipped:** Stable near-miss checklist (merge + skip follow-up loading flash); removed Add pantry item combobox; accordion `scrollIntoView` on expand; `yum4less.saved-meals.v1` localStorage + Saved tab list. Cross-device sync still needs accounts later.
+- **Honest limits:** Suggested list is near-miss ingredients only — staples that never appear as 1–4-item misses cannot be checked. Saved totals are snapshots, not live prices.
+- **Evidence this session:** `npm test` **1087/1087**. `npm run test:e2e:ci` **28 passed** / 2 skipped. `npm run build` ran inside e2e:ci (pass).
+
+### 2026-08-20 — Splash brand title + CC0 photos
+
+- **Theme:** Give Yum4Less the top of the splash; push intro copy down; fill the gap with grocery/dinner photos.
+- **Shipped:** Large `Yum4Less` heading; CC0 WebP mosaic (produce aisle, peppers, plated dinner) in `public/splash/`; tagline + estimate copy stay below the photos. Continue unchanged.
+- **Evidence this session:** `npm test` **1085/1085**; `npm run test:e2e:ci` **28 passed** / 2 skipped. `npm run build` ran inside e2e:ci (pass).
+
+### 2026-08-20 — Splash intro copy (no loading line)
+
+- **Theme:** Splash still has Continue (auto-advance timer remains). Replace “Loading your setup…” with plain-language what/why copy.
+- **Shipped:** Dinner-planner intro + estimate/verify-in-store line. No cheapest / save-money claims.
+- **Evidence this session:** `npm test` **1085/1085** (splash unit added). `npm run test:e2e:ci` **28 passed** / 2 skipped (mockup S6 + H12). `npm run build` ran inside e2e:ci (pass).
+
+### 2026-08-20 — Onboarding wizard setup UI (`feat/onboarding-wizard`)
+
+- **Theme:** Split the live Settings form into a sequential, mobile-first setup wizard; reuse GPS/ZIP/map/prefs/rank. Home/Deals/Cook/Saved visual restyle (Section H) and Q34/Q35 stay out of this slice.
+- **Shipped on branch:** splash (2s, skip/shorten for reduced-motion); GPS vs ZIP equal-weight; GPS allow → radius (default 5 mi, no GPS pin map); GPS deny → ZIP; ZIP → Leaflet pin screen → arrow commits (no Yes/Pick-again); `/api/market-search` on leaving radius; shopping-style tiles; store checkboxes; budget then dietary; 6-tab nav with **Feedback** always open; locked tabs tappable with remaining-step copy; chrome moon/sun theme toggle. ZIP pin reuses cached pin when present so the e2e fast path does not re-hit geocode.
+- **Not shipped:** Section H restyle; different compact Settings-after-setup (Q35); mockup HTML remains throwaway (`e2e/onboarding-wizard-mockup.spec.ts` skipped, S6). Work is **not** on `master` (`389db47`).
+- **Evidence this session:** `npm test` **1084/1084**; `npm run test:e2e:ci` **28 passed** / 2 skipped (mockup S6 + H12). `npm run build` ran inside e2e:ci (pass). Integration tests not required (no DB/ingest persist change). Semgrep not run (UI/setup flow only).
+- **Honest limits:** Not merge-ready to `master` until the owner reviews the branch. Homelab image unchanged.
+
+### 2026-08-20 — Owner questionnaire for mockup-to-live UI (no product UI change)
+
+- **Theme:** Capture wants + leads for each mockup screenshot vs live Settings/ZIP-pin/Welcome flow before any rewrite.
+- **Shipped (docs-only):** [`docs/redesign/onboarding-wizard-owner-answers.md`](docs/redesign/onboarding-wizard-owner-answers.md). Linked from `docs/redesign/README.md`.
+- **Not shipped:** No `src/` UI change. Implementation waits on filled answers. Old UI remains `389db47` on `master`.
+
+### 2026-08-20 — Onboarding-wizard mockup in e2e (no product UI change)
+
+- **Theme:** Load the static GPS/ZIP wizard HTML in Playwright without touching production app code.
+- **Shipped (test-only):** `e2e/fixtures/yum4less_onboarding_wizard_v3.html` + harness that injects `src/app/theme-tokens.css`; `e2e/onboarding-wizard-mockup.spec.ts` (welcome → GPS/ZIP pin → D7 light/dark). Map in `e2e/README.md`.
+- **Not shipped:** This is **not** Settings-first product UX. Mockup still has a sixth Feedback tab and no ZIP field / save / store picker.
+- **Evidence this session:** isolated mockup spec **1/1**; `npm run test:e2e:ci` **28 passed** / 1 skipped (H12). `npm test` not required (no `src/` change).
+
+### 2026-08-20 — Layman security/UX Q&A (audit-only, no code)
+
+- **Theme:** Owner asked 30 plain-language questions (keys, HTTPS, XSS, SQL, rate limits, CSRF, CORS, headers, 404, robots, ToS, feedback-vs-reviews, etc.).
+- **Shipped:** Read-only answers in [`docs/audits/layman-security-ux-qa-2026-08-20.md`](docs/audits/layman-security-ux-qa-2026-08-20.md). No product code.
+- **Evidence this session:** Live `https://yum4less.com/` HTTPS `200`; `/robots.txt` and `/sitemap.xml` 404; `/feedback` 200; no HSTS/CSP on live headers. Postgres MCP: `customer_feedback` table present. Later the same day: specialist reports folded in (phone overlap, ranking APIs vs feedback writes, FAQ/sitemap not for v1).
+- **Honest limits:** Playwright MCP could not browse (Chrome-for-testing missing); Semgrep MCP timed out; `npm test` not run (no implementation). Not a pentest or “production-ready” claim.
 
 ### 2026-08-10 — Owner console pagination + analytics by session
 
@@ -903,7 +1018,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | P1-10 No DB migration ledger | **DEFERRED** | Migrations `015`/`016` add SQL files without ledger |
 | tsc `--noEmit` | **CLOSED** | **0 errors** (2026-07-09); CI-gated via `npm run typecheck` in verify job; B1 pantry-add test bug found during cleanup |
 | M128/M151 automation | **DEFERRED** | Homelab slice |
-| Saved persistence | **DEFERRED** | Unchanged |
+| Saved persistence | **PARTIAL** | Device-local `yum4less.saved-meals.v1` shipped 2026-08-20. Cross-device / accounts still deferred. |
 | R11 — cuisine/ethnic filter chips | **DEFERRED** | Unchanged |
 | General locator-vs-OSM dedupe (Option A) | **DEFERRED** | Must be a **universal** cross-source dedupe (distance + name/type similarity for **any** source pair) — **no** chain-specific hardcoding (not another Publix/Kroger-only patch). Option B shipped Publix-only tombstone; prioritize Option A before Aldi/Lidl locator rollout to avoid silent duplicate storefront rows. |
 
@@ -988,7 +1103,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | P1-10 No DB migration ledger | **DEFERRED** | Structural backlog |
 | tsc `--noEmit` (64 errors) | **STILL OPEN** | Test mock drift bucket; unchanged vs Batch 4 baseline |
 | M128/M151 automation | **DEFERRED** | Homelab slice |
-| Saved persistence | **DEFERRED** | Shell/tab shipped as placeholder by design for beta v1 (session-first flow, no user accounts); no persistence model or storage decision (localStorage vs DB) recorded yet — scope decision, not a technical blocker |
+| Saved persistence | **PARTIAL** | Device-local localStorage shipped 2026-08-20 (no user accounts). Cross-device sync still deferred. |
 | R11 — cuisine/ethnic filter chips | **DEFERRED** | Blocked on recipe DB cuisine tags per 2026-06-25 locked redesign plan (“hide cuisine row until DB tags exist”); recipes have generic `tags[]` / `dietary_tags[]` but no cuisine facet — data-dependency blocker, not a scope decision |
 
 **Evidence (Batch 6, this session):**
@@ -2325,7 +2440,17 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 | Date | Decision | Status |
 |------|----------|--------|
-| 2026-08-04 | **ZIP search-center pin + Settings CTA order:** Settings GPS button (left) = “For Better Results, Use My GPS Location”; ZIP Find (right) = “Find stores based on my ZIP” opens a map picker (ZIP geocode focus → click pin → confirm). Radius is measured from the chosen pin. Pin cached in `yum4less.zip-search-centers.v1` (separate from settings prefs / `stripExactCoordinates`). ZIP change clears that ZIP’s pin. Radius change re-searches from cached pin or re-opens picker. | **Active** |
+| 2026-08-23 | **First live catalog-expansion ingest (local ZIP 23111):** classify path wrote skips, auto-created foods, weekly-ad aliases, and `/owner` pending reviews. Auto-create quality and junk-heuristic gaps are follow-ups; do not claim more dinners. TrueNAS still needs image + `024` migrate. | **Active** (evidence for 2026-08-22 lock; does not change shopper flow) |
+| 2026-08-22 | **Ingest catalog expansion:** grow `ingredients` from weekly-ad ingest (nicknames + skip list + owner Yes/No). Matching SSOT is Postgres; the 97-id list is seed/fallback and fixture-only. Shopper flow stays sale foods → pantry **1–4 leftovers** → Dinner recommendations. No 50/50 pantry split. TheMealDB stays first recipe library. Public shopper APIs stay read-only; owner writes use `YUM4LESS_FEEDBACK_ADMIN_KEY`. Do not claim more dinners without ingest evidence. | **Active** (supersedes backlog “Ingredient catalog expansion (pending near-miss analysis)”) |
+| 2026-08-21 | **Settings tab FAQ/Terms + return from legal pages:** After setup, Settings shows FAQ and Terms (Feedback keeps them). `/faq` does not link to Terms. Wipe-setup control is **Reset Preferences**. Client Back from `/faq` or `/terms` restores last tab and chrome theme and skips splash; full reload still splash → budget. Prefs write only after hydration so remount does not overwrite stores/theme. | **Active** (narrows 2026-08-20 “not last-tab restore” to reload-only) |
+| 2026-08-21 | **FAQ and Terms pages:** `/faq` lists question-titled articles; `/faq/[slug]` is one article; `/terms` is a short beta disclaimer (estimates, no accounts, no price guarantee, location on-device except ZIP for store search). Circle `?` is a link to an article, not a popover. No extra bottom-nav tab. | **Active** (reverses 2026-08-20 audit Q28 “no FAQ route”) |
+| 2026-08-21 | **Open dinner cards are action-first:** immediately visible = estimated total, cook time, confidence/freshness/difficulty, Save, nested Store/Shopping/Recipe. Hidden chrome remains behind `MEAL_CARD_SHOW_EXTENDED_CHROME`. | **Active** |
+| 2026-08-20 | **Shopper dinners are TheMealDB with a full recipe page:** ranking and pantry “shown next” counts exclude short internal-library writeups. Pantry coverage uses the same budget/plan/max-ingredient gates as rank so the sticky count matches the next screen. | **Active** |
+| 2026-08-20 | **Dinner recommendations price heads-up is opt-in help:** a lone `?` next to the title; map/discovery can still show the full banner. Recipe steps may link to TheMealDB meal pages when an attribution URL exists. Internal 3-step recipes stay as written. | **Superseded** 2026-08-21: `?` opens FAQ; banner is one line plus FAQ link |
+| 2026-08-20 | **Store coverage ratios are opt-in help, not body copy:** “Which stores should we use?” shows a `?` next to the heading. The modal states how many dinner ingredients Yum4Less tracks and how many of those have estimated prices at selected stores. Always-visible `Sale-price coverage this week…` banners on that screen are removed. Honesty still exists; it is no longer a wide-open footer. | **Superseded** 2026-08-21: `?` opens FAQ; a short coverage one-liner may stay |
+| 2026-08-20 | **Saved meals (this browser):** Save from a dinner card writes `yum4less.saved-meals.v1`. No user profiles. Cross-device sync would need accounts later. Factory reset clears saved meals. Totals are snapshots with estimate copy. | **Active** |
+| 2026-08-20 | **Onboarding wizard (setup UI):** GPS allow → radius (no GPS pin map). ZIP → typed ZIP → Leaflet pin → arrow commits (no Yes/Pick-again dialog). GPS deny/unavailable → ZIP input. `/api/market-search` runs when leaving the radius screen. Feedback is a 6th bottom-nav tab and always works, including during setup. Returning with setup complete: splash → budget then dietary (not last-tab restore). Incomplete setup: splash → resume last wizard step. Cleared cache / factory reset: first-run again. No progress dots. Theme: moon/sun light↔dark in chrome; persisted `system` resolves once to binary. After `setupComplete`, Settings reuses the same wizard screens; factory reset stays on Settings. Home/Deals/Cook/Saved content restyle (Section H) and Q34/Q35 are not in this slice. | **Active** |
+| 2026-08-04 | **ZIP search-center pin + Settings CTA order:** Settings GPS button (left) = “For Better Results, Use My GPS Location”; ZIP Find (right) = “Find stores based on my ZIP” opens a map picker (ZIP geocode focus → click pin → confirm). Radius is measured from the chosen pin. Pin cached in `yum4less.zip-search-centers.v1` (separate from settings prefs / `stripExactCoordinates`). ZIP change clears that ZIP’s pin. Radius change re-searches from cached pin or re-opens picker. | **Superseded** for shopper setup UI by the 2026-08-20 wizard (pin is a full screen; arrow commits; no confirm dialog). Cache key and radius-from-pin still **Active**. |
 | 2026-08-04 | **Cloudflare Tunnel WAN live:** `yum4less.com` via TrueNAS `cloudflared` Custom App (tunnel `truenas-homelab`); origin `http://192.168.1.246:3000`. App requires `TRUST_PROXY_HEADERS=1` + `YUM4LESS_TRUSTED_PROXY_VERIFIED=1`. Published app images bake `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` at build time. Docs: [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §12. | **Closed** (tunnel healthy; cron/backup drill still open) |
 | 2026-08-04 | **Shopper feedback UI:** no public recent-feedback feed; no analytics transparency panel (ops detail stays in docs/env). Admin list remains `GET /api/feedback` + admin key. | **Active** |
 | 2026-07-26 | **WAN exposure path:** public/internet access for the TrueNAS shopper app uses **Cloudflare Tunnel** (not a traditional reverse proxy + TLS on the NAS). | **Superseded** (implemented 2026-08-04 — see Closed row above) |
@@ -2351,7 +2476,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | 2026-06-28 | **Aldi Flipp matching closed (at-ceiling):** chain-agnostic false-positive guards for `honey` (graham/hot-honey context), `cheddar-cheese` (brats/smoked sausage), `vanilla-extract` (bars/ice cream); live re-measure **148 → 18 matched / 11 unique** (from 23/14 pre-guard); **no** threshold change; **no** near-miss promotions. Aldi funnel ~12% match on dinner-tracked list is SKU-mix + off-list noise limited — compound titles with ingredient tokens are a known cross-chain guard class (check Food Lion/Publix when approved) | **Closed** |
 | 2026-06-28 | **Kroger Flipp matching at-ceiling:** chain-agnostic `"greek yogurt"` → `plain-yogurt` alias shipped (+2 matched on same 119-offer Kroger feed); **no** global threshold change and **no** wrong-target near-miss promotions (Campari/canned, Ore-Ida/baby-potatoes). Kroger Flipp funnel ~9–11% match on dinner-tracked list is inventory/SKU-mix limited, not a resolver bug — further gains need different weekly ad inventory or second source, not more Kroger-only matching tweaks. **Aldi guard slice (same day):** 13 matched count **unchanged** — no honey/cheddar/vanilla false positives in that capture | **Active** |
 | 2026-06-27 | **Provider integration pattern:** document three data-type categories (store location / item pricing / sale discovery) and per-source capability rules in [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md); new chains run the checklist before wiring fallbacks — do not build a speculative plugin/adapter layer until a second chain proves the shape | **Active** |
-| 2026-06-26 | **Trust depth via banner expansion:** recover deleted modal paragraphs inside expandable `PricingTrustHeadsUpBanner`; no new modal, Settings “About these estimates”, or route | **Active** |
+| 2026-06-26 | **Trust depth via banner expansion:** recover deleted modal paragraphs inside expandable `PricingTrustHeadsUpBanner`; no new modal, Settings “About these estimates”, or route | **Superseded** 2026-08-21 by FAQ articles |
 | 2026-06-26 | **M128/M151 rule accuracy:** security rule describes manual owner-pause only today; robots.txt + auto-pause + automated kill switches remain homelab-slice work — not implied as shipped | **Active** |
 | 2026-06-26 | **Trust explainer modal removed:** no “How to read these results” dialog or results-panel trigger; trust via inline banners, cards, help hints, hero copy | **Active** (superseded for depth by banner expansion row above) |
 | 2026-06-26 | **D7 color port (shipped):** Theme C + D from `.private/tokens.css`; **light default first visit**; flat bg; system font; trust/urgency/price/tag tokens on existing UI — not mockup layout | **Active** |
@@ -2364,7 +2489,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | 2026-06-25 | **Welcome flow:** budget + dietary on welcome (not Settings); after valid Settings → welcome → straight to ingredients | **Active** |
 | 2026-06-25 | **Store selection:** under Shopping style — single store = one dropdown pick; multi store = multiple picks; **unselected stores invisible** in all UI | **Active** |
 | 2026-06-25 | **Meal results:** remove `dinnersWanted` completely; no fixed card cap; `maxIngredients` unchanged hidden | **Active** |
-| 2026-06-25 | **TheMealDB opt-in:** deleted hidden UI + shopper API path (slice 5); public API `internal-library` only; merged ranking default | **Active** |
+| 2026-06-25 | **TheMealDB opt-in:** deleted hidden UI + shopper API path (slice 5); public API `internal-library` only; merged ranking default | **Superseded** (2026-08-20 TheMealDB-only shopper ranking) |
 | 2026-06-25 | **Ingredients API:** remove 40-ID POST cap; default all sale items at selected stores; safeguards = 64 KB body + rate limits + per-ID validation | **Active** |
 | 2026-06-25 | **Results UI:** stacked accordion cards (one expanded at a time); delete carousel; tap-to-rank; full-screen loading with honest TheMealDB copy | **Active** |
 | ~~2026-06-25~~ | ~~**Redesign deferred:** 5-tab shell, Deals, Cook session tab, Saved persistence, cuisine R11, pantry full UI, map-link-only shell move — after slices 1–5~~ | **Superseded** (D1–D6 shipped; Saved persistence + R11 + D7 still open) |
@@ -2397,7 +2522,7 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 | 2026-06 | No user accounts in v1 | **Active** |
 | 2026-05 | Public API DB writes opt-in only; blocked in production | **Active** |
 | 2026-05 | Fixture ingest = CI/rehearsal only; owner path = daily live scheduled ingest | **Active** (supersedes fixture-first demo wording) |
-| 2026-05 | Internal recipe library only for rankings | **Active** |
+| 2026-05 | Internal recipe library only for rankings | **Superseded** (2026-08-20 TheMealDB-only shopper ranking; internal catalog kept for matching) |
 | 2026-03 | Official APIs first; careful scraping only with terms review | **Active** |
 | 2026-03 | Personalized teaching → `.private/learning-notes.md` only | **Active** |
 | ~~2026-03~~ | ~~Hard limit MVP to ~35 mi from ZIP 23111~~ | **Superseded** (2026-06 continental US) |
@@ -2417,6 +2542,18 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| Postgres MCP (first live catalog-expansion ingest, `yum4less_dev`) | 2026-08-23 | `ingredients` **319**; **17** `weekly-ad-catalog`; **22** weekly-ad aliases; **112** skips; **743** pending reviews; freshness **772/772** in 24h. Eligible dinner count **not** measured |
+| `npm test` (ingest catalog expansion, this session) | 2026-08-22 | **1117/1117** pass (198 files) |
+| `npm run test:integration` (024 skip/review tables + owner yes/no persist) | 2026-08-22 | **50/50** pass |
+| `npm run build` (owner ingredient-reviews route) | 2026-08-22 | **Pass** (Next.js 15.5.21) |
+| Postgres MCP (`ingredient_match_skips` / `ingredient_match_reviews` on `yum4less_dev`) | 2026-08-22 | Both tables present after `npm run db:migrate` |
+| `npm run test:e2e:ci` | 2026-08-22 | **Not run** — shopper pantry/rank wiring unchanged |
+| Semgrep MCP (owner review route) | 2026-08-22 | **Timed out** — do not treat as a passed scan |
+| `npm test` (Settings FAQ/Terms + return restore, this session) | 2026-08-21 | **1105/1105** pass (196 files) |
+| Playwright vs wizard `http://localhost:3000` (this session) | 2026-08-21 | **24 passed** / 8 failed / 2 skipped. New `faq-terms` **4/4**. Failures: empty rank / store-id on `yum4less_dev`. Isolated `test:e2e:ci` on :3100 not a clean gate this session |
+| `npm test` (FAQ/Terms + slim cards, this session) | 2026-08-21 | **1099/1099** pass (195 files) |
+| `npm run test:e2e:ci` (FAQ/Terms + slim cards, this session) | 2026-08-21 | **30 passed** / 0 failed / 2 skipped. Build inside the gate passed (`/faq`, `/faq/[slug]`, `/terms`). |
+| `npm run test:e2e:ci` (onboarding-wizard mockup harness) | 2026-08-20 | **28 passed** / 0 failed / 1 skipped (H12). Isolated mockup spec **1/1** with `PLAYWRIGHT_SKIP_WEBSERVER=1`. No product `src/` edits |
 | Homelab ingest + Watchtower (GHCR) | 2026-08-10 | **Green** — [31426780947](https://github.com/sfh1980/Yum4Less/actions/runs/31426780947) @ `800c450`; verify / integration / e2e / semgrep / **publish-image** / **publish-ingest-image** success. Owner `/owner` pagination. Watchtower pull on TrueNAS still owner-confirm |
 | GHCR `publish-image` (CI) | 2026-08-10 | **Green** — [31426780947](https://github.com/sfh1980/Yum4Less/actions/runs/31426780947) @ `800c450` (`:homelab` + SHA + `:latest`). Prior: [31070957928](https://github.com/sfh1980/Yum4Less/actions/runs/31070957928) @ `f337317` |
 | Compose `app`+`db` containerize | 2026-07-20 | **Local proof** — build OK; db healthy→app start; `GET /` 200; market-search `dataSource=database`; unit **1052/1052**; integration **48/48**; Semgrep clean on Dockerfile/compose; remote CI later green on containerize commit |
@@ -2596,7 +2733,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | Redis / platform rate limits | Multi-instance production |
 | User accounts | Explicitly out of v1 |
 | **Live near-miss confidence analysis** | Before changing the 0.55 weekly-ad match threshold or expanding the ingredient catalog, run a targeted live-data diagnostic per chain on offers in the 0.35-0.55 confidence band. This confirms whether filtered-out weekly-ad items are legitimate near-misses before threshold or catalog changes lock in extra noise. |
-| **Ingredient catalog expansion (pending near-miss analysis)** | Candidate additions discussed: rotisserie/whole chicken, pork chops/ground pork, and lettuce/romaine/salad kits. Do not add them until live near-miss analysis shows they land above threshold often enough on real weekly-ad data to improve useful matches. |
+| **Ingredient catalog expansion (pending near-miss analysis)** | **SUPERSEDED (2026-08-22)** — Catalog now grows from weekly-ad ingest + owner Yes/No, not from a one-shot near-miss list. Rotisserie/salad-kit candidates remain out of scope (junk/assembly meals). Live near-miss analysis still applies before changing the **0.55** persist threshold. |
 | **assertMarketDataAvailable() shared helper** | The DB-availability check is still repeated per-route. Extract it into a tiny shared helper alongside the next route addition so empty-vs-unavailable behavior cannot drift again across read APIs. |
 | **Store geographic breakdown audit** | Run a read-only Postgres query against `stores` to see whether the current 288 discovered rows are concentrated in Virginia or already spread across multiple states/regions. This should inform how much existing map/discovery head start Yum4Less has before expanding `YUM4LESS_INGEST_ZIPS`. |
 | **Bootstrap seed data provenance audit** | Confirm whether bootstrap rows in `yum4less_dev` carry a distinct `source_name` that separates hand-planted/CI bootstrap stores from real discovered stores. If not, add one in the bootstrap SQL so the app and future audits can distinguish seed rows from real discovery coverage. |
@@ -2668,6 +2805,7 @@ Full chat prose lives in agent transcripts; use these links for deep context.
 
 | When | Topic | Transcript |
 |------|-------|------------|
+| 2026-08-20 | Onboarding wizard setup UI on `feat/onboarding-wizard` | [Onboarding wizard UI](093dd1be-4914-4da5-b0e7-3e9dc2668289) |
 | 2026-03 | MVP planning, stack, competitors, Cursor setup | [Yum4Less MVP planning](0e5bcef8-54ed-4c87-b5a6-1b4423cc1d08) |
 | 2026-04/05 | Autonomous MVP slices, providers, map | [Autonomous MVP build slices](40f83ef1-d284-41d5-8f4f-7f7ade1daa2f) |
 | 2026-05 | MCP, weekly-ad gates, integration CI | [MCP setup MVP completion](8145bf83-1d8c-4b90-9431-990a72d04817) |

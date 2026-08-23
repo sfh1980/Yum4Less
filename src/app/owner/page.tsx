@@ -17,10 +17,10 @@ export default function OwnerPage() {
     <main className="page-shell">
       <section className="hero">
         <p className="eyebrow">Yum4Less · Owner ops</p>
-        <h1>Feedback and analytics</h1>
+        <h1>Owner console</h1>
         <p className="hero-copy">
-          Private console for recent customer feedback and saved product analytics.
-          Not linked from the shopper app.
+          Private console for customer feedback, saved product analytics, and
+          weekly-ad ingredient review. Not linked from the shopper app.
         </p>
         <p className="hero-copy">
           <Link className="text-link" href="/">

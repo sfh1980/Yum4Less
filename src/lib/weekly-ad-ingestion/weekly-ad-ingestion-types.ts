@@ -1,3 +1,4 @@
+import type { CatalogIngredient } from "@/lib/ingredient-category";
 import type { StoreChain } from "@/lib/provider-rollout";
 
 export type WeeklyAdChain = Extract<
@@ -60,6 +61,8 @@ export type WeeklyAdIngestionInput = {
   storeName: string;
   zipCode: string;
   trackedIngredientIds: string[];
+  catalogIngredients?: CatalogIngredient[];
+  extraSearchTermsByIngredientId?: Record<string, string[]>;
 };
 
 export type WeeklyAdIngestionClient = {

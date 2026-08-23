@@ -6,7 +6,7 @@ import { fetchKrogerWeeklyAdPage } from "@/lib/weekly-ad-ingestion/kroger-weekly
 import { resolveKrogerStoreForWeeklyAd } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-store";
 import { buildKrogerWeeklyAdUrl } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-url";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
-import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import { matchWeeklyAdOffers, weeklyAdMatchFieldsFromIngest } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import { parseKrogerWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-kroger-weekly-ad";
 import type {
   WeeklyAdIngestionClient,
@@ -66,6 +66,8 @@ async function ingestKrogerWeeklyAd(
       zipCode: input.zipCode,
       merchantName: KROGER_FLIPP_MERCHANT,
       trackedIngredientIds: input.trackedIngredientIds,
+      catalogIngredients: input.catalogIngredients,
+      extraSearchTermsByIngredientId: input.extraSearchTermsByIngredientId,
     });
     let rawOffers = flippResult.rawOffers;
     let retrievalLabel = flippResult.retrievalLabel;
@@ -136,7 +138,7 @@ async function ingestKrogerWeeklyAd(
       sourceUrl,
       observedAt: fetchedAt,
       rawOffers,
-      trackedIngredientIds: input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input),
     });
     const matchedCount = offers.filter((offer) => offer.ingredientId).length;
 

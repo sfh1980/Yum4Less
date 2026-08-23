@@ -4,6 +4,10 @@ Reference document derived from the beta v1 codebase (client shell, `use-meal-pl
 
 **Related:** [`README.md`](../README.md) · [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) · [`AGENTS.md`](../AGENTS.md)
 
+**As of 2026-08-21:** shopper ranking is **TheMealDB-only** (numeric meal-page id + sale overlap). Pantry “dinners we can show next” uses the same budget / plan / `maxIngredients` gates as rank.
+
+**As of 2026-08-23:** live weekly-ad ingest classifies unmatched flyer lines (skip / auto-create / `/owner` review). Fixture ingest still uses the 97-id seed and does not write skip/review rows. Onboarding-wizard launch routing stays on `feat/onboarding-wizard` until that branch merges.
+
 ---
 
 ## How to read these trees
@@ -234,7 +238,7 @@ flowchart TD
   D -->|0| E[No sale ingredients — Continue DISABLED]
   D -->|>0| F{ingredientPickMode}
 
-  F -->|unset| G[Gate: Use all vs Pick manually]
+  F -->|unset| G[Gate: Use everything on sale vs Choose specific sale items]
   F -->|all| H[Rank with all sale ingredients]
   F -->|manual| I{selectedIngredientIds.length}
 
@@ -253,10 +257,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A[Pantry step — always shown] --> B[Initial assess: suggestedChecklist + ingredientCatalog]
-  B --> C[Shopper toggles checklist / adds catalog items]
+  A[Pantry step — always shown] --> B[Initial assess: suggestedChecklist]
+  B --> C[Shopper toggles near-miss checklist]
   C --> D[Debounced full-pool reassess on pantryIngredientIds]
-  D --> E[Live summary: fullyCoveredRecipeCount / eligibleRecipeCount]
+  D --> E[Sticky summary: showableFullyCovered / eligibleRecipeCount]
   E --> F[Continue to rank — always enabled]
   F --> G[flowStep = rank + pantryIngredientIds pass-through]
 ```
@@ -264,11 +268,12 @@ flowchart TD
 | Rule | Behavior |
 |------|----------|
 | Near-miss checklist | Distinct missing ingredients from recipes missing 1–4 plan lines (empty OK) |
-| Open-ended add | Catalog autocomplete only — no free-text IDs |
+| Checklist membership | Stays on screen when checked; later coverage updates do not reshuffle/remove rows |
+| Sticky count | `fullyCoveredRecipeCount` = fully covered **and** would survive ranking gates (budget, plan build, `maxIngredients`) |
 | Totals | Pantry lines excluded from `estimatedTotal`; visible on results with trust copy |
 | Session | `pantryIngredientIds` not persisted |
 
-**Key files:** `src/components/meal-planner/pantry-step-panel.tsx`, `src/app/api/pantry-coverage/route.ts`, `src/lib/recipe-plan-coverage.ts`
+**Key files:** `src/components/meal-planner/pantry-step-panel.tsx`, `src/app/api/pantry-coverage/route.ts`, `src/lib/recipe-plan-coverage.ts`, `src/lib/ranking-result-gates.ts`, `src/lib/pantry-coverage-service.ts`
 
 ---
 
@@ -321,7 +326,7 @@ flowchart TD
 
 A recipe becomes a ranked candidate only if **all** pass:
 
-1. In ranking pool (internal recipe library by default)
+1. In ranking pool (TheMealDB with a numeric full-recipe page id; short internal writeups excluded)
 2. Sale-priced ingredients overlap recipe needs
 3. Matches manual `selectedIngredientIds` (if manual mode)
 4. Matches dietary focus (vegetarian / vegan / quick)
@@ -393,6 +398,27 @@ Is the chain Kroger-family, Aldi, Publix, or Food Lion?
 | Rank 503 | DB unavailable at rank time | Fix Postgres connection |
 | Rank ok, 0 meals | Filter / coverage path | Budget, ingredients, dietary |
 | Cook tab disabled | `cookEnabled` false | Successful rank with ≥1 meal |
+
+---
+
+## Tree 13 — Live weekly-ad flyer line (catalog expansion)
+
+```mermaid
+flowchart TD
+  A[Flyer line with no tracked ingredient id] --> B{On skip list?}
+  B -->|Yes| Z[Drop — no price row]
+  B -->|No| C{Nickname alias?}
+  C -->|Yes| M[Match existing ingredient]
+  C -->|No| D{Score ≥ 0.55 vs catalog?}
+  D -->|Yes| M
+  D -->|No| E{Junk heuristic?}
+  E -->|Yes| S[Write skip + drop]
+  E -->|No| F{Simple food auto-create?}
+  F -->|Yes| N[Insert ingredient + weekly-ad alias + price]
+  F -->|No| R[Queue /owner pending review — no shopper price]
+```
+
+Fixture ingest stops before this tree. `/owner` Yes writes a nickname alias (and may add a food); No writes a skip. Public `/api/recommendations` cannot write reviews.
 
 ---
 

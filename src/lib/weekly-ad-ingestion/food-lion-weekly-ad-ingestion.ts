@@ -2,7 +2,10 @@ import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chai
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
-import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import {
+  matchWeeklyAdOffers,
+  weeklyAdMatchFieldsFromIngest,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import { fetchWeeklyAdPageContent } from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
 import { parseWeeklyAdHtml } from "@/lib/weekly-ad-ingestion/parse-weekly-ad-html";
 import type {
@@ -54,7 +57,7 @@ async function ingestFoodLionWeeklyAd(
       chain: "food-lion",
       zipCode: input.zipCode,
       merchantName: FOOD_LION_FLIPP_MERCHANT,
-      trackedIngredientIds: input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input),
     });
     let rawOffers = flippResult.rawOffers;
     let retrievalLabel = flippResult.retrievalLabel;
@@ -116,7 +119,7 @@ async function ingestFoodLionWeeklyAd(
       sourceUrl: FOOD_LION_WEEKLY_AD_URL,
       observedAt: fetchedAt,
       rawOffers,
-      trackedIngredientIds: input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input),
     });
     const matchedCount = offers.filter((offer) => offer.ingredientId).length;
 

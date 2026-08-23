@@ -30,6 +30,27 @@ Public read-only routes (cache-first; ingest scripts are the write path):
 | `POST /api/feedback` | Optional customer feedback (feature-flagged) |
 | `GET /api/debug/pipeline` | Local dev only — ingest/freshness debug |
 
+### Shopper pages
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Meal planner (wizard + Home/Deals/Cook/Saved/Feedback/Settings) |
+| `/faq` | Question list |
+| `/faq/[slug]` | One FAQ article |
+| `/terms` | Short beta terms (estimates, no accounts, verify in store) |
+| `/feedback` | Standalone feedback form |
+| `/owner` | Private owner console (admin key; not in shopper nav) |
+
+### Owner ops (same admin key as feedback)
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/feedback` | Recent feedback rows |
+| `GET /api/analytics/events` | Recent Postgres analytics events |
+| `GET/POST /api/owner/ingredient-reviews` | Weekly-ad unmatched-line Yes (nickname) / No (skip) |
+
+Live weekly-ad ingest matches flyer lines against Postgres `ingredients` (97-id seed remains fixture SSOT). Unmatched lines skip junk, auto-create simple foods, or wait on `/owner`. Fixture ingest does not write skips/reviews.
+
 ### Location
 
 | Service | Role |
@@ -56,14 +77,14 @@ Public read-only routes (cache-first; ingest scripts are the write path):
 | **Chain weekly-ad page scrape** | Browser/HTTP parsers for ad HTML | Kroger-family, Aldi, Publix, Food Lion |
 | **Kroger product API** (fallback) | Partial last-resort fill when scrape + Flipp return nothing | Kroger only; not full ad coverage |
 
-Ingest runs via scheduled scripts (`npm run ingest:weekly-ads:scheduled`, `ingest:map-catalog`, `sync:provider-prices`) — not on every user search.
+Ingest runs via scheduled scripts (`npm run ingest:weekly-ads:scheduled`, `ingest:map-catalog`, `sync:provider-prices`) — not on every user search. After TrueNAS Watchtower pulls a new ingest image that includes `024_ingredient_match_catalog.sql`, run migrate on the live volume so skip/review tables exist.
 
 ### Recipes
 
 | Service | Role |
 |---------|------|
-| **Internal recipe library** | Primary ranking catalog (curated in-repo) |
-| **TheMealDB** | Sale-driven recipe import merged into rankings (`THEMEALDB_API_KEY`; cron/script path) |
+| **TheMealDB** | Shopper ranking catalog when a meal has a numeric full-recipe page id (`THEMEALDB_API_KEY`; cron/script ingest, cache-first) |
+| **Internal recipe library** | Curated matching catalog only — not shown in shopper dinner lists |
 | **Spoonacular / Edamam** | Research only — not wired to user-facing ranking |
 
 ### Research / ops (not app runtime)

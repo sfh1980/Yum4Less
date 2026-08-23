@@ -35,6 +35,12 @@ describe("OwnerConsole", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
+      if (url.includes("/api/owner/ingredient-reviews")) {
+        return new Response(
+          JSON.stringify({ ok: true, reviews: [], hasMore: false }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
       return new Response(
         JSON.stringify({
           ok: true,
@@ -69,7 +75,10 @@ describe("OwnerConsole", () => {
       screen.getByRole("button", { name: /Show next 50 events/i }),
     ).toBeInTheDocument();
 
-    expect(fetchMock).toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", { name: /ingredient review/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("No flyer lines waiting for review.")).toBeInTheDocument();
     const feedbackCall = fetchMock.mock.calls.find((call) =>
       String(call[0]).includes("/api/feedback"),
     );
@@ -88,6 +97,12 @@ describe("OwnerConsole", () => {
       if (url.includes("/api/feedback")) {
         return new Response(
           JSON.stringify({ ok: true, feedback: [], hasMore: false }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/api/owner/ingredient-reviews")) {
+        return new Response(
+          JSON.stringify({ ok: true, reviews: [], hasMore: false }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
@@ -171,9 +186,81 @@ describe("OwnerConsole", () => {
     await user.click(screen.getByRole("button", { name: /^view$/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Wrong or missing admin key/i),
-      ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Wrong or missing admin key/i),
+    ).toBeInTheDocument();
+    });
+  });
+
+  it("posts Yes on a pending flyer line", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (typeof init?.method === "string" && init.method === "POST") {
+        return new Response(
+          JSON.stringify({ ok: true, ingredientId: "pears" }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/api/feedback")) {
+        return new Response(
+          JSON.stringify({ ok: true, feedback: [], hasMore: false }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/api/analytics/events")) {
+        return new Response(
+          JSON.stringify({ ok: true, events: [], hasMore: false }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          reviews: [
+            {
+              id: 7,
+              normalizedLabel: "bartlett pears",
+              rawProductName: "Bartlett Pears",
+              chain: "kroger",
+              seenAt: "2026-08-22T00:00:00.000Z",
+              suggestedIngredientId: "pears",
+              suggestedName: "Pears",
+              suggestedCategory: "produce",
+            },
+          ],
+          hasMore: false,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<OwnerConsole />);
+
+    await user.type(screen.getByLabelText(/admin key/i), "secret-owner-key");
+    await user.click(screen.getByRole("button", { name: /^view$/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Bartlett Pears")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /^yes$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Saved as pears/i)).toBeInTheDocument();
+    });
+    const reviewPost = fetchMock.mock.calls.find(
+      (call) =>
+        String(call[0]).includes("/api/owner/ingredient-reviews") &&
+        call[1]?.method === "POST",
+    );
+    expect(reviewPost?.[1]?.headers).toMatchObject({
+      Authorization: "Bearer secret-owner-key",
+    });
+    expect(JSON.parse(String(reviewPost?.[1]?.body))).toMatchObject({
+      normalizedLabel: "bartlett pears",
+      decision: "yes",
+      ingredientId: "pears",
     });
   });
 });

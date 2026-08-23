@@ -34,7 +34,7 @@ Determine location (geolocation primary, ZIP fallback) → choose radius → dis
 
 ## Data and recipes
 
-- Curated **internal recipe library** only for rankings; external recipe APIs remain research-only.
+- Shopper rankings use **TheMealDB** imports that have a numeric full-recipe page id and enough sale overlap. Short internal-library writeups stay in the catalog for matching; they are **not** ranked. Spoonacular/Edamam remain research-only.
 - **Fixture weekly-ad ingest** for local dev/CI — rehearsal data in real tables, never presented as live retailer feeds.
 - **Cache-first** store/pricing reads; ingest and provider sync scripts are the intended write path — public HTTP routes stay read-only by default.
 - Official store APIs first; careful scraping only where terms, reliability, and maintenance burden are acceptable.
@@ -46,7 +46,7 @@ Yum4Less is **not**: a coupon-clipper, checkout/payments integration, price-guar
 ## Trust and fallbacks
 
 - Treat freshness, provenance, fallback state, and estimate quality as product features, not optional polish.
-- Explain source, freshness, fallback, and trust concepts in a dismissible explainer or modal before or alongside results.
+- Explain source, freshness, fallback, and trust concepts in FAQ articles (`/faq`). Circle `?` controls link to those articles instead of popovers.
 - Show strong trust signals on recommendation cards; deeper provenance may be expandable, but it must not be hidden entirely in a summary panel.
 - If data is stale, incomplete, fallback-backed, or directional, use explicit language like `estimated`, `directional`, or `limited coverage` instead of stronger claims.
 - Include stale or uncertain prices only with clear warnings and visibly lower confidence.

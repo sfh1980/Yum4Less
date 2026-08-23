@@ -167,6 +167,8 @@ export function migrationEffectPresent(version, db) {
         countIdentitySeedMemberStores(db, IDENTITY_SEED_SPECS["023"]) < 2 ||
         identitySeedEffectPresent(db, IDENTITY_SEED_SPECS["023"])
       );
+    case "024":
+      return db.tableExists("ingredient_match_skips") && db.tableExists("ingredient_match_reviews");
     default:
       return false;
   }

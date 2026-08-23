@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { INTERNAL_CATALOG_INGREDIENT_IDS } from "@/lib/internal-catalog";
-import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import {
+  matchWeeklyAdOffers,
+  weeklyAdMatchFieldsFromIngest,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import { parseWeeklyAdHtml } from "@/lib/weekly-ad-ingestion/parse-weekly-ad-html";
 import type {
   WeeklyAdChain,
@@ -33,7 +36,7 @@ export function buildWeeklyAdFixtureResult(input: {
     sourceUrl: input.sourceUrl,
     observedAt: input.fetchedAt,
     rawOffers,
-    trackedIngredientIds: input.ingestionInput.trackedIngredientIds,
+    ...weeklyAdMatchFieldsFromIngest(input.ingestionInput),
   });
   const matchedCount = offers.filter((offer) => offer.ingredientId).length;
 

@@ -1,6 +1,9 @@
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
 import { pickPrimaryKrogerStoreForWeeklyAdIngestList } from "@/lib/kroger-catalog-canonical";
-import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
+import {
+  enforceFixtureIngestDatabasePolicy,
+  isFixtureIngestMode,
+} from "@/lib/fixture-ingest-policy";
 import { createAldiWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
 import { createFoodLionWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/food-lion-weekly-ad-ingestion";
 import { createPublixWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-ingestion";
@@ -16,6 +19,11 @@ import {
   WEEKLY_AD_CHAINS,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-registry";
 import { WEEKLY_AD_TRACKED_INGREDIENT_IDS } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
+import {
+  expandUnmatchedWeeklyAdOffers,
+  loadWeeklyAdMatchCatalog,
+  trackedIngredientIdsFromCatalog,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-match-catalog";
 import type {
   WeeklyAdChain,
   WeeklyAdIngestionClient,
@@ -59,10 +67,17 @@ export async function runWeeklyAdIngestionForStores(input: {
   results: WeeklyAdIngestionResult[];
   syncSummaries: WeeklyAdOfferSyncSummary[];
 }> {
-  const trackedIngredientIds = WEEKLY_AD_TRACKED_INGREDIENT_IDS;
+  const catalog = await loadWeeklyAdMatchCatalog();
+  const trackedIngredientIds = isFixtureIngestMode()
+    ? WEEKLY_AD_TRACKED_INGREDIENT_IDS
+    : trackedIngredientIdsFromCatalog(catalog);
   const zipCode = input.zipCode ?? DEFAULT_ZIP_CODE;
   const results: WeeklyAdIngestionResult[] = [];
   const syncSummaries: WeeklyAdOfferSyncSummary[] = [];
+  const catalogFields = {
+    catalogIngredients: catalog.ingredients,
+    extraSearchTermsByIngredientId: catalog.extraSearchTermsByIngredientId,
+  };
 
   if (input.persistToDatabase) {
     enforceFixtureIngestDatabasePolicy();
@@ -82,6 +97,13 @@ export async function runWeeklyAdIngestionForStores(input: {
         storeName: primaryStore.name,
         zipCode,
         trackedIngredientIds,
+        ...catalogFields,
+      });
+      result.offers = await expandUnmatchedWeeklyAdOffers({
+        chain: "kroger",
+        offers: result.offers,
+        catalog,
+        persist: Boolean(input.persistToDatabase),
       });
       results.push(result);
 
@@ -119,6 +141,13 @@ export async function runWeeklyAdIngestionForStores(input: {
       storeName: primaryStore.name,
       zipCode,
       trackedIngredientIds,
+      ...catalogFields,
+    });
+    result.offers = await expandUnmatchedWeeklyAdOffers({
+      chain,
+      offers: result.offers,
+      catalog,
+      persist: Boolean(input.persistToDatabase),
     });
     results.push(result);
 

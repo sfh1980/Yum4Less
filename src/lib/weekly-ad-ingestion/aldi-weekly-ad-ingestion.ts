@@ -3,7 +3,10 @@ import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-ca
 import { mergeWeeklyAdRawOffers } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
-import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import {
+  matchWeeklyAdOffers,
+  weeklyAdMatchFieldsFromIngest,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import { fetchWeeklyAdPageContent } from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
 import { parseWeeklyAdHtml } from "@/lib/weekly-ad-ingestion/parse-weekly-ad-html";
 import type {
@@ -79,7 +82,7 @@ async function ingestAldiWeeklyAd(
       chain: "aldi",
       zipCode: input.zipCode,
       merchantName: ALDI_FLIPP_MERCHANT,
-      trackedIngredientIds: input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input),
     });
     let rawOffers = flippResult.rawOffers;
     let retrievalLabel = flippResult.retrievalLabel;
@@ -87,10 +90,7 @@ async function ingestAldiWeeklyAd(
     let fallbackUsed = true;
     let captureHtml = "";
 
-    const flippMatchedCount = countAldiMatchedIngredientIds(
-      rawOffers,
-      input.trackedIngredientIds,
-    );
+    const flippMatchedCount = countAldiMatchedIngredientIds(rawOffers, input);
     const shouldScrapeAldiPage = shouldSupplementAldiWeeklyAdWithDirectScrape({
       rawOfferCount: rawOffers.length,
       matchedIngredientCount: flippMatchedCount,
@@ -158,7 +158,7 @@ async function ingestAldiWeeklyAd(
       sourceUrl: ALDI_WEEKLY_SPECIALS_URL,
       observedAt: fetchedAt,
       rawOffers,
-      trackedIngredientIds: input.trackedIngredientIds,
+      ...weeklyAdMatchFieldsFromIngest(input),
     });
     const matchedCount = offers.filter((offer) => offer.ingredientId).length;
 
@@ -205,7 +205,7 @@ async function ingestAldiWeeklyAd(
 
 function countAldiMatchedIngredientIds(
   rawOffers: WeeklyAdRawOffer[],
-  trackedIngredientIds: string[],
+  input: WeeklyAdIngestionInput,
 ) {
   return matchWeeklyAdOffers({
     chain: "aldi",
@@ -213,6 +213,6 @@ function countAldiMatchedIngredientIds(
     sourceUrl: ALDI_WEEKLY_SPECIALS_URL,
     observedAt: new Date().toISOString(),
     rawOffers,
-    trackedIngredientIds,
+    ...weeklyAdMatchFieldsFromIngest(input),
   }).filter((offer) => offer.ingredientId).length;
 }

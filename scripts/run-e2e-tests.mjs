@@ -114,6 +114,11 @@ async function main() {
     "utf8",
   );
   psqlApplySqlContent(databaseName, bootstrapSql);
+  const themealdbRankSql = readFileSync(
+    join(process.cwd(), "db", "ci", "024_themealdb_rank_seed_clones.sql"),
+    "utf8",
+  );
+  psqlApplySqlContent(databaseName, themealdbRankSql);
   assertE2eSettingsBootstrapStores(databaseName);
 
   const e2e = spawnNpx(["playwright", "test"], {

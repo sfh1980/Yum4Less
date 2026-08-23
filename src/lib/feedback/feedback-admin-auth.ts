@@ -1,9 +1,9 @@
 import { isRequestAuthorizedWithAdminKey } from "@/lib/admin-key-auth";
 
 /**
- * Protects GET /api/feedback when feedback writes are enabled.
- * Set YUM4LESS_FEEDBACK_ADMIN_KEY and send Authorization: Bearer <key>
- * or X-Yum4Less-Admin-Key: <key>.
+ * Protects owner/admin GET lists (feedback, analytics, ingredient reviews)
+ * when YUM4LESS_FEEDBACK_ADMIN_KEY is set.
+ * Send Authorization: Bearer <key> or X-Yum4Less-Admin-Key: <key>.
  */
 export function isFeedbackListAuthorized(request: Request) {
   return isRequestAuthorizedWithAdminKey(

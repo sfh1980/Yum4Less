@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
-import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import {
+  matchWeeklyAdOffers,
+  weeklyAdMatchFieldsFromIngest,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import { fetchWeeklyAdPageContent } from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
 import { parseWeeklyAdHtml } from "@/lib/weekly-ad-ingestion/parse-weekly-ad-html";
 import type {
@@ -81,13 +84,12 @@ async function ingestWeeklyAd(input: {
     return buildSuccessResult({
       chain: input.chain,
       label,
-      storeId: input.ingestionInput.storeId,
       storeName: input.ingestionInput.storeName,
       sourceUrl: input.weeklyAdUrl,
       fetchedAt,
       termsNote: input.termsNote,
       rawOffers,
-      trackedIngredientIds: input.ingestionInput.trackedIngredientIds,
+      ingestionInput: input.ingestionInput,
       fixtureMode: false,
       fetchMethod: pageFetch.method,
     });
@@ -131,13 +133,12 @@ function buildFixtureResult(input: {
   return buildSuccessResult({
     chain: input.chain,
     label: input.label,
-    storeId: input.ingestionInput.storeId,
     storeName: input.ingestionInput.storeName,
     sourceUrl: input.weeklyAdUrl,
     fetchedAt: input.fetchedAt,
     termsNote: input.termsNote,
     rawOffers,
-    trackedIngredientIds: input.ingestionInput.trackedIngredientIds,
+    ingestionInput: input.ingestionInput,
     fixtureMode: true,
     fetchMethod: "http",
   });
@@ -146,23 +147,22 @@ function buildFixtureResult(input: {
 function buildSuccessResult(input: {
   chain: WeeklyAdChain;
   label: string;
-  storeId: string;
   storeName: string;
   sourceUrl: string;
   fetchedAt: string;
   termsNote: string;
   rawOffers: ReturnType<typeof parseWeeklyAdHtml>;
-  trackedIngredientIds: string[];
+  ingestionInput: WeeklyAdIngestionInput;
   fixtureMode: boolean;
   fetchMethod: "http" | "browser";
 }): WeeklyAdIngestionResult {
   const offers = matchWeeklyAdOffers({
     chain: input.chain,
-    storeId: input.storeId,
+    storeId: input.ingestionInput.storeId,
     sourceUrl: input.sourceUrl,
     observedAt: input.fetchedAt,
     rawOffers: input.rawOffers,
-    trackedIngredientIds: input.trackedIngredientIds,
+    ...weeklyAdMatchFieldsFromIngest(input.ingestionInput),
   });
   const matchedCount = offers.filter((offer) => offer.ingredientId).length;
   const modeLabel = input.fixtureMode ? "Fixture" : "Parsed";

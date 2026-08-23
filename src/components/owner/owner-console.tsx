@@ -9,6 +9,17 @@ import {
   type PublicFeedbackRow,
 } from "@/lib/feedback/feedback-types";
 
+type PublicIngredientReviewRow = {
+  id: number;
+  normalizedLabel: string;
+  rawProductName: string;
+  chain: string | null;
+  seenAt: string;
+  suggestedIngredientId: string | null;
+  suggestedName: string | null;
+  suggestedCategory: string | null;
+};
+
 const OWNER_ADMIN_KEY_STORAGE = "yum4less.owner-admin-key.v1";
 const OWNER_PAGE_SIZE = FEEDBACK_LIMITS.ownerListDefault;
 
@@ -59,16 +70,24 @@ export function OwnerConsole() {
   const [draftKey, setDraftKey] = useState("");
   const [activeKey, setActiveKey] = useState("");
   const [loadState, setLoadState] = useState<LoadState>("idle");
-  const [loadingMore, setLoadingMore] = useState<"feedback" | "analytics" | null>(
-    null,
-  );
+  const [loadingMore, setLoadingMore] = useState<
+    "feedback" | "analytics" | "reviews" | null
+  >(null);
   const [error, setError] = useState<string | undefined>();
   const [feedback, setFeedback] = useState<PublicFeedbackRow[]>([]);
   const [events, setEvents] = useState<PublicAnalyticsEventRow[]>([]);
+  const [reviews, setReviews] = useState<PublicIngredientReviewRow[]>([]);
+  const [reviewDraftIds, setReviewDraftIds] = useState<Record<number, string>>(
+    {},
+  );
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [reviewNotice, setReviewNotice] = useState<string | undefined>();
   const [feedbackHasMore, setFeedbackHasMore] = useState(false);
   const [analyticsHasMore, setAnalyticsHasMore] = useState(false);
+  const [reviewsHasMore, setReviewsHasMore] = useState(false);
   const [feedbackNextOffset, setFeedbackNextOffset] = useState(0);
   const [analyticsNextOffset, setAnalyticsNextOffset] = useState(0);
+  const [reviewsNextOffset, setReviewsNextOffset] = useState(0);
   const [analyticsNotice, setAnalyticsNotice] = useState<string | undefined>();
 
   useEffect(() => {
@@ -86,7 +105,8 @@ export function OwnerConsole() {
         reset: boolean;
         feedbackOffset: number;
         analyticsOffset: number;
-        which?: "both" | "feedback" | "analytics";
+        reviewsOffset: number;
+        which?: "both" | "feedback" | "analytics" | "reviews";
       },
     ) => {
       if (!key.trim()) {
@@ -94,11 +114,16 @@ export function OwnerConsole() {
         setError(undefined);
         setFeedback([]);
         setEvents([]);
+        setReviews([]);
+        setReviewDraftIds({});
         setFeedbackHasMore(false);
         setAnalyticsHasMore(false);
+        setReviewsHasMore(false);
         setFeedbackNextOffset(0);
         setAnalyticsNextOffset(0);
+        setReviewsNextOffset(0);
         setAnalyticsNotice(undefined);
+        setReviewNotice(undefined);
         return;
       }
 
@@ -109,12 +134,14 @@ export function OwnerConsole() {
         setLoadingMore("feedback");
       } else if (which === "analytics") {
         setLoadingMore("analytics");
+      } else if (which === "reviews") {
+        setLoadingMore("reviews");
       }
       setError(undefined);
 
       try {
         const fetches: Promise<Response>[] = [];
-        const fetchKinds: Array<"feedback" | "analytics"> = [];
+        const fetchKinds: Array<"feedback" | "analytics" | "reviews"> = [];
 
         if (which === "both" || which === "feedback") {
           fetchKinds.push("feedback");
@@ -134,6 +161,15 @@ export function OwnerConsole() {
             ),
           );
         }
+        if (which === "both" || which === "reviews") {
+          fetchKinds.push("reviews");
+          fetches.push(
+            fetch(
+              `/api/owner/ingredient-reviews?limit=${OWNER_PAGE_SIZE}&offset=${options.reviewsOffset}`,
+              { headers: authHeaders(key), cache: "no-store" },
+            ),
+          );
+        }
 
         const responses = await Promise.all(fetches);
         if (responses.some((response) => response.status === 401)) {
@@ -143,11 +179,16 @@ export function OwnerConsole() {
           );
           setFeedback([]);
           setEvents([]);
+          setReviews([]);
+          setReviewDraftIds({});
           setFeedbackHasMore(false);
           setAnalyticsHasMore(false);
+          setReviewsHasMore(false);
           setFeedbackNextOffset(0);
           setAnalyticsNextOffset(0);
+          setReviewsNextOffset(0);
           setAnalyticsNotice(undefined);
+          setReviewNotice(undefined);
           return;
         }
 
@@ -158,6 +199,7 @@ export function OwnerConsole() {
             ok?: boolean;
             feedback?: PublicFeedbackRow[];
             events?: PublicAnalyticsEventRow[];
+            reviews?: PublicIngredientReviewRow[];
             hasMore?: boolean;
             limit?: number;
             offset?: number;
@@ -171,7 +213,9 @@ export function OwnerConsole() {
               json.error ??
                 (kind === "feedback"
                   ? "Could not load feedback."
-                  : "Could not load analytics."),
+                  : kind === "analytics"
+                    ? "Could not load analytics."
+                    : "Could not load ingredient reviews."),
             );
             return;
           }
@@ -185,7 +229,7 @@ export function OwnerConsole() {
             );
             setFeedbackHasMore(Boolean(json.hasMore));
             setFeedbackNextOffset(pageOffset + page.length);
-          } else {
+          } else if (kind === "analytics") {
             const page = json.events ?? [];
             setEvents((current) =>
               options.reset ? page : mergeById(current, page),
@@ -195,6 +239,22 @@ export function OwnerConsole() {
             if (options.reset || json.notice) {
               setAnalyticsNotice(json.notice);
             }
+          } else {
+            const page = json.reviews ?? [];
+            setReviews((current) =>
+              options.reset ? page : mergeById(current, page),
+            );
+            setReviewsHasMore(Boolean(json.hasMore));
+            setReviewsNextOffset(pageOffset + page.length);
+            setReviewDraftIds((current) => {
+              const next = options.reset ? {} : { ...current };
+              for (const row of page) {
+                if (next[row.id] === undefined) {
+                  next[row.id] = row.suggestedIngredientId ?? "";
+                }
+              }
+              return next;
+            });
           }
         }
 
@@ -219,6 +279,7 @@ export function OwnerConsole() {
       reset: true,
       feedbackOffset: 0,
       analyticsOffset: 0,
+      reviewsOffset: 0,
       which: "both",
     });
   }, [activeKey, loadPage]);
@@ -238,11 +299,16 @@ export function OwnerConsole() {
     setError(undefined);
     setFeedback([]);
     setEvents([]);
+    setReviews([]);
+    setReviewDraftIds({});
     setFeedbackHasMore(false);
     setAnalyticsHasMore(false);
+    setReviewsHasMore(false);
     setFeedbackNextOffset(0);
     setAnalyticsNextOffset(0);
+    setReviewsNextOffset(0);
     setAnalyticsNotice(undefined);
+    setReviewNotice(undefined);
   }
 
   function handleRefresh() {
@@ -253,6 +319,7 @@ export function OwnerConsole() {
       reset: true,
       feedbackOffset: 0,
       analyticsOffset: 0,
+      reviewsOffset: 0,
       which: "both",
     });
   }
@@ -265,6 +332,7 @@ export function OwnerConsole() {
       reset: false,
       feedbackOffset: feedbackNextOffset,
       analyticsOffset: analyticsNextOffset,
+      reviewsOffset: reviewsNextOffset,
       which: "feedback",
     });
   }
@@ -277,8 +345,75 @@ export function OwnerConsole() {
       reset: false,
       feedbackOffset: feedbackNextOffset,
       analyticsOffset: analyticsNextOffset,
+      reviewsOffset: reviewsNextOffset,
       which: "analytics",
     });
+  }
+
+  function handleLoadMoreReviews() {
+    if (!activeKey || !reviewsHasMore) {
+      return;
+    }
+    void loadPage(activeKey, {
+      reset: false,
+      feedbackOffset: feedbackNextOffset,
+      analyticsOffset: analyticsNextOffset,
+      reviewsOffset: reviewsNextOffset,
+      which: "reviews",
+    });
+  }
+
+  async function handleReviewDecision(
+    row: PublicIngredientReviewRow,
+    decision: "yes" | "no",
+  ) {
+    if (!activeKey) {
+      return;
+    }
+    setReviewingId(row.id);
+    setReviewNotice(undefined);
+    try {
+      const response = await fetch("/api/owner/ingredient-reviews", {
+        method: "POST",
+        headers: {
+          ...authHeaders(activeKey),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          normalizedLabel: row.normalizedLabel,
+          decision,
+          ingredientId: reviewDraftIds[row.id]?.trim() || undefined,
+          ingredientName: row.suggestedName ?? undefined,
+          category: row.suggestedCategory ?? undefined,
+        }),
+      });
+      const json = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        ingredientId?: string;
+      };
+      if (response.status === 401) {
+        setLoadState("error");
+        setError(
+          "Wrong or missing admin key, or YUM4LESS_FEEDBACK_ADMIN_KEY is not set on the server.",
+        );
+        return;
+      }
+      if (!response.ok || !json.ok) {
+        setReviewNotice(json.error ?? "That flyer line could not be reviewed.");
+        return;
+      }
+      setReviews((current) => current.filter((item) => item.id !== row.id));
+      setReviewNotice(
+        decision === "yes"
+          ? `Saved as ${json.ingredientId ?? reviewDraftIds[row.id] ?? "a food"}. Next ingest can price it.`
+          : "Remembered as skip. That line will not become a food.",
+      );
+    } catch {
+      setReviewNotice("Ingredient review could not be saved. Check the network and try again.");
+    } finally {
+      setReviewingId(null);
+    }
   }
   return (
     <div className="owner-console">
@@ -339,6 +474,83 @@ export function OwnerConsole() {
 
       {loadState === "ready" ? (
         <div className="owner-console-panels">
+          <section className="panel panel-padding">
+            <h2>Ingredient review</h2>
+            <p className="panel-copy">
+              Unclear weekly-ad lines wait here. Yes saves a nickname (and a new
+              food when needed). No remembers a skip. Shoppers never see these
+              until you say yes. Pantry leftovers stay 1–4 items.
+            </p>
+            {reviewNotice ? (
+              <p className="panel-copy" role="status">
+                {reviewNotice}
+              </p>
+            ) : null}
+            {reviews.length === 0 ? (
+              <p className="panel-copy">No flyer lines waiting for review.</p>
+            ) : (
+              <ul className="owner-review-list">
+                {reviews.map((row) => (
+                  <li className="owner-review-row" key={row.id}>
+                    <p className="owner-review-title">{row.rawProductName}</p>
+                    <p className="panel-copy">
+                      {row.chain ?? "unknown chain"} · {row.normalizedLabel}
+                      {row.suggestedIngredientId
+                        ? ` · suggested ${row.suggestedIngredientId}`
+                        : ""}
+                    </p>
+                    <label className="field" htmlFor={`owner-review-id-${row.id}`}>
+                      <span className="field-label">Canonical food id</span>
+                      <input
+                        id={`owner-review-id-${row.id}`}
+                        onChange={(event) =>
+                          setReviewDraftIds((current) => ({
+                            ...current,
+                            [row.id]: event.target.value,
+                          }))
+                        }
+                        spellCheck={false}
+                        value={reviewDraftIds[row.id] ?? ""}
+                      />
+                    </label>
+                    <div className="action-row">
+                      <button
+                        className="primary-button"
+                        disabled={reviewingId === row.id}
+                        onClick={() => void handleReviewDecision(row, "yes")}
+                        type="button"
+                      >
+                        Yes
+                      </button>
+                      <button
+                        className="secondary-button"
+                        disabled={reviewingId === row.id}
+                        onClick={() => void handleReviewDecision(row, "no")}
+                        type="button"
+                      >
+                        No
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {reviewsHasMore ? (
+              <div className="action-row owner-load-more-row">
+                <button
+                  className="secondary-button"
+                  disabled={loadingMore === "reviews"}
+                  onClick={handleLoadMoreReviews}
+                  type="button"
+                >
+                  {loadingMore === "reviews"
+                    ? "Loading…"
+                    : `Show next ${OWNER_PAGE_SIZE} reviews`}
+                </button>
+              </div>
+            ) : null}
+          </section>
+
           <section className="panel panel-padding">
             <h2>Customer feedback</h2>
             <p className="panel-copy">
