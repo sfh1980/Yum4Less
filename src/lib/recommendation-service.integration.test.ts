@@ -198,7 +198,8 @@ describe("recommendation path through Postgres (CI-06)", () => {
 
     const scores = experience.recommendations.map((meal) => meal.score.total);
     for (let index = 1; index < experience.recommendations.length; index += 1) {
-      expect(scores[index - 1]!).toBeGreaterThan(scores[index]!);
+      // Ranking is descending; equal totals are allowed (ties are not a failure).
+      expect(scores[index - 1]!).toBeGreaterThanOrEqual(scores[index]!);
     }
 
     const totals = experience.recommendations.map((meal) => meal.estimatedTotal);

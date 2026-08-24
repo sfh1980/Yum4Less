@@ -1,14 +1,21 @@
 import { shouldRejectThemealdbIngredientLabel } from "@/lib/recipe-import/themealdb-reject-patterns";
 
 /** Postgres `ingredients.category` values (see db/init). */
-export type IngredientCategory =
-  | "protein"
-  | "produce"
-  | "pantry"
-  | "dairy"
-  | "seasoning"
-  | "baking"
-  | "frozen";
+export const INGREDIENT_CATEGORIES = [
+  "protein",
+  "produce",
+  "pantry",
+  "dairy",
+  "seasoning",
+  "baking",
+  "frozen",
+] as const;
+
+export type IngredientCategory = (typeof INGREDIENT_CATEGORIES)[number];
+
+export function isIngredientCategory(value: string): value is IngredientCategory {
+  return (INGREDIENT_CATEGORIES as readonly string[]).includes(value);
+}
 
 export type CatalogIngredient = {
   id: string;
