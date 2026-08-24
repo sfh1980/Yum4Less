@@ -4,9 +4,8 @@ import {
   completePantryAndSuggestRecipes,
   completeSettingsZipFlow,
   completeWelcomeFlow,
-  E2E_ZIP_FALLBACK,
   resetAppPreferences,
-  seedZipSearchCenterFromGeocode,
+  searchStoresFromZipWizard,
 } from "./helpers";
 
 test.describe("Single-store map overlay", () => {
@@ -17,44 +16,29 @@ test.describe("Single-store map overlay", () => {
   test("opens from Settings single-store picker and dismisses without losing form state", async ({
     page,
   }) => {
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-    await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-    await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
-    const [response] = await Promise.all([
-      page.waitForResponse(
-        (res) =>
-          res.url().includes("/api/market-search") &&
-          res.request().method() === "POST",
-        { timeout: 120_000 },
-      ),
-      page.getByRole("button", { name: "Find stores based on my ZIP" }).click(),
-    ]);
-    expect(response.status()).toBe(200);
+    const response = await searchStoresFromZipWizard(page);
     const marketBody = (await response.json()) as {
       market: {
-        nearbyStores: Array<{ id: string; chain: string; recommendationEnabled: boolean }>;
+        nearbyStores: Array<{
+          id: string;
+          chain: string;
+          recommendationEnabled: boolean;
+          name?: string;
+        }>;
       };
     };
     const kroger = marketBody.market.nearbyStores.find(
       (store) => store.chain === "kroger" && store.recommendationEnabled,
     );
     expect(kroger, "23111 fixture should include ranked Kroger for map overlay").toBeTruthy();
+    await page.getByRole("button", { name: "Continue" }).click();
 
-    const storeCombobox = page.getByRole("combobox", { name: "Store" });
-    await expect(storeCombobox).toBeVisible({ timeout: 120_000 });
-    await storeCombobox.selectOption(kroger!.id);
-    const selectedOptionLabel = (await storeCombobox.locator("option:checked").textContent())?.trim();
-    const expectedHeading = selectedOptionLabel?.replace(/\s*\([^)]*\)\s*$/, "").trim();
-    expect(
-      expectedHeading,
-      "selected store option label should include the map overlay title",
-    ).toBeTruthy();
-
-    await page.getByRole("button", { name: "📍 Show on map" }).click();
+    const mapButton = page.getByRole("button", { name: new RegExp(`Show .* on map`) }).first();
+    await expect(mapButton).toBeVisible({ timeout: 30_000 });
+    await mapButton.click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("heading", { name: expectedHeading! })).toBeVisible();
     await expect(page.locator(".single-store-map-overlay .nearby-stores-map")).toBeVisible();
 
     // Click the dimmed backdrop outside the panel — not the viewport center (panel/map).
@@ -62,10 +46,12 @@ test.describe("Single-store map overlay", () => {
       .locator(".single-store-map-overlay .map-overlay-backdrop")
       .click({ position: { x: 12, y: 12 } });
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByRole("combobox", { name: "Store" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Which stores should we use?" }),
+    ).toBeVisible();
   });
 
-  test("opens from meal card primary store pill on mobile viewport", async ({ page }) => {
+  test("opens from meal card store plan on mobile viewport", async ({ page }) => {
     test.setTimeout(150_000);
     await page.setViewportSize({ width: 390, height: 844 });
     await completeSettingsZipFlow(page);
@@ -79,7 +65,9 @@ test.describe("Single-store map overlay", () => {
     await expect(firstMealTrigger).toBeVisible({ timeout: 30_000 });
     await firstMealTrigger.click();
 
-    await page.getByRole("button", { name: /Show Kroger on map/i }).first().click();
+    const expandedPanel = page.locator(".meal-results-accordion-panel").first();
+    await expandedPanel.getByRole("button", { name: "Store plan" }).click();
+    await expandedPanel.getByRole("button", { name: /Show Kroger on map/i }).first().click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();

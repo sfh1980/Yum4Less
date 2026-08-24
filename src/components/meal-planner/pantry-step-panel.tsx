@@ -1,11 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { CatalogIngredient } from "@/lib/ingredient-category";
-import {
-  IngredientCatalogCombobox,
-  type PantryIngredientAddResult,
-} from "@/components/meal-planner/ingredient-catalog-combobox";
 import type { PantryCoverageChecklistItem } from "@/contracts/pantry-coverage";
 
 export type PantryItemSource = "suggested" | "manual";
@@ -24,23 +19,13 @@ type PantryStepPanelProps = {
   eligibleRecipeCount: number;
   suggestedChecklist: PantryCoverageChecklistItem[];
   pantryRows: PantryListRow[];
-  ingredientCatalog: CatalogIngredient[];
   selectedPantryIngredientIds: string[];
   onToggleChecklistItem: (ingredientId: string, checked: boolean) => void;
-  onAddPantryIngredient: (result: PantryIngredientAddResult) => void;
   onRemovePantryIngredient: (ingredientId: string) => void;
   rankingPaused: boolean;
   rankLoading: boolean;
   onSuggestRecipes: () => void;
 };
-
-function buildChecklistNameMap(
-  suggestedChecklist: PantryCoverageChecklistItem[],
-): Map<string, string> {
-  return new Map(
-    suggestedChecklist.map((item) => [item.ingredientId, item.ingredientName]),
-  );
-}
 
 export function PantryStepPanel({
   loading,
@@ -49,54 +34,45 @@ export function PantryStepPanel({
   eligibleRecipeCount,
   suggestedChecklist,
   pantryRows,
-  ingredientCatalog,
   selectedPantryIngredientIds,
   onToggleChecklistItem,
-  onAddPantryIngredient,
   onRemovePantryIngredient,
   rankingPaused,
   rankLoading,
   onSuggestRecipes,
 }: PantryStepPanelProps) {
   const suggestDisabled = rankingPaused || rankLoading;
-  const checklistNameById = buildChecklistNameMap(suggestedChecklist);
-  const nearMissRecipeCountByIngredientId = new Map(
-    suggestedChecklist.map((item) => [item.ingredientId, item.recipeCount]),
-  );
-  const suggestedIds = new Set(suggestedChecklist.map((item) => item.ingredientId));
-  const uncheckedSuggested = suggestedChecklist.filter(
-    (item) => !selectedPantryIngredientIds.includes(item.ingredientId),
-  );
   const [pantryListExpanded, setPantryListExpanded] = useState(false);
 
   return (
     <div className="panel panel-padding meal-planner-panel meal-planner-panel--inputs flow-panel flow-panel--pantry">
       <h2>Pantry check</h2>
       <p className="panel-copy">
-        Tell Yum4Less what you already have at home for this session only. Pantry
-        items are not saved when you reset the flow or leave.
+        Check what you already have at home for this session only. These picks
+        come from meals that are only a few ingredients away. Pantry items are
+        not saved when you reset the flow or leave.
       </p>
 
-      <div className="pantry-step-summary" role="status" aria-live="polite">
+      <div className="pantry-step-summary pantry-step-summary--sticky" role="status" aria-live="polite">
         {loading ? (
           <p className="panel-copy">Updating pantry coverage…</p>
         ) : (
           <>
-            <p className="panel-copy">
+            <p className="panel-copy pantry-step-summary-count">
               <strong>{fullyCoveredRecipeCount}</strong> of{" "}
-              <strong>{eligibleRecipeCount}</strong> eligible recipes are fully
-              covered with your sale picks plus pantry.
+              <strong>{eligibleRecipeCount}</strong> dinners can be shown next
+              with your sale picks plus pantry.
             </p>
             {suggestedChecklist.length > 0 ? (
               <p className="field-hint">
                 {suggestedChecklist.length} suggested ingredient
                 {suggestedChecklist.length === 1 ? "" : "s"} from nearby
-                near-miss meals.
+                near-miss meals. Checking items can open more dinners.
               </p>
             ) : (
               <p className="field-hint">
                 No meals are 1–4 items away at your stores right now. You can
-                still add pantry staples below.
+                still suggest recipes from this week&apos;s sales.
               </p>
             )}
           </>
@@ -109,38 +85,41 @@ export function PantryStepPanel({
         </p>
       ) : null}
 
-      {uncheckedSuggested.length > 0 ? (
+      {suggestedChecklist.length > 0 ? (
         <section className="pantry-checklist-block" aria-label="Suggested pantry items">
           <h3 className="card-title">Suggested from near-miss meals</h3>
           <ul className="pantry-checklist">
-            {uncheckedSuggested.map((item) => (
-              <li key={item.ingredientId} className="pantry-checklist-item">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={selectedPantryIngredientIds.includes(item.ingredientId)}
-                    onChange={(event) =>
-                      onToggleChecklistItem(item.ingredientId, event.target.checked)
-                    }
-                  />
-                  <span>{item.ingredientName}</span>
-                  <span className="pantry-checklist-meta">
-                    missing in {item.recipeCount} recipe
-                    {item.recipeCount === 1 ? "" : "s"}
-                  </span>
-                </label>
-              </li>
-            ))}
+            {suggestedChecklist.map((item) => {
+              const checked = selectedPantryIngredientIds.includes(item.ingredientId);
+              return (
+                <li
+                  key={item.ingredientId}
+                  className={
+                    checked
+                      ? "pantry-checklist-item pantry-checklist-item--checked"
+                      : "pantry-checklist-item"
+                  }
+                >
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) =>
+                        onToggleChecklistItem(item.ingredientId, event.target.checked)
+                      }
+                    />
+                    <span>{item.ingredientName}</span>
+                    <span className="pantry-checklist-meta">
+                      missing in {item.recipeCount} recipe
+                      {item.recipeCount === 1 ? "" : "s"}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : null}
-
-      <IngredientCatalogCombobox
-        catalog={ingredientCatalog}
-        selectedIngredientIds={selectedPantryIngredientIds}
-        nearMissRecipeCountByIngredientId={nearMissRecipeCountByIngredientId}
-        onSelectIngredient={onAddPantryIngredient}
-      />
 
       {pantryRows.length > 0 ? (
         <section className="pantry-combined-list-block" aria-label="Your pantry selections">
@@ -161,18 +140,7 @@ export function PantryStepPanel({
                 <li key={row.ingredientId} className="pantry-combined-list-item">
                   <div className="pantry-combined-list-copy">
                     <span className="pantry-combined-list-name">
-                      {row.ingredientName ||
-                        checklistNameById.get(row.ingredientId) ||
-                        row.ingredientId}
-                    </span>
-                    <span
-                      className={
-                        row.source === "suggested"
-                          ? "pantry-source-badge pantry-source-badge--suggested"
-                          : "pantry-source-badge pantry-source-badge--manual"
-                      }
-                    >
-                      {row.source === "suggested" ? "Suggested" : "You added"}
+                      {row.ingredientName || row.ingredientId}
                     </span>
                   </div>
                   <button

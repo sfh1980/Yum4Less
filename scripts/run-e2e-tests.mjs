@@ -121,12 +121,14 @@ async function main() {
   psqlApplySqlContent(databaseName, themealdbRankSql);
   assertE2eSettingsBootstrapStores(databaseName);
 
+  const playwrightEnv = { ...ciEnv };
+  delete playwrightEnv.PLAYWRIGHT_SKIP_WEBSERVER;
+  playwrightEnv.PLAYWRIGHT_FORCE_NEW_SERVER = "1";
+  playwrightEnv.PLAYWRIGHT_BASE_URL = "http://127.0.0.1:3100";
+
   const e2e = spawnNpx(["playwright", "test"], {
     stdio: "inherit",
-    env: {
-      ...ciEnv,
-      PLAYWRIGHT_FORCE_NEW_SERVER: "1",
-    },
+    env: playwrightEnv,
   });
 
   process.exit(e2e.status ?? 1);

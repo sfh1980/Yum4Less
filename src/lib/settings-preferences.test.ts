@@ -40,6 +40,17 @@ describe("settings preferences", () => {
     expect(prefs.setupComplete).toBe(true);
   });
 
+  it("persists onboardingStep for incomplete wizard resume", () => {
+    writeSettingsPreferences({
+      zipCode: "23111",
+      radiusMiles: 5,
+      onboardingStep: "radius",
+    });
+
+    expect(readSettingsPreferences()?.onboardingStep).toBe("radius");
+    expect(isSettingsPreferencesComplete(readSettingsPreferences())).toBe(false);
+  });
+
   it("marks setup complete only on explicit save", () => {
     const prefs = buildSettingsPreferencesPatch({
       zipCode: "23111",

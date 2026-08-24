@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { createElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { MealResultsAccordion } from "@/components/meal-planner/meal-results-accordion";
 import type { MealRecommendation } from "@/lib/recommendation-service";
 import type { FormState } from "@/components/meal-planner/types";
@@ -88,6 +88,10 @@ function buildMeal(title: string): MealRecommendation {
 describe("MealResultsAccordion", () => {
   const onOpenStoreMap = vi.fn();
 
+  beforeEach(() => {
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
   it("starts collapsed with title-only triggers", () => {
     render(
       createElement(MealResultsAccordion, {
@@ -141,6 +145,9 @@ describe("MealResultsAccordion", () => {
       "true",
     );
     expect(screen.getByTestId("meal-card")).toHaveTextContent("Second dinner");
+    await waitFor(() => {
+      expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+    });
   });
 
   it("collapses the expanded card when its trigger is clicked again", async () => {

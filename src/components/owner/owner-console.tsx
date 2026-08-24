@@ -8,6 +8,15 @@ import {
   FEEDBACK_LIMITS,
   type PublicFeedbackRow,
 } from "@/lib/feedback/feedback-types";
+import {
+  INGREDIENT_CATEGORIES,
+  isIngredientCategory,
+} from "@/lib/ingredient-category";
+import {
+  isCanonicalIngredientId,
+  slugifyIngredientId,
+  titleCaseIngredientName,
+} from "@/lib/ingredient-id";
 
 type PublicIngredientReviewRow = {
   id: number;
@@ -20,8 +29,47 @@ type PublicIngredientReviewRow = {
   suggestedCategory: string | null;
 };
 
+type ReviewDraft = {
+  ingredientId: string;
+  ingredientName: string;
+  category: string;
+};
+
 const OWNER_ADMIN_KEY_STORAGE = "yum4less.owner-admin-key.v1";
 const OWNER_PAGE_SIZE = FEEDBACK_LIMITS.ownerListDefault;
+const CATEGORY_LABELS: Record<(typeof INGREDIENT_CATEGORIES)[number], string> = {
+  protein: "Protein",
+  produce: "Produce",
+  pantry: "Pantry",
+  dairy: "Dairy",
+  seasoning: "Seasoning",
+  baking: "Baking",
+  frozen: "Frozen",
+};
+
+function buildReviewDraft(row: PublicIngredientReviewRow): ReviewDraft {
+  return {
+    ingredientId:
+      row.suggestedIngredientId ?? slugifyIngredientId(row.normalizedLabel),
+    ingredientName:
+      row.suggestedName ?? titleCaseIngredientName(row.normalizedLabel),
+    category: row.suggestedCategory ?? "",
+  };
+}
+
+function validateYesDraft(draft: ReviewDraft): string | undefined {
+  const ingredientId = slugifyIngredientId(draft.ingredientId);
+  if (!isCanonicalIngredientId(ingredientId)) {
+    return "Canonical food id must be lowercase kebab-case (letters, numbers, hyphens), 2-56 characters. Example: imitation-crab.";
+  }
+  if (!draft.ingredientName.trim()) {
+    return "Enter a short shopper-facing name. Example: Imitation crab. Skip brand, size, and pack counts.";
+  }
+  if (!isIngredientCategory(draft.category)) {
+    return "Pick a category. New foods need one; if this id already exists it is ignored.";
+  }
+  return undefined;
+}
 
 type LoadState = "idle" | "loading" | "ready" | "error";
 
@@ -77,7 +125,7 @@ export function OwnerConsole() {
   const [feedback, setFeedback] = useState<PublicFeedbackRow[]>([]);
   const [events, setEvents] = useState<PublicAnalyticsEventRow[]>([]);
   const [reviews, setReviews] = useState<PublicIngredientReviewRow[]>([]);
-  const [reviewDraftIds, setReviewDraftIds] = useState<Record<number, string>>(
+  const [reviewDrafts, setReviewDrafts] = useState<Record<number, ReviewDraft>>(
     {},
   );
   const [reviewingId, setReviewingId] = useState<number | null>(null);
@@ -115,7 +163,7 @@ export function OwnerConsole() {
         setFeedback([]);
         setEvents([]);
         setReviews([]);
-        setReviewDraftIds({});
+        setReviewDrafts({});
         setFeedbackHasMore(false);
         setAnalyticsHasMore(false);
         setReviewsHasMore(false);
@@ -180,7 +228,7 @@ export function OwnerConsole() {
           setFeedback([]);
           setEvents([]);
           setReviews([]);
-          setReviewDraftIds({});
+          setReviewDrafts({});
           setFeedbackHasMore(false);
           setAnalyticsHasMore(false);
           setReviewsHasMore(false);
@@ -246,11 +294,11 @@ export function OwnerConsole() {
             );
             setReviewsHasMore(Boolean(json.hasMore));
             setReviewsNextOffset(pageOffset + page.length);
-            setReviewDraftIds((current) => {
+            setReviewDrafts((current) => {
               const next = options.reset ? {} : { ...current };
               for (const row of page) {
                 if (next[row.id] === undefined) {
-                  next[row.id] = row.suggestedIngredientId ?? "";
+                  next[row.id] = buildReviewDraft(row);
                 }
               }
               return next;
@@ -300,7 +348,7 @@ export function OwnerConsole() {
     setFeedback([]);
     setEvents([]);
     setReviews([]);
-    setReviewDraftIds({});
+    setReviewDrafts({});
     setFeedbackHasMore(false);
     setAnalyticsHasMore(false);
     setReviewsHasMore(false);
@@ -370,9 +418,18 @@ export function OwnerConsole() {
     if (!activeKey) {
       return;
     }
+    const draft = reviewDrafts[row.id] ?? buildReviewDraft(row);
+    if (decision === "yes") {
+      const draftError = validateYesDraft(draft);
+      if (draftError) {
+        setReviewNotice(draftError);
+        return;
+      }
+    }
     setReviewingId(row.id);
     setReviewNotice(undefined);
     try {
+      const ingredientId = slugifyIngredientId(draft.ingredientId);
       const response = await fetch("/api/owner/ingredient-reviews", {
         method: "POST",
         headers: {
@@ -382,9 +439,10 @@ export function OwnerConsole() {
         body: JSON.stringify({
           normalizedLabel: row.normalizedLabel,
           decision,
-          ingredientId: reviewDraftIds[row.id]?.trim() || undefined,
-          ingredientName: row.suggestedName ?? undefined,
-          category: row.suggestedCategory ?? undefined,
+          ingredientId: decision === "yes" ? ingredientId : undefined,
+          ingredientName:
+            decision === "yes" ? draft.ingredientName.trim() : undefined,
+          category: decision === "yes" ? draft.category : undefined,
         }),
       });
       const json = (await response.json()) as {
@@ -406,7 +464,7 @@ export function OwnerConsole() {
       setReviews((current) => current.filter((item) => item.id !== row.id));
       setReviewNotice(
         decision === "yes"
-          ? `Saved as ${json.ingredientId ?? reviewDraftIds[row.id] ?? "a food"}. Next ingest can price it.`
+          ? `Saved as ${json.ingredientId ?? slugifyIngredientId(draft.ingredientId)}. Next ingest can price it.`
           : "Remembered as skip. That line will not become a food.",
       );
     } catch {
@@ -477,10 +535,40 @@ export function OwnerConsole() {
           <section className="panel panel-padding">
             <h2>Ingredient review</h2>
             <p className="panel-copy">
-              Unclear weekly-ad lines wait here. Yes saves a nickname (and a new
-              food when needed). No remembers a skip. Shoppers never see these
-              until you say yes. Pantry leftovers stay 1–4 items.
+              Unclear weekly-ad lines wait here. Yes attaches the flyer wording
+              to a food id (creates the id when it is new). No remembers a skip.
+              Shoppers never see these until the next ingest prices them. Pantry
+              leftovers stay 1-4 items.
             </p>
+            <div className="owner-review-help">
+              <p className="owner-review-help-title">How to create or reuse a food id</p>
+              <ol>
+                <li>
+                  Prefer an existing id when this is the same food we already
+                  track. Examples: <code>chicken-thighs</code>,{" "}
+                  <code>green-beans</code>, <code>heavy-cream</code>. Name and
+                  category are ignored if that id already exists.
+                </li>
+                <li>
+                  Create a new id only for a real grocery ingredient we do not
+                  have yet. Example: flyer Imitation Crab Meat → id{" "}
+                  <code>imitation-crab</code>, name Imitation crab, category
+                  Protein.
+                </li>
+                <li>
+                  Id format: lowercase kebab-case, letters, numbers, and hyphens
+                  only, 2-56 characters. Yes will format spaces and capitals
+                  (so Imitation Crab becomes <code>imitation-crab</code>). Do
+                  not put brands, sizes, or pack counts in the id (not{" "}
+                  <code>yoplait-strawberry-6oz</code>).
+                </li>
+                <li>
+                  Shopper-facing name: short title case, no flyer fluff. Category
+                  must be one of protein, produce, pantry, dairy, seasoning,
+                  baking, or frozen.
+                </li>
+              </ol>
+            </div>
             {reviewNotice ? (
               <p className="panel-copy" role="status">
                 {reviewNotice}
@@ -490,29 +578,85 @@ export function OwnerConsole() {
               <p className="panel-copy">No flyer lines waiting for review.</p>
             ) : (
               <ul className="owner-review-list">
-                {reviews.map((row) => (
+                {reviews.map((row) => {
+                  const draft = reviewDrafts[row.id] ?? buildReviewDraft(row);
+                  const formattedId = slugifyIngredientId(draft.ingredientId);
+                  return (
                   <li className="owner-review-row" key={row.id}>
                     <p className="owner-review-title">{row.rawProductName}</p>
                     <p className="panel-copy">
                       {row.chain ?? "unknown chain"} · {row.normalizedLabel}
                       {row.suggestedIngredientId
                         ? ` · suggested ${row.suggestedIngredientId}`
-                        : ""}
+                        : " · no existing suggestion — fill the fields to create one"}
                     </p>
+                    <div className="owner-review-fields">
                     <label className="field" htmlFor={`owner-review-id-${row.id}`}>
                       <span className="field-label">Canonical food id</span>
                       <input
+                        aria-describedby={`owner-review-id-${row.id}-hint`}
                         id={`owner-review-id-${row.id}`}
                         onChange={(event) =>
-                          setReviewDraftIds((current) => ({
+                          setReviewDrafts((current) => ({
                             ...current,
-                            [row.id]: event.target.value,
+                            [row.id]: {
+                              ...draft,
+                              ingredientId: event.target.value,
+                            },
                           }))
                         }
                         spellCheck={false}
-                        value={reviewDraftIds[row.id] ?? ""}
+                        value={draft.ingredientId}
                       />
+                      <p className="field-hint" id={`owner-review-id-${row.id}-hint`}>
+                        {formattedId && formattedId !== draft.ingredientId.trim()
+                          ? `Saves as ${formattedId}.`
+                          : "Lowercase kebab-case. Example: imitation-crab."}
+                      </p>
                     </label>
+                    <label className="field" htmlFor={`owner-review-name-${row.id}`}>
+                      <span className="field-label">Shopper-facing name</span>
+                      <input
+                        id={`owner-review-name-${row.id}`}
+                        onChange={(event) =>
+                          setReviewDrafts((current) => ({
+                            ...current,
+                            [row.id]: {
+                              ...draft,
+                              ingredientName: event.target.value,
+                            },
+                          }))
+                        }
+                        value={draft.ingredientName}
+                      />
+                      <p className="field-hint">
+                        Short title case. Example: Imitation crab.
+                      </p>
+                    </label>
+                    <label className="field" htmlFor={`owner-review-category-${row.id}`}>
+                      <span className="field-label">Category</span>
+                      <select
+                        id={`owner-review-category-${row.id}`}
+                        onChange={(event) =>
+                          setReviewDrafts((current) => ({
+                            ...current,
+                            [row.id]: {
+                              ...draft,
+                              category: event.target.value,
+                            },
+                          }))
+                        }
+                        value={draft.category}
+                      >
+                        <option value="">Choose category</option>
+                        {INGREDIENT_CATEGORIES.map((category) => (
+                          <option key={category} value={category}>
+                            {CATEGORY_LABELS[category]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    </div>
                     <div className="action-row">
                       <button
                         className="primary-button"
@@ -532,7 +676,8 @@ export function OwnerConsole() {
                       </button>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
             {reviewsHasMore ? (

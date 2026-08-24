@@ -261,6 +261,97 @@ describe("OwnerConsole", () => {
       normalizedLabel: "bartlett pears",
       decision: "yes",
       ingredientId: "pears",
+      ingredientName: "Pears",
+      category: "produce",
+    });
+  });
+
+  it("explains food-id format and posts a new id with name and category", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (typeof init?.method === "string" && init.method === "POST") {
+        return new Response(
+          JSON.stringify({ ok: true, ingredientId: "imitation-crab" }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/api/feedback")) {
+        return new Response(
+          JSON.stringify({ ok: true, feedback: [], hasMore: false }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/api/analytics/events")) {
+        return new Response(
+          JSON.stringify({ ok: true, events: [], hasMore: false }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          reviews: [
+            {
+              id: 9,
+              normalizedLabel: "imitation crab meat",
+              rawProductName: "Imitation Crab Meat",
+              chain: "publix",
+              seenAt: "2026-08-24T00:00:00.000Z",
+              suggestedIngredientId: null,
+              suggestedName: null,
+              suggestedCategory: null,
+            },
+          ],
+          hasMore: false,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<OwnerConsole />);
+
+    await user.type(screen.getByLabelText(/admin key/i), "secret-owner-key");
+    await user.click(screen.getByRole("button", { name: /^view$/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Imitation Crab Meat")).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/How to create or reuse a food id/i),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/canonical food id/i)).toHaveValue(
+      "imitation-crab-meat",
+    );
+    expect(screen.getByLabelText(/shopper-facing name/i)).toHaveValue(
+      "Imitation Crab Meat",
+    );
+
+    await user.click(screen.getByRole("button", { name: /^yes$/i }));
+    expect(
+      screen.getByText(/Pick a category/i),
+    ).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText(/canonical food id/i));
+    await user.type(screen.getByLabelText(/canonical food id/i), "Imitation Crab");
+    await user.selectOptions(screen.getByLabelText(/category/i), "protein");
+    await user.click(screen.getByRole("button", { name: /^yes$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Saved as imitation-crab/i)).toBeInTheDocument();
+    });
+    const reviewPost = fetchMock.mock.calls.find(
+      (call) =>
+        String(call[0]).includes("/api/owner/ingredient-reviews") &&
+        call[1]?.method === "POST",
+    );
+    expect(JSON.parse(String(reviewPost?.[1]?.body))).toMatchObject({
+      normalizedLabel: "imitation crab meat",
+      decision: "yes",
+      ingredientId: "imitation-crab",
+      ingredientName: "Imitation Crab Meat",
+      category: "protein",
     });
   });
 });

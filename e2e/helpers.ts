@@ -25,11 +25,6 @@ export const E2E_ZIP_FALLBACK_CENTER = {
   longitude: E2E_PRIMARY_COORDINATES.longitude,
 } as const;
 
-export const FIND_STORES_BASED_ON_ZIP_LABEL = "Find stores based on my ZIP";
-
-export const USE_GPS_LOCATION_LABEL =
-  "For Better Results, Use My GPS Location";
-
 const ZIP_SEARCH_CENTERS_STORAGE_KEY = "yum4less.zip-search-centers.v1";
 
 /** Skip the ZIP center-pick modal by seeding a cached pin for the ZIP. */
@@ -62,31 +57,6 @@ export async function seedZipSearchCenter(
       longitude: center.longitude,
     },
   );
-}
-
-/**
- * Seed the ZIP search-center cache using the same geocode the server would use
- * for ZIP-only lookup — keeps e2e ranked coverage aligned with pre-picker behavior.
- */
-export async function seedZipSearchCenterFromGeocode(
-  page: Page,
-  zipCode = E2E_ZIP_FALLBACK,
-) {
-  const response = await page.request.get(
-    `/api/geocode/zip?zip=${encodeURIComponent(zipCode)}`,
-  );
-  expect(response.ok(), `geocode ZIP ${zipCode} should succeed for e2e seed`).toBeTruthy();
-  const body = (await response.json()) as {
-    ok?: boolean;
-    location?: { latitude: number; longitude: number };
-  };
-  expect(body.ok).toBe(true);
-  expect(body.location?.latitude).toEqual(expect.any(Number));
-  expect(body.location?.longitude).toEqual(expect.any(Number));
-  await seedZipSearchCenter(page, zipCode, {
-    latitude: body.location!.latitude,
-    longitude: body.location!.longitude,
-  });
 }
 
 export type PublicNearbyStore = {
@@ -136,25 +106,20 @@ export async function readPersistedSelectedStoreIds(page: Page): Promise<string[
   }, SETTINGS_PREFERENCES_STORAGE_KEY);
 }
 
-export async function resetAppPreferences(page: Page) {
-  await page.goto("/");
-  const factoryReset = page.getByRole("button", { name: "Factory reset preferences" });
-  if (await factoryReset.isVisible()) {
-    await factoryReset.click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  }
+export async function goToZipInput(page: Page) {
+  await dismissOnboardingSplash(page);
+  await page.getByRole("button", { name: "Enter ZIP code" }).click();
+  await expect(page.getByRole("textbox", { name: "ZIP code" })).toBeVisible();
 }
 
-export async function completeSettingsZipFlow(
-  page: Page,
-  zipCode = E2E_ZIP_FALLBACK,
-): Promise<MarketSearchBody> {
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  await page.getByRole("textbox", { name: "ZIP code" }).fill(zipCode);
-  await seedZipSearchCenterFromGeocode(page, zipCode);
-  const findStoresButton = page.getByRole("button", {
-    name: FIND_STORES_BASED_ON_ZIP_LABEL,
+/** Pin is showing; walk pin → radius → style → store list. Market-search fires on radius. */
+export async function continueZipWizardToStorePicker(page: Page) {
+  await expect(page.getByRole("heading", { name: "Place your pin" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled({
+    timeout: 30_000,
   });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "How far should we look?" })).toBeVisible();
   const [response] = await Promise.all([
     page.waitForResponse(
       (res) =>
@@ -162,7 +127,96 @@ export async function completeSettingsZipFlow(
         res.request().method() === "POST",
       { timeout: 120_000 },
     ),
-    findStoresButton.click(),
+    page.getByRole("button", { name: "Continue" }).click(),
+  ]);
+  await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Which stores should we use?" }),
+  ).toBeVisible();
+  return response;
+}
+
+export async function searchStoresFromZipWizard(
+  page: Page,
+  zipCode = E2E_ZIP_FALLBACK,
+) {
+  await goToZipInput(page);
+  await page.getByRole("textbox", { name: "ZIP code" }).fill(zipCode);
+  await seedZipSearchCenter(page, zipCode);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Place your pin" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled({
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "How far should we look?" })).toBeVisible();
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/market-search") &&
+        res.request().method() === "POST",
+      { timeout: 120_000 },
+    ),
+    page.getByRole("button", { name: "Continue" }).click(),
+  ]);
+  expect(response.status()).toBe(200);
+  await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
+  return response;
+}
+
+export async function dismissOnboardingSplash(page: Page) {
+  const splash = page.getByTestId("onboarding-splash");
+  if (await splash.isVisible().catch(() => false)) {
+    await splash.getByRole("button", { name: "Continue" }).click();
+    await expect(splash).toHaveCount(0);
+  }
+}
+
+export async function resetAppPreferences(page: Page) {
+  await page.goto("/");
+  await page.evaluate(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+  await page.goto("/");
+  const splash = page.getByTestId("onboarding-splash");
+  const chooseLocation = page.getByRole("heading", { name: "Let’s get started" });
+  await expect(splash.or(chooseLocation)).toBeVisible();
+  if (await splash.isVisible().catch(() => false)) {
+    await splash.getByRole("button", { name: "Continue" }).click();
+    await expect(splash).toHaveCount(0);
+  }
+  await expect(chooseLocation).toBeVisible();
+}
+
+async function continueWizard(page: Page) {
+  await page.getByRole("button", { name: "Continue" }).click();
+}
+
+export async function completeSettingsZipFlow(
+  page: Page,
+  zipCode = E2E_ZIP_FALLBACK,
+): Promise<MarketSearchBody> {
+  await dismissOnboardingSplash(page);
+  await page.getByRole("button", { name: "Enter ZIP code" }).click();
+  await page.getByRole("textbox", { name: "ZIP code" }).fill(zipCode);
+  await seedZipSearchCenter(page, zipCode);
+  await continueWizard(page);
+  await expect(page.getByRole("heading", { name: "Place your pin" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled({
+    timeout: 30_000,
+  });
+  await continueWizard(page);
+  await expect(page.getByRole("heading", { name: "How far should we look?" })).toBeVisible();
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/market-search") &&
+        res.request().method() === "POST",
+      { timeout: 120_000 },
+    ),
+    continueWizard(page),
   ]);
   expect(response.status(), "market-search should succeed for ZIP flow").toBe(200);
   const body = (await response.json()) as MarketSearchBody;
@@ -177,17 +231,30 @@ export async function completeSettingsZipFlow(
   expect(typeof requestBody.longitude).toBe("number");
   assertPublicNearbyStoresSanitized(body.market.nearbyStores);
   assertProductionRankedRolloutGates(body.market.nearbyStores);
-  await page.getByRole("button", { name: "Save settings and continue" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
+  await page.getByRole("button", { name: "Several stores" }).click();
+  await continueWizard(page);
+  await expect(
+    page.getByRole("heading", { name: "Which stores should we use?" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled({
+    timeout: 30_000,
+  });
+  await continueWizard(page);
+  await expect(
+    page.getByRole("heading", { name: "How much do you want to spend?" }),
+  ).toBeVisible();
   return body;
 }
 
 export async function completeSettingsGeolocationFlow(page: Page): Promise<MarketSearchBody> {
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  const useLocationButton = page.getByRole("button", {
-    name: USE_GPS_LOCATION_LABEL,
-  });
+  await dismissOnboardingSplash(page);
+  const useLocationButton = page.getByRole("button", { name: "Use GPS" });
   await expect(useLocationButton).toBeEnabled({ timeout: 120_000 });
+  await useLocationButton.click();
+  await expect(page.getByRole("heading", { name: "How far should we look?" })).toBeVisible({
+    timeout: 30_000,
+  });
   const [response] = await Promise.all([
     page.waitForResponse(
       (res) =>
@@ -195,7 +262,7 @@ export async function completeSettingsGeolocationFlow(page: Page): Promise<Marke
         res.request().method() === "POST",
       { timeout: 120_000 },
     ),
-    useLocationButton.click(),
+    continueWizard(page),
   ]);
   expect(response.status(), "market-search should succeed for geolocation flow").toBe(200);
   const requestBody = response.request().postDataJSON() as {
@@ -207,18 +274,30 @@ export async function completeSettingsGeolocationFlow(page: Page): Promise<Marke
   expect(requestBody.longitude).toBeCloseTo(E2E_PRIMARY_COORDINATES.longitude, 2);
   const body = (await response.json()) as MarketSearchBody;
   expect(body.ok).toBe(true);
-  await page.getByRole("button", { name: "Save settings and continue" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
+  await continueWizard(page);
+  await expect(
+    page.getByRole("heading", { name: "Which stores should we use?" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled({
+    timeout: 30_000,
+  });
+  await continueWizard(page);
+  await expect(
+    page.getByRole("heading", { name: "How much do you want to spend?" }),
+  ).toBeVisible();
   return body;
 }
 
 export async function completeWelcomeFlow(page: Page) {
+  await continueWizard(page);
+  await expect(page.getByRole("heading", { name: "Dietary focus" })).toBeVisible();
   await page.getByRole("button", { name: "Continue to ingredients" }).click();
   await expect(page.getByRole("heading", { name: "Ingredients" })).toBeVisible();
 }
 
 export async function goToPantryStep(page: Page) {
-  const useAllButton = page.getByRole("button", { name: "Use all ingredients and check pantry" });
+  const useAllButton = page.getByRole("button", { name: "Use everything on sale" });
   if (await useAllButton.isVisible()) {
     await useAllButton.click();
     await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
@@ -320,7 +399,10 @@ export async function closeMapOverlay(page: Page) {
   await expect(page.getByRole("dialog", { name: "Store locations" })).toHaveCount(0);
 }
 
-export async function switchMainTab(page: Page, tab: "Home" | "Deals" | "Cook" | "Saved" | "Settings") {
+export async function switchMainTab(
+  page: Page,
+  tab: "Home" | "Deals" | "Cook" | "Saved" | "Feedback" | "Settings",
+) {
   await page
     .getByRole("navigation", { name: "Main" })
     .getByRole("button", { name: tab })
@@ -460,12 +542,6 @@ export async function runCoreMvpFlow(
 
   await page.goto("/");
 
-  await expect(
-    page.getByRole("heading", {
-      name: /Find realistic low-cost dinner options near you/i,
-    }),
-  ).toBeVisible();
-
   const marketBody = await completeSettingsZipFlow(page);
   await completeWelcomeFlow(page);
 
@@ -476,7 +552,7 @@ export async function runCoreMvpFlow(
 
   await expect(page.getByText(/^Priced$/i)).toHaveCount(0);
 
-  const ingredientGate = page.getByRole("button", { name: "Use all ingredients and check pantry" });
+  const ingredientGate = page.getByRole("button", { name: "Use everything on sale" });
   await expect(ingredientGate).toBeVisible({ timeout: 30_000 });
 
   const { body: recommendationsBody } = await completePantryAndSuggestRecipes(page);
@@ -506,20 +582,7 @@ export async function runCoreMvpFlow(
       )
       .first(),
   ).toBeVisible();
-  await expect(
-    page
-      .getByText(
-        /Dinner totals below use (?:saved sale prices|recently checked online (?:store )?prices plus saved sale prices)/i,
-      )
-      .first(),
-  ).toBeVisible();
-  await expect(
-    page
-      .getByText(
-        /(?:Limited )?(?:saved sale prices|recently checked online prices and saved sale prices) at .+ — not live checkout; confirm in store\./i,
-      )
-      .first(),
-  ).toBeVisible();
+  await expect(page.getByText(/Totals are estimates/i).first()).toBeVisible();
   await expandedPanel.getByRole("button", { name: "Shopping plan" }).click();
   await expect(
     expandedPanel
@@ -527,17 +590,12 @@ export async function runCoreMvpFlow(
       .filter({ hasText: /Sale price — estimate only|estimate only/i })
       .first(),
   ).toBeVisible();
-  const headsUpNote = page
-    .getByRole("note", { name: /heads up about these prices/i })
-    .first();
-  await expect(headsUpNote).toBeVisible();
-  await expect(headsUpNote).toContainText(
-    /saved store prices from ads and online checks|Treat totals as estimates/i,
-  );
-  await expect(page.getByText(/Treat totals as estimates/i).first()).toBeVisible();
   await expect(
-    page.locator(".meal-card-price-age, .sale-ingredient-freshness").first(),
+    page.getByRole("link", { name: "Where do these prices come from? Opens FAQ" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("note", { name: /heads up about these prices/i }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Project & data details (internal)" }),
   ).toHaveCount(0);

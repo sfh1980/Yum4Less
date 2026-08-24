@@ -14,8 +14,13 @@ import {
   isSettingsStoreIdSelected,
 } from "@/lib/store-identity-settings-lookup";
 import { formatSettingsStoreOptionLabel } from "@/lib/store-display-labels";
-import { buildMultiStoreCoverageSummary } from "@/lib/chain-coverage-honesty";
-import { radiusHelp, zipCodeHelp } from "@/lib/help-hint-content";
+import {
+  buildStoreCoverageHelpModel,
+  formatStoreCoverageHelpOneLiner,
+} from "@/lib/chain-coverage-honesty";
+import { HelpLegalLinks } from "@/components/help-legal-links";
+import { RESET_PREFERENCES_BUTTON_LABEL } from "@/lib/reset-preferences-copy";
+import { FAQ_SLUG } from "@/lib/faq-articles";
 import {
   FIND_STORES_BASED_ON_ZIP_LABEL,
   USE_GPS_LOCATION_LABEL,
@@ -139,9 +144,9 @@ export function SettingsPanel({
   const selectedSingleStore = selectableStores.find((store) =>
     isSettingsStoreIdSelected(form.selectedStoreIds, store.id),
   );
-  const multiStoreCoverageSummary =
-    storesReady && form.shoppingStyle === "multi-store"
-      ? buildMultiStoreCoverageSummary(selectableStores, form.selectedStoreIds)
+  const storeCoverageHelp =
+    storesReady && selectableStores.length > 0
+      ? buildStoreCoverageHelpModel(selectableStores, form.selectedStoreIds)
       : null;
 
   return (
@@ -157,7 +162,7 @@ export function SettingsPanel({
           id="settings-zip-code"
           label="ZIP code"
           error={displayedErrors.zipCode}
-          helpHint={zipCodeHelp}
+          helpArticleSlug={FAQ_SLUG.zip}
           hint="Continental US ZIP codes are supported in beta."
         >
           <input
@@ -172,7 +177,7 @@ export function SettingsPanel({
           id="settings-radius-miles"
           label="Radius in miles"
           error={displayedErrors.radiusMiles}
-          helpHint={radiusHelp}
+          helpArticleSlug={FAQ_SLUG.radius}
         >
           <input
             id="settings-radius-miles"
@@ -203,7 +208,16 @@ export function SettingsPanel({
 
         {storesReady ? (
           form.shoppingStyle === "single-store" ? (
-            <FormField id="settings-selected-store" label="Store">
+            <FormField
+              id="settings-selected-store"
+              label="Store"
+              helpArticleSlug={FAQ_SLUG.storeMapCoverage}
+              hint={
+                storeCoverageHelp
+                  ? formatStoreCoverageHelpOneLiner(storeCoverageHelp)
+                  : undefined
+              }
+            >
               <div className="settings-single-store-row">
                 <select
                   id="settings-selected-store"
@@ -237,7 +251,15 @@ export function SettingsPanel({
             <FormField
               id="settings-selected-stores"
               label="Stores"
-              hint="Pick one or more stores. Unselected stores stay hidden from the map and ingredient list."
+              helpArticleSlug={FAQ_SLUG.storeMapCoverage}
+              hint={[
+                "Pick one or more stores. Unselected stores stay hidden from the map and ingredient list.",
+                storeCoverageHelp
+                  ? formatStoreCoverageHelpOneLiner(storeCoverageHelp)
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
             >
               <div className="store-multi-select" id="settings-selected-stores">
                 {selectableStores.map((store) => {
@@ -288,11 +310,6 @@ export function SettingsPanel({
                   );
                 })}
               </div>
-              {multiStoreCoverageSummary ? (
-                <p className="field-hint badge-trust" role="status">
-                  {multiStoreCoverageSummary}
-                </p>
-              ) : null}
             </FormField>
           )
         ) : null}
@@ -386,18 +403,14 @@ export function SettingsPanel({
 
       <div className="settings-danger-zone">
         <button className="secondary-button" type="button" onClick={onFactoryReset}>
-          Factory reset preferences
+          {RESET_PREFERENCES_BUTTON_LABEL}
         </button>
         <p className="field-hint">
           Clears saved Settings and returns to this screen — same as a first visit.
         </p>
       </div>
 
-      <p className="settings-feedback-link">
-        <a className="text-link" href="/feedback">
-          Send feedback or report a wrong price
-        </a>
-      </p>
+      <HelpLegalLinks />
 
       <SingleStoreMapOverlay
         isOpen={isStoreMapOpen}

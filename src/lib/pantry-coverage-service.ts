@@ -19,13 +19,13 @@ import { RecommendationDependencyUnavailableError } from "@/lib/recommendation-t
 import { getMarketDataSnapshot } from "@/lib/market-repository";
 import { loadCatalogIngredients } from "@/lib/market-catalog-repository";
 import { buildEligibleRecipePool } from "@/lib/ranking-recipe-pool";
+import { recipePassesVisibleRankingGates } from "@/lib/ranking-result-gates";
 import {
   assessRecipePoolCoverage,
   buildCatalogById,
   buildCatalogIdSet,
   buildIngredientCatalogForClient,
   buildSuggestedPantryChecklist,
-  countFullyCoveredRecipes,
   filterValidPantryIngredientIds,
 } from "@/lib/recipe-plan-coverage";
 import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
@@ -183,9 +183,36 @@ export async function getPantryCoverageExperience(
     equivalentStoreIdsByStoreId,
   });
 
+  const recipesById = new Map(
+    eligibleRecipes.map((recipe) => [recipe.id, recipe]),
+  );
+  const rankingGateInput = {
+    stores: recommendationStores,
+    observations: scopedObservations,
+    shoppingStyle: preferences.shoppingStyle,
+    budget: preferences.budget,
+    maxIngredients: preferences.maxIngredients,
+    pantryIngredientIds: pantrySet,
+    dataSource: market.dataSource,
+    equivalentStoreIdsByStoreId,
+  };
+  const showableFullyCoveredCount = assessments.filter((assessment) => {
+    if (!assessment.isFullyCovered) {
+      return false;
+    }
+    const recipe = recipesById.get(assessment.recipeId);
+    return (
+      recipe !== undefined &&
+      recipePassesVisibleRankingGates({
+        ...rankingGateInput,
+        recipe,
+      })
+    );
+  }).length;
+
   return {
     suggestedChecklist: buildSuggestedPantryChecklist(assessments, catalogById),
-    fullyCoveredRecipeCount: countFullyCoveredRecipes(assessments),
+    fullyCoveredRecipeCount: showableFullyCoveredCount,
     eligibleRecipeCount: eligibleRecipes.length,
     ...(preferences.includeIngredientCatalog
       ? { ingredientCatalog: buildIngredientCatalogForClient(ingredientCatalog) }

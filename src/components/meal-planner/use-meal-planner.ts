@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildDiscoveryMapModel } from "@/lib/nearby-stores-map-model";
-import type { MealPreferenceForm } from "@/lib/recommendation-service";
+import type { MealPreferenceForm, MealRecommendation } from "@/lib/recommendation-service";
 import { DEFAULT_MAX_INGREDIENTS } from "@/lib/meal-preference-defaults";
 import { getDefaultRecipeSource } from "@/lib/recipe-sources/recipe-source-registry";
 import {
@@ -24,6 +24,15 @@ import {
   writeSettingsPreferences,
 } from "@/lib/settings-preferences";
 import {
+  clearHomeSessionDinners,
+  clearHomeSessionSnapshot,
+  readAppReturnSnapshot,
+  readHomeSessionSnapshot,
+  shouldRestoreHomeSessionSnapshot,
+  writeAppReturnSnapshot,
+  writeHomeSessionSnapshot,
+} from "@/lib/home-session-snapshot";
+import {
   clearAllZipSearchCenters,
   clearZipSearchCenter,
   readZipSearchCenter,
@@ -37,15 +46,31 @@ import {
 } from "@/lib/store-identity-settings-lookup";
 import { scopeMarketSummaryToSelectedStoresForMap } from "@/lib/store-identity-map-pin-resolve";
 import { defaultSelectedStoreIdsForSettings, filterSettingsSelectableStores } from "@/lib/settings-store-selection";
+import { mergeSuggestedPantryChecklist } from "@/lib/recipe-plan-coverage";
+import {
+  clearSavedMeals,
+  readSavedMeals,
+  toggleSavedMeal,
+  writeSavedMeals,
+  type SavedMealSnapshot,
+} from "@/lib/saved-meals";
 import type { AppTab } from "@/components/meal-planner/app-tab";
 import {
-  isAppTabEnabled,
-  resolveAppTabFromPreferences,
   SSR_DEFAULT_APP_TAB,
 } from "@/components/meal-planner/app-tab";
 import type { IngredientPickMode } from "@/components/meal-planner/ingredient-pick-mode";
 import type { FlowStep } from "@/components/meal-planner/flow-step";
-import { getInitialFlowStep } from "@/components/meal-planner/flow-step";
+import { getInitialFlowStep, isWelcomeFlowStep } from "@/components/meal-planner/flow-step";
+import {
+  GPS_UNAVAILABLE_NOTICE,
+  isPersistableOnboardingStep,
+  previousOnboardingStep,
+  remainingSetupStepCount,
+  resolveResumeOnboardingStep,
+  type OnboardingStep,
+  type PersistableOnboardingStep,
+} from "@/components/meal-planner/onboarding-step";
+import { resolveThemePreference } from "@/lib/resolve-theme";
 import type { PantryItemSource } from "@/components/meal-planner/pantry-step-panel";
 import type {
   ActiveLocationRequest,
@@ -60,7 +85,6 @@ import type {
   RecommendationResponse,
   RecommendationState,
 } from "@/components/meal-planner/types";
-import type { CatalogIngredient } from "@/lib/ingredient-category";
 
 const defaultForm: MealPreferenceForm = {
   zipCode: "23111",
@@ -114,7 +138,14 @@ function hydrateFormFromSettings(): FormState {
           ),
         }
       : {}),
-    ...(saved.theme ? { theme: saved.theme } : {}),
+    ...(saved.theme
+      ? {
+          theme:
+            saved.theme === "system"
+              ? resolveThemePreference("system")
+              : saved.theme,
+        }
+      : {}),
   };
 }
 
@@ -151,9 +182,18 @@ function persistLocationPreferences(
 export function useMealPlanner() {
   const [activeTab, setActiveTab] = useState<AppTab>(SSR_DEFAULT_APP_TAB);
   const [settingsComplete, setSettingsComplete] = useState(false);
+  const [splashVisible, setSplashVisible] = useState(true);
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("choose-location");
+  const [gpsRequesting, setGpsRequesting] = useState(false);
+  const [gpsNotice, setGpsNotice] = useState<string>();
+  const [pendingBrowserLocation, setPendingBrowserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  }>();
+  const splashFinishedRef = useRef(false);
   const [flowStep, setFlowStep] = useState<FlowStep>(() => getInitialFlowStep());
   const [form, setForm] = useState<FormState>(defaultFormState);
-  const preferencesHydratedRef = useRef(false);
+  const [preferencesHydrated, setPreferencesHydrated] = useState(false);
   const [marketSearchState, setMarketSearchState] =
     useState<MarketSearchState>(initialMarketSearchState);
   const [recommendationState, setRecommendationState] =
@@ -179,17 +219,16 @@ export function useMealPlanner() {
   const [pantryItemSources, setPantryItemSources] = useState<
     Record<string, PantryItemSource>
   >({});
-  const [ingredientCatalog, setIngredientCatalog] = useState<CatalogIngredient[]>([]);
   const [pantryCoverageState, setPantryCoverageState] = useState<PantryCoverageState>(
     initialPantryCoverageState,
   );
+  const [savedMeals, setSavedMeals] = useState<SavedMealSnapshot[]>(() => readSavedMeals());
   const marketSearchRequestRef = useRef(0);
   const rankRequestRef = useRef(0);
   const pantryCoverageRequestRef = useRef(0);
   const geolocationRequestRef = useRef(0);
   const autoMarketSearchAttemptedRef = useRef(false);
   const rankedStoreScopeRef = useRef<string[] | null>(null);
-  const pantryCatalogLoadedRef = useRef(false);
   const pantryCoverageStatusRef = useRef<PantryCoverageState["status"]>(
     initialPantryCoverageState.status,
   );
@@ -217,12 +256,53 @@ export function useMealPlanner() {
   };
 
   useEffect(() => {
-    setActiveTab(resolveAppTabFromPreferences());
+    const saved = readSettingsPreferences();
     setForm(hydrateFormFromSettings());
-    setSettingsComplete(
-      isSettingsPreferencesComplete(readSettingsPreferences()),
-    );
-    preferencesHydratedRef.current = true;
+    const complete = isSettingsPreferencesComplete(saved);
+    setSettingsComplete(complete);
+    if (saved?.theme === "system") {
+      const resolved = resolveThemePreference("system");
+      setForm((current) => ({ ...current, theme: resolved }));
+      writeSettingsPreferences(buildSettingsPreferencesPatch({ theme: resolved }));
+    }
+    if (!complete) {
+      setOnboardingStep(
+        resolveResumeOnboardingStep(saved?.onboardingStep, saved?.locationMode),
+      );
+    }
+    setPreferencesHydrated(true);
+
+    if (shouldRestoreHomeSessionSnapshot()) {
+      const returnSnapshot = readAppReturnSnapshot();
+      const dinners = readHomeSessionSnapshot();
+      if (returnSnapshot?.splashFinished) {
+        splashFinishedRef.current = true;
+        setSplashVisible(false);
+        setActiveTab(returnSnapshot.activeTab);
+        setFlowStep(returnSnapshot.flowStep);
+        if (dinners) {
+          setMarketSearchState(dinners.marketSearchState);
+          setRecommendationState(dinners.recommendationState);
+          setHasAttemptedRanking(true);
+        }
+        return;
+      }
+    }
+
+    // First-run: stay on splash until Continue. Returning visitors with setup
+    // already saved get a brief splash, then Home (Q7).
+    if (!complete) {
+      return;
+    }
+
+    const reducedMotion =
+      typeof window.matchMedia !== "function" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const delay = reducedMotion ? 0 : 2000;
+    const timer = window.setTimeout(() => {
+      finishSplash(true);
+    }, delay);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -230,6 +310,22 @@ export function useMealPlanner() {
       setFlowStep("results");
     }
   }, [recommendationState.status]);
+
+  useEffect(() => {
+    if (
+      marketSearchState.status !== "ready" ||
+      !marketSearchState.market ||
+      recommendationState.status !== "ready"
+    ) {
+      return;
+    }
+
+    writeHomeSessionSnapshot({
+      flowStep: "results",
+      marketSearchState,
+      recommendationState,
+    });
+  }, [marketSearchState, recommendationState]);
 
   const market = marketSearchState.market;
   const scopedMarket = useMemo(() => {
@@ -272,29 +368,33 @@ export function useMealPlanner() {
 
   const pantryRows = useMemo(() => {
     const nameById = new Map(
-      ingredientCatalog.map((ingredient) => [ingredient.id, ingredient.name]),
+      pantryCoverageState.suggestedChecklist.map((item) => [
+        item.ingredientId,
+        item.ingredientName,
+      ]),
     );
-    for (const item of pantryCoverageState.suggestedChecklist) {
-      nameById.set(item.ingredientId, item.ingredientName);
-    }
 
     return pantryIngredientIds.map((ingredientId) => ({
       ingredientId,
       ingredientName: nameById.get(ingredientId) ?? ingredientId,
-      source: pantryItemSources[ingredientId] ?? "manual",
+      source: pantryItemSources[ingredientId] ?? "suggested",
       recipeCount: pantryCoverageState.suggestedChecklist.find(
         (item) => item.ingredientId === ingredientId,
       )?.recipeCount,
     }));
   }, [
-    ingredientCatalog,
     pantryCoverageState.suggestedChecklist,
     pantryIngredientIds,
     pantryItemSources,
   ]);
 
+  const savedMealIds = useMemo(
+    () => new Set(savedMeals.map((meal) => meal.id)),
+    [savedMeals],
+  );
+
   useEffect(() => {
-    if (!preferencesHydratedRef.current) {
+    if (!preferencesHydrated) {
       return;
     }
 
@@ -310,12 +410,35 @@ export function useMealPlanner() {
         shoppingStyle: form.shoppingStyle,
         selectedStoreIds: canonicalizeStoreIdsForSettings(form.selectedStoreIds),
         theme: form.theme,
+        ...(isPersistableOnboardingStep(onboardingStep)
+          ? { onboardingStep }
+          : {}),
       }),
     );
-  }, [form.zipCode, form.radiusMiles, form.shoppingStyle, form.selectedStoreIds, form.theme]);
+  }, [
+    preferencesHydrated,
+    form.zipCode,
+    form.radiusMiles,
+    form.shoppingStyle,
+    form.selectedStoreIds,
+    form.theme,
+    onboardingStep,
+  ]);
 
   useEffect(() => {
-    if (!preferencesHydratedRef.current) {
+    if (!preferencesHydrated || splashVisible) {
+      return;
+    }
+
+    writeAppReturnSnapshot({
+      splashFinished: true,
+      activeTab,
+      flowStep,
+    });
+  }, [preferencesHydrated, splashVisible, activeTab, flowStep]);
+
+  useEffect(() => {
+    if (!preferencesHydrated) {
       return;
     }
 
@@ -328,12 +451,13 @@ export function useMealPlanner() {
     }
 
     invalidateRankedResults();
-  }, [form.selectedStoreIds]);
+  }, [form.selectedStoreIds, preferencesHydrated]);
 
   function invalidateRankedResults() {
     rankedStoreScopeRef.current = null;
     rankRequestRef.current += 1;
     setRecommendationState(initialRecommendationState);
+    clearHomeSessionDinners();
   }
 
   function resetLocationDependentState() {
@@ -351,12 +475,11 @@ export function useMealPlanner() {
     setIngredientPickMode("unset");
     setPantryIngredientIds([]);
     setPantryItemSources({});
-    setIngredientCatalog([]);
     setPantryCoverageState(initialPantryCoverageState);
     pantryCoverageStatusRef.current = initialPantryCoverageState.status;
     pantryCoverageRateLimitedUntilRef.current = null;
-    pantryCatalogLoadedRef.current = false;
     setIsMapOverlayOpen(false);
+    clearHomeSessionSnapshot();
     setIsZipCenterPickerOpen(false);
     setForm((current) => ({ ...current, selectedStoreIds: [] }));
   }
@@ -617,7 +740,7 @@ export function useMealPlanner() {
       (activeTab === "settings" &&
         !isSettingsPreferencesComplete(readSettingsPreferences())) ||
       (activeTab === "home" &&
-        (flowStep === "welcome" || flowStep === "ingredients")) ||
+        (isWelcomeFlowStep(flowStep) || flowStep === "ingredients")) ||
       activeTab === "deals";
 
     if (!shouldAutoLoadMarket) {
@@ -637,20 +760,57 @@ export function useMealPlanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load for home/deals tabs
   }, [activeTab, flowStep, marketSearchState.status]);
 
-  function handleTabChange(tab: AppTab) {
-    if (
-      !isAppTabEnabled(tab, {
-        settingsComplete,
-        cookEnabled,
-      })
-    ) {
+  function finishSplash(
+    complete = isSettingsPreferencesComplete(readSettingsPreferences()),
+  ) {
+    if (splashFinishedRef.current) {
       return;
     }
+    splashFinishedRef.current = true;
+    setSplashVisible(false);
+    if (complete) {
+      setActiveTab("home");
+      setFlowStep("welcome-budget");
+    } else {
+      setActiveTab("settings");
+    }
+  }
 
+  function persistOnboardingStep(
+    step: PersistableOnboardingStep,
+    extras?: Parameters<typeof buildSettingsPreferencesPatch>[0],
+  ) {
+    const radiusMiles = Number(form.radiusMiles);
+    writeSettingsPreferences(
+      buildSettingsPreferencesPatch({
+        ...(form.zipCode.trim() ? { zipCode: form.zipCode.trim() } : {}),
+        ...(Number.isFinite(radiusMiles) ? { radiusMiles } : {}),
+        shoppingStyle: form.shoppingStyle,
+        selectedStoreIds: canonicalizeStoreIdsForSettings(form.selectedStoreIds),
+        theme: form.theme === "system" ? resolveThemePreference("system") : form.theme,
+        onboardingStep: step,
+        ...extras,
+      }),
+    );
+  }
+
+  function goToOnboardingStep(
+    step: PersistableOnboardingStep,
+    extras?: Parameters<typeof buildSettingsPreferencesPatch>[0],
+  ) {
+    setOnboardingStep(step);
+    persistOnboardingStep(step, extras);
+  }
+
+  function handleTabChange(tab: AppTab) {
     setActiveTab(tab);
 
     if (tab === "cook" && cookEnabled) {
       setFlowStep("results");
+    }
+
+    if (tab === "settings" && settingsComplete) {
+      goToOnboardingStep("choose-location");
     }
   }
 
@@ -707,52 +867,23 @@ export function useMealPlanner() {
   function handleRadiusMilesChange(radiusMiles: string) {
     setForm((current) => ({ ...current, radiusMiles }));
     setZipCenterCancelNotice(undefined);
-
-    const zipCode = form.zipCode.trim();
-    const parsedRadius = Number(radiusMiles);
-    const marketReady = marketSearchState.status === "ready";
-    const cachedCenter = readZipSearchCenter(zipCode);
-
-    if (!marketReady) {
-      return;
-    }
-
-    if (!Number.isFinite(parsedRadius)) {
-      resetLocationDependentState();
-      return;
-    }
-
-    if (cachedCenter) {
-      rankedStoreScopeRef.current = null;
-      setRecommendationState(initialRecommendationState);
-      runZipMarketSearch(zipCode, parsedRadius, cachedCenter);
-      return;
-    }
-
-    resetLocationDependentState();
-    openZipCenterPicker();
   }
 
   function handleBrowserLocationSearch() {
     setSettingsSaveError(undefined);
+    setGpsNotice(undefined);
     setLocationValidationMode("browser");
     setHasAttemptedLocationSearch(true);
     geolocationRequestRef.current += 1;
 
-    if (Object.keys(validateLocationFields(form, false)).length > 0) {
-      return;
-    }
-
     if (!("geolocation" in navigator)) {
-      setMarketSearchState({
-        status: "error",
-        error: "Browser geolocation is not available here. Try ZIP search instead.",
-      });
+      setGpsRequesting(false);
+      setGpsNotice(GPS_UNAVAILABLE_NOTICE);
+      goToOnboardingStep("zip-input");
       return;
     }
 
-    setMarketSearchState({ status: "loading" });
-    setRecommendationState(initialRecommendationState);
+    setGpsRequesting(true);
 
     const geolocationRequestId = ++geolocationRequestRef.current;
 
@@ -762,29 +893,27 @@ export function useMealPlanner() {
           return;
         }
 
-        void runMarketSearch(
-          {
-            zipCode: "",
-            radiusMiles: Number(form.radiusMiles),
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          },
-          {
-            mode: "browser",
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          },
-        );
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        setGpsRequesting(false);
+        setPendingBrowserLocation(coords);
+        setActiveLocationRequest({
+          mode: "browser",
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        });
+        goToOnboardingStep("radius", { locationMode: "geolocation" });
       },
       () => {
         if (geolocationRequestId !== geolocationRequestRef.current) {
           return;
         }
 
-        void runMarketSearchWithZipFallback(
-          "Location access was denied — using your ZIP instead.",
-          Number(form.radiusMiles),
-        );
+        setGpsRequesting(false);
+        setGpsNotice(GPS_UNAVAILABLE_NOTICE);
+        goToOnboardingStep("zip-input");
       },
     );
   }
@@ -848,12 +977,15 @@ export function useMealPlanner() {
     autoMarketSearchAttemptedRef.current = true;
     invalidateRankedResults();
     setActiveTab("home");
-    setFlowStep("welcome");
+    setFlowStep("welcome-budget");
   }
 
   function handleFactoryReset() {
     clearSettingsPreferences();
     clearAllZipSearchCenters();
+    clearSavedMeals();
+    clearHomeSessionSnapshot();
+    setSavedMeals([]);
     resetLocationDependentState();
     setForm(defaultFormState);
     setSettingsSaveError(undefined);
@@ -863,8 +995,14 @@ export function useMealPlanner() {
     setHasAttemptedRanking(false);
     setLocationValidationMode("zip");
     setSettingsComplete(false);
+    setSplashVisible(true);
+    splashFinishedRef.current = false;
+    setOnboardingStep("choose-location");
+    setGpsRequesting(false);
+    setGpsNotice(undefined);
+    setPendingBrowserLocation(undefined);
     setActiveTab("settings");
-    setFlowStep("welcome");
+    setFlowStep("welcome-budget");
   }
 
   function handleCompleteWelcome() {
@@ -874,9 +1012,187 @@ export function useMealPlanner() {
     }
 
     invalidateRankedResults();
+    setFlowStep("welcome-dietary");
+    setIngredientPickMode("unset");
+    setSelectedIngredientIds([]);
+  }
+
+  function handleCompleteDietary() {
+    setHasAttemptedWelcome(true);
+    if (Object.keys(validateMealFields(form)).length > 0) {
+      return;
+    }
+
+    invalidateRankedResults();
     setFlowStep("ingredients");
     setIngredientPickMode("unset");
     setSelectedIngredientIds([]);
+  }
+
+  function handleEnterZipPath() {
+    setGpsRequesting(false);
+    geolocationRequestRef.current += 1;
+    setLocationValidationMode("zip");
+    goToOnboardingStep("zip-input", { locationMode: "zip" });
+  }
+
+  function handleZipInputContinue() {
+    setHasAttemptedLocationSearch(true);
+    setLocationValidationMode("zip");
+    if (Object.keys(validateLocationFields(form, true)).length > 0) {
+      return;
+    }
+    goToOnboardingStep("zip-pin", { locationMode: "zip" });
+  }
+
+  function handleZipPinCommit(center: { latitude: number; longitude: number }) {
+    const zipCode = form.zipCode.trim();
+    writeZipSearchCenter(zipCode, center);
+    setLocationValidationMode("zip");
+    setHasAttemptedLocationSearch(true);
+    goToOnboardingStep("radius", { locationMode: "zip", zipCode });
+  }
+
+  function startMarketSearchForCurrentLocation() {
+    const radiusMiles = Number(form.radiusMiles);
+    if (!Number.isFinite(radiusMiles)) {
+      return;
+    }
+
+    const browserCoords =
+      pendingBrowserLocation ??
+      (activeLocationRequest?.mode === "browser"
+        ? {
+            latitude: activeLocationRequest.latitude,
+            longitude: activeLocationRequest.longitude,
+          }
+        : undefined);
+
+    if (locationValidationMode === "browser" || browserCoords) {
+      if (browserCoords) {
+        void runMarketSearch(
+          {
+            zipCode: "",
+            radiusMiles,
+            latitude: browserCoords.latitude,
+            longitude: browserCoords.longitude,
+          },
+          {
+            mode: "browser",
+            latitude: browserCoords.latitude,
+            longitude: browserCoords.longitude,
+          },
+        );
+        return;
+      }
+
+      if (!("geolocation" in navigator)) {
+        setGpsNotice(GPS_UNAVAILABLE_NOTICE);
+        goToOnboardingStep("zip-input");
+        return;
+      }
+
+      const geolocationRequestId = ++geolocationRequestRef.current;
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (geolocationRequestId !== geolocationRequestRef.current) {
+            return;
+          }
+          void runMarketSearch(
+            {
+              zipCode: "",
+              radiusMiles,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            },
+            {
+              mode: "browser",
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            },
+          );
+        },
+        () => {
+          if (geolocationRequestId !== geolocationRequestRef.current) {
+            return;
+          }
+          setGpsNotice(GPS_UNAVAILABLE_NOTICE);
+          goToOnboardingStep("zip-input");
+        },
+      );
+      return;
+    }
+
+    const zipCode = form.zipCode.trim();
+    const cachedCenter = readZipSearchCenter(zipCode);
+    if (!cachedCenter) {
+      goToOnboardingStep("zip-pin");
+      return;
+    }
+    runZipMarketSearch(zipCode, radiusMiles, cachedCenter);
+  }
+
+  function handleRadiusContinue() {
+    setHasAttemptedLocationSearch(true);
+    if (Object.keys(validateLocationFields(form, locationValidationMode === "zip")).length > 0) {
+      return;
+    }
+    goToOnboardingStep("shopping-style");
+    startMarketSearchForCurrentLocation();
+  }
+
+  function handleShoppingStyleContinue() {
+    goToOnboardingStep("stores");
+  }
+
+  function handleShoppingStyleChange(shoppingStyle: FormState["shoppingStyle"]) {
+    const selectable = filterSettingsSelectableStores(market?.nearbyStores ?? []);
+    setForm((current) => ({
+      ...current,
+      shoppingStyle,
+      selectedStoreIds: defaultSelectedStoreIdsForSettings(selectable, shoppingStyle),
+    }));
+  }
+
+  function handleStoreSelectionChange(
+    shoppingStyle: FormState["shoppingStyle"],
+    selectedStoreIds: string[],
+  ) {
+    setForm((current) => ({
+      ...current,
+      shoppingStyle,
+      selectedStoreIds,
+    }));
+  }
+
+  function handleWizardBack() {
+    geolocationRequestRef.current += 1;
+    setGpsRequesting(false);
+    const locationMode =
+      locationValidationMode === "browser" ? "geolocation" : "zip";
+    const previous = previousOnboardingStep(onboardingStep, locationMode);
+    if (previous && isPersistableOnboardingStep(previous)) {
+      goToOnboardingStep(previous);
+    }
+  }
+
+  function handleToggleTheme() {
+    const resolved = resolveThemePreference(form.theme);
+    const next = resolved === "light" ? "dark" : "light";
+    setForm((current) => ({ ...current, theme: next }));
+    writeSettingsPreferences(buildSettingsPreferencesPatch({ theme: next }));
+  }
+
+  function handleDismissSplash() {
+    const complete = isSettingsPreferencesComplete(readSettingsPreferences());
+    splashFinishedRef.current = true;
+    setSplashVisible(false);
+    if (complete) {
+      setActiveTab("home");
+      setFlowStep("welcome-budget");
+    } else {
+      setActiveTab("settings");
+    }
   }
 
   const runPantryCoverageAssess = useCallback(
@@ -975,17 +1291,18 @@ export function useMealPlanner() {
           return;
         }
 
-        if (result.ingredientCatalog) {
-          setIngredientCatalog(result.ingredientCatalog);
-          pantryCatalogLoadedRef.current = true;
-        }
-
-        setPantryCoverageState({
+        setPantryCoverageState((current) => ({
           status: "ready",
-          suggestedChecklist: result.suggestedChecklist,
+          suggestedChecklist:
+            current.status === "ready" && current.suggestedChecklist.length > 0
+              ? mergeSuggestedPantryChecklist(
+                  current.suggestedChecklist,
+                  result.suggestedChecklist,
+                )
+              : result.suggestedChecklist,
           fullyCoveredRecipeCount: result.fullyCoveredRecipeCount,
           eligibleRecipeCount: result.eligibleRecipeCount,
-        });
+        }));
       } catch {
         if (requestId !== pantryCoverageRequestRef.current) {
           return;
@@ -1011,7 +1328,7 @@ export function useMealPlanner() {
     const delay = pantryCoverageStatusRef.current === "idle" ? 0 : 300;
     const timer = window.setTimeout(() => {
       void runPantryCoverageAssess(pantryIngredientIds, {
-        includeIngredientCatalog: !pantryCatalogLoadedRef.current,
+        skipLoadingState: pantryCoverageStatusRef.current !== "idle",
       });
     }, delay);
 
@@ -1242,27 +1559,27 @@ export function useMealPlanner() {
     });
   }
 
-  function handleAddPantryIngredient(result: {
-    ingredientId: string;
-    ingredientName: string;
-    nearMissRecipeCount: number;
-  }) {
-    setPantryIngredientIds((current) =>
-      current.includes(result.ingredientId)
-        ? current
-        : [...current, result.ingredientId],
-    );
-    setPantryItemSources((current) => ({
-      ...current,
-      [result.ingredientId]: "manual",
-    }));
-  }
-
   function handleRemovePantryIngredient(ingredientId: string) {
     setPantryIngredientIds((current) => current.filter((id) => id !== ingredientId));
     setPantryItemSources((current) => {
       const next = { ...current };
       delete next[ingredientId];
+      return next;
+    });
+  }
+
+  function handleToggleSaveMeal(meal: MealRecommendation) {
+    setSavedMeals((current) => {
+      const next = toggleSavedMeal(current, meal);
+      writeSavedMeals(next);
+      return next;
+    });
+  }
+
+  function handleRemoveSavedMeal(mealId: string) {
+    setSavedMeals((current) => {
+      const next = current.filter((meal) => meal.id !== mealId);
+      writeSavedMeals(next);
       return next;
     });
   }
@@ -1304,7 +1621,8 @@ export function useMealPlanner() {
     pantryIngredientIds,
     pantryCoverageState,
     pantryRows,
-    ingredientCatalog,
+    savedMeals,
+    savedMealIds,
     settingsSaveError,
     zipCenterCancelNotice,
     isZipCenterPickerOpen,
@@ -1331,10 +1649,31 @@ export function useMealPlanner() {
     handleUseAllIngredients,
     handlePickIngredientsManually,
     handleTogglePantryChecklistItem,
-    handleAddPantryIngredient,
     handleRemovePantryIngredient,
+    handleToggleSaveMeal,
+    handleRemoveSavedMeal,
     handleOpenMapOverlay,
     handleCloseMapOverlay,
+    splashVisible,
+    onboardingStep,
+    gpsRequesting,
+    gpsNotice,
+    remainingSetupSteps: remainingSetupStepCount(onboardingStep, settingsComplete),
+    handleDismissSplash,
+    handleWizardBack,
+    handleToggleTheme,
+    handleEnterZipPath,
+    handleZipInputContinue,
+    handleZipPinCommit,
+    handleRadiusContinue,
+    handleShoppingStyleContinue,
+    handleShoppingStyleChange,
+    handleStoreSelectionChange,
+    handleCompleteDietary,
+    locationValidationMode,
+    handleWelcomeBudgetBack: () => {
+      setFlowStep("welcome-budget");
+    },
   };
 }
 

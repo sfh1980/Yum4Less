@@ -125,7 +125,7 @@ describe("getRecommendationExperience merged TheMealDB ranking", () => {
     await resetDbPoolForTests();
   });
 
-  it("merges internal library and TheMealDB imports in one score-sorted list", async () => {
+  it("merges TheMealDB imports in one score-sorted list", async () => {
     const snapshot = withThemealdbSaleLabels(
       buildZip23111RankingSnapshot(["kroger-mechanicsville"]),
     );
@@ -139,14 +139,15 @@ describe("getRecommendationExperience merged TheMealDB ranking", () => {
     );
 
     expect(experience.recommendations.length).toBeGreaterThan(3);
+    expect(
+      experience.recommendations.every((meal) =>
+        meal.recipeAttribution?.includes("TheMealDB"),
+      ),
+    ).toBe(true);
 
-    const hasInternal = experience.recommendations.some(
-      (meal) => !meal.recipeAttribution?.includes("TheMealDB"),
-    );
     const themealdbMeal = experience.recommendations.find((meal) =>
       meal.title.includes("Teriyaki"),
     );
-    expect(hasInternal).toBe(true);
     expect(themealdbMeal?.recipeAttribution).toContain("TheMealDB");
     expect(themealdbMeal?.recipeAttributionUrl).toBe(
       "https://www.themealdb.com/meal/52772",
@@ -158,7 +159,7 @@ describe("getRecommendationExperience merged TheMealDB ranking", () => {
     }
   });
 
-  it("returns internal meals when zero TheMealDB imports exist — eligibility, not error", async () => {
+  it("still ranks linked TheMealDB fixture dinners when no extra imports exist", async () => {
     mockRankingReads(buildZip23111RankingSnapshot(["kroger-mechanicsville"]));
 
     const experience = await getRecommendationExperience(
@@ -169,16 +170,41 @@ describe("getRecommendationExperience merged TheMealDB ranking", () => {
 
     expect(experience.recommendations).toHaveLength(3);
     expect(
-      experience.recommendations.every(
-        (meal) => !meal.recipeAttribution?.includes("TheMealDB"),
+      experience.recommendations.every((meal) =>
+        meal.recipeAttribution?.includes("TheMealDB"),
       ),
     ).toBe(true);
     expect(experience.shopperNotice?.title ?? "").not.toContain("No TheMealDB meals");
   });
 
-  it("keeps internal meals when TheMealDB imports fail sale overlap", async () => {
+  it("keeps other linked dinners when a TheMealDB import fails sale overlap", async () => {
+    const unmatchedThemealdbRecipe = {
+      ...themealdbRecipe,
+      ingredients: [
+        {
+          ingredientId: "ground-turkey",
+          displayName: "Ground turkey",
+          quantityNote: "1 lb",
+        },
+        {
+          ingredientId: "sour-cream",
+          displayName: "Sour cream",
+          quantityNote: "1 tub",
+        },
+        {
+          ingredientId: "mozzarella",
+          displayName: "Mozzarella",
+          quantityNote: "8 oz",
+        },
+        {
+          ingredientId: "penne-pasta",
+          displayName: "Penne",
+          quantityNote: "1 box",
+        },
+      ],
+    };
     const snapshot = buildZip23111RankingSnapshot(["kroger-mechanicsville"]);
-    snapshot.recipes = [...snapshot.recipes, themealdbRecipe];
+    snapshot.recipes = [...snapshot.recipes, unmatchedThemealdbRecipe];
     mockRankingReads(snapshot);
 
     const experience = await getRecommendationExperience(

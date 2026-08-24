@@ -1,8 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = process.env.PLAYWRIGHT_FORCE_NEW_SERVER
-  ? "3100"
-  : (process.env.PORT ?? "3000");
+const useIsolatedServer = Boolean(
+  process.env.CI || process.env.PLAYWRIGHT_FORCE_NEW_SERVER,
+);
+const port = useIsolatedServer ? "3100" : (process.env.PORT ?? "3000");
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
 
 export default defineConfig({
@@ -34,12 +35,13 @@ export default defineConfig({
       use: { ...devices["Pixel 5"] },
     },
   ],
-  webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
-    ? undefined
-    : {
+  webServer:
+    process.env.PLAYWRIGHT_SKIP_WEBSERVER && !process.env.CI
+      ? undefined
+      : {
         command: process.env.CI ? "npm run start" : "npm run dev",
         url: baseURL,
-        reuseExistingServer: !process.env.PLAYWRIGHT_FORCE_NEW_SERVER,
+        reuseExistingServer: !useIsolatedServer,
         timeout: 120_000,
         env: {
           ...process.env,

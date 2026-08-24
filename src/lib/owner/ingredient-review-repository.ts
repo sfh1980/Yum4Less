@@ -1,5 +1,9 @@
 import { getDbPool } from "@/lib/db";
 import type { IngredientCategory } from "@/lib/ingredient-category";
+import {
+  isCanonicalIngredientId,
+  slugifyIngredientId,
+} from "@/lib/ingredient-id";
 import { resolveCanonicalSimpleFood } from "@/lib/weekly-ad-ingestion/weekly-ad-simple-food";
 import {
   insertIngredientIfMissing,
@@ -154,8 +158,17 @@ async function resolveAcceptedIngredient(input: {
   ingredientName?: string;
   category?: IngredientCategory;
 }): Promise<{ ok: true; ingredientId: string } | { ok: false; error: string }> {
-  const requestedId = input.ingredientId?.trim();
+  const requestedId = input.ingredientId
+    ? slugifyIngredientId(input.ingredientId)
+    : "";
   if (requestedId) {
+    if (!isCanonicalIngredientId(requestedId)) {
+      return {
+        ok: false,
+        error:
+          "Canonical food id must be lowercase kebab-case (letters, numbers, hyphens), 2-56 characters. Example: imitation-crab.",
+      };
+    }
     const existing = await getDbPool().query<{ id: string }>(
       `select id from ingredients where id = $1`,
       [requestedId],
@@ -163,10 +176,11 @@ async function resolveAcceptedIngredient(input: {
     if (existing.rows[0]?.id) {
       return { ok: true, ingredientId: existing.rows[0].id };
     }
-    if (input.ingredientName && input.category) {
+    const createdName = input.ingredientName?.trim();
+    if (createdName && input.category) {
       const createdId = await insertIngredientIfMissing({
         id: requestedId,
-        name: input.ingredientName,
+        name: createdName,
         category: input.category,
       });
       return { ok: true, ingredientId: createdId };

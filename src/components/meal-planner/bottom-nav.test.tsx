@@ -5,49 +5,40 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { BottomNav } from "@/components/meal-planner/bottom-nav";
 
-describe("BottomNav Settings-first gate", () => {
-  it("disables Home/Deals/Cook/Saved until settings are complete", () => {
+describe("BottomNav", () => {
+  it("keeps Home/Deals/Cook/Saved/Feedback tappable before setup is complete", () => {
     const onTabChange = vi.fn();
     render(
       createElement(BottomNav, {
         activeTab: "settings",
-        settingsComplete: false,
-        cookEnabled: false,
         onTabChange,
       }),
     );
 
     expect(screen.getByRole("button", { name: "Settings" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Home" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Deals" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Cook" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Saved" })).toBeDisabled();
-
-    expect(screen.getAllByText("Finish setup to unlock this").length).toBe(4);
+    expect(screen.getByRole("button", { name: "Home" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Feedback" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Settings" })).toHaveClass(
+      "bottom-nav-button--active",
+    );
+    expect(
+      screen.getByRole("button", { name: "Settings" }).querySelector("svg"),
+    ).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
-    expect(onTabChange).not.toHaveBeenCalled();
+    expect(onTabChange).toHaveBeenCalledWith("home");
   });
 
-  it("enables main tabs after setup while Cook stays recipe-gated with helper text", () => {
+  it("can open Feedback from the nav after setup", () => {
     const onTabChange = vi.fn();
     render(
       createElement(BottomNav, {
         activeTab: "home",
-        settingsComplete: true,
-        cookEnabled: false,
         onTabChange,
       }),
     );
 
-    expect(screen.getByRole("button", { name: "Home" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Deals" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Saved" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Cook" })).toBeDisabled();
-    expect(screen.getByText("Suggest recipes on Home first")).toBeInTheDocument();
-    expect(screen.queryByText("Finish setup to unlock this")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Deals" }));
-    expect(onTabChange).toHaveBeenCalledWith("deals");
+    fireEvent.click(screen.getByRole("button", { name: "Feedback" }));
+    expect(onTabChange).toHaveBeenCalledWith("feedback");
   });
 });

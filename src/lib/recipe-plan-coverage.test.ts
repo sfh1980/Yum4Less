@@ -4,6 +4,7 @@ import {
   buildSuggestedPantryChecklist,
   countFullyCoveredRecipes,
   assessRecipePoolCoverage,
+  mergeSuggestedPantryChecklist,
 } from "@/lib/recipe-plan-coverage";
 import {
   aldiStore,
@@ -232,5 +233,24 @@ describe("countFullyCoveredRecipes", () => {
     });
 
     expect(countFullyCoveredRecipes(assessments)).toBe(1);
+  });
+});
+
+describe("mergeSuggestedPantryChecklist", () => {
+  it("keeps the original order when coverage membership changes", () => {
+    const current = [
+      { ingredientId: "cumin", ingredientName: "Cumin", recipeCount: 3 },
+      { ingredientId: "onion", ingredientName: "Onion", recipeCount: 2 },
+    ];
+    const incoming = [
+      { ingredientId: "garlic", ingredientName: "Garlic", recipeCount: 4 },
+      { ingredientId: "onion", ingredientName: "Onion", recipeCount: 1 },
+    ];
+
+    expect(mergeSuggestedPantryChecklist(current, incoming)).toEqual([
+      { ingredientId: "cumin", ingredientName: "Cumin", recipeCount: 3 },
+      { ingredientId: "onion", ingredientName: "Onion", recipeCount: 1 },
+      { ingredientId: "garlic", ingredientName: "Garlic", recipeCount: 4 },
+    ]);
   });
 });

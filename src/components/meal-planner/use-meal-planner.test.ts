@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
 import { clearSettingsPreferences, readSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
+import { clearHomeSessionSnapshot } from "@/lib/home-session-snapshot";
 import {
   clearAllZipSearchCenters,
   writeZipSearchCenter,
@@ -160,6 +161,7 @@ async function loadMarketAndOpenPantry(
 
   await act(async () => {
     result.current.handleCompleteWelcome();
+    result.current.handleCompleteDietary();
     result.current.handleContinueToPantry();
   });
 }
@@ -167,15 +169,34 @@ async function loadMarketAndOpenPantry(
 describe("useMealPlanner request generation (C2, H4)", () => {
   beforeEach(() => {
     clearSettingsPreferences();
+    clearHomeSessionSnapshot();
     clearAllZipSearchCenters();
     writeZipSearchCenter("23111", { latitude: 37.6085, longitude: -77.3321 });
   });
 
   afterEach(() => {
     clearSettingsPreferences();
+    clearHomeSessionSnapshot();
     clearAllZipSearchCenters();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it("keeps first-run splash until Continue", async () => {
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.splashVisible).toBe(true);
+
+    await act(() => {
+      result.current.handleDismissSplash();
+    });
+
+    expect(result.current.splashVisible).toBe(false);
+    expect(result.current.activeTab).toBe("settings");
   });
 
   it("opens the ZIP center picker when no cached pin exists", async () => {
@@ -422,6 +443,44 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(readSettingsPreferences()?.longitude).toBeUndefined();
   });
 
+  it("sends first-run GPS deny to ZIP input even when ZIP is empty", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const geolocationMock = vi.fn((_success: PositionCallback, error?: PositionErrorCallback) => {
+      error?.({
+        code: 1,
+        message: "User denied Geolocation",
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      } as GeolocationPositionError);
+    });
+    vi.stubGlobal("navigator", {
+      ...globalThis.navigator,
+      geolocation: { getCurrentPosition: geolocationMock },
+    });
+
+    const { result } = renderHook(() => useMealPlanner());
+
+    await act(async () => {
+      result.current.setForm((current) => ({ ...current, zipCode: "" }));
+      result.current.handleBrowserLocationSearch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.onboardingStep).toBe("zip-input");
+    });
+
+    expect(geolocationMock).toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.form.zipCode).toBe("");
+    expect(result.current.gpsNotice).toBe(
+      "GPS isn't available. Continue with a ZIP code and place a pin on the map.",
+    );
+    expect(result.current.market).toBeUndefined();
+  });
+
   it("falls back to form ZIP when Use my location is denied (Site B)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(marketPayload("ZIP fallback market", "23111")), {
@@ -453,28 +512,16 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.marketSearchState.status).toBe("ready");
+      expect(result.current.onboardingStep).toBe("zip-input");
     });
 
     expect(geolocationMock).toHaveBeenCalled();
-    expect(result.current.marketSearchState.notice).toBe(
-      "Location access was denied — using your ZIP instead.",
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.gpsNotice).toBe(
+      "GPS isn't available. Continue with a ZIP code and place a pin on the map.",
     );
-    expect(result.current.activeLocationRequest).toEqual({
-      mode: "zip",
-      zipCode: "23111",
-      latitude: 37.6085,
-      longitude: -77.3321,
-    });
-
-    const requestBody = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string) as {
-      zipCode?: string;
-      latitude?: number;
-      longitude?: number;
-    };
-    expect(requestBody.zipCode).toBe("23111");
-    expect(requestBody.latitude).toBe(37.6085);
-    expect(requestBody.longitude).toBe(-77.3321);
+    expect(result.current.market).toBeUndefined();
+    expect(result.current.activeLocationRequest).toBeUndefined();
   });
 
   it("surfaces denial notice as error when Use my location is denied and ZIP is invalid (Site B)", async () => {
@@ -506,13 +553,13 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.marketSearchState.status).toBe("error");
+      expect(result.current.onboardingStep).toBe("zip-input");
     });
 
     expect(geolocationMock).toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(result.current.marketSearchState.error).toBe(
-      "Location access was denied — using your ZIP instead.",
+    expect(result.current.gpsNotice).toBe(
+      "GPS isn't available. Continue with a ZIP code and place a pin on the map.",
     );
     expect(result.current.market).toBeUndefined();
     expect(result.current.activeLocationRequest).toBeUndefined();
@@ -617,6 +664,14 @@ describe("useMealPlanner request generation (C2, H4)", () => {
 
     await act(async () => {
       result.current.handleBrowserLocationSearch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.onboardingStep).toBe("radius");
+    });
+
+    await act(async () => {
+      result.current.handleRadiusContinue();
     });
 
     await waitFor(() => {
@@ -759,6 +814,12 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     });
 
     expect(result.current.recommendationState.status).toBe("idle");
+    expect(result.current.flowStep).toBe("welcome-dietary");
+
+    await act(async () => {
+      result.current.handleCompleteDietary();
+    });
+
     expect(result.current.flowStep).toBe("ingredients");
   });
 });
@@ -766,12 +827,14 @@ describe("useMealPlanner request generation (C2, H4)", () => {
 describe("useMealPlanner pantry coverage debounce", () => {
   beforeEach(() => {
     clearSettingsPreferences();
+    clearHomeSessionSnapshot();
     clearAllZipSearchCenters();
     writeZipSearchCenter("23111", { latitude: 37.6085, longitude: -77.3321 });
   });
 
   afterEach(() => {
     clearSettingsPreferences();
+    clearHomeSessionSnapshot();
     clearAllZipSearchCenters();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -834,11 +897,7 @@ describe("useMealPlanner pantry coverage debounce", () => {
     });
 
     await act(async () => {
-      result.current.handleAddPantryIngredient({
-        ingredientId: "olive-oil",
-        ingredientName: "Olive oil",
-        nearMissRecipeCount: 0,
-      });
+      result.current.handleTogglePantryChecklistItem("olive-oil", true);
     });
 
     await waitFor(() => {

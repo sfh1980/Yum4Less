@@ -1,17 +1,25 @@
 // @vitest-environment jsdom
 
 import { createElement } from "react";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
 import { buildTestMarketSummary, buildTestProviderCoverageRollup } from "@/lib/test-fixtures/contract-fixtures";
-import {
-  collectPricingTrustHeadsUpDetailText,
-  FORBIDDEN_TRUST_CLAIM_PATTERNS,
-  PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS,
-  PRICING_TRUST_HEADS_UP_EXPAND_SUMMARY,
-} from "@/lib/pricing-trust-heads-up-expanded";
+import { FAQ_SLUG, faqArticleHref } from "@/lib/faq-articles";
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+    id?: string;
+    "aria-label"?: string;
+  }) => createElement("a", { href, ...props }, children),
+}));
 
 const marketWithStoreContext = buildTestMarketSummary({
   providerStoreSearches: [
@@ -36,17 +44,9 @@ const marketWithStoreContext = buildTestMarketSummary({
   recommendationReadyStoreCount: 1,
 });
 
-function getTrustDetails(container: HTMLElement): HTMLDetailsElement {
-  const details = container.querySelector(".trust-heads-up-details");
-  if (!(details instanceof HTMLDetailsElement)) {
-    throw new Error("Expected trust heads-up details element");
-  }
-  return details;
-}
-
-describe("PricingTrustHeadsUpBanner expanded disclosure", () => {
-  it("renders the inline heads-up copy and collapsed expand control", () => {
-    const { container } = render(
+describe("PricingTrustHeadsUpBanner", () => {
+  it("renders a one-line heads-up and links ? to the price-source FAQ", () => {
+    render(
       createElement(PricingTrustHeadsUpBanner, {
         market: marketWithStoreContext,
         instanceId: "test",
@@ -57,38 +57,12 @@ describe("PricingTrustHeadsUpBanner expanded disclosure", () => {
       screen.getByRole("heading", { name: "Heads up about these prices" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Meal prices are estimates/i)).toBeInTheDocument();
-    expect(screen.getByText(PRICING_TRUST_HEADS_UP_EXPAND_SUMMARY)).toBeInTheDocument();
-    expect(getTrustDetails(container).open).toBe(false);
-  });
-
-  it("reveals shortened trust sections when expanded", async () => {
-    const user = userEvent.setup();
-    const { container } = render(
-      createElement(PricingTrustHeadsUpBanner, {
-        market: marketWithStoreContext,
-        instanceId: "test-expand",
+    expect(screen.queryByText("More about these estimates")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Where do these prices come from? Opens FAQ",
       }),
-    );
-
-    const details = getTrustDetails(container);
-    const summary = within(details).getByText(PRICING_TRUST_HEADS_UP_EXPAND_SUMMARY);
-    await user.click(summary);
-    expect(details.open).toBe(true);
-
-    expect(
-      screen.getByRole("heading", { name: "What these prices mean" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Which stores" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/limited coverage/i)).toBeInTheDocument();
-    expect(screen.getByText(/Walmart/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Before you shop" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Send feedback or report a wrong price" }),
-    ).toHaveAttribute("href", "/feedback");
+    ).toHaveAttribute("href", faqArticleHref(FAQ_SLUG.priceSource));
   });
 
   it("does not render the removed trust explainer modal trigger", () => {
@@ -106,35 +80,25 @@ describe("PricingTrustHeadsUpBanner expanded disclosure", () => {
       screen.queryByRole("heading", { name: "How to read these results" }),
     ).not.toBeInTheDocument();
   });
-});
 
-describe("pricing trust expanded copy — forbidden claims (M156)", () => {
-  it("static expanded sections avoid forbidden positive claims", () => {
-    const detailText = collectPricingTrustHeadsUpDetailText(
-      PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS,
-    );
-
-    for (const pattern of FORBIDDEN_TRUST_CLAIM_PATTERNS) {
-      expect(detailText).not.toMatch(pattern);
-    }
-  });
-
-  it("expanded banner DOM avoids forbidden positive claims after disclosure opens", async () => {
-    const user = userEvent.setup();
-    const { container } = render(
+  it("renders only a question-mark FAQ link in icon variant", () => {
+    render(
       createElement(PricingTrustHeadsUpBanner, {
         market: marketWithStoreContext,
-        instanceId: "test-forbidden",
+        instanceId: "test-icon",
+        variant: "icon",
       }),
     );
 
-    const details = getTrustDetails(container);
-    await user.click(within(details).getByText(PRICING_TRUST_HEADS_UP_EXPAND_SUMMARY));
-
-    const bannerText = container.querySelector(".trust-heads-up")?.textContent ?? "";
-
-    for (const pattern of FORBIDDEN_TRUST_CLAIM_PATTERNS) {
-      expect(bannerText).not.toMatch(pattern);
-    }
+    expect(
+      screen.queryByRole("heading", { name: "Heads up about these prices" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Meal prices are estimates/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Where do these prices come from? Opens FAQ",
+      }),
+    ).toHaveAttribute("href", faqArticleHref(FAQ_SLUG.priceSource));
   });
 });

@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  isAppTabContentReady,
   isAppTabEnabled,
   resolveAppTabFromPreferences,
   SSR_DEFAULT_APP_TAB,
@@ -33,40 +34,58 @@ describe("app tab routing", () => {
   });
 });
 
-describe("isAppTabEnabled (Settings-first gate)", () => {
-  it("allows only Settings before setup is complete", () => {
+describe("isAppTabContentReady", () => {
+  it("keeps Feedback and Settings usable before setup is complete", () => {
     expect(
-      isAppTabEnabled("settings", { settingsComplete: false, cookEnabled: false }),
+      isAppTabContentReady("settings", { settingsComplete: false, cookEnabled: false }),
     ).toBe(true);
     expect(
-      isAppTabEnabled("home", { settingsComplete: false, cookEnabled: false }),
+      isAppTabContentReady("feedback", { settingsComplete: false, cookEnabled: false }),
+    ).toBe(true);
+    expect(
+      isAppTabContentReady("home", { settingsComplete: false, cookEnabled: false }),
     ).toBe(false);
     expect(
-      isAppTabEnabled("deals", { settingsComplete: false, cookEnabled: false }),
+      isAppTabContentReady("deals", { settingsComplete: false, cookEnabled: false }),
     ).toBe(false);
     expect(
-      isAppTabEnabled("saved", { settingsComplete: false, cookEnabled: false }),
+      isAppTabContentReady("saved", { settingsComplete: false, cookEnabled: false }),
     ).toBe(false);
     expect(
-      isAppTabEnabled("cook", { settingsComplete: false, cookEnabled: true }),
+      isAppTabContentReady("cook", { settingsComplete: false, cookEnabled: true }),
     ).toBe(false);
   });
 
-  it("allows Home/Deals/Saved after setup; Cook still needs recipes", () => {
+  it("does not hard-disable Home or other tabs before setup", () => {
     expect(
-      isAppTabEnabled("home", { settingsComplete: true, cookEnabled: false }),
+      isAppTabEnabled("home", { settingsComplete: false, cookEnabled: false }),
     ).toBe(true);
     expect(
-      isAppTabEnabled("deals", { settingsComplete: true, cookEnabled: false }),
+      isAppTabEnabled("deals", { settingsComplete: false, cookEnabled: false }),
     ).toBe(true);
     expect(
-      isAppTabEnabled("saved", { settingsComplete: true, cookEnabled: false }),
+      isAppTabEnabled("cook", { settingsComplete: false, cookEnabled: false }),
     ).toBe(true);
     expect(
-      isAppTabEnabled("cook", { settingsComplete: true, cookEnabled: false }),
+      isAppTabEnabled("saved", { settingsComplete: false, cookEnabled: false }),
+    ).toBe(true);
+  });
+
+  it("allows Home/Deals/Saved content after setup; Cook still needs recipes", () => {
+    expect(
+      isAppTabContentReady("home", { settingsComplete: true, cookEnabled: false }),
+    ).toBe(true);
+    expect(
+      isAppTabContentReady("deals", { settingsComplete: true, cookEnabled: false }),
+    ).toBe(true);
+    expect(
+      isAppTabContentReady("saved", { settingsComplete: true, cookEnabled: false }),
+    ).toBe(true);
+    expect(
+      isAppTabContentReady("cook", { settingsComplete: true, cookEnabled: false }),
     ).toBe(false);
     expect(
-      isAppTabEnabled("cook", { settingsComplete: true, cookEnabled: true }),
+      isAppTabContentReady("cook", { settingsComplete: true, cookEnabled: true }),
     ).toBe(true);
   });
 });

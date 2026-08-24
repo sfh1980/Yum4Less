@@ -1,7 +1,5 @@
 import type { CatalogIngredient, IngredientCategory } from "@/lib/ingredient-category";
-import {
-  slugifyIngredientId,
-} from "@/lib/recipe-import/ingredient-normalization";
+import { slugifyIngredientId } from "@/lib/ingredient-id";
 import { stripWeeklyAdPackagingTokens } from "@/lib/weekly-ad-ingestion/weekly-ad-label-normalize";
 
 const PRODUCE_HEADS: Record<string, string> = {

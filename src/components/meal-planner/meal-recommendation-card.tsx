@@ -12,15 +12,9 @@ import {
   shopperPriceTierFromSaleConfidenceLevel,
   shopperPriceTierFromShoppingPlan,
 } from "@/lib/shopper-price-wording";
-import {
-  formatMealPriceAgeFromShoppingPlan,
-} from "@/lib/sale-ingredient-offers";
-import {
-  confidenceLabelHelp,
-  freshnessLabelHelp,
-  mealPriceSourceHelp,
-  mealTotalHelp,
-} from "@/lib/help-hint-content";
+import { formatMealPriceAgeFromShoppingPlan } from "@/lib/sale-ingredient-offers";
+import { FAQ_SLUG } from "@/lib/faq-articles";
+import { MEAL_CARD_SHOW_EXTENDED_CHROME } from "@/components/meal-planner/meal-card-chrome";
 import { buildMealPriceSourceSummary } from "@/lib/meal-price-source-copy";
 import { resolveNearbyStoreByName } from "@/lib/resolve-nearby-store-by-name";
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
@@ -33,6 +27,9 @@ type MealRecommendationCardProps = {
   onOpenStoreMap: (store: NearbyStoreSummary | null) => void;
   /** Accordion expanded panel: title lives on the trigger button. */
   hideTitle?: boolean;
+  isSaved?: boolean;
+  onToggleSave?: (meal: MealRecommendation) => void;
+  showExtendedChrome?: boolean;
 };
 
 function StoreMapTapButton({
@@ -71,6 +68,9 @@ export function MealRecommendationCard({
   market,
   onOpenStoreMap,
   hideTitle = false,
+  isSaved = false,
+  onToggleSave,
+  showExtendedChrome = MEAL_CARD_SHOW_EXTENDED_CHROME,
 }: MealRecommendationCardProps) {
   const priceSource = buildMealPriceSourceSummary({ meal, market });
   const mealPriceAgeLabel = formatMealPriceAgeFromShoppingPlan(
@@ -98,46 +98,46 @@ export function MealRecommendationCard({
           </span>
           <HelpHint
             id={`${meal.title}-total-help`}
-            label={`Estimated total for ${meal.title}`}
-            popoverContent={mealTotalHelp.popoverContent}
-            popoverTitle={mealTotalHelp.popoverTitle}
-            tooltip={mealTotalHelp.tooltip}
+            articleSlug={FAQ_SLUG.mealTotal}
           />
         </span>
       </div>
 
-      <p className="card-summary">{meal.summary}</p>
+      {showExtendedChrome ? (
+        <>
+          <p className="card-summary">{meal.summary}</p>
 
-      {meal.recipeAttribution ? (
-        <p className="field-hint recipe-attribution">
-          {meal.recipeAttribution}{" "}
-          {meal.recipeAttributionUrl ? (
-            <a
-              href={meal.recipeAttributionUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              View on TheMealDB
-            </a>
+          {meal.recipeAttribution ? (
+            <p className="field-hint recipe-attribution">
+              {meal.recipeAttribution}{" "}
+              {meal.recipeAttributionUrl ? (
+                <a
+                  href={meal.recipeAttributionUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  View on TheMealDB
+                </a>
+              ) : null}
+            </p>
           ) : null}
-        </p>
-      ) : null}
 
-      <p className="meal-price-source">
-        <span className="meal-price-source-with-hint">
-          <span>{priceSource.summary}</span>
-          <HelpHint
-            id={`${meal.title}-price-source-help`}
-            label={`Price source for ${meal.title}`}
-            popoverContent={priceSource.detail}
-            popoverTitle={mealPriceSourceHelp.popoverTitle}
-            tooltip={mealPriceSourceHelp.tooltip}
-          />
-        </span>
-      </p>
+          <p className="meal-price-source">
+            <span className="meal-price-source-with-hint">
+              <span>{priceSource.summary}</span>
+              <HelpHint
+                id={`${meal.title}-price-source-help`}
+                articleSlug={FAQ_SLUG.priceSource}
+              />
+            </span>
+          </p>
 
-      {mealPriceAgeLabel ? (
-        <p className="field-hint meal-card-price-age badge-trust">{mealPriceAgeLabel}</p>
+          {mealPriceAgeLabel ? (
+            <p className="field-hint meal-card-price-age badge-trust">
+              {mealPriceAgeLabel}
+            </p>
+          ) : null}
+        </>
       ) : null}
 
       <div className="pill-row">
@@ -145,45 +145,56 @@ export function MealRecommendationCard({
           <span className="pill pill--trust">{meal.confidenceLabel}</span>
           <HelpHint
             id={`${meal.title}-confidence-help`}
-            label={`Confidence label for ${meal.title}`}
-            popoverContent={confidenceLabelHelp.popoverContent}
-            popoverTitle={confidenceLabelHelp.popoverTitle}
-            tooltip={confidenceLabelHelp.tooltip}
+            articleSlug={FAQ_SLUG.confidence}
           />
         </span>
         <span className="pill">{meal.cookTimeMinutes} min</span>
         <span className="pill">{formatDifficulty(meal.difficulty)}</span>
-        <StoreMapTapButton
-          className="pill store-map-tap-button--pill"
-          nearbyStores={nearbyStores}
-          onOpenStoreMap={onOpenStoreMap}
-          storeName={meal.primaryStore}
-        />
+        {showExtendedChrome ? (
+          <StoreMapTapButton
+            className="pill store-map-tap-button--pill"
+            nearbyStores={nearbyStores}
+            onOpenStoreMap={onOpenStoreMap}
+            storeName={meal.primaryStore}
+          />
+        ) : null}
         <span className="pill-with-hint">
           <span className="pill pill--trust">{meal.freshnessLabel}</span>
           <HelpHint
             id={`${meal.title}-freshness-help`}
-            label={`Freshness label for ${meal.title}`}
-            popoverContent={freshnessLabelHelp.popoverContent}
-            popoverTitle={freshnessLabelHelp.popoverTitle}
-            tooltip={freshnessLabelHelp.tooltip}
+            articleSlug={FAQ_SLUG.freshness}
           />
         </span>
       </div>
 
-      <div className="pill-row">
-        <span className="pill">{meal.storeCount} store(s)</span>
-        <span className="pill">{meal.matchedIngredients} matched ingredients</span>
-        {meal.tags.map((tag) => (
-          <span className="pill" key={tag}>
-            {tag}
-          </span>
-        ))}
-      </div>
+      {showExtendedChrome ? (
+        <>
+          <div className="pill-row">
+            <span className="pill">{meal.storeCount} store(s)</span>
+            <span className="pill">{meal.matchedIngredients} matched ingredients</span>
+            {meal.tags.map((tag) => (
+              <span className="pill" key={tag}>
+                {tag}
+              </span>
+            ))}
+          </div>
 
-      <p className="ingredient-highlights">
-        Key ingredients: {meal.ingredientHighlights.join(", ")}.
-      </p>
+          <p className="ingredient-highlights">
+            Key ingredients: {meal.ingredientHighlights.join(", ")}.
+          </p>
+        </>
+      ) : null}
+
+      {onToggleSave ? (
+        <button
+          className="secondary-button meal-save-button"
+          type="button"
+          aria-pressed={isSaved}
+          onClick={() => onToggleSave(meal)}
+        >
+          {isSaved ? "Saved" : "Save meal"}
+        </button>
+      ) : null}
 
       <CollapsibleCardSection title="Store plan">
         <div className="store-summary-list">
@@ -271,6 +282,18 @@ export function MealRecommendationCard({
             <li key={`${meal.title}-step-${index}`}>{step}</li>
           ))}
         </ol>
+        {meal.recipeAttributionUrl ? (
+          <p className="recipe-full-instructions">
+            <a
+              className="text-link"
+              href={meal.recipeAttributionUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Open full recipe instructions
+            </a>
+          </p>
+        ) : null}
       </CollapsibleCardSection>
     </article>
   );

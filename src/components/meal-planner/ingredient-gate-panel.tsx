@@ -1,5 +1,13 @@
 "use client";
 
+import { WizardChoiceButton } from "@/components/meal-planner/wizard-choice-button";
+
+export const USE_ALL_SALE_ITEMS_LABEL = "Use everything on sale";
+export const PICK_SALE_ITEMS_LABEL = "Choose specific sale items";
+
+const PANTRY_FOLLOW_UP =
+  "Next, you can see if these additional items are in your pantry to give you more dinner options to choose from.";
+
 type IngredientGatePanelProps = {
   ingredientCount: number;
   onPickManually: () => void;
@@ -11,27 +19,31 @@ export function IngredientGatePanel({
   onPickManually,
   onUseAll,
 }: IngredientGatePanelProps) {
+  const itemWord = ingredientCount === 1 ? "item" : "items";
+
   return (
     <div className="ingredient-gate">
       <p className="panel-copy">
-        We found <strong>{ingredientCount}</strong> sale ingredient
-        {ingredientCount === 1 ? "" : "s"} at your selected store(s) from saved
-        Settings. Store choice is already set — confirm how you want to scope
-        ranking.
+        We found <strong>{ingredientCount}</strong> {itemWord} on sale at the
+        stores you chose.
       </p>
+      <p className="panel-copy">Choose how to use them for dinner ideas:</p>
 
-      <div className="ingredient-gate-actions action-row">
-        <button className="primary-button" type="button" onClick={onUseAll}>
-          Use all ingredients and check pantry
-        </button>
-        <button className="secondary-button" type="button" onClick={onPickManually}>
-          Pick ingredients manually
-        </button>
+      <div className="wizard-choice-stack ingredient-gate-actions">
+        <WizardChoiceButton
+          label={USE_ALL_SALE_ITEMS_LABEL}
+          description={`We'll use all of these sale items to suggest dinners. ${PANTRY_FOLLOW_UP}`}
+          onClick={onUseAll}
+        />
+        <WizardChoiceButton
+          label={PICK_SALE_ITEMS_LABEL}
+          description={`You'll pick which sale items to use. ${PANTRY_FOLLOW_UP}`}
+          onClick={onPickManually}
+        />
       </div>
 
       <p className="field-hint ingredient-gate-trust">
-        Totals stay <strong>estimated</strong> or <strong>directional</strong> —
-        verify in store.
+        Dinner totals are <strong>estimates</strong>. Check prices in the store.
       </p>
     </div>
   );

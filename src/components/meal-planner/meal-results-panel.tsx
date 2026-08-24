@@ -11,7 +11,8 @@ import { SingleStoreMapOverlay } from "@/components/single-store-map-overlay";
 import { MealResultsAccordion } from "@/components/meal-planner/meal-results-accordion";
 import { HelpHint } from "@/components/help-hint";
 import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
-import { mealTotalHelp } from "@/lib/help-hint-content";
+import { FAQ_SLUG } from "@/lib/faq-articles";
+import { MEAL_CARD_SHOW_EXTENDED_CHROME } from "@/components/meal-planner/meal-card-chrome";
 import { buildResultsPanelPriceSourceLine } from "@/lib/meal-price-source-copy";
 import { buildMealRankingPausedStatus } from "@/lib/market-shopper-status";
 import type {
@@ -35,6 +36,8 @@ type MealResultsPanelProps = {
   suppressInlineLoading?: boolean;
   /** Cook tab uses clearer idle copy when rankings were cleared. */
   surface?: "home" | "cook";
+  savedMealIds?: ReadonlySet<string>;
+  onToggleSaveMeal?: (meal: MealRecommendation) => void;
 };
 
 export function MealResultsPanel({
@@ -49,6 +52,8 @@ export function MealResultsPanel({
   activeLocationRequest,
   suppressInlineLoading = false,
   surface = "home",
+  savedMealIds,
+  onToggleSaveMeal,
 }: MealResultsPanelProps) {
   const [storeMapTarget, setStoreMapTarget] = useState<NearbyStoreSummary | null>(null);
   const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
@@ -82,12 +87,24 @@ export function MealResultsPanel({
     <div className="panel panel-padding meal-planner-panel meal-planner-panel--meals">
       <div className="panel-header">
         <div>
-          <h2>Dinner recommendations</h2>
+          <div className="results-title-with-hint">
+            <h2>Dinner recommendations</h2>
+            <PricingTrustHeadsUpBanner
+              instanceId="meals"
+              variant="icon"
+              market={market}
+              trustContext={{
+                shoppingStyle: _form.shoppingStyle,
+                selectedStoreIds: _form.selectedStoreIds,
+                recommendations,
+              }}
+            />
+          </div>
           <p className="panel-copy">
             Recipe suggestions, shopping plans, and steps appear here after you
             pick sale ingredients.
           </p>
-          {resultsPriceSourceLine ? (
+          {MEAL_CARD_SHOW_EXTENDED_CHROME && resultsPriceSourceLine ? (
             <p className="panel-copy meal-results-price-source">
               {resultsPriceSourceLine}
             </p>
@@ -98,16 +115,6 @@ export function MealResultsPanel({
         </div>
       </div>
 
-      <PricingTrustHeadsUpBanner
-        instanceId="meals"
-        market={market}
-        trustContext={{
-          shoppingStyle: _form.shoppingStyle,
-          selectedStoreIds: _form.selectedStoreIds,
-          recommendations,
-        }}
-      />
-
       <div className="warning warning-with-hint">
         <p>
           Totals are estimates. Check freshness and confidence labels on each
@@ -115,10 +122,7 @@ export function MealResultsPanel({
         </p>
         <HelpHint
           id="meal-totals-warning-help"
-          label="Estimated meal totals help"
-          popoverContent={mealTotalHelp.popoverContent}
-          popoverTitle={mealTotalHelp.popoverTitle}
-          tooltip={mealTotalHelp.tooltip}
+          articleSlug={FAQ_SLUG.mealTotal}
         />
       </div>
 
@@ -196,7 +200,9 @@ export function MealResultsPanel({
                   form={_form}
                   market={market}
                   onOpenStoreMap={handleOpenStoreMap}
+                  onToggleSaveMeal={onToggleSaveMeal}
                   recommendations={recommendations}
+                  savedMealIds={savedMealIds}
                 />
               </>
             )}

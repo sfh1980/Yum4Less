@@ -20,7 +20,7 @@ export function buildTierCMarketSearchResponse(): Extract<
         chain: "kroger",
         chainLabel: "Kroger",
         rolloutStatus: "limited-coverage",
-        recommendationEnabled: false,
+        recommendationEnabled: true,
         rolloutNote: "Limited weekly-ad coverage in this beta area.",
         locationProvenance: "bootstrap",
         locationBadge: "Catalog pin",

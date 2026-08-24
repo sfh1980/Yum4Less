@@ -13,6 +13,21 @@ import type {
   MarketSearchState,
   RecommendationState,
 } from "@/components/meal-planner/types";
+import { FAQ_SLUG, faqArticleHref } from "@/lib/faq-articles";
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+    id?: string;
+    "aria-label"?: string;
+  }) => createElement("a", { href, ...props }, children),
+}));
 
 vi.mock("@/components/meal-planner/meal-recommendation-card", () => ({
   MealRecommendationCard: ({ meal }: { meal: MealRecommendation }) =>
@@ -121,6 +136,38 @@ describe("MealResultsPanel shopperNotice + recommendations (C1)", () => {
       screen.getByRole("heading", { name: "Select sale ingredients first" }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("meal-card")).not.toBeInTheDocument();
+  });
+
+  it("puts price heads-up behind a question mark next to the dinner title", async () => {
+    const marketSearchState: MarketSearchState = { status: "ready", market };
+    const recommendationState: RecommendationState = {
+      status: "ready",
+      recommendations: [recommendation],
+    };
+
+    render(
+      createElement(MealResultsPanel, {
+        form,
+        marketSearchState,
+        recommendationState,
+        market,
+        recommendations: [recommendation],
+        marketBlocked: false,
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Dinner recommendations" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("note", { name: /heads up about these prices/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Meal prices are estimates/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Where do these prices come from? Opens FAQ",
+      }),
+    ).toHaveAttribute("href", faqArticleHref(FAQ_SLUG.priceSource));
   });
 
   it("shows an error badge instead of Ready to suggest when ranking fails", () => {

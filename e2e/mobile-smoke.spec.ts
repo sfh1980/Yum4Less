@@ -9,8 +9,8 @@ test.describe("Mobile layout smoke", () => {
     await resetAppPreferences(page);
   });
 
-  test("shows Settings and bottom nav on a phone viewport", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  test("shows setup and bottom nav on a phone viewport", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: "Let’s get started" })).toBeVisible();
     const mainNav = page.getByRole("navigation", { name: "Main" });
     await expect(mainNav.getByRole("button", { name: "Home" })).toBeVisible();
     await expect(mainNav.getByRole("button", { name: "Deals" })).toBeVisible();

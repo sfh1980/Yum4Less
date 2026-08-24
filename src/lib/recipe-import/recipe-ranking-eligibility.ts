@@ -17,8 +17,8 @@ export type ThemealdbAttribution = {
 };
 
 /**
- * Internal library recipes are always eligible when other gates pass.
- * TheMealDB imports require sale overlap with this week's on-sale catalog set.
+ * Internal library recipes stay in the catalog but are not ranked.
+ * TheMealDB imports require a full recipe page link and sale overlap with this week's on-sale catalog set.
  */
 export function isRecipeEligibleForRanking(input: {
   recipe: CatalogRecipeRecord;

@@ -7,7 +7,7 @@ import { NearbyStoresList } from "@/components/nearby-stores-list";
 import type { DiscoveryMapModel } from "@/lib/nearby-stores-map-model";
 import { HelpHint } from "@/components/help-hint";
 import { PricingTrustHeadsUpBanner } from "@/components/meal-planner/pricing-trust-heads-up";
-import { nearbyStoresMapHelp } from "@/lib/help-hint-content";
+import { FAQ_SLUG } from "@/lib/faq-articles";
 import { buildMarketShopperBlockedStatus } from "@/lib/market-shopper-status";
 import type { MarketSearchState } from "@/components/meal-planner/types";
 
@@ -68,10 +68,7 @@ export function MarketDiscoveryPanel({
             <h3>Nearby stores map</h3>
             <HelpHint
               id="nearby-stores-map-help"
-              label="Nearby stores map help"
-              popoverContent={nearbyStoresMapHelp.popoverContent}
-              popoverTitle={nearbyStoresMapHelp.popoverTitle}
-              tooltip={nearbyStoresMapHelp.tooltip}
+              articleSlug={FAQ_SLUG.mapPins}
             />
           </div>
           <div className="map-discovery-layout">

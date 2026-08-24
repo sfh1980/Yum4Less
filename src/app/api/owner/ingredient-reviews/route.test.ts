@@ -143,6 +143,68 @@ describe("/api/owner/ingredient-reviews", () => {
     });
   });
 
+  it("slugifies a new food id and passes name and category through", async () => {
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
+    process.env.DATABASE_URL = "postgres://yum4less/test";
+    resolveIngredientReview.mockResolvedValue({
+      ok: true,
+      ingredientId: "imitation-crab",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/owner/ingredient-reviews", {
+        method: "POST",
+        headers: { Authorization: "Bearer test-admin-key" },
+        body: JSON.stringify({
+          normalizedLabel: "imitation crab meat",
+          decision: "yes",
+          ingredientId: "Imitation Crab",
+          ingredientName: "Imitation crab",
+          category: "protein",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      ingredientId: "imitation-crab",
+    });
+    expect(resolveIngredientReview).toHaveBeenCalledWith({
+      normalizedLabel: "imitation crab meat",
+      decision: "yes",
+      ingredientId: "imitation-crab",
+      ingredientName: "Imitation crab",
+      category: "protein",
+    });
+  });
+
+  it("rejects a food id that cannot be slugified", async () => {
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
+    process.env.DATABASE_URL = "postgres://yum4less/test";
+
+    const response = await POST(
+      new Request("http://localhost/api/owner/ingredient-reviews", {
+        method: "POST",
+        headers: { Authorization: "Bearer test-admin-key" },
+        body: JSON.stringify({
+          normalizedLabel: "imitation crab meat",
+          decision: "yes",
+          ingredientId: "!!!",
+          ingredientName: "Imitation crab",
+          category: "protein",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/kebab-case/i),
+    });
+    expect(resolveIngredientReview).not.toHaveBeenCalled();
+  });
+
   it("does not let public /api/recommendations write ingredient reviews", async () => {
     process.env.DATABASE_URL = "postgres://yum4less/test";
 

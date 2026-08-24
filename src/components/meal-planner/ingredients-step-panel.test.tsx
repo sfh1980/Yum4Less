@@ -34,8 +34,9 @@ describe("IngredientsStepPanel", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: "Use all ingredients and check pantry" })).toBeInTheDocument();
-    expect(screen.getByText(/estimated/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use everything on sale" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Choose specific sale items" })).toBeInTheDocument();
+    expect(screen.getByText(/estimates/i)).toBeInTheDocument();
   });
 
   it("shows manual picker when pick mode is manual", () => {

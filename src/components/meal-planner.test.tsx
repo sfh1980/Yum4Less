@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { createElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,32 +13,92 @@ vi.mock("@/components/zip-center-pick-map", () => ({
   ZipCenterPickMap: () => createElement("div", { "data-testid": "zip-center-pick-map-stub" }),
 }));
 
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+    id?: string;
+    "aria-label"?: string;
+  }) => createElement("a", { href, ...props }, children),
+}));
+
 import { MealPlanner } from "@/components/meal-planner";
-import { clearSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
+import { clearSettingsPreferences, readSettingsPreferences, writeSettingsPreferences } from "@/lib/settings-preferences";
+import { clearHomeSessionSnapshot, writeAppReturnSnapshot } from "@/lib/home-session-snapshot";
 import {
   clearAllZipSearchCenters,
   writeZipSearchCenter,
 } from "@/lib/zip-search-centers";
-import { FIND_STORES_BASED_ON_ZIP_LABEL } from "@/lib/zip-search-center-copy";
 
 const fetchMock = vi.fn();
 
+function stubPlannerFetch() {
+  vi.stubGlobal("fetch", async (input: RequestInfo, init?: RequestInit) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    if (url.includes("/api/geocode/zip")) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          location: {
+            latitude: 37.6085,
+            longitude: -77.3321,
+            city: "Mechanicsville",
+            state: "VA",
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return fetchMock(input, init);
+  });
+}
+
+async function dismissOnboardingSplash(user: ReturnType<typeof userEvent.setup>) {
+  const splash = await screen.findByTestId("onboarding-splash");
+  await user.click(within(splash).getByRole("button", { name: "Continue" }));
+  await waitFor(() => {
+    expect(screen.queryByTestId("onboarding-splash")).not.toBeInTheDocument();
+  });
+}
+
 async function completeSettingsFlow(user: ReturnType<typeof userEvent.setup>) {
   writeZipSearchCenter("23111", { latitude: 37.6085, longitude: -77.3321 });
-  await user.click(screen.getByRole("button", { name: FIND_STORES_BASED_ON_ZIP_LABEL }));
-  await screen.findByRole("combobox", { name: "Store" });
-  await user.click(screen.getByRole("button", { name: "Save settings and continue" }));
-  await screen.findByRole("heading", { name: "Welcome" });
+  await dismissOnboardingSplash(user);
+  await screen.findByRole("heading", { name: "Let’s get started" });
+  await user.click(screen.getByRole("button", { name: "Enter ZIP code" }));
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "Place your pin" });
+  await user.click(await screen.findByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "How far should we look?" });
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "How do you shop?" });
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "Which stores should we use?" });
+  await screen.findByRole("checkbox", { name: /Select / });
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "How much do you want to spend?" });
 }
 
 async function completeWelcomeFlow(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "Dietary focus" });
   await user.click(screen.getByRole("button", { name: "Continue to ingredients" }));
   await screen.findByRole("heading", { name: "Ingredients" });
 }
 
 async function completeIngredientGate(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    screen.getByRole("button", { name: "Use all ingredients and check pantry" }),
+    screen.getByRole("button", { name: "Use everything on sale" }),
   );
   await screen.findByRole("heading", { name: "Pantry check" });
 }
@@ -67,10 +127,12 @@ describe("MealPlanner", () => {
   beforeEach(() => {
     clearSettingsPreferences();
     clearAllZipSearchCenters();
+    clearHomeSessionSnapshot();
   });
 
   afterEach(() => {
     clearAllZipSearchCenters();
+    clearHomeSessionSnapshot();
     fetchMock.mockReset();
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
@@ -105,11 +167,9 @@ describe("MealPlanner", () => {
           },
         }),
       );
-    vi.stubGlobal("fetch", fetchMock);
+    stubPlannerFetch();
 
     render(createElement(MealPlanner));
-
-    expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
 
     await completeSettingsFlow(user);
     await completeWelcomeFlow(user);
@@ -123,41 +183,47 @@ describe("MealPlanner", () => {
 
     await suggestRecipesFromPantry(user);
 
-    expect(await screen.findAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(1);
-
     expect(await screen.findByText("Weeknight Lemon Chicken")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("note", { name: /heads up about these prices/i }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "How to read these results" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "How to read these labels" }),
     ).not.toBeInTheDocument();
+
     expect(
-      screen.getByRole("note", { name: "Heads up about these prices" }),
-    ).toHaveTextContent(/Meal prices are estimates/i);
+      screen.getByRole("link", {
+        name: "Where do these prices come from? Opens FAQ",
+      }),
+    ).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Weeknight Lemon Chicken" }),
     );
 
     expect(screen.getByText("Lowest price we found: $13.42")).toBeInTheDocument();
+    expect(document.querySelector(".meal-card-price-age")).toBeNull();
     expect(
-      document.querySelector(".meal-card-price-age"),
-    ).toHaveTextContent(/Prices from ~24 hours ago/i);
-    expect(
-      screen.getByText(
+      screen.queryByText(
         "Dinner totals below use saved sale prices — not live checkout.",
       ),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.queryByText(
         "Saved sale prices at Kroger Mechanicsville — not live checkout; confirm in store.",
       ),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Shopping plan" }));
     expect(screen.getAllByText(/Lowest price we found: \$6\.49|Estimated lowest price: \$6\.49/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("note", { name: /heads up about these prices/i })).toHaveLength(1);
-    expect(screen.getAllByText(/Treat totals as estimates/i)).toHaveLength(1);
+    expect(
+      screen.getByRole("link", {
+        name: "Where do these prices come from? Opens FAQ",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("note", { name: /heads up about these prices/i })).not.toBeInTheDocument();
     expect(await screen.findByText("Sale price — estimate only")).toBeInTheDocument();
     expect(screen.queryByText("Postgres catalog + ingested prices")).not.toBeInTheDocument();
     expect(screen.queryByText("Geocodio lookup")).not.toBeInTheDocument();
@@ -192,10 +258,11 @@ describe("MealPlanner", () => {
         },
       ),
     );
-    vi.stubGlobal("fetch", fetchMock);
+    stubPlannerFetch();
 
     render(createElement(MealPlanner));
 
+    await screen.findByRole("heading", { name: "How much do you want to spend?" });
     await user.click(screen.getByRole("button", { name: "Deals" }));
 
     expect(
@@ -213,13 +280,13 @@ describe("MealPlanner", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    vi.stubGlobal("fetch", fetchMock);
+    stubPlannerFetch();
 
     render(createElement(MealPlanner));
 
     await completeSettingsFlow(user);
     await completeWelcomeFlow(user);
-    await user.click(screen.getByRole("button", { name: "Pick ingredients manually" }));
+    await user.click(screen.getByRole("button", { name: "Choose specific sale items" }));
     await screen.findByText("Chicken thighs");
 
     expect(
@@ -232,6 +299,81 @@ describe("MealPlanner", () => {
     expect(screen.queryByText(/cheapest|best price|live price/i)).not.toBeInTheDocument();
   });
 
+  it("toggles light and dark from the chrome control", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(createElement(MealPlanner));
+
+    await dismissOnboardingSplash(user);
+    await screen.findByRole("heading", { name: "Let’s get started" });
+    await user.click(screen.getByRole("button", { name: "Switch to dark theme" }));
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    });
+    expect(readSettingsPreferences()?.theme).toBe("dark");
+
+    await user.click(screen.getByRole("button", { name: "Switch to light theme" }));
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe("light");
+    });
+    expect(readSettingsPreferences()?.theme).toBe("light");
+  });
+
+  it("does not overwrite saved dark theme or stores when remounting", async () => {
+    writeSettingsPreferences({
+      zipCode: "23111",
+      radiusMiles: 5,
+      shoppingStyle: "single-store",
+      selectedStoreIds: ["kroger-1"],
+      theme: "dark",
+      setupComplete: true,
+    });
+
+    const { unmount } = render(createElement(MealPlanner));
+    await screen.findByRole("heading", { name: "How much do you want to spend?" });
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    });
+    expect(readSettingsPreferences()?.theme).toBe("dark");
+    expect(readSettingsPreferences()?.selectedStoreIds).toEqual(["kroger-1"]);
+
+    unmount();
+    render(createElement(MealPlanner));
+    await screen.findByRole("heading", { name: "How much do you want to spend?" });
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    });
+    expect(readSettingsPreferences()?.theme).toBe("dark");
+    expect(readSettingsPreferences()?.selectedStoreIds).toEqual(["kroger-1"]);
+    expect(readSettingsPreferences()?.setupComplete).toBe(true);
+  });
+
+  it("restores the Settings tab after a client return snapshot", async () => {
+    writeSettingsPreferences({
+      zipCode: "23111",
+      radiusMiles: 5,
+      shoppingStyle: "single-store",
+      selectedStoreIds: ["kroger-1"],
+      theme: "dark",
+      setupComplete: true,
+    });
+    writeAppReturnSnapshot({
+      splashFinished: true,
+      activeTab: "settings",
+      flowStep: "welcome-budget",
+    });
+
+    render(createElement(MealPlanner));
+
+    await screen.findByRole("heading", { name: "Let’s get started" });
+    expect(screen.getByRole("link", { name: "FAQ" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Terms of use" })).toBeInTheDocument();
+    expect(screen.queryByTestId("onboarding-splash")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    });
+    expect(readSettingsPreferences()?.setupComplete).toBe(true);
+  });
+
   it("shows welcome budget controls after settings are saved", async () => {
     const user = userEvent.setup({ delay: null });
     fetchMock.mockResolvedValueOnce(
@@ -240,14 +382,14 @@ describe("MealPlanner", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    vi.stubGlobal("fetch", fetchMock);
+    stubPlannerFetch();
 
     render(createElement(MealPlanner));
 
     await completeSettingsFlow(user);
 
     expect(
-      screen.getByRole("spinbutton", { name: "How much do you want to spend?" }),
+      screen.getByRole("spinbutton", { name: "Spending limit" }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Maximum ingredients")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Dinner options wanted")).not.toBeInTheDocument();
@@ -264,7 +406,7 @@ describe("MealPlanner", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    vi.stubGlobal("fetch", fetchMock);
+    stubPlannerFetch();
 
     const { MealPlanner: DemoWithInternal } = await import(
       "@/components/meal-planner"

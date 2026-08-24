@@ -3,7 +3,8 @@ import {
   fixtureRecipes,
   fixtureStores,
 } from "@/lib/fixtures/market-catalog.fixtures";
-import type { CatalogPriceObservation } from "@/lib/market-catalog-types";
+import { THEMEALDB_SOURCE_NAME } from "@/lib/recipe-import/themealdb-types";
+import type { CatalogPriceObservation, CatalogRecipeRecord } from "@/lib/market-catalog-types";
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 
@@ -67,6 +68,23 @@ export function weeklyAdPromotionFreshObservationFields(
   };
 }
 
+/** Ranking tests tag fixture dinners as TheMealDB with a numeric meal id (shopper ranking pool). */
+export function asLinkedThemealdbRecipes(
+  recipes: CatalogRecipeRecord[],
+): CatalogRecipeRecord[] {
+  return recipes.map((recipe, index) =>
+    recipe.sourceName === THEMEALDB_SOURCE_NAME && /^\d+$/.test(recipe.sourceRecipeId ?? "")
+      ? recipe
+      : {
+          ...recipe,
+          sourceName: THEMEALDB_SOURCE_NAME,
+          sourceRecipeId: /^\d+$/.test(recipe.sourceRecipeId ?? "")
+            ? recipe.sourceRecipeId
+            : String(900001 + index),
+        },
+  );
+}
+
 /**
  * Fixture price observations that enable weekly-ad-ranked stores near ZIP 23111.
  * No live APIs — mirrors ingested weekly-ad cache rows used in ranking fixture tests.
@@ -84,6 +102,7 @@ export function buildZip23111WeeklyAdPriceObservations(
       return {
         ...observation,
         priceSource: chain?.priceSource ?? "kroger-weekly-ad-scrape",
+        saleLabel: observation.saleLabel ?? "Weekly deal",
         ...weeklyAdPromotionFreshObservationFields(observation.freshnessDaysAgo),
       };
     });
@@ -96,7 +115,7 @@ export function buildZip23111RankingSnapshot(
 ) {
   return {
     stores: fixtureStores,
-    recipes: fixtureRecipes,
+    recipes: asLinkedThemealdbRecipes(fixtureRecipes),
     priceObservations: buildZip23111WeeklyAdPriceObservations(storeIds),
   };
 }
@@ -116,6 +135,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ingredientId: "black-beans",
       price: 1.09,
       priceSource: "kroger-weekly-ad-scrape",
+      saleLabel: "Weekly deal",
       ...weeklyAdPromotionFreshObservationFields(3),
     },
     {
@@ -123,6 +143,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ingredientId: "corn-tortillas",
       price: 2.29,
       priceSource: "kroger-weekly-ad-scrape",
+      saleLabel: "Weekly deal",
       ...weeklyAdPromotionFreshObservationFields(4),
     },
     {
@@ -130,6 +151,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ingredientId: "cabbage",
       price: 2.19,
       priceSource: "kroger-weekly-ad-scrape",
+      saleLabel: "Weekly deal",
       ...weeklyAdPromotionFreshObservationFields(2),
     },
     {
@@ -137,6 +159,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ingredientId: "taco-seasoning",
       price: 0.89,
       priceSource: "kroger-weekly-ad-scrape",
+      saleLabel: "Weekly deal",
       ...weeklyAdPromotionFreshObservationFields(3),
     },
     {
@@ -144,6 +167,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ingredientId: "cumin",
       price: 0.79,
       priceSource: "kroger-weekly-ad-scrape",
+      saleLabel: "Weekly deal",
       ...weeklyAdPromotionFreshObservationFields(3),
     },
     {
@@ -151,6 +175,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ingredientId: "lime",
       price: 0.45,
       priceSource: "aldi-weekly-ad-scrape",
+      saleLabel: "Weekly deal",
       ...weeklyAdPromotionFreshObservationFields(2),
     },
     {
@@ -158,6 +183,7 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ingredientId: "olive-oil",
       price: 2.49,
       priceSource: "aldi-weekly-ad-scrape",
+      saleLabel: "Weekly deal",
       ...weeklyAdPromotionFreshObservationFields(4),
     },
     {
@@ -165,13 +191,14 @@ export function buildZip23111SplitStoreBlackBeanSnapshot() {
       ingredientId: "black-beans",
       price: 0.89,
       priceSource: "aldi-weekly-ad-scrape",
+      saleLabel: "Weekly deal",
       ...weeklyAdPromotionFreshObservationFields(2),
     },
   ];
 
   return {
     stores: fixtureStores,
-    recipes: [blackBeanTacoRecipe],
+    recipes: asLinkedThemealdbRecipes([blackBeanTacoRecipe]),
     priceObservations,
   };
 }

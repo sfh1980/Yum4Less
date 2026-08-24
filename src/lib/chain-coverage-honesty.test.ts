@@ -3,7 +3,9 @@ import {
   buildBestChainCoverageDepth,
   buildChainCoverageDepthLiveSummary,
   buildMultiStoreCoverageSkewReason,
-  buildMultiStoreCoverageSummary,
+  buildStoreCoverageHelpModel,
+  formatStoreCoverageHelpOneLiner,
+  formatStoreCoverageHelpParagraphs,
 } from "@/lib/chain-coverage-honesty";
 import { buildTestMeal } from "@/components/meal-planner/test-fixtures";
 import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
@@ -44,17 +46,57 @@ describe("chain-coverage-honesty", () => {
     expect(depth[1]?.matchedIngredientCount).toBe(34);
   });
 
-  it("formats multi-store settings summary from selected stores", () => {
-    const summary = buildMultiStoreCoverageSummary(stores, [
+  it("formats store coverage help from selected stores", () => {
+    const model = buildStoreCoverageHelpModel(stores, [
       "kroger-1",
       "publix-1",
       "aldi-1",
     ]);
+    expect(model).toMatchObject({
+      trackedIngredientCount: 97,
+      includeMultiStoreNote: true,
+    });
+    expect(model?.chains.map((chain) => chain.chainLabel)).toEqual([
+      "Kroger",
+      "Publix",
+      "Aldi",
+    ]);
 
-    expect(summary).toContain("Kroger ~96/97");
-    expect(summary).toContain("Publix ~34/97");
-    expect(summary).toContain("Aldi ~17/97");
-    expect(summary).toContain("lowest estimated priced item");
+    const paragraphs = formatStoreCoverageHelpParagraphs(model!);
+    expect(paragraphs[0]).toBe(
+      "Yum4Less currently tracks 97 dinner ingredients.",
+    );
+    expect(paragraphs).toContain(
+      "Kroger is showing estimated prices for 96 of those 97.",
+    );
+    expect(paragraphs).toContain(
+      "Publix is showing estimated prices for 34 of those 97.",
+    );
+    expect(paragraphs).toContain(
+      "Aldi is showing estimated prices for 17 of those 97.",
+    );
+    expect(paragraphs.join(" ")).toContain("lowest estimate we have");
+    expect(paragraphs.join(" ")).toContain("These are estimates");
+    expect(paragraphs.join(" ")).not.toContain("Sale-price coverage");
+  });
+
+  it("formats a short coverage one-liner for Settings", () => {
+    const model = buildStoreCoverageHelpModel(stores, [
+      "kroger-1",
+      "publix-1",
+      "aldi-1",
+    ]);
+    expect(formatStoreCoverageHelpOneLiner(model!)).toBe(
+      "Near you this week: Kroger ~96/97 · Publix ~34/97 · Aldi ~17/97.",
+    );
+  });
+
+  it("omits per-chain counts until stores are selected", () => {
+    const model = buildStoreCoverageHelpModel(stores, []);
+    expect(model?.chains).toEqual([]);
+    expect(formatStoreCoverageHelpParagraphs(model!).join(" ")).toContain(
+      "After you choose stores",
+    );
   });
 
   it("builds live coverage summary for trust banner depth section", () => {

@@ -12,13 +12,20 @@ function isThemealdbImportRecipe(recipe: CatalogRecipeRecord): boolean {
   return recipe.sourceName === THEMEALDB_SOURCE_NAME;
 }
 
-/** Internal library + sale-matched TheMealDB imports for default merged ranking. */
+/** TheMealDB meal page URL requires a numeric meal id. */
+export function hasThemealdbFullRecipeLink(recipe: CatalogRecipeRecord): boolean {
+  const sourceRecipeId = recipe.sourceRecipeId?.trim() ?? "";
+  return isThemealdbImportRecipe(recipe) && /^\d+$/.test(sourceRecipeId);
+}
+
+/**
+ * Shopper ranking pool: TheMealDB imports that have a full recipe page link.
+ * Short internal-library dinners stay in the catalog for matching, but are not ranked.
+ */
 export function filterRecipesForMergedRanking(
   recipes: CatalogRecipeRecord[],
 ): CatalogRecipeRecord[] {
-  return recipes.filter(
-    (recipe) => isInternalCatalogRecipe(recipe) || isThemealdbImportRecipe(recipe),
-  );
+  return recipes.filter((recipe) => hasThemealdbFullRecipeLink(recipe));
 }
 
 export function selectRecipesForRanking(
@@ -41,7 +48,7 @@ export function filterRecipesBySource(
   }
 
   if (recipeSource === "themealdb") {
-    return recipes.filter((recipe) => isThemealdbImportRecipe(recipe));
+    return recipes.filter((recipe) => hasThemealdbFullRecipeLink(recipe));
   }
 
   return [];

@@ -9,12 +9,12 @@ export const RECIPE_SOURCE_RESEARCH: RecipeSourceEntry[] = [
     id: "internal-library",
     label: "Internal recipe library",
     availability: "active",
-    mvpRecommendation: "primary",
+    mvpRecommendation: "later",
     summary:
-      "Curated Postgres dinner recipes around ZIP 23111 with ingredient IDs aligned to local store pricing.",
+      "Short curated dinners used for ingredient matching. They are not shown to shoppers; ranking uses TheMealDB meals with a full recipe page.",
     trustNotes: [
-      "Best control for ingredient matching and shopping-plan trust labels.",
-      "No third-party attribution or caching rules apply.",
+      "Kept for catalog matching and tests.",
+      "Not ranked in the shopper dinner list.",
     ],
     requiredEnvVars: [],
   },
@@ -22,9 +22,9 @@ export const RECIPE_SOURCE_RESEARCH: RecipeSourceEntry[] = [
     id: "themealdb",
     label: "TheMealDB",
     availability: "active",
-    mvpRecommendation: "secondary",
+    mvpRecommendation: "primary",
     summary:
-      "Public recipe catalog imported when meals overlap local weekly-ad sale ingredients. Ingredient strings are normalized but still weaker than the internal library.",
+      "TheMealDB dinners that overlap local weekly-ad sale ingredients and have a full recipe page link. Short internal-library writeups are not ranked.",
     trustNotes: [
       "Free test key (`1`) is fine for development only.",
       "Commercial or app-store use expects a paid Patreon supporter key and source attribution to TheMealDB.",
@@ -91,7 +91,7 @@ export function buildRecipeSourceResearchSummary() {
     (entry) => entry.availability !== "active",
   );
 
-  return `Beta v1 ranks from the internal library and sale-matched TheMealDB imports. ${blocked.length} external provider(s) remain blocked until licensing and matching gates are implemented.`;
+  return `Beta v1 ranks TheMealDB dinners that have a full recipe page and overlap this week's sale ingredients. Short internal-library writeups stay in the catalog but are not ranked. ${blocked.length} external provider(s) remain blocked until licensing and matching gates are implemented.`;
 }
 
 export type InactiveRecipeSourceShopperNotice = {
@@ -108,6 +108,6 @@ export function buildInactiveRecipeSourceShopperNotice(
 
   return {
     title: `${label} is not available yet`,
-    body: "Yum4Less only ranks dinners from the internal recipe library right now. Choose Internal recipe library in your search settings, or pick another source when we add it.",
+    body: "Yum4Less only ranks dinners from TheMealDB right now, and only when a full recipe page is available. Pick another source when we add it.",
   };
 }

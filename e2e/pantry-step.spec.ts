@@ -21,26 +21,27 @@ test.describe("Pantry check step", () => {
   test("always shows suggest recipes enabled when ranking is available", async ({
     page,
   }) => {
-    await page.getByRole("button", { name: "Use all ingredients and check pantry" }).click();
+    await page.getByRole("button", { name: "Use everything on sale" }).click();
 
     await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
     await expect(page.getByText(/session only/i)).toBeVisible();
+    await expect(page.getByText(/dinners can be shown next/i)).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Suggest recipes for my store(s)" }),
     ).toBeEnabled();
   });
 
-  test("lets shoppers add a catalog pantry item and suggest recipes", async ({ page }) => {
-    await page.getByRole("button", { name: "Use all ingredients and check pantry" }).click();
+  test("lets shoppers check a suggested pantry item and suggest recipes", async ({ page }) => {
+    await page.getByRole("button", { name: "Use everything on sale" }).click();
     await expect(page.getByRole("heading", { name: "Pantry check" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Add a pantry item" })).toHaveCount(0);
 
-    await page.getByRole("combobox", { name: "Add a pantry item" }).fill("olive");
-    await page.getByRole("option", { name: /Olive oil/i }).click();
+    const firstSuggested = page.locator(".pantry-checklist input[type=checkbox]").first();
+    if ((await firstSuggested.count()) > 0) {
+      await firstSuggested.check();
+      await expect(firstSuggested).toBeChecked();
+    }
 
-    await page
-      .getByRole("button", { name: /Your pantry for this session \(\d+ items?\)/i })
-      .click();
-    await expect(page.getByText("You added")).toBeVisible();
     await page.getByRole("button", { name: "Suggest recipes for my store(s)" }).click();
     await expect(page.getByRole("heading", { name: "Dinner recommendations" })).toBeVisible({
       timeout: 30_000,

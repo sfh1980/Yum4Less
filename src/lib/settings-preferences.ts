@@ -98,6 +98,7 @@ export function buildSettingsPreferencesPatch(input: {
   locationMode?: LocationMode;
   latitude?: number;
   longitude?: number;
+  onboardingStep?: SettingsPreferences["onboardingStep"];
   /** When true, recompute setupComplete from merged fields (explicit Save settings). */
   markSetupComplete?: boolean;
 }): SettingsPreferences {

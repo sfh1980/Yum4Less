@@ -12,9 +12,9 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 **Slices 1–5** and shell **D1–D6** are **shipped**. Full locks and history → [`PROJECT_CONTINUITY.md` → Redesign plan](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25).
 
-**What shipped:** Settings-first gate; **6-tab** bottom nav (Home, Deals, Cook, Saved, Feedback, Settings); welcome **budget + dietary** → ingredients → pantry → rank → **stacked accordion** results; **TheMealDB** dinners with a full recipe page (short internal writeups are not ranked); store scope from Settings (**Kroger, Aldi, Publix, and Food Lion** dropdown); ingredient gate + category chips; map **link + overlay**; session pantry prompt; light/dark theme with **mockup Theme C/D tokens** (D7, 2026-06-26).
+**What shipped:** Splash → GPS or ZIP+pin onboarding; **6-tab** bottom nav (Home, Deals, Cook, Saved, Feedback, Settings); **budget + dietary** → ingredients → pantry → rank → **stacked accordion** results; **TheMealDB** dinners with a full recipe page (short internal writeups are not ranked); store scope from setup/Settings (**Kroger, Aldi, Publix, and Food Lion**); ingredient gate + category chips; map **link + overlay**; session pantry prompt; device-local Saved meals; light/dark theme with **mockup Theme C/D tokens** (D7, 2026-06-26).
 
-**Still deferred:** Saved persistence, cuisine filters (R11).
+**Still deferred:** Cross-device saved meals (needs accounts), cuisine filters (R11), Section H content restyle.
 
 ---
 

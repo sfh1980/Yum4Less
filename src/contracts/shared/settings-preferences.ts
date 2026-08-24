@@ -39,6 +39,16 @@ export const settingsPreferencesSchema = z.object({
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   setupComplete: z.boolean().optional(),
+  onboardingStep: z
+    .enum([
+      "choose-location",
+      "zip-input",
+      "zip-pin",
+      "radius",
+      "shopping-style",
+      "stores",
+    ])
+    .optional(),
 });
 
 export type SettingsPreferences = z.infer<typeof settingsPreferencesSchema>;

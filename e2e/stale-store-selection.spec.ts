@@ -1,35 +1,23 @@
 import { test, expect } from "@playwright/test";
 import {
   completeWelcomeFlow,
-  E2E_ZIP_FALLBACK,
   goToPantryStep,
   injectStaleSelectedStoreIds,
   readPersistedSelectedStoreIds,
   resetAppPreferences,
-  seedZipSearchCenterFromGeocode,
+  searchStoresFromZipWizard,
 } from "./helpers";
 
 const STALE_STORE_ID = "aldi-23111";
 
 async function completeSettingsZipFlowMultiStore(page: import("@playwright/test").Page) {
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-  await page.getByRole("combobox", { name: "Shopping style" }).selectOption("Multiple stores allowed");
-  await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
-
-  const [response] = await Promise.all([
-    page.waitForResponse(
-      (res) =>
-        res.url().includes("/api/market-search") &&
-        res.request().method() === "POST",
-      { timeout: 120_000 },
-    ),
-    page.getByRole("button", { name: "Find stores based on my ZIP" }).click(),
-  ]);
-  expect(response.status()).toBe(200);
-
-  await page.getByRole("button", { name: "Save settings and continue" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
+  await searchStoresFromZipWizard(page);
+  await page.getByRole("button", { name: "Several stores" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(
+    page.getByRole("heading", { name: "How much do you want to spend?" }),
+  ).toBeVisible();
 }
 
 test.describe("Stale store selection re-sync (#14–15)", () => {
@@ -103,7 +91,9 @@ test.describe("Stale store selection re-sync (#14–15)", () => {
     await page.reload();
     const marketResponse = await marketSearchAfterReload;
     expect(marketResponse.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: "How much do you want to spend?" }),
+    ).toBeVisible({
       timeout: 30_000,
     });
     await completeWelcomeFlow(page);

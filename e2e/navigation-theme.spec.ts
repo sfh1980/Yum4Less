@@ -3,9 +3,8 @@ import {
   completePantryAndSuggestRecipes,
   completeSettingsZipFlow,
   completeWelcomeFlow,
-  E2E_ZIP_FALLBACK,
   resetAppPreferences,
-  seedZipSearchCenterFromGeocode,
+  searchStoresFromZipWizard,
   switchMainTab,
 } from "./helpers";
 
@@ -16,25 +15,30 @@ test.describe("Bottom navigation and theme", () => {
     await resetAppPreferences(page);
   });
 
-  test("disables Home/Deals/Saved until Settings setup is complete", async ({
+  test("lets locked tabs open a remaining-steps message before setup is complete", async ({
     page,
   }) => {
     const mainNav = page.getByRole("navigation", { name: "Main" });
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Let’s get started" })).toBeVisible();
     await expect(mainNav.getByRole("button", { name: "Settings" })).toBeEnabled();
-    await expect(mainNav.getByRole("button", { name: "Home" })).toBeDisabled();
-    await expect(mainNav.getByRole("button", { name: "Deals" })).toBeDisabled();
-    await expect(mainNav.getByRole("button", { name: "Saved" })).toBeDisabled();
-    await expect(mainNav.getByRole("button", { name: "Cook" })).toBeDisabled();
-    await expect(mainNav.getByText("Finish setup to unlock this").first()).toBeVisible();
+    await expect(mainNav.getByRole("button", { name: "Home" })).toBeEnabled();
+    await expect(mainNav.getByRole("button", { name: "Feedback" })).toBeEnabled();
+
+    await switchMainTab(page, "Home");
+    await expect(page.getByText("4 steps needed before this works")).toBeVisible();
+
+    await switchMainTab(page, "Feedback");
+    await expect(
+      page.getByRole("heading", { name: "Send feedback or report a wrong price." }),
+    ).toBeVisible();
   });
 
-  test("routes across main tabs and disables Cook until recipes exist", async ({ page }) => {
+  test("routes across main tabs and keeps Cook gated until recipes exist", async ({ page }) => {
     await completeSettingsZipFlow(page);
     await completeWelcomeFlow(page);
 
-    const mainNav = page.getByRole("navigation", { name: "Main" });
-    await expect(mainNav.getByRole("button", { name: "Cook" })).toBeDisabled();
+    await switchMainTab(page, "Cook");
+    await expect(page.getByText("Suggest recipes on Home first")).toBeVisible();
 
     await switchMainTab(page, "Deals");
     await expect(page.getByRole("heading", { name: "Deals" })).toBeVisible();
@@ -43,7 +47,7 @@ test.describe("Bottom navigation and theme", () => {
     await expect(page.getByRole("heading", { name: "Saved" })).toBeVisible();
 
     await switchMainTab(page, "Settings");
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Let’s get started" })).toBeVisible();
 
     await switchMainTab(page, "Home");
     await expect(page.getByRole("heading", { name: "Ingredients" })).toBeVisible();
@@ -51,19 +55,7 @@ test.describe("Bottom navigation and theme", () => {
 
   test("enables Cook tab after ranked recipes are ready", async ({ page }) => {
     await resetAppPreferences(page);
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-    await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-    await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
-    const [response] = await Promise.all([
-      page.waitForResponse(
-        (res) =>
-          res.url().includes("/api/market-search") &&
-          res.request().method() === "POST",
-        { timeout: 120_000 },
-      ),
-      page.getByRole("button", { name: "Find stores based on my ZIP" }).click(),
-    ]);
-    expect(response.status()).toBe(200);
+    const response = await searchStoresFromZipWizard(page);
     const marketBody = (await response.json()) as {
       market: { nearbyStores: Array<{ id: string; chain: string; recommendationEnabled: boolean }> };
     };
@@ -71,9 +63,12 @@ test.describe("Bottom navigation and theme", () => {
       (store) => store.chain === "kroger" && store.recommendationEnabled,
     );
     expect(kroger, "23111 fixture should include ranked Kroger for Cook tab gate").toBeTruthy();
-    await page.getByRole("combobox", { name: "Store" }).selectOption(kroger!.id);
-    await page.getByRole("button", { name: "Save settings and continue" }).click();
-    await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.locator(`#wizard-store-${kroger!.id}`).check();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(
+      page.getByRole("heading", { name: "How much do you want to spend?" }),
+    ).toBeVisible();
 
     await completeWelcomeFlow(page);
     await completePantryAndSuggestRecipes(page);
@@ -81,16 +76,15 @@ test.describe("Bottom navigation and theme", () => {
     const cookButton = page
       .getByRole("navigation", { name: "Main" })
       .getByRole("button", { name: "Cook" });
-    await expect(cookButton).toBeEnabled({ timeout: 30_000 });
     await cookButton.click();
     await expect(page.getByRole("heading", { name: "Dinner recommendations" })).toBeVisible();
   });
 
-  test("applies dark theme from Settings", async ({ page }) => {
-    await page.getByRole("combobox", { name: "Theme" }).selectOption("Dark");
+  test("applies dark theme from the chrome toggle", async ({ page }) => {
+    await page.getByRole("button", { name: "Switch to dark theme" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-    await page.getByRole("combobox", { name: "Theme" }).selectOption("Light");
+    await page.getByRole("button", { name: "Switch to light theme" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 });

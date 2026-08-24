@@ -89,7 +89,7 @@ describe("getRecommendationExperience", () => {
 
     expect(experience.recommendations).toHaveLength(0);
     expect(experience.shopperNotice?.title).toContain("Spoonacular");
-    expect(experience.shopperNotice?.body).toContain("internal recipe library");
+    expect(experience.shopperNotice?.body).toContain("TheMealDB");
     expect(experience.market).not.toHaveProperty("message");
     expect(experience.market.message).toBeUndefined();
   });

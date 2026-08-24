@@ -1,6 +1,7 @@
 import { getDbPool } from "@/lib/db";
 import type { IngredientCategory } from "@/lib/ingredient-category";
 import { inferIngredientCategory } from "@/lib/ingredient-category";
+import { slugifyIngredientId } from "@/lib/ingredient-id";
 import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
 import { scoreProviderProductMatch } from "@/lib/providers/provider-price-matching";
 import {
@@ -301,13 +302,7 @@ export function normalizeAliasLabel(label: string): string {
   return label.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export function slugifyIngredientId(label: string): string {
-  return label
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 56);
-}
+export { slugifyIngredientId };
 
 function titleCase(value: string): string {
   return value

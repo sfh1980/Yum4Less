@@ -2,17 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   inferIngredientCategory,
   normalizeAliasLabel,
-  slugifyIngredientId,
 } from "@/lib/recipe-import/ingredient-normalization";
 import { shouldRejectThemealdbIngredientLabel } from "@/lib/recipe-import/themealdb-reject-patterns";
 
 describe("ingredient normalization helpers", () => {
   it("normalizes alias labels for lookup", () => {
     expect(normalizeAliasLabel("  Chicken  Breast ")).toBe("chicken breast");
-  });
-
-  it("slugifies external labels into catalog ids", () => {
-    expect(slugifyIngredientId("Red Bell Pepper")).toBe("red-bell-pepper");
   });
 
   it("rejects garnish and beverage labels", () => {

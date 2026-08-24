@@ -26,7 +26,7 @@ describe("recipe source registry", () => {
       "not-approved",
     );
     expect(sources.find((source) => source.id === "themealdb")?.mvpRecommendation).toBe(
-      "secondary",
+      "primary",
     );
     expect(sources.find((source) => source.id === "internal-library")?.summary).not.toContain(
       "in-memory",
@@ -34,15 +34,17 @@ describe("recipe source registry", () => {
   });
 
   it("summarizes active and blocked recipe sources", () => {
-    expect(buildRecipeSourceResearchSummary()).toContain("internal library");
     expect(buildRecipeSourceResearchSummary()).toContain("TheMealDB");
+    expect(buildRecipeSourceResearchSummary()).not.toContain(
+      "ranks from the internal library and sale-matched",
+    );
   });
 
   it("builds layman shopper copy for inactive recipe sources", () => {
     const notice = buildInactiveRecipeSourceShopperNotice("spoonacular");
 
     expect(notice.title).toContain("Spoonacular");
-    expect(notice.body).toContain("internal recipe library");
+    expect(notice.body).toContain("TheMealDB");
     expect(notice.body).not.toContain("MVP");
   });
 });

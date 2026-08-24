@@ -6,6 +6,10 @@ import {
   isIngredientCategory,
   type IngredientCategory,
 } from "@/lib/ingredient-category";
+import {
+  isCanonicalIngredientId,
+  slugifyIngredientId,
+} from "@/lib/ingredient-id";
 import { clampListLimit, clampListOffset } from "@/lib/list-limit";
 import {
   INGREDIENT_REVIEW_LIMITS,
@@ -123,10 +127,24 @@ function parseIngredientReviewDecision(
     return { ok: false, error: "decision must be yes or no." };
   }
 
-  const ingredientId =
+  const rawIngredientId =
     typeof record.ingredientId === "string" && record.ingredientId.trim()
       ? record.ingredientId.trim()
       : undefined;
+  let ingredientId: string | undefined;
+  if (rawIngredientId) {
+    if (rawIngredientId.length > 80) {
+      return { ok: false, error: "ingredientId is too long." };
+    }
+    ingredientId = slugifyIngredientId(rawIngredientId);
+    if (!isCanonicalIngredientId(ingredientId)) {
+      return {
+        ok: false,
+        error:
+          "Canonical food id must be lowercase kebab-case (letters, numbers, hyphens), 2-56 characters. Example: imitation-crab.",
+      };
+    }
+  }
   const ingredientName =
     typeof record.ingredientName === "string" && record.ingredientName.trim()
       ? record.ingredientName.trim()
@@ -140,9 +158,6 @@ function parseIngredientReviewDecision(
     category = trimmedCategory;
   }
 
-  if (ingredientId && ingredientId.length > 80) {
-    return { ok: false, error: "ingredientId is too long." };
-  }
   if (ingredientName && ingredientName.length > 80) {
     return { ok: false, error: "ingredientName is too long." };
   }

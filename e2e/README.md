@@ -6,19 +6,21 @@ Committed browser tests (`@playwright/test`) gate merge via `npm run test:e2e:ci
 
 | File | Responsibility |
 |------|----------------|
-| `helpers.ts` | Shared flows (Settings → rank), ZIP center-pin seed helpers, trust assertions, tab navigation |
+| `helpers.ts` | Shared wizard → rank flows, ZIP pin seed (fast path), trust assertions, tab navigation |
 | `fixtures/api-mocks.ts` | Deterministic Tier C and API error payloads |
-| `mvp-flow.spec.ts` | Happy path, accordion, beta/trust copy, trust disclosure |
-| `settings-stores.spec.ts` | Multi-store scoping, four-chain Settings, ZIP validation |
-| `coordinate-first.spec.ts` | GPS-primary Settings CTA (`For Better Results, Use My GPS Location`) |
-| `coordinate-first-cold.spec.ts` | Cold-start geolocation path before Settings cache warms |
+| `gps-deny.spec.ts` | GPS deny → ZIP + real pin-step continue (no cache seed) |
+| `faq-terms.spec.ts` | `/faq`, `/faq/[slug]`, `/terms`; Settings/Feedback legal links; Back from Terms keeps theme/tab |
+| `mvp-flow.spec.ts` | Happy path, accordion, splash branding, FAQ from map `?`, save-to-Saved |
+| `settings-stores.spec.ts` | Multi-store scoping, four-chain store list, ZIP validation |
+| `coordinate-first.spec.ts` | GPS-primary wizard (`Use GPS`) to ingredients |
+| `coordinate-first-cold.spec.ts` | Cold-start geolocation path before catalog cache warms |
 | `single-store-map-overlay.spec.ts` | Single-store map overlay from ingredients step |
 | `tier-c.spec.ts` | Map context without ranked meals (mocked Tier C) |
 | `api-errors.spec.ts` | Market-search and recommendations 400/500 UI copy |
 | `market-pass-through.spec.ts` | Trimmed market snapshot on rank + post-rank Deals |
 | `stale-store-selection.spec.ts` | Stale localStorage store IDs → rank notice + effectiveSelectedStoreIds re-sync |
-| `navigation-theme.spec.ts` | Bottom nav, Cook gating, light/dark theme |
-| `pantry-step.spec.ts` | Pantry check step — always visible, catalog add, continue to rank |
+| `navigation-theme.spec.ts` | 6-tab nav, locked-tab messages, chrome theme toggle, Cook gating |
+| `pantry-step.spec.ts` | Pantry check — near-miss checklist, sticky “dinners we can show next”, continue to rank |
 | `error-surfaces.spec.ts` | H11 `error.tsx` (H12 skipped — bundled Leaflet) |
 | `mobile-smoke.spec.ts` | Narrow viewport smoke (`mobile-chrome` project only) |
 
@@ -33,7 +35,7 @@ npm run db:up
 npm run dev
 # PowerShell:
 $env:PLAYWRIGHT_SKIP_WEBSERVER="1"
-$env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:3000"
+$env:PLAYWRIGHT_BASE_URL="http://localhost:3000"
 npm run test:e2e
 ```
 

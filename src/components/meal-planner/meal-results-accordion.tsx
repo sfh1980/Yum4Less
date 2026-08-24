@@ -5,6 +5,8 @@ import type { MealRecommendation, RecommendationExperience } from "@/lib/recomme
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 import { MealRecommendationCard } from "@/components/meal-planner/meal-recommendation-card";
 import type { ActiveLocationRequest, FormState } from "@/components/meal-planner/types";
+import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
+import { savedMealIdFromRecommendation } from "@/lib/saved-meals";
 
 type MealResultsAccordionProps = {
   ariaLabel: string;
@@ -13,7 +15,28 @@ type MealResultsAccordionProps = {
   market: RecommendationExperience["market"];
   activeLocationRequest?: ActiveLocationRequest;
   onOpenStoreMap: (store: NearbyStoreSummary | null) => void;
+  savedMealIds?: ReadonlySet<string>;
+  onToggleSaveMeal?: (meal: MealRecommendation) => void;
 };
+
+function scrollMealIntoView(node: HTMLElement | null) {
+  if (!node || typeof node.scrollIntoView !== "function") {
+    return;
+  }
+
+  const behavior = prefersReducedMotion() ? "auto" : "smooth";
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      if (typeof node.scrollIntoView === "function") {
+        node.scrollIntoView({
+          behavior,
+          block: "start",
+          inline: "nearest",
+        });
+      }
+    });
+  });
+}
 
 export function MealResultsAccordion({
   ariaLabel,
@@ -22,6 +45,8 @@ export function MealResultsAccordion({
   market,
   activeLocationRequest,
   onOpenStoreMap,
+  savedMealIds,
+  onToggleSaveMeal,
 }: MealResultsAccordionProps) {
   const baseId = useId();
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
@@ -46,7 +71,17 @@ export function MealResultsAccordion({
                 className="meal-results-accordion-trigger"
                 aria-expanded={isExpanded}
                 aria-controls={panelId}
-                onClick={() => setExpandedIndex(isExpanded ? null : index)}
+                onClick={(event) => {
+                  const nextIndex = isExpanded ? null : index;
+                  setExpandedIndex(nextIndex);
+                  if (nextIndex === null) {
+                    return;
+                  }
+                  const item = event.currentTarget.closest(
+                    ".meal-results-accordion-item",
+                  );
+                  scrollMealIntoView(item instanceof HTMLElement ? item : null);
+                }}
               >
                 {meal.title}
               </button>
@@ -62,9 +97,11 @@ export function MealResultsAccordion({
                   activeLocationRequest={activeLocationRequest}
                   form={form}
                   hideTitle
+                  isSaved={savedMealIds?.has(savedMealIdFromRecommendation(meal))}
                   market={market}
                   meal={meal}
                   onOpenStoreMap={onOpenStoreMap}
+                  onToggleSave={onToggleSaveMeal}
                 />
               </div>
             ) : null}

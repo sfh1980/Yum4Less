@@ -18,11 +18,11 @@
 | Ingredients | All-sale vs manual gate; search + category chips; no 40-ID cap | Cuisine chips (R11) |
 | Results count | No `dinnersWanted`; eligibility-only count | — |
 | Results UI | Stacked accordion (one expanded at a time) | — |
-| TheMealDB | Merged with internal library; opt-in deleted | — |
+| TheMealDB | **2026-08-20:** shopper list is TheMealDB with a full recipe page only (supersedes 2026-06-25 merged internal + TheMealDB). Opt-in UI still deleted | — |
 | Rank | Tap between steps; full-screen loading overlay | — |
 | Shell | 5-tab nav (Home, Deals, Cook, Saved, Settings) | Saved persistence |
 | Map | Link bar + overlay on ingredients step (not a tab) | — |
-| Pantry | Session-only prompt on results | Persist + affect ranking |
+| Pantry | Session-only near-miss checklist; sticky “dinners we can show next” matches rank gates | Persist across devices (needs accounts) |
 | Theme | Mockup Theme C/D in `theme-tokens.css`; light default first visit | — |
 | Hydration | SSR-safe tab routing (`SSR_DEFAULT_APP_TAB`) | — |
 

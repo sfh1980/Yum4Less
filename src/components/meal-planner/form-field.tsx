@@ -5,13 +5,14 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { HelpHint, type HelpHintContent } from "@/components/help-hint";
+import { HelpHint } from "@/components/help-hint";
+import type { FaqArticleSlug } from "@/lib/faq-articles";
 
 type FormFieldProps = {
   id: string;
   label: string;
   hint?: string;
-  helpHint?: HelpHintContent;
+  helpArticleSlug?: FaqArticleSlug;
   error?: string;
   children: ReactNode;
 };
@@ -20,7 +21,7 @@ export function FormField({
   id,
   label,
   hint,
-  helpHint,
+  helpArticleSlug,
   error,
   children,
 }: FormFieldProps) {
@@ -42,8 +43,8 @@ export function FormField({
     <div className="field">
       <div className="field-label-row">
         <label htmlFor={id}>{label}</label>
-        {helpHint ? (
-          <HelpHint id={`${id}-help`} label={`${label} help`} {...helpHint} />
+        {helpArticleSlug ? (
+          <HelpHint id={`${id}-help`} articleSlug={helpArticleSlug} />
         ) : null}
       </div>
       {describedChildren}

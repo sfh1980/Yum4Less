@@ -2,8 +2,9 @@ import { test, expect } from "@playwright/test";
 import {
   completeWelcomeFlow,
   E2E_ZIP_FALLBACK,
+  goToZipInput,
   resetAppPreferences,
-  seedZipSearchCenterFromGeocode,
+  searchStoresFromZipWizard,
 } from "./helpers";
 
 test.describe("Settings store selection", () => {
@@ -12,20 +13,12 @@ test.describe("Settings store selection", () => {
   });
 
   test("scopes the map to the stores selected in Settings (ranked-chain subset)", async ({ page }) => {
-    await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-    await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
-    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
-    await expect(page.getByRole("button", { name: "Save settings and continue" })).toBeVisible({
-      timeout: 30_000,
-    });
+    await searchStoresFromZipWizard(page, E2E_ZIP_FALLBACK);
+    await page.getByRole("button", { name: "Several stores" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
 
-    await page
-      .getByRole("combobox", { name: "Shopping style" })
-      .selectOption("Multiple stores allowed");
-
-    // Multi-store defaults to all ranked v1 chains once Publix/Food Lion are in radius.
-    await page.locator("#settings-store-kroger-mechanicsville").check();
-    await page.locator("#settings-store-aldi-mechanicsville").check();
+    await page.locator("#wizard-store-kroger-mechanicsville").check();
+    await page.locator("#wizard-store-aldi-mechanicsville").check();
 
     const publixCheckboxes = page.getByRole("checkbox", { name: /Publix —/ });
     for (let index = 0; index < await publixCheckboxes.count(); index += 1) {
@@ -37,7 +30,7 @@ test.describe("Settings store selection", () => {
       await foodLionCheckboxes.nth(index).uncheck();
     }
 
-    await page.getByRole("button", { name: "Save settings and continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await completeWelcomeFlow(page);
 
     await page.getByRole("button", { name: "Do you want to see store locations?" }).click();
@@ -53,18 +46,16 @@ test.describe("Settings store selection", () => {
   test("lists selectable ranked-chain stores in Settings after market search", async ({
     page,
   }) => {
-    await page.getByRole("textbox", { name: "ZIP code" }).fill(E2E_ZIP_FALLBACK);
-    await seedZipSearchCenterFromGeocode(page, E2E_ZIP_FALLBACK);
-    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
-    await expect(page.getByRole("combobox", { name: "Store" })).toBeVisible({
-      timeout: 30_000,
-    });
+    await searchStoresFromZipWizard(page, E2E_ZIP_FALLBACK);
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Which stores should we use?" }),
+    ).toBeVisible({ timeout: 30_000 });
 
-    const storeSelect = page.getByRole("combobox", { name: "Store" });
-    await expect(storeSelect).toContainText("Kroger");
-    await expect(storeSelect).toContainText("Aldi");
-    await expect(storeSelect).toContainText("Publix");
-    await expect(storeSelect).toContainText("Food Lion");
+    await expect(page.getByRole("checkbox", { name: /Kroger/ }).first()).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: /Aldi/ }).first()).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: /Publix/ }).first()).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: /Food Lion/ }).first()).toBeVisible();
   });
 });
 
@@ -74,8 +65,9 @@ test.describe("Settings validation", () => {
   });
 
   test("shows ZIP validation error for invalid input", async ({ page }) => {
+    await goToZipInput(page);
     await page.getByRole("textbox", { name: "ZIP code" }).fill("abc");
-    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByText("Enter a valid 5-digit ZIP code.")).toBeVisible();
   });
 });

@@ -20,10 +20,8 @@ describe("PantryStepPanel", () => {
       },
     ],
     pantryRows: [],
-    ingredientCatalog: [{ id: "olive-oil", name: "Olive oil", category: "pantry" as const }],
     selectedPantryIngredientIds: [],
     onToggleChecklistItem: vi.fn(),
-    onAddPantryIngredient: vi.fn(),
     onRemovePantryIngredient: vi.fn(),
     rankingPaused: false,
     rankLoading: false,
@@ -43,13 +41,27 @@ describe("PantryStepPanel", () => {
       }),
     );
 
-    expect(screen.getByText(/No meals are 1–4 items away/i)).toBeInTheDocument();
+    expect(screen.getByText(/dinners can be shown next/i)).toBeInTheDocument();
+    expect(document.querySelector(".pantry-step-summary--sticky")).not.toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Add a pantry item" })).not.toBeInTheDocument();
     const suggestButton = screen.getByRole("button", {
       name: "Suggest recipes for my store(s)",
     });
     expect(suggestButton).toBeEnabled();
     await user.click(suggestButton);
     expect(onSuggestRecipes).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a checked suggested item in the list", () => {
+    render(
+      createElement(PantryStepPanel, {
+        ...baseProps,
+        selectedPantryIngredientIds: ["cumin"],
+      }),
+    );
+
+    const checkbox = screen.getByRole("checkbox", { name: /Ground cumin/i });
+    expect(checkbox).toBeChecked();
   });
 
   it("disables suggest recipes when ranking is paused", () => {
@@ -78,7 +90,7 @@ describe("PantryStepPanel", () => {
     ).toBeDisabled();
   });
 
-  it("renders combined pantry rows with source badges", async () => {
+  it("renders combined pantry rows", async () => {
     const user = userEvent.setup();
 
     render(
@@ -91,21 +103,18 @@ describe("PantryStepPanel", () => {
             source: "suggested",
             recipeCount: 2,
           },
-          {
-            ingredientId: "olive-oil",
-            ingredientName: "Olive oil",
-            source: "manual",
-          },
         ],
-        selectedPantryIngredientIds: ["cumin", "olive-oil"],
+        selectedPantryIngredientIds: ["cumin"],
       }),
     );
 
     await user.click(
-      screen.getByRole("button", { name: /Your pantry for this session \(2 items\)/i }),
+      screen.getByRole("button", { name: /Your pantry for this session \(1 item\)/i }),
     );
 
-    expect(screen.getByText("Suggested")).toBeInTheDocument();
-    expect(screen.getByText("You added")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Your pantry selections" }),
+    ).toHaveTextContent("Ground cumin");
+    expect(screen.queryByText("You added")).not.toBeInTheDocument();
   });
 });

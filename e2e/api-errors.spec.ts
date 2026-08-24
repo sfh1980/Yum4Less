@@ -6,6 +6,7 @@ import {
 import {
   completeSettingsZipFlow,
   completeWelcomeFlow,
+  continueZipWizardToStorePicker,
   goToPantryStep,
   resetAppPreferences,
   seedZipSearchCenter,
@@ -37,13 +38,14 @@ test.describe("API error surfaces in the UI", () => {
     });
 
     await switchMainTab(page, "Settings");
-    // Clearing location re-shows Find so we can force a failed search after setup.
-    await page.getByRole("textbox", { name: "ZIP code" }).fill("00000");
-    await seedZipSearchCenter(page, "00000", {
+    await page.getByRole("button", { name: "Enter ZIP code" }).click();
+    await page.getByRole("textbox", { name: "ZIP code" }).fill("23111");
+    await seedZipSearchCenter(page, "23111", {
       latitude: 37.6085,
       longitude: -77.3739,
     });
-    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await continueZipWizardToStorePicker(page);
     await expect(page.getByText(/ZIP must be five digits/i)).toBeVisible({
       timeout: 30_000,
     });
@@ -69,12 +71,14 @@ test.describe("API error surfaces in the UI", () => {
     });
 
     await switchMainTab(page, "Settings");
-    await page.getByRole("textbox", { name: "ZIP code" }).fill("00000");
-    await seedZipSearchCenter(page, "00000", {
+    await page.getByRole("button", { name: "Enter ZIP code" }).click();
+    await page.getByRole("textbox", { name: "ZIP code" }).fill("23111");
+    await seedZipSearchCenter(page, "23111", {
       latitude: 37.6085,
       longitude: -77.3739,
     });
-    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await continueZipWizardToStorePicker(page);
     await expect(
       page.getByText(/Internal server error|temporarily unavailable/i),
     ).toBeVisible({ timeout: 30_000 });

@@ -31,7 +31,7 @@ function byDietaryFocus(
 
 /**
  * Eligible recipe pool for ranking and pantry coverage — same upstream filters,
- * excluding budget, maxIngredients, scoring, and plan-build null candidates.
+ * excluding budget, maxIngredients, and plan-build / budget gates applied later.
  */
 export function buildEligibleRecipePool(
   input: RankingRecipePoolInput,

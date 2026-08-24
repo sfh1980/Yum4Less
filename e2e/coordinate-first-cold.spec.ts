@@ -86,11 +86,14 @@ test.describe("Coordinate-first location (cold OSM gap-fill)", () => {
       "cold coordinate must start with zero openstreetmap-overpass rows in yum4less_test after fixture prep",
     ).toBe(0);
 
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-    const useLocationButton = page.getByRole("button", {
-      name: "For Better Results, Use My GPS Location",
-    });
+    await expect(page.getByRole("heading", { name: "Let’s get started" })).toBeVisible();
+    const useLocationButton = page.getByRole("button", { name: "Use GPS" });
     await expect(useLocationButton).toBeEnabled({ timeout: 120_000 });
+
+    await useLocationButton.click();
+    await expect(page.getByRole("heading", { name: "How far should we look?" })).toBeVisible({
+      timeout: 30_000,
+    });
 
     const startedAtMs = Date.now();
     const [response] = await Promise.all([
@@ -100,7 +103,7 @@ test.describe("Coordinate-first location (cold OSM gap-fill)", () => {
           res.request().method() === "POST",
         { timeout: 120_000 },
       ),
-      useLocationButton.click(),
+      page.getByRole("button", { name: "Continue" }).click(),
     ]);
     await response.finished();
     const marketSearchElapsedMs = Date.now() - startedAtMs;
@@ -129,7 +132,8 @@ test.describe("Coordinate-first location (cold OSM gap-fill)", () => {
       "thin map-context coverage should surface an honest notice instead of silently hanging or looking complete",
     ).toBeTruthy();
 
-    await page.getByRole("button", { name: "Save settings and continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await completeWelcomeFlow(page);
 
     await expect(page.getByText(/No sale ingredients are available/i)).not.toBeVisible();

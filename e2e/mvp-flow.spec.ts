@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { runCoreMvpFlow, seedZipSearchCenterFromGeocode } from "./helpers";
+import {
+  completeSettingsZipFlow,
+  completeWelcomeFlow,
+  runCoreMvpFlow,
+} from "./helpers";
 
 // Fat Settings → map → pantry → rank path needs headroom beyond the default 90s
 // so the dedicated 60s rank wait is not starved by earlier steps (Wave 1a).
@@ -20,11 +24,17 @@ test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
     expect(triggerCount).toBeGreaterThan(0);
 
     const firstTrigger = titleTriggers.first();
+    if ((await firstTrigger.getAttribute("aria-expanded")) !== "true") {
+      await firstTrigger.click();
+    }
     await expect(firstTrigger).toHaveAttribute("aria-expanded", "true");
     await expect(page.locator(".meal-results-accordion-panel")).toHaveCount(1);
     await expect(
       page.locator(".meal-results-accordion-panel .recommendation-card").first(),
     ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save meal" })).toBeVisible();
+    await page.getByRole("button", { name: "Save meal" }).click();
+    await expect(page.locator(".meal-save-button")).toHaveText("Saved");
 
     if (triggerCount > 1) {
       const secondTrigger = titleTriggers.nth(1);
@@ -34,19 +44,39 @@ test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
       await expect(secondTrigger).toHaveAttribute("aria-expanded", "true");
       await expect(page.locator(".meal-results-accordion-panel")).toHaveCount(1);
     }
+
+    await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "Saved" }).click();
+    await expect(
+      page.getByText(/Totals are estimates from when you saved/i),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
   });
 
-  test("shows beta label and footer feedback link", async ({ page }) => {
+  test("shows splash branding and a Feedback tab after results", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.locator(".hero .eyebrow")).toHaveText("Yum4Less");
+    const splash = page.getByTestId("onboarding-splash");
     await expect(
-      page.getByRole("link", { name: "Send feedback or report a wrong price" }),
-    ).toHaveAttribute("href", "/feedback");
+      splash.or(page.getByRole("heading", { name: "Let’s get started" })),
+    ).toBeVisible();
+    if (await splash.isVisible()) {
+      await expect(page.getByRole("heading", { name: "Yum4Less" })).toBeVisible();
+      await expect(
+        page.getByText(/Find realistic low-cost dinner options near you/i),
+      ).toBeVisible();
+      await expect(
+        page.getByText(/dinner planner for grocery stores near you/i),
+      ).toBeVisible();
+      await expect(page.getByText(/Prices are estimates/i)).toBeVisible();
+    }
 
     await runCoreMvpFlow(page);
 
     await expect(page.getByText(/Totals are estimates/i)).toBeVisible();
+    await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "Feedback" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Send feedback or report a wrong price." }),
+    ).toBeVisible();
   });
 
   test("keeps inline trust copy without the removed trust explainer modal", async ({
@@ -62,21 +92,28 @@ test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
     ).toHaveCount(0);
     await expect(page.getByText(/Totals are estimates/i)).toBeVisible();
     await expect(
-      page.getByRole("note", { name: /heads up about these prices/i }).first(),
+      page.getByRole("note", { name: /heads up about these prices/i }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Where do these prices come from? Opens FAQ" }),
     ).toBeVisible();
   });
 
-  test("expands pricing trust disclosure on the map", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("textbox", { name: "ZIP code" }).fill("23111");
-    await seedZipSearchCenterFromGeocode(page, "23111");
-    await page.getByRole("button", { name: "Find stores based on my ZIP" }).click();
-    await page.getByRole("button", { name: "Save settings and continue" }).click();
-    await page.getByRole("button", { name: "Continue to ingredients" }).click();
-    await page.getByRole("button", { name: "Do you want to see store locations?" }).click();
+  test("opens a FAQ article from dinner results and restores dinners on Back", async ({
+    page,
+  }) => {
+    await runCoreMvpFlow(page);
 
-    const expandSummary = page.getByText("More about these estimates").first();
-    await expandSummary.click();
-    await expect(page.getByText(/Kroger-family|weekly.ad|directional/i).first()).toBeVisible();
+    await page
+      .getByRole("link", { name: "Where do these prices come from? Opens FAQ" })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Where do these prices come from?" }),
+    ).toBeVisible();
+
+    await page.goBack();
+    await expect(page.locator(".meal-results-accordion")).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

@@ -238,6 +238,36 @@ export function buildSuggestedPantryChecklist(
     });
 }
 
+/** Keep the visible pantry checklist stable while coverage counts update. */
+export function mergeSuggestedPantryChecklist(
+  current: SuggestedPantryChecklistItem[],
+  incoming: SuggestedPantryChecklistItem[],
+): SuggestedPantryChecklistItem[] {
+  if (current.length === 0) {
+    return incoming;
+  }
+
+  const incomingById = new Map(
+    incoming.map((item) => [item.ingredientId, item]),
+  );
+  const seen = new Set<string>();
+  const merged: SuggestedPantryChecklistItem[] = [];
+
+  for (const item of current) {
+    seen.add(item.ingredientId);
+    merged.push(incomingById.get(item.ingredientId) ?? item);
+  }
+
+  for (const item of incoming) {
+    if (seen.has(item.ingredientId)) {
+      continue;
+    }
+    merged.push(item);
+  }
+
+  return merged;
+}
+
 export function buildIngredientCatalogForClient(
   catalog: CatalogIngredient[],
 ): CatalogIngredient[] {

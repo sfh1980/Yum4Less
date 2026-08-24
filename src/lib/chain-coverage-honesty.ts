@@ -105,7 +105,16 @@ export function buildChainCoverageDepthLiveSummary(
   return `Near you this week: ${parts.join(" · ")}.`;
 }
 
-export function buildMultiStoreCoverageSummary(
+export type StoreCoverageHelpModel = {
+  trackedIngredientCount: number;
+  chains: Array<{
+    chainLabel: string;
+    matchedIngredientCount: number;
+  }>;
+  includeMultiStoreNote: boolean;
+};
+
+export function buildStoreCoverageHelpModel(
   stores: readonly Pick<
     NearbyStoreSummary,
     | "id"
@@ -116,27 +125,78 @@ export function buildMultiStoreCoverageSummary(
     | "totalTrackedIngredientCount"
   >[],
   selectedStoreIds: readonly string[],
-): string | null {
+): StoreCoverageHelpModel | null {
   const selectedIdSet = new Set(selectedStoreIds);
   const selectedStores = stores.filter(
     (store) => selectedIdSet.has(store.id) && store.recommendationEnabled,
   );
+  const coveragePool =
+    selectedStores.length > 0
+      ? selectedStores
+      : stores.filter((store) => store.recommendationEnabled);
 
-  if (selectedStores.length < 2) {
+  const depthEntries = buildBestChainCoverageDepth(coveragePool);
+  const trackedIngredientCount =
+    depthEntries[0]?.totalTrackedIngredientCount ?? TRACKED_DINNER_INGREDIENT_COUNT;
+
+  if (trackedIngredientCount <= 0) {
     return null;
   }
 
-  const depthEntries = buildBestChainCoverageDepth(selectedStores);
-  if (depthEntries.length < 2) {
-    return null;
+  const selectedDepth = buildBestChainCoverageDepth(selectedStores);
+
+  return {
+    trackedIngredientCount,
+    chains: selectedDepth.map((entry) => ({
+      chainLabel: entry.chainLabel,
+      matchedIngredientCount: entry.matchedIngredientCount,
+    })),
+    includeMultiStoreNote: selectedStores.length >= 2 && selectedDepth.length >= 2,
+  };
+}
+
+export function formatStoreCoverageHelpParagraphs(
+  model: StoreCoverageHelpModel,
+): string[] {
+  const paragraphs = [
+    `Yum4Less currently tracks ${model.trackedIngredientCount} dinner ingredients.`,
+  ];
+
+  if (model.chains.length === 0) {
+    paragraphs.push(
+      "After you choose stores, this note shows how many of those ingredients have estimated sale prices nearby this week.",
+    );
+  } else {
+    paragraphs.push("Near you this week:");
+    for (const chain of model.chains) {
+      paragraphs.push(
+        `${chain.chainLabel} is showing estimated prices for ${chain.matchedIngredientCount} of those ${model.trackedIngredientCount}.`,
+      );
+    }
   }
 
-  const parts = depthEntries.map(
-    (entry) =>
-      `${entry.chainLabel} ~${formatChainCoverageRatio(entry.matchedIngredientCount, entry.totalTrackedIngredientCount)}`,
+  if (model.includeMultiStoreNote) {
+    paragraphs.push(
+      "If you pick more than one store, we use the lowest estimate we have for each ingredient. Some ingredients only have a price at the store with the most coverage right now.",
+    );
+  }
+
+  paragraphs.push("These are estimates — check the shelf before you shop.");
+  return paragraphs;
+}
+
+export function formatStoreCoverageHelpOneLiner(
+  model: StoreCoverageHelpModel,
+): string {
+  if (model.chains.length === 0) {
+    return `Yum4Less currently tracks ${model.trackedIngredientCount} dinner ingredients.`;
+  }
+
+  const parts = model.chains.map(
+    (chain) =>
+      `${chain.chainLabel} ~${formatChainCoverageRatio(chain.matchedIngredientCount, model.trackedIngredientCount)}`,
   );
-
-  return `Sale-price coverage this week near you: ${parts.join(" · ")}. Multi-store picks the lowest estimated priced item per ingredient — many ingredients may only have a price at the chain with the deepest coverage right now.`;
+  return `Near you this week: ${parts.join(" · ")}.`;
 }
 
 export function buildMultiStoreCoverageSkewReason(input: {
