@@ -206,6 +206,8 @@ Back leads only to the previous screen, whether that be configuration set up if 
 
 a proceed, or continue or arrow button will allow user to progress to next screens. for all screens
 
+**Update 2026-08-25:** Shopping style and Dietary focus have no Continue. Tapping a choice advances immediately (same pattern as Use GPS / Enter ZIP). Radius, ZIP, pin, stores, and budget still use Continue.
+
 ### Q17 — Radius on the GPS path
 
 Mentioned in copy, not drawn.

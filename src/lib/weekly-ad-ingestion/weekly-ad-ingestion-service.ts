@@ -31,7 +31,9 @@ import type {
   WeeklyAdOfferSyncSummary,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import { createResearchWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/weekly-ad-research-ingestion";
+import { rejectPendingReviewsMatchingJunk } from "@/lib/owner/ingredient-review-repository";
 import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
+import { logServerError } from "@/lib/server-log";
 import {
   getWeeklyAdIngestionStatusSummaries,
   syncWeeklyAdOffersToPriceObservations,
@@ -164,6 +166,19 @@ export async function runWeeklyAdIngestionForStores(input: {
           await syncWeeklyAdOffersToPriceObservations({ result: fanOutResult }),
         );
       }
+    }
+  }
+
+  if (input.persistToDatabase && !isFixtureIngestMode()) {
+    try {
+      const heal = await rejectPendingReviewsMatchingJunk();
+      if (heal.rejected > 0) {
+        console.info(
+          `[weekly-ad] rejected ${heal.rejected} pending junk review(s) of ${heal.scanned} scanned`,
+        );
+      }
+    } catch (error) {
+      logServerError("weekly-ad-ingest.reject-pending-junk", error);
     }
   }
 

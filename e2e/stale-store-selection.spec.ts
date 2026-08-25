@@ -14,7 +14,6 @@ async function completeSettingsZipFlowMultiStore(page: import("@playwright/test"
   await searchStoresFromZipWizard(page);
   await page.getByRole("button", { name: "Several stores" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "Continue" }).click();
   await expect(
     page.getByRole("heading", { name: "How much do you want to spend?" }),
   ).toBeVisible();

@@ -1,8 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { FeedbackRecentFeed } from "@/components/feedback/feedback-recent-feed";
 import { OwnerAnalyticsFeed } from "@/components/owner/owner-analytics-feed";
+import {
+  DEFAULT_OWNER_CONSOLE_TAB,
+  OWNER_CONSOLE_TABS,
+  type OwnerConsoleTab,
+} from "@/components/owner/owner-console-tab";
 import type { PublicAnalyticsEventRow } from "@/lib/analytics/analytics-repository";
 import {
   FEEDBACK_LIMITS,
@@ -137,6 +142,12 @@ export function OwnerConsole() {
   const [analyticsNextOffset, setAnalyticsNextOffset] = useState(0);
   const [reviewsNextOffset, setReviewsNextOffset] = useState(0);
   const [analyticsNotice, setAnalyticsNotice] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState<OwnerConsoleTab>(
+    DEFAULT_OWNER_CONSOLE_TAB,
+  );
+  const tabButtonRefs = useRef<Partial<Record<OwnerConsoleTab, HTMLButtonElement | null>>>(
+    {},
+  );
 
   useEffect(() => {
     const stored = readStoredKey();
@@ -357,6 +368,7 @@ export function OwnerConsole() {
     setReviewsNextOffset(0);
     setAnalyticsNotice(undefined);
     setReviewNotice(undefined);
+    setActiveTab(DEFAULT_OWNER_CONSOLE_TAB);
   }
 
   function handleRefresh() {
@@ -473,6 +485,25 @@ export function OwnerConsole() {
       setReviewingId(null);
     }
   }
+
+  function handleTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentTab: OwnerConsoleTab,
+  ) {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+      return;
+    }
+    event.preventDefault();
+    const index = OWNER_CONSOLE_TABS.findIndex((tab) => tab.id === currentTab);
+    const delta = event.key === "ArrowRight" ? 1 : -1;
+    const next =
+      OWNER_CONSOLE_TABS[
+        (index + delta + OWNER_CONSOLE_TABS.length) % OWNER_CONSOLE_TABS.length
+      ]!;
+    setActiveTab(next.id);
+    tabButtonRefs.current[next.id]?.focus();
+  }
+
   return (
     <div className="owner-console">
       <section className="panel panel-padding">
@@ -532,7 +563,42 @@ export function OwnerConsole() {
 
       {loadState === "ready" ? (
         <div className="owner-console-panels">
-          <section className="panel panel-padding">
+          <div
+            className="owner-tablist"
+            role="tablist"
+            aria-label="Owner console"
+          >
+            {OWNER_CONSOLE_TABS.map((tab) => {
+              const selected = activeTab === tab.id;
+              return (
+                <button
+                  aria-controls={`owner-panel-${tab.id}`}
+                  aria-selected={selected}
+                  className={`owner-tab${selected ? " owner-tab--selected" : ""}`}
+                  id={`owner-tab-${tab.id}`}
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
+                  ref={(element) => {
+                    tabButtonRefs.current[tab.id] = element;
+                  }}
+                  role="tab"
+                  tabIndex={selected ? 0 : -1}
+                  type="button"
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {activeTab === "reviews" ? (
+          <section
+            aria-labelledby="owner-tab-reviews"
+            className="panel panel-padding"
+            id="owner-panel-reviews"
+            role="tabpanel"
+          >
             <h2>Ingredient review</h2>
             <p className="panel-copy">
               Unclear weekly-ad lines wait here. Yes attaches the flyer wording
@@ -695,9 +761,16 @@ export function OwnerConsole() {
               </div>
             ) : null}
           </section>
+          ) : null}
 
-          <section className="panel panel-padding">
-            <h2>Customer feedback</h2>
+          {activeTab === "feedback" ? (
+          <section
+            aria-labelledby="owner-tab-feedback"
+            className="panel panel-padding"
+            id="owner-panel-feedback"
+            role="tabpanel"
+          >
+            <h2>User feedback</h2>
             <p className="panel-copy">
               Rows from <code>customer_feedback</code>, newest first. Loaded{" "}
               {feedback.length}
@@ -722,9 +795,16 @@ export function OwnerConsole() {
               </div>
             ) : null}
           </section>
+          ) : null}
 
-          <section className="panel panel-padding">
-            <h2>Analytics by session</h2>
+          {activeTab === "analytics" ? (
+          <section
+            aria-labelledby="owner-tab-analytics"
+            className="panel panel-padding"
+            id="owner-panel-analytics"
+            role="tabpanel"
+          >
+            <h2>Analytics</h2>
             <p className="panel-copy">
               Events from <code>analytics_events</code>, grouped by session.
               Loaded {events.length}
@@ -746,6 +826,7 @@ export function OwnerConsole() {
               </div>
             ) : null}
           </section>
+          ) : null}
         </div>
       ) : null}
     </div>

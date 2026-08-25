@@ -1,6 +1,6 @@
 import type { CatalogIngredient } from "@/lib/ingredient-category";
 import { MIN_WEEKLY_AD_MATCH_CONFIDENCE } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
-import { isWeeklyAdJunkProduct } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
+import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
 import {
   normalizeWeeklyAdFlyerLabel,
   splitWeeklyAdOrLabels,
@@ -99,7 +99,7 @@ function classifyOneFlyerPart(input: {
     };
   }
 
-  if (isWeeklyAdJunkProduct(normalizedLabel)) {
+  if (flyerLineLooksLikeJunk(input.rawProductName, normalizedLabel)) {
     return { action: "skip", reason: "junk", normalizedLabel };
   }
 

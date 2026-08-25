@@ -164,6 +164,7 @@ Full list and ingest flags → `.env.example`.
 | `npm run ingest:map-catalog:fixture` | Deterministic OSM-style map catalog for CI/rehearsal (ZIP 23111; skips live Kroger/Publix locators) |
 | `npm run ingest:weekly-ads:scheduled` | **Daily cron wrapper** — map catalog → weekly-ad ingest (live matching vs Postgres `ingredients`; unmatched lines skip / auto-create / `/owner` review) → provider sync → TheMealDB import |
 | `npm run ingest:weekly-ads:scheduled:fixture` | Rehearsal cron path (CI/tests — fixture weekly ads only) |
+| `npm run owner:reject-pending-junk-reviews` | One-shot: reject pending `/owner` flyer lines that match current junk heuristics (`yum4less_dev`; not a public API) |
 | `npm run probe:kroger-api` | Kroger OAuth + store pricing probe (owner-only, not CI) |
 | `npm run probe:publix-api` | Publix store-locator probe (owner-only, not CI) |
 | `npm run probe:kroger-live-scrape` | Kroger weekly-ad live scrape probe |

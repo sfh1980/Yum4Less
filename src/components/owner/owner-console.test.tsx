@@ -13,7 +13,7 @@ describe("OwnerConsole", () => {
     vi.unstubAllGlobals();
   });
 
-  it("sends the typed admin key on View and renders feedback + analytics", async () => {
+  it("sends the typed admin key on View and switches owner tabs", async () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/api/feedback")) {
@@ -68,17 +68,34 @@ describe("OwnerConsole", () => {
     await user.click(screen.getByRole("button", { name: /^view$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Works well")).toBeInTheDocument();
+      expect(
+        screen.getByRole("tab", { name: "Ingredient review" }),
+      ).toHaveAttribute("aria-selected", "true");
     });
+    expect(
+      screen.getByRole("heading", { name: "Ingredient review" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("No flyer lines waiting for review.")).toBeInTheDocument();
+    expect(screen.queryByText("Works well")).not.toBeInTheDocument();
+    expect(screen.queryByText("rank_meals_completed")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "User feedback" }));
+    expect(screen.getByText("Works well")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Ingredient review" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Analytics" }));
     expect(screen.getByText("rank_meals_completed")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Show next 50 events/i }),
     ).toBeInTheDocument();
 
+    await user.keyboard("{ArrowRight}");
     expect(
-      screen.getByRole("heading", { name: /ingredient review/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("No flyer lines waiting for review.")).toBeInTheDocument();
+      screen.getByRole("tab", { name: "Ingredient review" }),
+    ).toHaveAttribute("aria-selected", "true");
+
     const feedbackCall = fetchMock.mock.calls.find((call) =>
       String(call[0]).includes("/api/feedback"),
     );
@@ -154,6 +171,12 @@ describe("OwnerConsole", () => {
 
     await user.type(screen.getByLabelText(/admin key/i), "secret-owner-key");
     await user.click(screen.getByRole("button", { name: /^view$/i }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("tab", { name: "Analytics" }),
+      ).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("tab", { name: "Analytics" }));
     await waitFor(() => {
       expect(screen.getByText("rank_meals_completed")).toBeInTheDocument();
     });

@@ -139,4 +139,107 @@ describe("classifyWeeklyAdFlyerLine", () => {
       }),
     ]);
   });
+
+  it("skips housewares and personal-care junk while leaving dinner foods in review or auto-create", () => {
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "KIRKTON HOUSE Fall Icon Candle",
+        chain: "aldi",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Colgate Total Toothpaste",
+        chain: "publix",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName:
+          'GIGABYTE Gaming A16 16" Laptop, Intel Core i7, 16GB RAM, 1TB SSD, GeForce RTX 5060',
+        chain: "walmart",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Gravy Train Wet Dog Food",
+        chain: "walmart",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Libman 24-Inch Cotton Dust Mop",
+        chain: "walmart",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Licensed Toddlers' Character Halloween Slippers",
+        chain: "walmart",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Publix Garden Salad",
+        chain: "publix",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        action: "review",
+        normalizedLabel: expect.stringContaining("garden salad"),
+      }),
+    ]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "McCormick Grill Mates 30 Minute Montreal Steak Marinade",
+        chain: "publix",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        action: "review",
+        normalizedLabel: expect.stringContaining("grill mates"),
+      }),
+    ]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Eastern Peaches",
+        chain: "food-lion",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        action: "review",
+        normalizedLabel: expect.stringContaining("peaches"),
+      }),
+    ]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Boneless Strip Steaks",
+        chain: "kroger",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        action: "review",
+        normalizedLabel: expect.stringContaining("steaks"),
+      }),
+    ]);
+  });
 });

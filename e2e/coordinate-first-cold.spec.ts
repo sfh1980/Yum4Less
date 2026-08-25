@@ -132,7 +132,11 @@ test.describe("Coordinate-first location (cold OSM gap-fill)", () => {
       "thin map-context coverage should surface an honest notice instead of silently hanging or looking complete",
     ).toBeTruthy();
 
-    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
+    await page.getByRole("button", { name: "One store" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Which stores should we use?" }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Continue" }).click();
     await completeWelcomeFlow(page);
 

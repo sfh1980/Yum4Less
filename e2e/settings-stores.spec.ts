@@ -15,7 +15,9 @@ test.describe("Settings store selection", () => {
   test("scopes the map to the stores selected in Settings (ranked-chain subset)", async ({ page }) => {
     await searchStoresFromZipWizard(page, E2E_ZIP_FALLBACK);
     await page.getByRole("button", { name: "Several stores" }).click();
-    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Which stores should we use?" }),
+    ).toBeVisible();
 
     await page.locator("#wizard-store-kroger-mechanicsville").check();
     await page.locator("#wizard-store-aldi-mechanicsville").check();
@@ -47,7 +49,7 @@ test.describe("Settings store selection", () => {
     page,
   }) => {
     await searchStoresFromZipWizard(page, E2E_ZIP_FALLBACK);
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "One store" }).click();
     await expect(
       page.getByRole("heading", { name: "Which stores should we use?" }),
     ).toBeVisible({ timeout: 30_000 });

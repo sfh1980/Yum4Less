@@ -129,8 +129,7 @@ export async function continueZipWizardToStorePicker(page: Page) {
     ),
     page.getByRole("button", { name: "Continue" }).click(),
   ]);
-  await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
-  await page.getByRole("button", { name: "Continue" }).click();
+  await chooseShoppingStyle(page);
   await expect(
     page.getByRole("heading", { name: "Which stores should we use?" }),
   ).toBeVisible();
@@ -194,6 +193,22 @@ async function continueWizard(page: Page) {
   await page.getByRole("button", { name: "Continue" }).click();
 }
 
+export async function chooseShoppingStyle(
+  page: Page,
+  style: "One store" | "Several stores" = "One store",
+) {
+  await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
+  await page.getByRole("button", { name: style }).click();
+}
+
+export async function chooseDietaryFocus(
+  page: Page,
+  focus: "Anything" | "Vegetarian" | "Vegan" | "Quick meals" = "Anything",
+) {
+  await expect(page.getByRole("heading", { name: "Dietary focus" })).toBeVisible();
+  await page.getByRole("button", { name: focus }).click();
+}
+
 export async function completeSettingsZipFlow(
   page: Page,
   zipCode = E2E_ZIP_FALLBACK,
@@ -231,9 +246,7 @@ export async function completeSettingsZipFlow(
   expect(typeof requestBody.longitude).toBe("number");
   assertPublicNearbyStoresSanitized(body.market.nearbyStores);
   assertProductionRankedRolloutGates(body.market.nearbyStores);
-  await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
-  await page.getByRole("button", { name: "Several stores" }).click();
-  await continueWizard(page);
+  await chooseShoppingStyle(page, "Several stores");
   await expect(
     page.getByRole("heading", { name: "Which stores should we use?" }),
   ).toBeVisible();
@@ -274,8 +287,7 @@ export async function completeSettingsGeolocationFlow(page: Page): Promise<Marke
   expect(requestBody.longitude).toBeCloseTo(E2E_PRIMARY_COORDINATES.longitude, 2);
   const body = (await response.json()) as MarketSearchBody;
   expect(body.ok).toBe(true);
-  await expect(page.getByRole("heading", { name: "How do you shop?" })).toBeVisible();
-  await continueWizard(page);
+  await chooseShoppingStyle(page);
   await expect(
     page.getByRole("heading", { name: "Which stores should we use?" }),
   ).toBeVisible();
@@ -291,8 +303,7 @@ export async function completeSettingsGeolocationFlow(page: Page): Promise<Marke
 
 export async function completeWelcomeFlow(page: Page) {
   await continueWizard(page);
-  await expect(page.getByRole("heading", { name: "Dietary focus" })).toBeVisible();
-  await page.getByRole("button", { name: "Continue to ingredients" }).click();
+  await chooseDietaryFocus(page);
   await expect(page.getByRole("heading", { name: "Ingredients" })).toBeVisible();
 }
 

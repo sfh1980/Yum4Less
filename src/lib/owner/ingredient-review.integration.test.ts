@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
-import { resolveIngredientReview } from "@/lib/owner/ingredient-review-repository";
+import {
+  rejectPendingReviewsMatchingJunk,
+  resolveIngredientReview,
+} from "@/lib/owner/ingredient-review-repository";
 import { WEEKLY_AD_ALIAS_SOURCE } from "@/lib/weekly-ad-ingestion/weekly-ad-match-catalog";
 
 const TEST_LABEL = "itest catalog pork loin";
@@ -93,5 +96,47 @@ describe("ingredient match catalog schema (integration)", () => {
       [TEST_LABEL],
     );
     expect(skip.rows[0]?.reason).toBe("owner-rejected");
+  });
+
+  it("rejects pending junk reviews and leaves dinner foods pending", async () => {
+    const pool = getDbPool();
+    const junkLabel = "itest kirkton house candle";
+    const foodLabel = "itest eastern peaches";
+
+    await pool.query(
+      `insert into ingredient_match_reviews (
+         normalized_label, raw_product_name, chain, status
+       ) values
+         ($1, $2, 'aldi', 'pending'),
+         ($3, $4, 'food-lion', 'pending')`,
+      [
+        junkLabel,
+        "KIRKTON HOUSE Fall Icon Candle",
+        foodLabel,
+        "Eastern Peaches",
+      ],
+    );
+
+    const healed = await rejectPendingReviewsMatchingJunk();
+    expect(healed.scanned).toBeGreaterThanOrEqual(2);
+    expect(healed.rejected).toBeGreaterThanOrEqual(1);
+
+    const junk = await pool.query<{ status: string }>(
+      `select status from ingredient_match_reviews where normalized_label = $1`,
+      [junkLabel],
+    );
+    expect(junk.rows[0]?.status).toBe("rejected");
+
+    const skipRow = await pool.query<{ reason: string }>(
+      `select reason from ingredient_match_skips where normalized_label = $1`,
+      [junkLabel],
+    );
+    expect(skipRow.rows[0]?.reason).toBe("junk-heuristic");
+
+    const food = await pool.query<{ status: string }>(
+      `select status from ingredient_match_reviews where normalized_label = $1`,
+      [foodLabel],
+    );
+    expect(food.rows[0]?.status).toBe("pending");
   });
 });

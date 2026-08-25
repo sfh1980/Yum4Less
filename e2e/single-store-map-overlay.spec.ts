@@ -31,7 +31,7 @@ test.describe("Single-store map overlay", () => {
       (store) => store.chain === "kroger" && store.recommendationEnabled,
     );
     expect(kroger, "23111 fixture should include ranked Kroger for map overlay").toBeTruthy();
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "One store" }).click();
 
     const mapButton = page.getByRole("button", { name: new RegExp(`Show .* on map`) }).first();
     await expect(mapButton).toBeVisible({ timeout: 30_000 });

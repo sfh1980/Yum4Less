@@ -1,3 +1,4 @@
+/** Non-food flyer lines. Avoid bare tokens that hit dinners: garden, grill, paper. */
 const JUNK_PATTERNS: RegExp[] = [
   /\bchips?\b/i,
   /\bcrisps?\b/i,
@@ -39,6 +40,41 @@ const JUNK_PATTERNS: RegExp[] = [
   /\bdetergent\b/i,
   /\bshampoo\b/i,
   /\bpaper towels?\b/i,
+  /\blaptops?\b/i,
+  /\bssd\b/i,
+  /\brtx\b/i,
+  /\busb\b/i,
+  /\bkeyboards?\b/i,
+  /\bgb ram\b/i,
+  /\bpatio\b/i,
+  /\bgazebos?\b/i,
+  /\bsofas?\b/i,
+  /\bcandles?\b/i,
+  /\btowels?\b/i,
+  /\bmops?\b/i,
+  /\bpaper plates?\b/i,
+  /\btoothbrushes?\b/i,
+  /\btoothpaste\b/i,
+  /\bbody wash\b/i,
+  /\bdog foods?\b/i,
+  /\bcat foods?\b/i,
+  /\bpet toys?\b/i,
+  /\bsweatshirts?\b/i,
+  /\bslippers?\b/i,
+  /\bjoggers?\b/i,
+  /\bkirkton house\b/i,
+  /\bcrofton\b/i,
+  /\bsilvercrest\b/i,
+  /\bmainstays\b/i,
+  /\bbetter homes(?:\s*&\s*|\s+)gardens\b/i,
+  /\bheart to tail\b/i,
+  /\blicensed children/i,
+  /\blicensed toddler/i,
+  /\bcorona\b/i,
+  /\bmodelo\b/i,
+  /\bpacifico\b/i,
+  /\bnobilo\b/i,
+  /\btrivento\b/i,
 ];
 
 export function isWeeklyAdJunkProduct(productName: string): boolean {
@@ -47,4 +83,18 @@ export function isWeeklyAdJunkProduct(productName: string): boolean {
     return true;
   }
   return JUNK_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+/** True when the raw flyer title or the normalized label matches junk. */
+export function flyerLineLooksLikeJunk(
+  rawProductName: string,
+  normalizedLabel?: string,
+): boolean {
+  if (isWeeklyAdJunkProduct(rawProductName)) {
+    return true;
+  }
+  if (normalizedLabel && isWeeklyAdJunkProduct(normalizedLabel)) {
+    return true;
+  }
+  return false;
 }

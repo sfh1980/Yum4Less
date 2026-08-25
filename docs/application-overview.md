@@ -49,7 +49,7 @@ Public read-only routes (cache-first; ingest scripts are the write path):
 | `GET /api/analytics/events` | Recent Postgres analytics events |
 | `GET/POST /api/owner/ingredient-reviews` | Weekly-ad unmatched-line Yes (nickname or new food id) / No (skip) |
 
-Live weekly-ad ingest matches flyer lines against Postgres `ingredients` (97-id seed remains fixture SSOT). Unmatched lines skip junk, auto-create simple foods, or wait on `/owner`. Fixture ingest does not write skips/reviews.
+Live weekly-ad ingest matches flyer lines against Postgres `ingredients` (97-id seed remains fixture SSOT). Unmatched lines skip junk (`isWeeklyAdJunkProduct`), auto-create simple foods, or wait on `/owner`. Live persist also rejects pending reviews that later match junk. Fixture ingest does not write skips/reviews. One-shot heal: `npm run owner:reject-pending-junk-reviews`.
 
 ### Location
 

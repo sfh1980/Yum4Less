@@ -63,7 +63,7 @@ test.describe("Bottom navigation and theme", () => {
       (store) => store.chain === "kroger" && store.recommendationEnabled,
     );
     expect(kroger, "23111 fixture should include ranked Kroger for Cook tab gate").toBeTruthy();
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "One store" }).click();
     await page.locator(`#wizard-store-${kroger!.id}`).check();
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(

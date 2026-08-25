@@ -82,7 +82,7 @@ async function completeSettingsFlow(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("heading", { name: "How far should we look?" });
   await user.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("heading", { name: "How do you shop?" });
-  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await user.click(screen.getByRole("button", { name: "One store" }));
   await screen.findByRole("heading", { name: "Which stores should we use?" });
   await screen.findByRole("checkbox", { name: /Select / });
   await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -92,7 +92,7 @@ async function completeSettingsFlow(user: ReturnType<typeof userEvent.setup>) {
 async function completeWelcomeFlow(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("heading", { name: "Dietary focus" });
-  await user.click(screen.getByRole("button", { name: "Continue to ingredients" }));
+  await user.click(screen.getByRole("button", { name: "Anything" }));
   await screen.findByRole("heading", { name: "Ingredients" });
 }
 

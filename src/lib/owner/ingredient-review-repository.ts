@@ -5,6 +5,8 @@ import {
   slugifyIngredientId,
 } from "@/lib/ingredient-id";
 import { resolveCanonicalSimpleFood } from "@/lib/weekly-ad-ingestion/weekly-ad-simple-food";
+import { isFixtureIngestMode } from "@/lib/fixture-ingest-policy";
+import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
 import {
   insertIngredientIfMissing,
   insertSkipIfMissing,
@@ -150,6 +152,54 @@ export async function resolveIngredientReview(input: {
     });
     return { ok: false, error: "That flyer line could not be saved as a food." };
   }
+}
+
+export async function rejectPendingReviewsMatchingJunk(): Promise<{
+  scanned: number;
+  rejected: number;
+}> {
+  if (isFixtureIngestMode()) {
+    return { scanned: 0, rejected: 0 };
+  }
+
+  const pool = getDbPool();
+  const pending = await pool.query<{
+    normalized_label: string;
+    raw_product_name: string;
+  }>(
+    `
+      select normalized_label, raw_product_name
+      from ingredient_match_reviews
+      where status = 'pending'
+    `,
+  );
+
+  let rejected = 0;
+  for (const row of pending.rows) {
+    if (!flyerLineLooksLikeJunk(row.raw_product_name, row.normalized_label)) {
+      continue;
+    }
+
+    await insertSkipIfMissing({
+      normalizedLabel: row.normalized_label,
+      rawProductName: row.raw_product_name,
+      reason: "junk-heuristic",
+    });
+    await pool.query(
+      `
+        update ingredient_match_reviews
+        set status = 'rejected',
+            resolved_ingredient_id = null,
+            resolved_at = now()
+        where normalized_label = $1
+          and status = 'pending'
+      `,
+      [row.normalized_label],
+    );
+    rejected += 1;
+  }
+
+  return { scanned: pending.rows.length, rejected };
 }
 
 async function resolveAcceptedIngredient(input: {

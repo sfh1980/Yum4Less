@@ -8,7 +8,7 @@ Yum4Less keeps **first-party analytics** separate from customer feedback. Analyt
 | --- | --- | --- |
 | In-app feedback form (`/feedback`) | Bug reports, wrong-price reports, general product feedback | Implemented (disabled by default; enable with `YUM4LESS_FEEDBACK_ENABLED=1`) |
 | Admin list API (`GET /api/feedback`) | Owner reads recent rows with `YUM4LESS_FEEDBACK_ADMIN_KEY` | Implemented |
-| Owner console (`/owner`) | Key-gated UI for recent feedback, Postgres analytics events, and weekly-ad ingredient Yes/No (map or create food ids) | Implemented (same admin key; not linked from shopper nav; `noindex`) |
+| Owner console (`/owner`) | Key-gated UI with tabs for weekly-ad ingredient Yes/No (map or create food ids), user feedback, and Postgres analytics events | Implemented (same admin key; not linked from shopper nav; `noindex`) |
 | Public recent-feedback feed on `/feedback` | — | **Removed** from shopper UI (2026-08-04) |
 | Analytics transparency panel on `/feedback` | — | **Removed** from shopper UI (2026-08-04); ops detail stays in this doc / env |
 | Email or support inbox | Complaints and account-free MVP contact | Planned (owner choice) |
@@ -38,13 +38,15 @@ Apply `db/init/007_customer_feedback.sql` before enabling feedback in deployed e
 
 ### Owner console
 
-Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FEEDBACK_ADMIN_KEY` into the unlock field. The key is stored in **sessionStorage for that tab only** and sent as `Authorization: Bearer …` to:
+Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FEEDBACK_ADMIN_KEY` into the unlock field. After View, the console has three tabs: **Ingredient review**, **User feedback**, and **Analytics**. The key is stored in **sessionStorage for that tab only** and sent as `Authorization: Bearer …` to:
 
 - `GET /api/feedback?limit=50&offset=0` (then `offset=50`, `100`, … via **Show next 50**)
 - `GET /api/analytics/events?limit=50&offset=0` (same load-more pattern)
 - `GET /api/owner/ingredient-reviews` and `POST /api/owner/ingredient-reviews` (Yes maps or **creates** a food id; No writes a skip)
 
 On Yes, fill **Canonical food id** (lowercase kebab-case, 2–56 characters; spaces/capitals are formatted on save), **Shopper-facing name**, and **category**. If the id already exists, name and category are ignored and the flyer title becomes a nickname. If it does not exist, Yes inserts `ingredients` (`weekly-ad-catalog`) then the nickname. Example: `imitation-crab` / Imitation crab / protein. Do not encode brands, sizes, or pack counts in the id.
+
+Non-food flyer lines are skipped at ingest (`isWeeklyAdJunkProduct`) and can be healed from the existing pending queue with `npm run owner:reject-pending-junk-reviews` (defaults to `yum4less_dev`; not a public API). Dinner leftovers such as peaches and steaks stay in review until auto-create widens. That does not add shopper dinners by itself.
 
 Analytics are shown **grouped by session** (all loaded events for each `session_id`). Responses include `hasMore` so the console can offer the next page without dumping the full table at once.
 
