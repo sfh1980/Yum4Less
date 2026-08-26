@@ -18,6 +18,7 @@ import {
 
 describe("resolveZipLocation durable cache", () => {
   const originalGeocodioKey = process.env.GEOCODIO_API_KEY;
+  const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
     resetZipLocationCacheForTests();
@@ -27,7 +28,7 @@ describe("resolveZipLocation durable cache", () => {
     } else {
       process.env.GEOCODIO_API_KEY = originalGeocodioKey;
     }
-    restoreTestNodeEnv();
+    restoreTestNodeEnv(originalNodeEnv);
   });
 
   it("returns a cached geocode without calling Geocodio", async () => {

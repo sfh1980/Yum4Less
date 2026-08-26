@@ -3,6 +3,14 @@ import { listActiveMarketZipCodes } from "@/lib/active-markets";
 
 const ZIP5 = /^\d{5}$/;
 
+/** Subset of process.env that scheduled ingest and owner probes actually read. */
+export type IngestZipEnv = {
+  NODE_ENV?: string;
+  YUM4LESS_INGEST_ZIPS?: string;
+  YUM4LESS_INGEST_ZIP?: string;
+  YUM4LESS_PROVIDER_SYNC_ZIP?: string;
+};
+
 export const INGEST_ZIPS_REQUIRED_MESSAGE =
   "No ingest markets. Insert at least one active row in active_markets (npm run markets:activate -- <ZIP>) or set YUM4LESS_INGEST_ZIPS as a debug overlay. Optional single-ZIP alias: YUM4LESS_PROVIDER_SYNC_ZIP. There is no default market ZIP.";
 
@@ -79,7 +87,9 @@ export function mergeIngestZipSources(input: {
  * Scheduled ingest markets: env overlay wins when set; otherwise active_markets.
  * Empty overlay + empty table fails closed. Never invents 23111.
  */
-export async function resolveScheduledIngestZipCodes(env: NodeJS.ProcessEnv = process.env): Promise<string[]> {
+export async function resolveScheduledIngestZipCodes(
+  env: IngestZipEnv = process.env,
+): Promise<string[]> {
   const overlayZips = parseIngestZipOverlay(
     env.YUM4LESS_INGEST_ZIPS,
     env.YUM4LESS_PROVIDER_SYNC_ZIP,
@@ -108,9 +118,7 @@ export async function resolveScheduledIngestZipCodes(env: NodeJS.ProcessEnv = pr
 }
 
 /** Owner probes: singular `YUM4LESS_INGEST_ZIP`, else env overlay. Does not read active_markets. */
-export function resolveRequiredProbeZipCode(
-  env: NodeJS.ProcessEnv = process.env,
-): string {
+export function resolveRequiredProbeZipCode(env: IngestZipEnv = process.env): string {
   const singular = env.YUM4LESS_INGEST_ZIP?.trim();
   if (singular && ZIP5.test(singular)) {
     return singular;
