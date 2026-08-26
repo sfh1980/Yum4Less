@@ -148,9 +148,19 @@ function isPantryCoverageCall(call: unknown[]) {
   return String(call[0]).includes("/api/pantry-coverage");
 }
 
+async function setTestZip(
+  result: { current: ReturnType<typeof useMealPlanner> },
+  zipCode = "23111",
+) {
+  await act(async () => {
+    result.current.setForm((current) => ({ ...current, zipCode }));
+  });
+}
+
 async function loadMarketAndOpenPantry(
   result: { current: ReturnType<typeof useMealPlanner> },
 ) {
+  await setTestZip(result);
   await act(async () => {
     result.current.handleFindStores();
   });
@@ -199,9 +209,16 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     expect(result.current.activeTab).toBe("settings");
   });
 
+  it("starts with an empty ZIP until GPS or a typed ZIP succeeds", async () => {
+    const { result } = renderHook(() => useMealPlanner());
+
+    expect(result.current.form.zipCode).toBe("");
+  });
+
   it("opens the ZIP center picker when no cached pin exists", async () => {
     clearAllZipSearchCenters();
     const { result } = renderHook(() => useMealPlanner());
+    await setTestZip(result);
 
     await act(async () => {
       result.current.handleFindStores();
@@ -291,6 +308,7 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() => useMealPlanner());
+    await setTestZip(result);
 
     await act(async () => {
       result.current.handleFindStores();
@@ -356,6 +374,7 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() => useMealPlanner());
+    await setTestZip(result);
 
     await act(async () => {
       result.current.handleFindStores();
@@ -711,6 +730,8 @@ describe("useMealPlanner request generation (C2, H4)", () => {
         zipCode: "23111",
         selectedStoreIds: ["kroger-1"],
       }));
+    });
+    await act(async () => {
       result.current.handleFindStores();
     });
 
@@ -748,6 +769,7 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() => useMealPlanner());
+    await setTestZip(result);
 
     await act(async () => {
       result.current.handleFindStores();
@@ -792,6 +814,7 @@ describe("useMealPlanner request generation (C2, H4)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() => useMealPlanner());
+    await setTestZip(result);
 
     await act(async () => {
       result.current.handleFindStores();

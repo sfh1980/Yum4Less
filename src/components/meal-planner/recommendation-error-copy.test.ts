@@ -57,7 +57,7 @@ describe("recommendation error copy", () => {
     });
 
     expect(mapped.title).toMatch(/limited/i);
-    expect(mapped.hint).toMatch(/23111|GEOCODIO/i);
+    expect(mapped.hint).toMatch(/GEOCODIO|geolocation|continental US ZIP/i);
   });
 
   it("maps recommendation 500 to temporary outage copy", () => {

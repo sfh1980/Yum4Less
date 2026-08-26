@@ -3,6 +3,7 @@ import {
   buildFlippWeeklyAdSearchUrl,
   fetchFlippSearchOffersForMerchant,
   parseFlippWeeklyAdItems,
+  selectFlyersForWeeklyAdPersist,
 } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 
 describe("flipp-weekly-ad-feed", () => {
@@ -105,5 +106,41 @@ describe("flipp-weekly-ad-feed", () => {
         price: 2.49,
       }),
     ]);
+  });
+
+  it("prefers grocery-tagged flyers and drops apparel/electronics flyers", () => {
+    const selected = selectFlyersForWeeklyAdPersist([
+      {
+        id: 1,
+        merchant: "Walmart",
+        name: "Weekly Grocery Ad",
+        categories: ["Grocery"],
+      },
+      {
+        id: 2,
+        merchant: "Walmart",
+        name: "Electronics Sale",
+        categories: ["Electronics"],
+      },
+      {
+        id: 3,
+        merchant: "Walmart",
+        name: "Apparel",
+        categories_csv: "clothing,fashion",
+      },
+    ]);
+
+    expect(selected).toEqual([
+      expect.objectContaining({ id: 1, name: "Weekly Grocery Ad" }),
+    ]);
+  });
+
+  it("keeps untagged grocery-chain flyers when no grocery category exists", () => {
+    const selected = selectFlyersForWeeklyAdPersist([
+      { id: 10, merchant: "ALDI", name: "ALDI Weekly Ad" },
+      { id: 11, merchant: "ALDI", name: "Pharmacy", categories: ["pharmacy"] },
+    ]);
+
+    expect(selected).toEqual([expect.objectContaining({ id: 10 })]);
   });
 });

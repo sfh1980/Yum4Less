@@ -112,7 +112,7 @@ Expired sale rows stay in `price_observations` as history; unchanged sales with 
 
 **Kroger:** set `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`; verify with `npm run probe:kroger-api`. Certification API omits store-specific prices.
 
-**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; feedback + analytics lists + weekly-ad ingredient Yes/No review).
+**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; ingredient Yes/No, Coverage, feedback, analytics).
 
 **Semgrep:** CI runs `semgrep ci` when the GitHub repository secret `SEMGREP_APP_TOKEN` is set (Settings → Secrets → Actions). Local Cursor hooks use the optional `semgrep` CLI — not the same token. Lint, unit tests, build, integration, and E2E remain merge gates.
 
@@ -128,7 +128,7 @@ Copy `.env.example` → `.env.local`. Key variables:
 | `GEOCODIO_API_KEY` | Live ZIP geocoding (continental US); omit for seed ZIP fallback |
 | `KROGER_*` | Kroger OAuth + store/pricing API |
 | `YUM4LESS_KROGER_LOCATION_SEARCH_LIMIT` | Kroger Location API store search cap for map-catalog ingest (default 25, max 50) |
-| `YUM4LESS_INGEST_ZIPS` | Comma-separated ZIPs for scheduled ingest (`sync:provider-prices`, `ingest:map-catalog`) |
+| `YUM4LESS_INGEST_ZIPS` | Optional debug overlay of comma-separated ZIPs for scheduled ingest. If unset, cron reads `active_markets`. |
 | `YUM4LESS_ENABLE_API_DB_WRITES` | Local dev only — allow public API Postgres writes (**never in production**) |
 | `TRUST_PROXY_HEADERS` | `=1` only behind a trusted reverse proxy |
 | `NEXT_PUBLIC_YUM4LESS_ANALYTICS` + `YUM4LESS_ENABLE_ANALYTICS` | Both required to record events |
@@ -155,6 +155,8 @@ Full list and ingest flags → `.env.example`.
 | `npm run test:all` | Unit + integration |
 | `npm run test:e2e` / `npm run test:e2e:ci` | Playwright browser suite — CI uses port **3100**; see [`e2e/README.md`](e2e/README.md) |
 | `npm run db:up` / `db:down` / `db:reset` / `db:logs` | Postgres **only** on host port **5433** (Compose `db` service) |
+| `npm run db:migrate` | Apply missing `db/init` files (including `025` markets + ZIP cache) |
+| `npm run markets:activate -- <ZIP>` | Insert/activate one ingest market in Postgres (no silent default ZIP) |
 | `npm run db:backup` / `db:restore` / `db:backup-restore-drill` | Logical `pg_dump`/`psql` backup + disposable restore drill (see [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §4.4) |
 | `npm run ingest:weekly-ads:fixture` | **CI/rehearsal only** — deterministic weekly ads → Postgres |
 | `npm run ingest:weekly-ads` | Live weekly-ad fetch (HTTP + browser fallback) |
@@ -178,7 +180,7 @@ Live ingest chain-by-chain baseline → [`PROJECT_CONTINUITY.md` → Live weekly
 
 Public `/api/market-search` and `/api/recommendations` reads are **cache-only for ranked prices**: meal totals come from Postgres rows observed within the last **24 hours**. User searches do **not** call live Kroger pricing APIs or write new price rows. **Map pins** merge ingested Postgres stores, cached provider discovery, and (when pins within radius are sparse) ephemeral OpenStreetMap context via Overpass — merged in memory only unless you run ingest scripts.
 
-Schedule one daily ingest on your host (homelab cron, Task Scheduler, etc.). **Set `YUM4LESS_INGEST_ZIPS` in `.env.local` to your real market ZIP(s)** — do not rely on the `23111` default (CI anchor only).
+Schedule one daily ingest on your host (homelab cron, Task Scheduler, etc.). Cron visits **`active_markets`** (status `active`). You can still set `YUM4LESS_INGEST_ZIPS` as a **debug overlay** for one run; if overlay and table are both empty, ingest fails closed. ZIP `23111` is a CI/E2E test geography only, not an app or cron default. After `db:migrate` for `025`, activate a market with `npm run markets:activate -- 23220` (your real ZIP).
 
 **Homelab/Linux step-by-step:** [`docs/homelab-deploy.md`](docs/homelab-deploy.md) — TrueNAS ingest container (§10), Watchtower (§11), host cron fallback (§3), freshness SQL (§4).
 

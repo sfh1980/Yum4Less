@@ -76,6 +76,7 @@ async function completeSettingsFlow(user: ReturnType<typeof userEvent.setup>) {
   await dismissOnboardingSplash(user);
   await screen.findByRole("heading", { name: "Let’s get started" });
   await user.click(screen.getByRole("button", { name: "Enter ZIP code" }));
+  await user.type(screen.getByRole("textbox", { name: "ZIP code" }), "23111");
   await user.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("heading", { name: "Place your pin" });
   await user.click(await screen.findByRole("button", { name: "Continue" }));

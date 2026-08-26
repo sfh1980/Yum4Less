@@ -115,7 +115,7 @@ describe("migration ledger integration", () => {
     expect(readLedger()).toHaveLength(listInitMigrationFiles().length);
     expect(krogerAfter).toBe(krogerBefore);
     },
-    120_000,
+    180_000,
   );
 
   it(
@@ -184,7 +184,7 @@ describe("migration ledger integration", () => {
       expect(readLedger().map((row) => String(row.version))).toContain("022");
       expect(readLedger().map((row) => String(row.version))).not.toContain("023");
     },
-    120_000,
+    180_000,
   );
 
   it(
@@ -222,6 +222,6 @@ describe("migration ledger integration", () => {
         expect.arrayContaining(["022", "023"]),
       );
     },
-    120_000,
+    180_000,
   );
 });

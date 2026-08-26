@@ -54,7 +54,7 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
     browserWaitSelector:
       "[data-testid*='weekly'], [data-testid*='Weekly'], #weekly-ad-offers-data, [data-weekly-ad-product], script#__NEXT_DATA__",
     researchTargets: [
-      "https://www.kroger.com/weeklyad?zipcode=23111",
+      "https://www.kroger.com/weeklyad",
       "https://www.kroger.com/search?query=weekly%20ad&searchType=mktg%20content",
     ],
     termsNote:
@@ -68,7 +68,7 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
     browserWaitSelector: "#weekly-ad-offers-data, [data-weekly-ad-product], [data-automation-id*='weekly']",
     researchTargets: ["https://www.walmart.com/store/weekly-ads"],
     termsNote:
-      "Walmart weekly-ad pages use HTTP first, then headless browser fallback because live pages are heavily dynamic. Verify current deals in store before checkout.",
+      "Walmart weekly-ad offers use the shared Flipp resolver (grocery flyers when tagged) plus a live page scrape. Non-food lines are skipped by the same junk heuristic as every other chain. Verify current deals in store before checkout.",
   },
   {
     chain: "lidl",

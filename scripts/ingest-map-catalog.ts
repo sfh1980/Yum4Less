@@ -1,7 +1,7 @@
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import {
-  parseIngestZipCodesFromEnv,
+  resolveScheduledIngestZipCodes,
   syncUniversalMapCatalogForZip,
 } from "@/lib/store-catalog-sync";
 
@@ -21,7 +21,7 @@ async function main() {
     process.env.YUM4LESS_MAP_CATALOG_FIXTURE = "1";
     enforceFixtureIngestDatabasePolicy();
   }
-  const zipCodes = parseIngestZipCodesFromEnv();
+  const zipCodes = await resolveScheduledIngestZipCodes();
   let totalOsmUpserted = 0;
   let totalRankedUpserted = 0;
   let totalPublixUpserted = 0;

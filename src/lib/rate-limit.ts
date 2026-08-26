@@ -56,6 +56,7 @@ export const RATE_LIMITS = {
   apiDebugPipeline: { windowMs: 60_000, maxRequests: 10 },
   apiFeedback: { windowMs: 60_000, maxRequests: 10 },
   apiOwnerIngredientReviews: { windowMs: 60_000, maxRequests: 30 },
+  apiOwnerStoreCoverage: { windowMs: 60_000, maxRequests: 30 },
   apiMarketSearch: { windowMs: 60_000, maxRequests: 30 },
   apiRecommendations: { windowMs: 60_000, maxRequests: 20 },
   apiPantryCoverage: { windowMs: 60_000, maxRequests: 40 },

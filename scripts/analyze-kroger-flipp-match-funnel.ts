@@ -1,5 +1,5 @@
 /**
- * Owner diagnostic: weekly-ad match funnel (ZIP 23111).
+ * Owner diagnostic: weekly-ad match funnel for a required ingest ZIP.
  * Persists raw offers + per-offer probes under captures/weekly-ad-baseline/{chain}/.
  * Not a CI merge gate.
  *
@@ -9,6 +9,7 @@
  *   tsx scripts/analyze-kroger-flipp-match-funnel.ts --chain publix   # Publix browser scrape
  */
 import { loadEnvLocal } from "@/lib/load-env-local";
+import { resolveRequiredProbeZipCode } from "@/lib/ingest-zip-codes";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import {
   analyzeWeeklyAdMatchFunnel,
@@ -24,7 +25,7 @@ import type { WeeklyAdChain, WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/
 
 loadEnvLocal();
 
-const zipCode = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
+const zipCode = resolveRequiredProbeZipCode();
 
 type FlippMerchantName = "Kroger" | "Food Lion" | "ALDI";
 

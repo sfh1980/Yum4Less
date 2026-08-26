@@ -35,6 +35,7 @@
     "ingest:map-catalog:fixture": "tsx scripts/ingest-map-catalog.ts --fixture",
     "ingest:snap-retailers": "tsx scripts/ingest-snap-retailers.ts",
     "ingest:snap-retailers:fixture": "tsx scripts/ingest-snap-retailers.ts --fixture",
+    "markets:activate": "tsx scripts/activate-ingest-market.ts",
     "ingest:weekly-ads:scheduled": "node scripts/run-scheduled-weekly-ad-ingest.mjs",
     "ingest:weekly-ads:scheduled:fixture": "node scripts/run-scheduled-weekly-ad-ingest.mjs --fixture",
     "owner:reject-pending-junk-reviews": "tsx scripts/reject-pending-junk-reviews.ts",

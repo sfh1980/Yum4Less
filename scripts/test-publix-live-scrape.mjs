@@ -7,11 +7,12 @@ import { matchWeeklyAdOffers } from "../src/lib/weekly-ad-ingestion/weekly-ad-in
 import { captureWeeklyAdArtifacts } from "../src/lib/weekly-ad-ingestion/weekly-ad-capture.ts";
 
 import { WEEKLY_AD_TRACKED_INGREDIENT_IDS } from "../src/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest.ts";
+import { resolveRequiredProbeZipCode } from "../src/lib/ingest-zip-codes.ts";
 import { loadEnvLocal } from "./lib/load-env-local.mjs";
 
 loadEnvLocal();
 
-const zipCode = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
+const zipCode = resolveRequiredProbeZipCode();
 const trackedIngredientIds = WEEKLY_AD_TRACKED_INGREDIENT_IDS;
 
 async function main() {

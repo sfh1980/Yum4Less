@@ -27,7 +27,7 @@ export function createPublixWeeklyAdIngestionClient(): WeeklyAdIngestionClient {
     chain: "publix",
     label: config?.label ?? "Publix weekly ad ingestion",
     configured: true,
-    researchTargets: config?.researchTargets ?? [buildPublixWeeklyAdUrl({ zipCode: "23111" })],
+    researchTargets: config?.researchTargets ?? [],
     ingestWeeklyAd: ingestPublixWeeklyAd,
   };
 }

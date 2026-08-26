@@ -5,8 +5,12 @@ import {
   weeklyAdPromotionGatesPass,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-coverage";
 import { runWeeklyAdIngestionForStores } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
+import { resolveRequiredProbeZipCode } from "@/lib/ingest-zip-codes";
+import { loadEnvLocal } from "@/lib/load-env-local";
 
-const zipCode = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
+loadEnvLocal();
+
+const zipCode = resolveRequiredProbeZipCode();
 const storeId = "publix-1626";
 const storeName = "Publix";
 

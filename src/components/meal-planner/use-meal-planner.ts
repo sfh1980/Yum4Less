@@ -87,7 +87,7 @@ import type {
 } from "@/components/meal-planner/types";
 
 const defaultForm: MealPreferenceForm = {
-  zipCode: "23111",
+  zipCode: "",
   radiusMiles: 5,
   budget: 20,
   maxIngredients: DEFAULT_MAX_INGREDIENTS,

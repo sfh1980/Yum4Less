@@ -1,10 +1,11 @@
 /**
- * One-shot Kroger weekly-ad live baseline at ZIP 23111 (Flipp-first path).
+ * One-shot Kroger weekly-ad live baseline (Flipp-first path) for a required ingest ZIP.
  * Owner probe — not a CI merge gate. Single attempt; report parsed → synced.
  * Persists raw offers + match funnel under captures/weekly-ad-baseline/kroger/.
  */
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import { loadEnvLocal } from "@/lib/load-env-local";
+import { resolveRequiredProbeZipCode } from "@/lib/ingest-zip-codes";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { createKrogerWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-ingestion";
 import { persistWeeklyAdBaselineCapture } from "@/lib/weekly-ad-ingestion/weekly-ad-baseline-capture";
@@ -22,7 +23,7 @@ if (!process.env.DATABASE_URL) {
 async function main() {
   enforceFixtureIngestDatabasePolicy();
 
-  const zipCode = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
+  const zipCode = resolveRequiredProbeZipCode();
   const storeId = process.env.YUM4LESS_KROGER_BASELINE_STORE_ID ?? "kroger-mechanicsville";
   const capturedAt = new Date().toISOString();
 

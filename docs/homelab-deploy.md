@@ -93,7 +93,7 @@ docker ps --filter name=yum4less-
 
 Schema is applied from `db/init/` on first **db** container start (physical SQL only — the ledger table is created but **not populated** until the first migration pass). **`schema_migrations` is the source of truth** for which init files have been applied; `npm run db:migrate` or any path that runs `ensure-test-db.mjs` reconciles the ledger (backfill on existing volumes, apply missing files such as `015`/`016` on long-lived dev DBs).
 
-After each deploy that adds or changes files under `db/init/` (including **`024_ingredient_match_catalog.sql`** for weekly-ad skip/review tables), run:
+After each deploy that adds or changes files under `db/init/` (including **`025_active_markets_and_zip_geocode_cache.sql`** for ingest markets + ZIP cache and **`026_chain_registry_and_store_coverage.sql`** for the `/owner` Coverage tab), run:
 
 ```bash
 docker compose up -d db
@@ -137,9 +137,9 @@ Edit `.env.local`. **Required for live scheduled ingest** (enforced by `assert-l
 
 | Variable | Purpose |
 |----------|---------|
-| `YUM4LESS_INGEST_ZIPS` | Comma-separated **5-digit ZIPs** for map catalog, weekly-ad scope, and provider sync. |
+| `YUM4LESS_INGEST_ZIPS` | Optional **debug overlay** of comma-separated **5-digit ZIPs**. If unset, scheduled ingest reads `active_markets`. |
 
-> **Important:** If `YUM4LESS_INGEST_ZIPS` is unset or invalid, code falls back to `YUM4LESS_PROVIDER_SYNC_ZIP` or **`23111`** (Mechanicsville, VA — CI/E2E anchor). That is fine for development; it is **wrong** for a homelab serving your real geography. Set your real ZIP(s) before enabling cron.
+> **Markets:** After applying `025`, insert at least one active ZIP (`npm run markets:activate -- <ZIP>` on a host/Node path, or the same command in the ingest container). If `active_markets` is empty **and** `YUM4LESS_INGEST_ZIPS` is unset, ingest **exits non-zero**. There is no fallback to `23111`. Existing TrueNAS `YUM4LESS_INGEST_ZIPS` overlay still works until you switch to table rows. `YUM4LESS_PROVIDER_SYNC_ZIP` is an optional single-ZIP overlay alias only when the multi-ZIP list is blank.
 
 Example (replace with your markets):
 
@@ -348,6 +348,78 @@ Logical dumps use `pg_dump` / `psql` **inside** the `yum4less-postgres` containe
 ```
 
 Rotate or prune `backups/` yourself (e.g. keep 14 days). After a real restore into scratch, point `DATABASE_URL` at the restored DB or rename databases only when the app is stopped.
+
+### 4.5 Owner paste-back snapshot (local ≠ live)
+
+Local Docker `yum4less_dev` (Cursor Postgres MCP on **5433**) is **not** the TrueNAS volume behind `https://yum4less.com/`. When an agent needs live catalog / ingest / migration truth, it should give these **read-only** commands; paste the output back; then docs may be updated. Watchtower does **not** migrate new `db/init` files. **`024` is applied** on this live volume (owner paste-back **2026-08-26**: `applied_at` 2026-08-24 07:00:02Z). If a later migration is missing from `schema_migrations`, skip queries that need those tables.
+
+On the NAS (TrueNAS Custom App names from §9):
+
+```bash
+sudo docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}' | grep -E 'yum4less|NAMES'
+
+sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "
+select version, filename, applied_at
+from schema_migrations
+order by version;
+"
+
+sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "
+select source_name, count(*)::int as n
+from ingredients
+group by source_name
+order by n desc;
+"
+
+sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "
+select
+  count(*)::int as recipes,
+  count(*) filter (where source_name = 'themealdb')::int as themealdb
+from recipes;
+"
+```
+
+Only after `024` is in `schema_migrations`:
+
+```bash
+sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "
+select
+  (select count(*)::int from ingredient_match_reviews where status = 'pending') as pending_reviews,
+  (select count(*)::int from ingredient_aliases where source_name = 'weekly-ad') as weekly_ad_aliases,
+  (select count(*)::int from ingredient_match_skips) as skip_rows;
+"
+```
+
+Only after `025` is in `schema_migrations`:
+
+```bash
+sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "
+select zip_code, status, source, priority
+from active_markets
+order by priority, zip_code;
+"
+```
+
+Freshness (same idea as §4.2):
+
+```bash
+sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "
+select source_name,
+  count(*)::int as obs_rows,
+  count(distinct ingredient_id)::int as unique_ingredients,
+  max(observed_at) as newest,
+  round(extract(epoch from (now() - max(observed_at))) / 3600, 1) as hours_ago
+from price_observations
+where in_stock = true
+  and (source_name like '%weekly-ad-scrape' or source_name = 'kroger-official-api')
+group by source_name
+order by newest desc;
+"
+```
+
+Do not dump secrets, `.env`, or admin keys. If a table is missing, paste the error — that is useful (usually means a migration after `024` is not applied).
+
+**2026-08-26 snapshot (this volume):** ingredients 438; pending reviews 704; weekly-ad aliases 90; skips 675. Freshness ~10.4h: Kroger API 97/97, Publix 102, Food Lion 62, Kroger weekly-ad 35, Aldi 30, Walmart 14 (newest 07:00–07:06 UTC). See `PROJECT_CONTINUITY.md` Resume.
 
 **Verify the drill once per host** before treating unattended cron as foundation-complete:
 
@@ -658,13 +730,13 @@ Default = in-container cron. Use host exec if you prefer all schedules in one Tr
 
 ### 10.2 Required environment (explicit — do not rely on defaults)
 
-Set these on the **ingest** service (Custom App env). Do **not** leave `YUM4LESS_INGEST_ZIPS` unset (code falls back to **`23111`**).
+Set these on the **ingest** service (Custom App env). **`YUM4LESS_INGEST_ZIPS` is optional overlay** — if unset, cron reads `active_markets` (must have ≥1 `active` row after `025` migrate). Unset overlay + empty table fails the job (no `23111` default).
 
 | Variable | Required | Notes |
 |----------|----------|-------|
 | `YUM4LESS_EXTERNAL_POSTGRES` | **Yes** (`1`) | Baked into the image; keeps ensure/migrate on TCP `psql` (no Docker socket). |
 | `DATABASE_URL` | **Yes** | `postgresql://postgres:postgres@db:5432/yum4less_dev` — host **`db`**, port **5432** (Apps network). Not `localhost:5433`. |
-| `YUM4LESS_INGEST_ZIPS` | **Yes** | Real comma-separated 5-digit ZIPs for your markets. |
+| `YUM4LESS_INGEST_ZIPS` | Overlay | Debug/probe ZIP list. Prefer `active_markets` + `npm run markets:activate`. |
 | `GEOCODIO_API_KEY` | **Yes** (live) | Enforced by `assert-live-ingest-env`. |
 | `KROGER_CLIENT_ID` | **Yes** (live) | OAuth |
 | `KROGER_CLIENT_SECRET` | **Yes** (live) | OAuth |
@@ -857,7 +929,7 @@ YUM4LESS_ANALYTICS_SINK: "postgres"
 # NEXT_PUBLIC_YUM4LESS_ANALYTICS is baked at image *build* time (CI passes =1) — runtime alone is not enough
 ```
 
-**Owner console (2026-08-06; ingredient review 2026-08-22; create-id 2026-08-24; tabs 2026-08-25; junk heal 2026-08-25):** after Watchtower pulls an image that includes `/owner`, open `https://yum4less.com/owner` and paste `YUM4LESS_FEEDBACK_ADMIN_KEY`. Tabs: **Ingredient review**, **User feedback**, **Analytics**. Yes can map a flyer line to an existing food id or **create** a kebab-case id with name + category (see [`docs/feedback-path.md`](feedback-path.md)). Live ingest skips junk and heals matching pending rows; `npm run owner:reject-pending-junk-reviews` is the one-shot for existing queues. Not linked from shopper nav. Curl still works for `GET /api/feedback` and `GET /api/analytics/events` with the same key. Image pull alone does **not** create `ingredient_match_skips` / `ingredient_match_reviews` — apply `024` on the live Postgres volume after this catalog-expansion image lands.
+**Owner console (2026-08-06; ingredient review 2026-08-22; create-id 2026-08-24; tabs 2026-08-25; junk heal 2026-08-25; Coverage 2026-08-26):** after Watchtower pulls an image that includes `/owner`, open `https://yum4less.com/owner` and paste `YUM4LESS_FEEDBACK_ADMIN_KEY`. Tabs: **Ingredient review**, **User feedback**, **Analytics**, **Coverage**. Coverage is read-only (search name, city/state, usable-in-app) over `store_coverage` and needs migrate **`026`**. Missing `026` shows a notice on that tab only. Yes can map a flyer line to an existing food id or **create** a kebab-case id with name + category (see [`docs/feedback-path.md`](feedback-path.md)). Live ingest skips junk and heals matching pending rows; `npm run owner:reject-pending-junk-reviews` is the one-shot for existing queues. Not linked from shopper nav. Curl still works for `GET /api/feedback` and `GET /api/analytics/events` with the same key. Image pull alone does **not** run migrations. **`024` is applied** on the live volume (paste-back 2026-08-26); later `db/init` files still need an operator migrate.
 
 ### 12.2 `cloudflared` Custom App shape
 
@@ -893,7 +965,7 @@ Issues to resolve **before** relying on unattended cron:
 | **`ensure-test-db.mjs` requires Docker** (host path) | Cron fails if Docker stopped or user lacks permission | Host path: `restart: unless-stopped`; docker group. **Ingest container:** set `YUM4LESS_EXTERNAL_POSTGRES=1` (image default) — TCP `psql`, no socket |
 | **Stale schema detection throws** (no auto-reset without `YUM4LESS_ALLOW_DB_RESET=1`) | After pulling migrations, cron may exit until manual migrate | After each deploy with `db/init` changes, run migrate via ingest once-shot or `npm run db:migrate`; never enable auto-reset on shared homelab `yum4less_dev` |
 | **`assert-live-ingest-env` does not require `KROGER_API_ENV=production`** | Cron exits 0 but Kroger official API sync no-ops | Set `KROGER_API_ENV=production` explicitly on ingest env |
-| **`YUM4LESS_INGEST_ZIPS` defaults to 23111** | Ingest warms wrong market silently | Set real ZIPs on ingest env; verify stores in §4.2 SQL |
+| **`YUM4LESS_INGEST_ZIPS` unset and `active_markets` empty** | Ingest exits non-zero (no `23111` default) | `npm run db:migrate` then `npm run markets:activate -- <ZIP>`, or set overlay ZIPs; verify stores in §4.2 SQL |
 | **Map catalog failure is non-fatal** | Cron exit 0 with degraded OSM/catalog | Read warnings in log; rerun `ingest:map-catalog` manually |
 | **Partial weekly-ad chain failure** | Exit **non-zero** if **any** chain errors or any persist failure (code is fail-loud; other chains may still have written) | Scan per-chain `[kroger]` / `[aldi]` lines in log; fix the failed chain |
 | **Playwright / headless deps on Linux** | Kroger scrape fallback fails with browser launch errors | Host: `playwright install-deps`. **Ingest image:** deps baked in |

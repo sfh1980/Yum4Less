@@ -37,7 +37,9 @@ describe("listInitMigrationFiles", () => {
     expect(files).toContain("022_seed_kroger_mechanicsville_identity.sql");
     expect(files).toContain("023_seed_aldi_mechanicsville_identity.sql");
     expect(files).toContain("024_ingredient_match_catalog.sql");
-    expect(files.length).toBeGreaterThanOrEqual(21);
+    expect(files).toContain("025_active_markets_and_zip_geocode_cache.sql");
+    expect(files).toContain("026_chain_registry_and_store_coverage.sql");
+    expect(files.length).toBeGreaterThanOrEqual(23);
   });
 });
 
@@ -149,6 +151,20 @@ describe("migrationEffectPresent", () => {
         ...db,
         tableExists: (name) =>
           name === "ingredient_match_skips" || name === "ingredient_match_reviews",
+      }),
+    ).toBe(true);
+    expect(
+      migrationEffectPresent("025", {
+        ...db,
+        tableExists: (name) =>
+          name === "active_markets" || name === "zip_geocode_cache",
+      }),
+    ).toBe(true);
+    expect(
+      migrationEffectPresent("026", {
+        ...db,
+        tableExists: (name) =>
+          name === "chain_registry" || name === "store_coverage",
       }),
     ).toBe(true);
   });

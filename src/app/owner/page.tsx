@@ -19,8 +19,8 @@ export default function OwnerPage() {
         <p className="eyebrow">Yum4Less · Owner ops</p>
         <h1>Owner console</h1>
         <p className="hero-copy">
-          Private console for weekly-ad ingredient review, user feedback, and
-          analytics. Not linked from the shopper app.
+          Private console for weekly-ad ingredient review, store coverage,
+          user feedback, and analytics. Not linked from the shopper app.
         </p>
         <p className="hero-copy">
           <Link className="text-link" href="/">

@@ -24,7 +24,7 @@ export function createKrogerWeeklyAdIngestionClient(): WeeklyAdIngestionClient {
     chain: "kroger",
     label: config?.label ?? "Kroger weekly ad ingestion",
     configured: true,
-    researchTargets: config?.researchTargets ?? [buildKrogerWeeklyAdUrl({ zipCode: "23111" })],
+    researchTargets: config?.researchTargets ?? [],
     ingestWeeklyAd: ingestKrogerWeeklyAd,
   };
 }

@@ -1,3 +1,4 @@
+import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
 import { getDbPool } from "@/lib/db";
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import { loadEnvLocal } from "@/lib/load-env-local";
@@ -18,7 +19,7 @@ import {
   resolveStoreMapLocationProvenance,
 } from "@/lib/store-map-location-copy";
 import {
-  parseIngestZipCodesFromEnv,
+  resolveScheduledIngestZipCodes,
   syncV1ChainStoresToCatalog,
 } from "@/lib/store-catalog-sync";
 import { shouldFailProviderPriceSyncExit } from "@/lib/ingest/ingest-script-exit-policy";
@@ -44,7 +45,7 @@ async function main() {
     enforceFixtureIngestDatabasePolicy();
   }
 
-  const zipCodes = parseIngestZipCodesFromEnv();
+  const zipCodes = await resolveScheduledIngestZipCodes();
   let totalSynced = 0;
   const allSummaries: Awaited<
     ReturnType<typeof syncProviderPreviewsToPriceObservations>
@@ -60,6 +61,11 @@ async function main() {
       console.warn(`[sync:skip] ZIP ${zipCode}: ${locationResult.error}`);
       continue;
     }
+
+    await rememberIngestZipGeocode({
+      ...locationResult.location,
+      zipCode,
+    });
 
     const providerStoreSearches = await searchOfficialProviderStores({
       location: locationResult.location,

@@ -61,11 +61,17 @@ export type KrogerApiSetupProbe = {
 };
 
 export async function probeKrogerApiSetup(
-  zipCode = "23111",
+  zipCode: string,
   input?: Partial<KrogerApiCredentials>,
 ): Promise<KrogerApiSetupProbe> {
   const environment = getKrogerApiEnvironment();
   const baseUrl = getKrogerApiBaseUrl();
+  const trimmedZip = zipCode.trim();
+  if (!/^\d{5}$/.test(trimmedZip)) {
+    throw new Error(
+      "Kroger API probe requires a 5-digit zipCode; set YUM4LESS_INGEST_ZIP or YUM4LESS_INGEST_ZIPS. There is no default market ZIP.",
+    );
+  }
   const api = createKrogerApiClient(input);
 
   if (!api.isConfigured) {
@@ -84,7 +90,7 @@ export async function probeKrogerApiSetup(
   try {
     const locationId =
       process.env.KROGER_LOCATION_ID?.trim() ??
-      (await api.resolveLocationIdForZip(zipCode));
+      (await api.resolveLocationIdForZip(trimmedZip));
 
     if (!locationId) {
       return {

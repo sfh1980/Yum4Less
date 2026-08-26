@@ -8,7 +8,7 @@ Yum4Less keeps **first-party analytics** separate from customer feedback. Analyt
 | --- | --- | --- |
 | In-app feedback form (`/feedback`) | Bug reports, wrong-price reports, general product feedback | Implemented (disabled by default; enable with `YUM4LESS_FEEDBACK_ENABLED=1`) |
 | Admin list API (`GET /api/feedback`) | Owner reads recent rows with `YUM4LESS_FEEDBACK_ADMIN_KEY` | Implemented |
-| Owner console (`/owner`) | Key-gated UI with tabs for weekly-ad ingredient Yes/No (map or create food ids), user feedback, and Postgres analytics events | Implemented (same admin key; not linked from shopper nav; `noindex`) |
+| Owner console (`/owner`) | Key-gated UI with tabs for weekly-ad ingredient Yes/No (map or create food ids), store coverage, user feedback, and Postgres analytics events | Implemented (same admin key; not linked from shopper nav; `noindex`) |
 | Public recent-feedback feed on `/feedback` | — | **Removed** from shopper UI (2026-08-04) |
 | Analytics transparency panel on `/feedback` | — | **Removed** from shopper UI (2026-08-04); ops detail stays in this doc / env |
 | Email or support inbox | Complaints and account-free MVP contact | Planned (owner choice) |
@@ -31,18 +31,19 @@ Do **not** store full shopping carts, checkout receipts, geolocation, ZIP codes,
 ```env
 # Enable anonymous Postgres-backed feedback (POST /api/feedback)
 # YUM4LESS_FEEDBACK_ENABLED=1
-# YUM4LESS_FEEDBACK_ADMIN_KEY=<secret for GET /api/feedback, GET /api/analytics/events, GET/POST /api/owner/ingredient-reviews, and /owner unlock>
+# YUM4LESS_FEEDBACK_ADMIN_KEY=<secret for GET /api/feedback, GET /api/analytics/events, GET/POST /api/owner/ingredient-reviews, GET /api/owner/store-coverage, and /owner unlock>
 ```
 
 Apply `db/init/007_customer_feedback.sql` before enabling feedback in deployed environments.
 
 ### Owner console
 
-Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FEEDBACK_ADMIN_KEY` into the unlock field. After View, the console has three tabs: **Ingredient review**, **User feedback**, and **Analytics**. The key is stored in **sessionStorage for that tab only** and sent as `Authorization: Bearer …` to:
+Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FEEDBACK_ADMIN_KEY` into the unlock field. After View, the console has four tabs: **Ingredient review**, **User feedback**, **Analytics**, and **Coverage**. The key is stored in **sessionStorage for that tab only** and sent as `Authorization: Bearer …` to:
 
 - `GET /api/feedback?limit=50&offset=0` (then `offset=50`, `100`, … via **Show next 50**)
 - `GET /api/analytics/events?limit=50&offset=0` (same load-more pattern)
 - `GET /api/owner/ingredient-reviews` and `POST /api/owner/ingredient-reviews` (Yes maps or **creates** a food id; No writes a skip)
+- `GET /api/owner/store-coverage` (read-only storefront checklist: name, city/state, usable-in-app). Needs migrate `026`. A missing schema returns a Coverage-tab notice and does not lock the rest of the console.
 
 On Yes, fill **Canonical food id** (lowercase kebab-case, 2–56 characters; spaces/capitals are formatted on save), **Shopper-facing name**, and **category**. If the id already exists, name and category are ignored and the flyer title becomes a nickname. If it does not exist, Yes inserts `ingredients` (`weekly-ad-catalog`) then the nickname. Example: `imitation-crab` / Imitation crab / protein. Do not encode brands, sizes, or pack counts in the id.
 
@@ -56,6 +57,7 @@ Curl still works:
 curl -sS "https://yum4less.com/api/feedback?limit=50&offset=0" -H "X-Yum4Less-Admin-Key: <secret>"
 curl -sS "https://yum4less.com/api/analytics/events?limit=50&offset=0" -H "X-Yum4Less-Admin-Key: <secret>"
 curl -sS "https://yum4less.com/api/owner/ingredient-reviews" -H "X-Yum4Less-Admin-Key: <secret>"
+curl -sS "https://yum4less.com/api/owner/store-coverage?name=kroger&location=VA&usable=yes" -H "X-Yum4Less-Admin-Key: <secret>"
 ```
 
 Analytics list reads **Postgres** only (`YUM4LESS_ANALYTICS_SINK=postgres`). Other sinks return an empty list with a notice.

@@ -5,9 +5,8 @@ import {
   touchStoreVerification,
 } from "@/lib/price-observation-writes";
 import { logServerError } from "@/lib/server-log";
-import {
-  MIN_WEEKLY_AD_MATCH_CONFIDENCE,
-} from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
+import { MIN_WEEKLY_AD_MATCH_CONFIDENCE } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import type {
   WeeklyAdIngestionResult,
   WeeklyAdOffer,
@@ -99,6 +98,10 @@ async function persistWeeklyAdOffer(
   // Ranked writes keep one current row per store + ingredient; higher-trust
   // official API prices supersede weekly-ad rows for the same ingredient.
   if (!offer.ingredientId) {
+    return "skipped";
+  }
+
+  if (flyerLineLooksLikeJunk(offer.productName)) {
     return "skipped";
   }
 

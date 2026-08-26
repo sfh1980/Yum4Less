@@ -1,9 +1,5 @@
-import {
-  fetchFlippWeeklyAdOffers,
-  fetchFlippWeeklyAdOffersForMerchantFlyers,
-  fetchFlippWeeklyAdOffersForSearchTerms,
-  mergeWeeklyAdRawOffers,
-} from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
+import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
+import { mergeWeeklyAdRawOffers } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
@@ -11,19 +7,17 @@ import {
   matchWeeklyAdOffers,
   weeklyAdMatchFieldsFromIngest,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
-import { getWeeklyAdIngredientSearchTerms } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-search-terms";
 import { parseWalmartWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-walmart-weekly-ad";
 import { fetchWalmartWeeklyAdPage } from "@/lib/weekly-ad-ingestion/walmart-weekly-ad-fetcher";
 import { buildWalmartWeeklyAdUrl } from "@/lib/weekly-ad-ingestion/walmart-weekly-ad-url";
-import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
 import type {
   WeeklyAdIngestionClient,
   WeeklyAdIngestionInput,
   WeeklyAdIngestionResult,
-  WeeklyAdRawOffer,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 const FIXTURE_FILE_NAME = "walmart-weekly-ad-sample.html";
+const WALMART_FLIPP_MERCHANT = "Walmart";
 
 export function createWalmartWeeklyAdIngestionClient(): WeeklyAdIngestionClient {
   const config = getWeeklyAdChainConfig("walmart");
@@ -63,63 +57,41 @@ async function ingestWalmartWeeklyAd(
   }
 
   try {
-    const flippOffers = await fetchFlippWeeklyAdOffers({
+    const flippResult = await resolveFlippWeeklyAdOffersForChain({
+      chain: "walmart",
       zipCode: input.zipCode,
-      merchantName: "Walmart",
+      merchantName: WALMART_FLIPP_MERCHANT,
+      trackedIngredientIds: input.trackedIngredientIds,
+      catalogIngredients: input.catalogIngredients,
+      extraSearchTermsByIngredientId: input.extraSearchTermsByIngredientId,
     });
-    const groceryFlyerOffers = await fetchFlippWeeklyAdOffersForMerchantFlyers({
-      zipCode: input.zipCode,
-      merchantName: "Walmart",
-    });
-
-    let rawOffers = mergeWeeklyAdRawOffers(flippOffers, groceryFlyerOffers);
-    let retrievalLabel = "Flipp syndicated weekly-ad feed";
+    let rawOffers = flippResult.rawOffers;
+    let retrievalLabel = flippResult.retrievalLabel;
     let provenance: WeeklyAdIngestionResult["provenance"] = "weekly-ad-partner-feed";
     let fallbackUsed = true;
 
-    let matchedCount = countMatchedOffers(rawOffers, input);
+    const pageFetch = await fetchWalmartWeeklyAdPage({ url: sourceUrl });
+    const scrapedOffers = parseWalmartWeeklyAd({
+      html: pageFetch.html,
+      networkJsonBodies: pageFetch.networkJsonBodies,
+    });
 
-    if (matchedCount === 0) {
-      const supplementalSearchTerms = buildSupplementalFlippSearchTerms(input);
-      if (supplementalSearchTerms.length > 0) {
-        const supplementalOffers = await fetchFlippWeeklyAdOffersForSearchTerms({
-          zipCode: input.zipCode,
-          merchantName: "Walmart",
-          searchTerms: supplementalSearchTerms,
-        });
-        rawOffers = mergeWeeklyAdRawOffers(rawOffers, supplementalOffers);
-        matchedCount = countMatchedOffers(rawOffers, input);
-        if (supplementalOffers.length > 0) {
-          retrievalLabel = "Flipp syndicated feed + ingredient searches";
-        }
-      }
-    }
-
-    if (matchedCount === 0) {
-      const pageFetch = await fetchWalmartWeeklyAdPage({ url: sourceUrl });
-      const scrapedOffers = parseWalmartWeeklyAd({
+    if (scrapedOffers.length > 0) {
+      rawOffers = mergeWeeklyAdRawOffers(rawOffers, scrapedOffers);
+      retrievalLabel = `${pageFetch.method} scrape + ${flippResult.retrievalLabel}`;
+      provenance =
+        pageFetch.method === "browser" ? "weekly-ad-scrape" : "weekly-ad-partner-feed";
+      fallbackUsed = true;
+    } else if (pageFetch.html && rawOffers.length === 0) {
+      captureWeeklyAdArtifacts({
+        chain: "walmart",
+        zipCode: input.zipCode,
+        sourceUrl,
         html: pageFetch.html,
         networkJsonBodies: pageFetch.networkJsonBodies,
+        errorMessage:
+          "Walmart browser/HTTP scrape returned HTML but no parseable weekly-ad offers.",
       });
-
-      if (scrapedOffers.length > 0) {
-        rawOffers = mergeWeeklyAdRawOffers(rawOffers, scrapedOffers);
-        retrievalLabel = `${pageFetch.method} scrape + Flipp syndicated feed`;
-        provenance =
-          pageFetch.method === "browser" ? "weekly-ad-scrape" : "weekly-ad-partner-feed";
-        fallbackUsed = true;
-        matchedCount = countMatchedOffers(rawOffers, input);
-      } else if (pageFetch.html) {
-        captureWeeklyAdArtifacts({
-          chain: "walmart",
-          zipCode: input.zipCode,
-          sourceUrl,
-          html: pageFetch.html,
-          networkJsonBodies: pageFetch.networkJsonBodies,
-          errorMessage:
-            "Walmart browser/HTTP scrape returned HTML but no parseable weekly-ad offers.",
-        });
-      }
     }
 
     if (rawOffers.length === 0) {
@@ -154,7 +126,7 @@ async function ingestWalmartWeeklyAd(
       rawOffers,
       ...weeklyAdMatchFieldsFromIngest(input),
     });
-    matchedCount = offers.filter((offer) => offer.ingredientId).length;
+    const matchedCount = offers.filter((offer) => offer.ingredientId).length;
 
     return {
       chain: "walmart",
@@ -195,41 +167,4 @@ async function ingestWalmartWeeklyAd(
       termsNote,
     };
   }
-}
-
-function buildSupplementalFlippSearchTerms(input: WeeklyAdIngestionInput) {
-  const catalog = input.catalogIngredients ?? INTERNAL_CATALOG_INGREDIENTS;
-  const terms = new Set<string>();
-  for (const ingredient of catalog) {
-    if (!input.trackedIngredientIds.includes(ingredient.id)) {
-      continue;
-    }
-    for (const searchTerm of getWeeklyAdIngredientSearchTerms(ingredient)) {
-      if (searchTerm.length >= 4) {
-        terms.add(searchTerm);
-      }
-    }
-    for (const extra of input.extraSearchTermsByIngredientId?.[ingredient.id] ?? []) {
-      if (extra.length >= 4) {
-        terms.add(extra);
-      }
-    }
-  }
-  return [...terms];
-}
-
-function countMatchedOffers(
-  rawOffers: WeeklyAdRawOffer[],
-  input: WeeklyAdIngestionInput,
-) {
-  return matchWeeklyAdOffers({
-    chain: "walmart",
-    storeId: input.storeId,
-    sourceUrl: buildWalmartWeeklyAdUrl({
-      storeId: process.env.WALMART_STORE_ID?.trim(),
-    }),
-    observedAt: new Date().toISOString(),
-    rawOffers,
-    ...weeklyAdMatchFieldsFromIngest(input),
-  }).filter((offer) => offer.ingredientId).length;
 }

@@ -26,6 +26,7 @@ import {
   type CollocatedCatalogStoreLike,
 } from "@/lib/catalog-store-colocated-identity";
 import { getDistanceMiles } from "@/lib/geo-distance";
+import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
 import {
   findProximityLinkedKrogerStore,
   isApiDerivedKrogerCatalogStoreId,
@@ -1297,29 +1298,13 @@ export function filterCatalogStoresNearLocation<T extends CatalogStoreCoordinate
   );
 }
 
-export function parseIngestZipCodesFromEnv(
-  value = process.env.YUM4LESS_INGEST_ZIPS,
-): string[] {
-  const fallback = process.env.YUM4LESS_PROVIDER_SYNC_ZIP ?? "23111";
-
-  if (!value?.trim()) {
-    return [fallback];
-  }
-
-  const parsed = value
-    .split(",")
-    .map((zip) => zip.trim())
-    .filter((zip) => /^\d{5}$/.test(zip));
-
-  if (parsed.length === 0) {
-    console.warn(
-      `YUM4LESS_INGEST_ZIPS had no valid 5-digit ZIP codes; falling back to ${fallback}`,
-    );
-    return [fallback];
-  }
-
-  return parsed;
-}
+export {
+  INGEST_ZIPS_REQUIRED_MESSAGE,
+  IngestZipCodesRequiredError,
+  parseIngestZipCodesFromEnv,
+  resolveRequiredProbeZipCode,
+  resolveScheduledIngestZipCodes,
+} from "@/lib/ingest-zip-codes";
 
 export async function syncUniversalMapCatalogForZip(input: {
   zipCode: string;
@@ -1345,6 +1330,11 @@ export async function syncUniversalMapCatalogForZip(input: {
       publixMessage: "",
     };
   }
+
+  await rememberIngestZipGeocode({
+    ...locationResult.location,
+    zipCode: input.zipCode,
+  });
 
   const discovery = await discoverFoodRetailStoresNearLocation({
     latitude: locationResult.location.latitude,

@@ -1,3 +1,4 @@
+import { resolveRequiredProbeZipCode } from "../src/lib/ingest-zip-codes.ts";
 import { loadEnvLocal } from "./lib/load-env-local.mjs";
 import { createWalmartWeeklyAdIngestionClient } from "../src/lib/weekly-ad-ingestion/walmart-weekly-ad-ingestion.ts";
 import { syncWeeklyAdOffersToPriceObservations } from "../src/lib/weekly-ad-ingestion/weekly-ad-offer-sync.ts";
@@ -16,7 +17,7 @@ async function main() {
     chain: "walmart",
     storeId: "walmart-rocketts",
     storeName: "Walmart Supercenter",
-    zipCode: process.env.YUM4LESS_INGEST_ZIP ?? "23111",
+    zipCode: resolveRequiredProbeZipCode(),
     trackedIngredientIds: WEEKLY_AD_TRACKED_INGREDIENT_IDS,
   });
 

@@ -1,6 +1,7 @@
 import { consumeRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { allowsSeedZipGeocodingFallback } from "@/lib/runtime-environment";
 import { isWithinContinentalUsBounds } from "@/lib/us-service-area";
+import { readZipGeocodeCache } from "@/lib/zip-geocode-cache";
 
 export type ResolvedZipLocation = {
   zipCode: string;
@@ -79,6 +80,15 @@ export async function resolveZipLocation(zipCode: string): Promise<ZipLookupResu
       location: cached,
       providerConfigured: Boolean(process.env.GEOCODIO_API_KEY?.trim()),
     };
+  }
+
+  const durableCached = await readZipGeocodeCache(normalizedZipCode);
+  if (durableCached) {
+    return cacheZipLookupResult({
+      ok: true,
+      location: durableCached,
+      providerConfigured: Boolean(process.env.GEOCODIO_API_KEY?.trim()),
+    });
   }
 
   const geocodioKey = process.env.GEOCODIO_API_KEY?.trim();

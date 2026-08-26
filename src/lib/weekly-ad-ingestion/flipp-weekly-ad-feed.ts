@@ -127,11 +127,7 @@ export async function fetchFlippWeeklyAdOffersForMerchantFlyers(input: {
   const merchantFlyers = flyers.filter(
     (flyer) => flyer.merchant?.toLowerCase() === input.merchantName.toLowerCase(),
   );
-  const groceryFlyers = merchantFlyers.filter((flyer) => flyerIncludesGroceryCategory(flyer));
-  const selectedFlyers =
-    groceryFlyers.length > 0
-      ? groceryFlyers
-      : merchantFlyers.filter((flyer) => typeof flyer.id === "number");
+  const selectedFlyers = selectFlyersForWeeklyAdPersist(merchantFlyers);
 
   const merged: WeeklyAdRawOffer[] = [];
   for (const flyer of selectedFlyers) {
@@ -162,17 +158,42 @@ export async function fetchFlippWeeklyAdOffersForMerchantFlyers(input: {
   return merged;
 }
 
-function flyerIncludesGroceryCategory(flyer: FlippFlyerSummary) {
-  const categories = [
+const NON_GROCERY_FLYER_DEPARTMENT =
+  /\b(electronics|apparel|clothing|fashion|furniture|pharmacy|beauty|automotive|toys?|sporting goods|home decor)\b/i;
+
+function flyerCategoryTokens(flyer: FlippFlyerSummary): string[] {
+  return [
     ...(flyer.categories ?? []),
     ...(flyer.categories_csv?.split(",") ?? []),
+    flyer.name ?? "",
   ]
-    .map((category) => category.trim().toLowerCase())
+    .map((token) => token.trim().toLowerCase())
     .filter(Boolean);
+}
 
-  return categories.some(
+export function flyerIncludesGroceryCategory(flyer: FlippFlyerSummary) {
+  return flyerCategoryTokens(flyer).some(
     (category) => category.includes("grocer") || category.includes("grocery"),
   );
+}
+
+export function flyerLooksLikeNonGroceryDepartment(flyer: FlippFlyerSummary) {
+  if (flyerIncludesGroceryCategory(flyer)) {
+    return false;
+  }
+  return NON_GROCERY_FLYER_DEPARTMENT.test(flyerCategoryTokens(flyer).join(" "));
+}
+
+/** Grocery flyers when tagged; otherwise drop explicit merch departments. All chains. */
+export function selectFlyersForWeeklyAdPersist(
+  merchantFlyers: FlippFlyerSummary[],
+): FlippFlyerSummary[] {
+  const withIds = merchantFlyers.filter((flyer) => typeof flyer.id === "number");
+  const groceryFlyers = withIds.filter((flyer) => flyerIncludesGroceryCategory(flyer));
+  if (groceryFlyers.length > 0) {
+    return groceryFlyers;
+  }
+  return withIds.filter((flyer) => !flyerLooksLikeNonGroceryDepartment(flyer));
 }
 
 export async function fetchFlippWeeklyAdOffersForSearchTerms(input: {

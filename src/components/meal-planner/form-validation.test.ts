@@ -18,6 +18,12 @@ const baseForm: FormState = {
 };
 
 describe("validateLocationFields", () => {
+  it("rejects a missing ZIP when ZIP is required", () => {
+    expect(
+      validateLocationFields({ ...baseForm, zipCode: "" }, true).zipCode,
+    ).toBeDefined();
+  });
+
   it("rejects non-integer radius values", () => {
     expect(
       validateLocationFields({ ...baseForm, radiusMiles: "5.5" }, true).radiusMiles,

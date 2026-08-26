@@ -27,9 +27,39 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(isWeeklyAdJunkProduct("nobilo")).toBe(true);
     expect(isWeeklyAdJunkProduct("Corona, Modelo or Pacifico")).toBe(true);
     expect(
+      isWeeklyAdJunkProduct("Avia Women's Bubble Bottom Sneakers"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Crocs Women's Kadee Flip Flop Wedge Sandal"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Wonder Nation Boys Straight Fit Denim Jeans"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Coppertone Sport Sunscreen Spray, SPF 50 Sunscreen"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Lysol Disinfectant Spray, Lavender & Cotton Blossom"),
+    ).toBe(true);
+    expect(
       isWeeklyAdJunkProduct(
-        "Better Homes & Gardens River Oaks Outdoor Sofa & 2 Nesting Tables with Patio Cover",
+        "Chefman Anti-Overflow Belgian Waffle Maker with Shade Selector",
       ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Yellowstone Kayce Ceramic Dinner Plate"),
+    ).toBe(true);
+    expect(isWeeklyAdJunkProduct("Charmin Essentials Soft Toilet Paper 12 Mega Rolls")).toBe(
+      true,
+    );
+    expect(
+      isWeeklyAdJunkProduct("Hamilton Beach Smoothie Blender, 48 oz BPA-Free Jar"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Great Value Disinfecting Wipes, Lemon and Fresh Scent"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Razer Basilisk V3 Ergonomic Wired Gaming Mouse"),
     ).toBe(true);
   });
 
@@ -43,6 +73,8 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(isWeeklyAdJunkProduct("Boneless Strip Steaks")).toBe(false);
     expect(isWeeklyAdJunkProduct("Hillshire Farm Lunch Meats")).toBe(false);
     expect(isWeeklyAdJunkProduct("Mama Cozzi's Pizza Kitchen Pizza Dough")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Short ribs")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Iced tea")).toBe(false);
   });
 
   it("treats either the raw title or the normalized label as junk", () => {

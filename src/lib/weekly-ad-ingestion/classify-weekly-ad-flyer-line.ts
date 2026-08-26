@@ -75,6 +75,10 @@ function classifyOneFlyerPart(input: {
     };
   }
 
+  if (flyerLineLooksLikeJunk(input.rawProductName, normalizedLabel)) {
+    return { action: "skip", reason: "junk", normalizedLabel };
+  }
+
   const scored = matchWeeklyAdOffers({
     chain: input.chain,
     storeId: "classify-probe",
@@ -97,10 +101,6 @@ function classifyOneFlyerPart(input: {
       saveAlias: true,
       normalizedLabel,
     };
-  }
-
-  if (flyerLineLooksLikeJunk(input.rawProductName, normalizedLabel)) {
-    return { action: "skip", reason: "junk", normalizedLabel };
   }
 
   const created = resolveCanonicalSimpleFood(normalizedLabel);

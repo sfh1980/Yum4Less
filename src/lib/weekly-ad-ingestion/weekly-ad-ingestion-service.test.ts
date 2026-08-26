@@ -84,6 +84,16 @@ describe("weekly ad ingestion service", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("throws when weekly-ad ingest is called without a ZIP", async () => {
+    await expect(
+      runWeeklyAdIngestionForStores({
+        nearbyStores: [{ id: "aldi-mechanicsville", name: "Aldi", chain: "aldi" }],
+        zipCode: "",
+        persistToDatabase: false,
+      }),
+    ).rejects.toThrow(/no default market ZIP/i);
+  });
+
   it("fans out one Kroger weekly-ad ingest to every Kroger store id when persisting", async () => {
     const purgeSpy = vi
       .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")

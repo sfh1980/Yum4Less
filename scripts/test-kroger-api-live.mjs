@@ -1,9 +1,10 @@
 import { probeKrogerApiSetup } from "../src/lib/providers/kroger/kroger-api-client.ts";
+import { resolveRequiredProbeZipCode } from "../src/lib/ingest-zip-codes.ts";
 import { loadEnvLocal } from "./lib/load-env-local.mjs";
 
 loadEnvLocal();
 
-const zipCode = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
+const zipCode = resolveRequiredProbeZipCode();
 
 async function main() {
   console.log(`\n=== Kroger API setup probe (ZIP ${zipCode}) ===\n`);

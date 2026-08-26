@@ -39,9 +39,17 @@ import {
   syncWeeklyAdOffersToPriceObservations,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-offer-sync";
 
-const DEFAULT_ZIP_CODE = process.env.YUM4LESS_PROVIDER_SYNC_ZIP ?? "23111";
-
 export { WEEKLY_AD_CHAINS, isWeeklyAdChain };
+
+function requireWeeklyAdZipCode(zipCode: string | undefined): string {
+  const trimmed = zipCode?.trim() ?? "";
+  if (!/^\d{5}$/.test(trimmed)) {
+    throw new Error(
+      "Weekly-ad ingest requires a 5-digit zipCode; there is no default market ZIP.",
+    );
+  }
+  return trimmed;
+}
 
 export function getWeeklyAdIngestionClients(): WeeklyAdIngestionClient[] {
   return [
@@ -63,7 +71,7 @@ export function getWeeklyAdIngestionClient(
 
 export async function runWeeklyAdIngestionForStores(input: {
   nearbyStores: Pick<NearbyStoreSummary, "id" | "name" | "chain">[];
-  zipCode?: string;
+  zipCode: string;
   persistToDatabase?: boolean;
 }): Promise<{
   results: WeeklyAdIngestionResult[];
@@ -73,7 +81,7 @@ export async function runWeeklyAdIngestionForStores(input: {
   const trackedIngredientIds = isFixtureIngestMode()
     ? WEEKLY_AD_TRACKED_INGREDIENT_IDS
     : trackedIngredientIdsFromCatalog(catalog);
-  const zipCode = input.zipCode ?? DEFAULT_ZIP_CODE;
+  const zipCode = requireWeeklyAdZipCode(input.zipCode);
   const results: WeeklyAdIngestionResult[] = [];
   const syncSummaries: WeeklyAdOfferSyncSummary[] = [];
   const catalogFields = {

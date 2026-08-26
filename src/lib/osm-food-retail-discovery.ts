@@ -217,20 +217,20 @@ function filterFixtureStoresByRadius(input: {
   radiusMiles: number;
   zipCode?: string;
 }): OsmDiscoveredFoodRetailStore[] {
-  if (input.zipCode === "23111" || !input.zipCode) {
-    return fixtureOsmFoodRetailStores23111.filter(
-      (store) =>
-        isAllowedGroceryOsmShopTag(store.shopTag) &&
-        getDistanceMiles(
-          input.latitude,
-          input.longitude,
-          store.latitude,
-          store.longitude,
-        ) <= input.radiusMiles,
-    );
+  if (input.zipCode && input.zipCode !== "23111") {
+    return [];
   }
 
-  return [];
+  return fixtureOsmFoodRetailStores23111.filter(
+    (store) =>
+      isAllowedGroceryOsmShopTag(store.shopTag) &&
+      getDistanceMiles(
+        input.latitude,
+        input.longitude,
+        store.latitude,
+        store.longitude,
+      ) <= input.radiusMiles,
+  );
 }
 
 async function fetchOverpassWithFallback(query: string): Promise<{

@@ -41,6 +41,24 @@ describe("osm food retail discovery", () => {
     expect(result.stores).toHaveLength(0);
   });
 
+  it("filters fixture OSM by search coordinates when ZIP is omitted", async () => {
+    const near = await discoverFoodRetailStoresNearLocation({
+      latitude: 37.6085,
+      longitude: -77.3321,
+      radiusMiles: 12,
+      useFixture: true,
+    });
+    expect(near.stores.length).toBeGreaterThan(0);
+
+    const far = await discoverFoodRetailStoresNearLocation({
+      latitude: 33.75,
+      longitude: -84.39,
+      radiusMiles: 8,
+      useFixture: true,
+    });
+    expect(far.stores).toHaveLength(0);
+  });
+
   it("prefers brand over missing name for Food Lion-like OSM elements", () => {
     const stores = parseOverpassElements({
       elements: [

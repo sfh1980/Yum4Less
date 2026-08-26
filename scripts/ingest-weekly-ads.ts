@@ -1,10 +1,11 @@
+import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
 import { buildWeeklyAdIngestStoreCandidates } from "@/lib/ingest/weekly-ad-ingest-store-selection";
 import {
   filterCatalogStoresNearLocation,
-  parseIngestZipCodesFromEnv,
   resolveIngestRadiusMiles,
+  resolveScheduledIngestZipCodes,
 } from "@/lib/store-catalog-sync";
 import {
   isWeeklyAdChain,
@@ -24,7 +25,7 @@ async function main() {
 
   enforceFixtureIngestDatabasePolicy();
 
-  const zipCodes = parseIngestZipCodesFromEnv();
+  const zipCodes = await resolveScheduledIngestZipCodes();
   const radiusMiles = resolveIngestRadiusMiles();
   const { snapshot } = await getMarketDataSnapshot();
 
@@ -46,6 +47,11 @@ async function main() {
       );
       continue;
     }
+
+    await rememberIngestZipGeocode({
+      ...locationResult.location,
+      zipCode,
+    });
 
     const nearbyStores = filterCatalogStoresNearLocation(
       weeklyAdCandidates,

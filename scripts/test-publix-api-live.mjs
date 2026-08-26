@@ -1,7 +1,11 @@
 import { createPublixServicesApiClient } from "../src/lib/providers/publix/publix-services-api-client.ts";
 import { resolvePublixStoreForZip } from "../src/lib/weekly-ad-ingestion/publix-weekly-ad-store.ts";
+import { resolveRequiredProbeZipCode } from "../src/lib/ingest-zip-codes.ts";
+import { loadEnvLocal } from "./lib/load-env-local.mjs";
 
-const zipCode = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
+loadEnvLocal();
+
+const zipCode = resolveRequiredProbeZipCode();
 
 async function main() {
   console.log(`\n=== Publix API setup probe (ZIP ${zipCode}) ===\n`);

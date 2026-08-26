@@ -1,4 +1,5 @@
 import { loadEnvLocal } from "./lib/load-env-local.mjs";
+import { resolveRequiredProbeZipCode } from "../src/lib/ingest-zip-codes.ts";
 import {
   createKrogerApiClient,
   readKrogerApiCredentialsFromEnv,
@@ -6,7 +7,7 @@ import {
 
 loadEnvLocal();
 
-const ZIP = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
+const ZIP = resolveRequiredProbeZipCode();
 const RADIUS_MILES = 10;
 
 function distMi(a, b) {

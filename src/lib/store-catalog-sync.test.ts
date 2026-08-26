@@ -119,8 +119,10 @@ describe("store-catalog-sync", () => {
     ]);
   });
 
-  it("falls back when ingest ZIP env has no valid codes", () => {
-    expect(parseIngestZipCodesFromEnv("bad, also-bad")).toEqual(["23111"]);
+  it("throws when ingest ZIP env has no valid codes instead of defaulting to 23111", () => {
+    expect(() => parseIngestZipCodesFromEnv("bad, also-bad")).toThrow(
+      /no default market ZIP/i,
+    );
   });
 
   it("filters catalog stores to those within the ingest radius of a market anchor", () => {

@@ -76,7 +76,7 @@ export function mapRecommendationApiError(input: {
         body:
           apiError ||
           "Geocoding is not fully configured, so only a short local ZIP list is available.",
-        hint: "Try ZIP 23111 for local dev, or add GEOCODIO_API_KEY for broader ZIP coverage.",
+        hint: "Use geolocation or enter any continental US ZIP. Add GEOCODIO_API_KEY for ZIP lookup beyond the local seed set.",
       };
     }
 
@@ -137,7 +137,7 @@ export function mapMarketSearchApiError(input: {
         body:
           apiError ||
           "Geocoding is not fully configured, so only a short local ZIP list is available.",
-        hint: "Try ZIP 23111 for local dev, or add GEOCODIO_API_KEY for broader ZIP coverage.",
+        hint: "Use geolocation or enter any continental US ZIP. Add GEOCODIO_API_KEY for ZIP lookup beyond the local seed set.",
       };
     }
 

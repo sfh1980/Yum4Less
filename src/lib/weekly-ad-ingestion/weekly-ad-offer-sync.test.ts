@@ -122,4 +122,41 @@ describe("syncWeeklyAdOffersToPriceObservations persist failures (H5)", () => {
       sourceRecordId: expect.stringContaining("Strong chicken match"),
     });
   });
+
+  it("does not persist junk titles even when a matcher attached an ingredient id", async () => {
+    insertPriceObservationIfChanged.mockResolvedValue("inserted");
+
+    const result: WeeklyAdIngestionResult = {
+      chain: "walmart",
+      label: "Walmart",
+      status: "live",
+      provenance: "weekly-ad-partner-feed",
+      retrievalMode: "live",
+      configured: true,
+      fallbackUsed: true,
+      message: "Live ingest",
+      fetchedAt: "2026-08-25T12:00:00.000Z",
+      termsNote: "Directional.",
+      offers: [
+        {
+          chain: "walmart",
+          storeId: "walmart-rocketts",
+          ingredientId: "honey",
+          productName: "Avia Women's Bubble Bottom Sneakers",
+          price: 12.88,
+          saleLabel: "Weekly special",
+          sourceUrl: "https://example.test/walmart",
+          observedAt: "2026-08-25T12:00:00.000Z",
+          confidenceScore: 0.7,
+          matchConfidence: 0.7,
+        },
+      ],
+    };
+
+    const summary = await syncWeeklyAdOffersToPriceObservations({ result });
+
+    expect(summary.syncedCount).toBe(0);
+    expect(summary.skippedCount).toBe(1);
+    expect(insertPriceObservationIfChanged).not.toHaveBeenCalled();
+  });
 });

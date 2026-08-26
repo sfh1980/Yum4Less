@@ -4,23 +4,23 @@
 
 ---
 
-## Resume (as of 2026-08-25)
+## Resume (as of 2026-08-26)
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
 **Phase:** Redesign **slices 1–5**, shell **D1–D7**, and post-audit hardening **Sprints A–E** **shipped**. **Onboarding wizard setup UI** is on **`master`** (splash → GPS or ZIP+pin → 6-tab shell). Settings-first shopper UI is rollback-only at **`backup/settings-ui-plus-catalog`** (`38bad3a`). Section H visual restyle of Home/Deals/Cook/Saved and Q34/Q35 remain out of scope. **DB migration ledger (backlog #3) CLOSED** (2026-07-09). **Store-ID integrity bundle (#14–15) CLOSED** (2026-07-09). **Coverage ingest slices 2–5 CLOSED** (2026-07-09). **Chain coverage honesty (#13 + #16) CLOSED** (2026-07-09). **Publix weekly-ad ingest exclusion (0/97) CLOSED** (2026-07-09) — **`c18f99e`**. **Geolocation denial asymmetry (P1-3) CLOSED** (2026-07-10) — **`295daee`**. **Option A Slice 1–4 CLOSED** (2026-07-10). **Option A Slice 5 (5a/5b/5c) CLOSED** (2026-07-11). **Option A Slice 6 CLOSED** (2026-07-11) — identity source onboarding checklist + Dollar Tree dry-run appendix. Master + `NEXT_PUBLIC_` expand flags and `AUTO_CONFIRM` still **OFF** by default. **Tier 1 Pass 1–7 CLOSED** (2026-07-15/16). **022/023 vacuous probe CLOSED** (2026-07-16). **`yum4less_dev` Kroger identity live repair CLOSED** (2026-07-16) — manual data heal, not a code change. **Wave 0 Home Ingredients market blank hole CLOSED** (2026-07-16). **Wave 1 CI-trust-tax CLOSED** (2026-07-16) — **1a** rank-wait/ZIP 409, **1b** overlay mobile false-sync, **1c** Scale risk C portal rule docs. **Wave 2 Part 1 Aldi `023` heal CLOSED** (2026-07-16). **Wave 2 Part 2 Phase 0 Q1–Q3 locked** (2026-07-16) — Q1 map-align code **not started**. **Backlog #5 (`tsc` bucket) CLOSED** (2026-07-09). **Tier 2 comprehensive audit CLOSED (audit-only)** (2026-07-16) — see [`docs/audits/tier2-comprehensive-audit-report.md`](docs/audits/tier2-comprehensive-audit-report.md). **Tier 2 SS-1 CLOSED** (2026-07-16) — Postgres compose bind loopback-only + `check:compose-db-bind` CI gate. **Vision-gap + UI stub sweep CLOSED (investigation checkpoint)** (2026-07-17). **Vision-gap sprint items 1–6 CLOSED** (2026-07-20) — External API Integration Standard; exact-coord privacy; geo-only Settings completion; nav finish-setup hints; Cook honest empty + rank invalidation; confidence-flexed price wording (`directional-provider-match` → Low). CI [**29770945822**](https://github.com/sfh1980/Yum4Less/actions/runs/29770945822) @ `adf0a62`. P1-ops freshness (`fresh_24h=0` on `yum4less_dev`) remains **open** (ops).
 
-**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db`. **GHCR published (2026-07-24):** `yum4less-app` + `yum4less-ingest` — SHA **`54e7b60`** + `:homelab` + `:latest` ([CI **30104150018**](https://github.com/sfh1980/Yum4Less/actions/runs/30104150018)). **TrueNAS Apps `app`+`db` CLOSED (2026-07-22)**; **Ingest + Watchtower CLOSED (2026-07-26)**. **Cloudflare Tunnel WAN CLOSED (2026-08-03/04)** — `https://yum4less.com/` via `cloudflared` Custom App + tunnel `truenas-homelab`; app `TRUST_PROXY_*` set; feedback + analytics (postgres sink) enabled on box. **Shopper UI copy trim (2026-08-04)** — feedback analytics panel + public feed removed; trust expand shortened; CI bakes `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` into published app images. **ZIP search-center picker + Settings button order (2026-08-04)** — GPS left / ZIP Find right; ZIP path opens map pin confirm before search. **Owner console (`/owner`, 2026-08-06; pagination 2026-08-10; ingredient review 2026-08-22; create-id 2026-08-24; tabs 2026-08-25)** — key-gated **Ingredient review**, **User feedback**, and **Analytics** tabs (Yes can **create** a kebab-case food id with name + category, or map to an existing id). Runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8–§12. **Still open:** unattended **3am** cron confirmation, Watchtower first hourly scan, backup/restore drill. Compose local still **`127.0.0.1:3000`** / **`127.0.0.1:5433`** (SS-1).
+**Homelab prep:** Convergence verdict → [`docs/audits/homelab-readiness-verdict.md`](docs/audits/homelab-readiness-verdict.md) — **READY WITH CONDITIONS**; **OPEN-BLOCKS empty**. **App containerized (2026-07-20):** multi-stage `Dockerfile` + Compose `app` + `db`. **GHCR published (2026-07-24):** `yum4less-app` + `yum4less-ingest` — SHA **`54e7b60`** + `:homelab` + `:latest` ([CI **30104150018**](https://github.com/sfh1980/Yum4Less/actions/runs/30104150018)). **TrueNAS Apps `app`+`db` CLOSED (2026-07-22)**; **Ingest + Watchtower CLOSED (2026-07-26)**. **Cloudflare Tunnel WAN CLOSED (2026-08-03/04)** — `https://yum4less.com/` via `cloudflared` Custom App + tunnel `truenas-homelab`; app `TRUST_PROXY_*` set; feedback + analytics (postgres sink) enabled on box. **Shopper UI copy trim (2026-08-04)** — feedback analytics panel + public feed removed; trust expand shortened; CI bakes `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` into published app images. **ZIP search-center picker + Settings button order (2026-08-04)** — GPS left / ZIP Find right; ZIP path opens map pin confirm before search. **Owner console (`/owner`, 2026-08-06; pagination 2026-08-10; ingredient review 2026-08-22; create-id 2026-08-24; tabs 2026-08-25; Coverage 2026-08-26)** — key-gated **Ingredient review**, **User feedback**, **Analytics**, and **Coverage** tabs (Yes can **create** a kebab-case food id with name + category, or map to an existing id). Coverage is read-only over `store_coverage` (search name, city/state, usable-in-app) and needs migrate `026`. Runbook → [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §8–§12. **Still open:** unattended **3am** cron **multi-night** proof (one-night paste-back **2026-08-26**), Watchtower first hourly scan, backup/restore drill. Compose local still **`127.0.0.1:3000`** / **`127.0.0.1:5433`** (SS-1).
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`**. Wizard shopper UI is on **`master`** after this slice’s push; live `yum4less.com` updates only after green `publish-image` / `publish-ingest-image` and Watchtower pull. Rollback: **`backup/settings-ui-plus-catalog`** (`38bad3a`, Settings-first + catalog) or older **`backup/pre-catalog-expansion-live`** / **`:800c450`**. TrueNAS must still apply `024_ingredient_match_catalog.sql` on the live volume (`npm run db:migrate` / ingest migrate) — Watchtower does not migrate.
+**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`**. Wizard shopper UI is on **`master`** after this slice’s push; live `yum4less.com` updates only after green `publish-image` / `publish-ingest-image` and Watchtower pull. Rollback: **`backup/settings-ui-plus-catalog`** (`38bad3a`, Settings-first + catalog) or older **`backup/pre-catalog-expansion-live`** / **`:800c450`**. Watchtower still does **not** migrate. **`024_ingredient_match_catalog.sql` is applied** on the live volume (`applied_at` **2026-08-24 07:00:02Z**, owner paste-back **2026-08-26**). Future `db/init` files still need an operator migrate.
 
 **Production-ranked focus:** **Kroger family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass. Walmart and other unsupported chains: map/context only.
 
 **Owner ingest path:** `npm run setup:local` / `ingest:weekly-ads:scheduled` runs **map-catalog → weekly-ad → provider sync → TheMealDB** when `GEOCODIO_API_KEY` + Kroger credentials set. Fixture ingest requires `CI=true`, Vitest (`NODE_ENV=test`), or aligned `DATABASE_URL` + `DATABASE_URL_TEST`. Map-catalog fixtures write `fixture-osm-*` / `yum4less-map-fixture` only — never live Overpass identity.
 
-**Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent.
+**Geocoding:** `NODE_ENV=production` without `CI` requires `GEOCODIO_API_KEY`; seed ZIP fallback disabled. `npm run dev` and CI/e2e runners may still use seed ZIPs when the key is absent **and the shopper types one of those ZIPs**. The wizard does **not** prefill `23111`. Scheduled ingest reads **`active_markets`** when `YUM4LESS_INGEST_ZIPS` is unset (empty table fails closed). Env ZIP list remains a debug overlay. `zip_geocode_cache` is filled by ingest, not by public geocode GET.
 
 **Verified (2026-07-11 Slice 5c evidence — historical):** Option A Slice **5c CLOSED**. At that time: unit **978/978**, integration **46/46**, build pass, typecheck **0**, e2e **25/1 skip**. Remote CI later green on **`812d6b7`** ([**29173497984**](https://github.com/sfh1980/Yum4Less/actions/runs/29173497984)). Master expand + `AUTO_CONFIRM` **OFF**.
 
@@ -30,7 +30,7 @@
 
 ### Working today (honest)
 
-- **Weekly-ad catalog expansion (2026-08-22, first live run 2026-08-23; junk heal 2026-08-25):** live ingest matches against Postgres `ingredients` (97-id `internal-catalog.ts` remains seed/fallback and fixture SSOT). Unmatched flyer lines skip, auto-create simple foods, or queue on private `/owner` for Yes (nickname) / No (skip). Junk skip SSOT is `isWeeklyAdJunkProduct`; live ingest also heals existing pending rows that match. **Local `yum4less_dev` after junk heal (2026-08-25):** pending `/owner` reviews **743 → 619**; junk skips **112 → 236**. Remaining queue still includes dinner leftovers (peaches, steaks, garden salad) that auto-create does not cover. Shopper pantry leftovers stay **1–4**. Do **not** claim more dinners. Live TrueNAS does not have this path until Watchtower pulls the post-merge `:homelab` image **and** `024` is applied.
+- **Weekly-ad catalog expansion (2026-08-22, first live run 2026-08-23; junk heal 2026-08-25; persist tighten 2026-08-25):** live ingest matches against Postgres `ingredients` (97-id `internal-catalog.ts` remains seed/fallback and fixture SSOT). Unmatched flyer lines skip, auto-create simple foods, or queue on private `/owner` for Yes (nickname) / No (skip). Junk skip SSOT is `isWeeklyAdJunkProduct` for all chains; classify skips junk before fuzzy match; price persist will not write junk titles. Flipp persist prefers grocery-tagged flyers. **Local `yum4less_dev` after junk heal (2026-08-25):** pending `/owner` reviews **743 → 619**; junk skips **112 → 236**. Live Flipp probe (same day, no persist): Walmart 144 offers → 113 junk / 6 grocery matches. **TrueNAS live volume (owner paste-back 2026-08-26):** `024` applied; `ingredients` **438** (TheMealDB **265** / internal **97** / weekly-ad-catalog **76**); pending reviews **704**; weekly-ad aliases **90**; skips **675**. Ranked in-stock prices all **~10.4h** old (newest **07:00–07:06 UTC**, ~3am Eastern): Kroger API **97/97** foods; Publix ad **102**; Food Lion ad **62**; Kroger ad **35**; Aldi ad **30**; Walmart ad **14** (ranked still deferred). App/ingest `:homelab` healthy (~24h). Shopper pantry leftovers stay **1–4**. Do **not** claim more dinners. Local and live catalogs are **not** the same size.
 - **Pipeline debug:** local-only `GET /api/debug/pipeline?zip=23111` or `?lat=&lng=` with `YUM4LESS_DEBUG_ROUTES_ENABLED=1` **and** `YUM4LESS_DEBUG_ADMIN_KEY` (`Authorization: Bearer` or `X-Yum4Less-Admin-Key`) — stores, ranked observations, 24h freshness, missing tracked ingredients (404 in production; 401 without key)
 - **Phase B price/store alignment:** `resolveInternalKrogerStoreId` maps locationId via `source_store_id` / canonical `kroger-{locationId}` / name heuristics — **no** single-store guess fallback (H8); ingest prefers catalog `source_store_id` for Kroger weekly-ad URLs; `sync:provider-prices` resolves nearest Kroger-family numeric `locationId` via `resolvePreferredKrogerLocationIdForZip` (Postgres + haversine; optional `KROGER_LOCATION_ID` escape hatch) and logs `skip_reason`
 - **Phase C location trust:** `store-location-reconciliation` — ranked coord updates need agreeing witnesses (Kroger API + Geocodio address; optional USDA SNAP corroboration); change-only when delta ≥ `YUM4LESS_LOCATION_CHANGE_THRESHOLD_METERS` (default 50); single provider witness still promotes bootstrap → API
@@ -87,7 +87,7 @@
 - **Walmart** ranked pricing deferred
 - **Homelab TrueNAS Custom App (`app`+`db`)** — **CLOSED** (2026-07-22); see [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §9
 - **Homelab ingest container + Watchtower deploy** — **CLOSED** (recorded 2026-07-26); see [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §10–§11. Evidence: one-shot dry-run `YUM4LESS_INGEST_ONCE=1` @ ZIP `23111` → live Kroger/Aldi/Publix/Food Lion/Walmart scrapes; **33** Publix observations synced; **15** TheMealDB meals imported; freshness **246/246**; success line `Scheduled pricing ingest completed.`; Watchtower logs `Using notifications: discord` + `Only checking containers using enable label` (app+ingest; db unlabeled)
-- **Homelab still open (do not fold into closed):** unattended **3am** cron confirmation; Watchtower first hourly scan; backup/restore drill on TrueNAS target
+- **Homelab still open (do not fold into closed):** unattended **3am** cron **multi-night** proof (one-night evidence **2026-08-26**: all ranked sources `hours_ago` **~10.4**, timestamps **07:00–07:06 UTC**); Watchtower first hourly scan; backup/restore drill on TrueNAS target
 - **Homelab Cloudflare Tunnel WAN** — **CLOSED** (2026-08-03/04) @ `https://yum4less.com/`
 - **M128/M151 scrape automation** (robots.txt checks, auto-pause on block signals, automated per-chain kill switches) — homelab slice; manual owner-pause only today
 - **Semgrep CI** — runs when GitHub repo secret `SEMGREP_APP_TOKEN` is set (not a `.env.local` var); local hooks use optional `semgrep` CLI
@@ -102,7 +102,7 @@
 6. ~~**Deferred D1–D6** — 5-tab shell, theme tokens, ingredient gate/chips, map-as-link overlay, session pantry UI~~ **done (2026-06-25)** — cuisine chips (R11) still deferred. Device-local Saved meals shipped 2026-08-20 (no accounts; cross-device still deferred).
 7. ~~**D7 — Color/tokens port** — Theme C (dark) + Theme D (light) from `.private/tokens.css`; flat page bg; system font; light default first visit; recolor buttons/panels/nav/map~~ **done (2026-06-26)** — owner browser verify pending
 
-**Later (when reprioritized):** Section H restyle of Home/Deals/Cook/Saved + Q34/Q35 compact Settings; confirm unattended 3am ingest cron + Watchtower first hourly scan; backup/restore drill on TrueNAS; GYAM Cloudflare hostname on same tunnel; Saved tab persistence; cuisine chips (R11); optional SNAP CSV ingest; Walmart ranked path.
+**Later (when reprioritized):** organic market queue (Phase C); Section H restyle of Home/Deals/Cook/Saved + Q34/Q35 compact Settings; confirm unattended 3am ingest cron + Watchtower first hourly scan; backup/restore drill on TrueNAS; GYAM Cloudflare hostname on same tunnel; Saved tab persistence; cuisine chips (R11); optional SNAP CSV ingest; Walmart ranked path.
 
 ---
 
@@ -250,6 +250,66 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 ---
 
 ## Changelog (newest first)
+
+### 2026-08-26 — Phase B2 chain_registry + /owner Coverage tab
+
+**Theme:** Track banners in Postgres; search storefront coverage from `/owner`.
+
+**Shipped:** `db/init/026_chain_registry_and_store_coverage.sql` — `chain_registry` seed (ranked Kroger/Aldi/Publix/Food Lion; Walmart blocked; upcoming Target/H-E-B/etc.) plus `store_coverage` view over existing `stores` + 24h in-stock `price_observations`. `GET /api/owner/store-coverage` (same admin key). Fourth `/owner` tab searches store name, city/state, and usable-in-app (`recipe_ready`). Missing `026` is a Coverage-tab notice, not a full console lockout. Shopper ranking lists stay in TypeScript (`SHOPPER_RANKED_V1_CHAINS`) until a later cutover.
+
+**Limits:** Does not invent a second store directory. Convenience OSM pins stay Other / untracked. No ZIP column on `stores`. Does not auto-queue shopper cities (Phase C). Does not flip Walmart ranked. TrueNAS needs operator migrate `026` after Watchtower pull. Local Docker ≠ yum4less.com.
+
+**Evidence:** this session `npm test` **1165/1165** (207 files). `npm run build` pass (Next 15.5.21; `/api/owner/store-coverage` + `/owner`). `npm run test:integration` **54/54** (17 files) on a second run; first run had 2 ledger timeouts while `next build` was competing. Local Postgres MCP: `026` applied **2026-08-26 22:06:34Z**; 18 registry banners; `store_coverage` **282** mapped storefronts, **0** fresh 24h sales (local Docker, not TrueNAS). `npm run test:e2e:ci` not run (`/owner` is not a shopper e2e surface). Semgrep MCP scanned unrelated temp copies — not a passed scan of these files.
+
+### 2026-08-26 — Phase B active_markets (ingest SSOT)
+
+**Theme:** Scheduled ingest markets live in Postgres; env is a debug overlay.
+
+**Shipped:** `db/init/025_active_markets_and_zip_geocode_cache.sql` — empty `active_markets` + `zip_geocode_cache` (no 23111 seed). Cron uses `YUM4LESS_INGEST_ZIPS` overlay when set, else `active_markets` where `status=active`; both empty fails closed. `npm run markets:activate -- <ZIP>` inserts one ops market after geocode. Ingest writes ZIP cache; public `/api/geocode/zip` stays read-only (may **read** cache). CI/E2E still set overlay `23111`.
+
+**Limits:** TrueNAS needs migrate `025` then either keep the existing ingest env overlay **or** `markets:activate` and drop the overlay. Does not auto-queue shopper cities (Phase C). Coverage tab is still Phase B2. Local Docker ≠ yum4less.com.
+
+**Evidence:** this session `npm test` **1152/1152** (205 files). `npm run test:integration` **53/53**. Local Postgres MCP: `025` on `yum4less_dev`, empty `active_markets`. `npm run test:e2e:ci` not run (shopper flow unchanged; CI still sets overlay `23111`). Semgrep MCP timed out on the new ingest files.
+
+### 2026-08-26 — Owner Coverage tab locked (plan only)
+
+**Theme:** Phase B2 coverage is a searchable `/owner` list, not counts-only.
+
+**Shipped (docs):** Plan requires a fourth `/owner` tab (**Coverage**) after Ingredient review / User feedback / Analytics. Search by store name, location, and checked/usable-in-app (`recipe_ready`). Read-only; same admin key. Not implemented.
+
+**Limits:** Needs `store_coverage` + migrate on TrueNAS after that slice. Does not change shopper UI.
+
+### 2026-08-26 — No silent 23111 default (Phase A)
+
+**Theme:** Shopper ZIP and scheduled ingest must not invent Mechanicsville.
+
+**Shipped:** Empty wizard ZIP until GPS or a typed ZIP + pin. `parseIngestZipCodesFromEnv` / weekly-ad ingest / owner probes **fail closed** when no valid ZIP is set (`YUM4LESS_INGEST_ZIPS` or explicit `YUM4LESS_PROVIDER_SYNC_ZIP` / `YUM4LESS_INGEST_ZIP`). Seed geocode table still resolves 23111/23116/23223/23231 when those ZIPs are actually entered in dev/CI. CI/E2E keep 23111 as **test geography only**.
+
+**Limits:** `active_markets` is not shipped — env is still the ingest list, just without a silent default. Homelab ingest will exit non-zero until `YUM4LESS_INGEST_ZIPS` is set on the ingest container. Walmart ranked still deferred.
+
+**Evidence:** this session `npm test` **1143/1143** (203 files). `npm run test:e2e:ci` **32 passed** / **2 skipped**.
+
+### 2026-08-26 — TrueNAS catalog paste-back (024 is live)
+
+**Shipped (docs):** Owner NAS snapshot recorded. Containers `yum4less-app` / `yum4less-ingest` on `:homelab` healthy (~24h); `yum4less-postgres` healthy. Ledger **000–013, 015–024** (no `014` in repo). **`024` applied 2026-08-24 07:00:02Z.** Live `ingredients`: TheMealDB **265**, internal **97**, weekly-ad-catalog **76** (**438** total). Pending `/owner` reviews **704**; weekly-ad aliases **90**; skips **675**.
+
+**Freshness (same day, second paste):** in-stock ranked rows all **~10.3–10.4h** old — Kroger official API **97** foods / **97** rows; Publix weekly-ad **102** / **102**; Food Lion **62** / **310**; Kroger weekly-ad **35** / **129**; Aldi **30** / **60**; Walmart **14** / **28**. Newest cluster **2026-08-26 07:00–07:06 UTC** (~3:00am Eastern ingest window). Inside the 24h ranked-read gate.
+
+**Limits:** These numbers are **TrueNAS**, not local Docker. Do **not** claim more shopper dinners. One morning of timestamps is **not** multi-night cron proof. Walmart ranked still deferred. Watchtower still does not migrate future `db/init` files.
+
+### 2026-08-25 — Local DB is not homelab / yum4less.com
+
+**Shipped (process):** Agents must not treat local `yum4less_dev` counts as live TrueNAS or `https://yum4less.com/` truth. When live catalog, ingest, or migration state is needed, give the owner paste-back commands from [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §4.5; update docs only after those results land.
+
+**Limits:** TrueNAS still needs Watchtower `:homelab` pull for **new** images. Catalog-expansion numbers dated 2026-08-23/25 in this file are **local Docker** unless a paste-back says otherwise. **`024` is applied on TrueNAS** (see 2026-08-26 snapshot).
+
+### 2026-08-25 — Universal weekly-ad junk skip + persist tighten
+
+**Shipped:** Junk skip stays one SSOT (`isWeeklyAdJunkProduct`) for **every** chain — apparel, electronics, cleaning, and small appliances added from live Flipp titles. Classify runs junk **before** fuzzy match (owner Yes alias still wins). Price persist skips junk titles even if a matcher attached an ingredient id. Flipp flyer persist prefers grocery-tagged flyers and drops explicit merch departments. Walmart live ingest uses the shared Flipp resolver and always attempts a page scrape (no longer skips scrape after a weak Flipp match). Live probe `probe:walmart-live-scrape` uses Postgres catalog foods, not the 97-id fixture list, and does not persist.
+
+**Limits:** Live Walmart.com scrape returned **0** parseable offers this run (Flipp still returned 144). Remaining 6 Flipp matches after junk were grocery (banana, bread, cheese, peanut butter, apple snack pack, grape jelly). Walmart ranked pricing is still hard-blocked. Do **not** claim more shopper dinners.
+
+**Evidence:** `npm test` **1133/1133** (202 files). Live probe ZIP **23111**: Flipp 144 → junk 113 / match 6 / review 25; browser scrape 0. Integration and e2e not run (no shopper-route change). Semgrep MCP not run this slice.
 
 ### 2026-08-25 — Shrink Ingredient review by skipping junk
 
@@ -2482,11 +2542,18 @@ Saved tab **persistence**, cuisine DB/tags (**R11**), and mockup layout polish (
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-08-26 | **Ingest markets in Postgres (Phase B):** cron reads `active_markets` when `YUM4LESS_INGEST_ZIPS` is unset. Env list is a debug overlay only. Empty overlay + empty table fails closed. No silent `23111`. `zip_geocode_cache` filled by ingest; public geocode GET does not write. Activate with `npm run markets:activate -- <ZIP>` after migrate `025`. | **Active** (narrows 2026-08-26 no silent ZIP) |
+| 2026-08-26 | **Phase B2 coverage ledger shipped:** `chain_registry` + `store_coverage` view + `/owner` Coverage tab. Search by store name, city/state, and usable-in-app (`recipe_ready`). Read-only. Same admin-key gate. Not a shopper surface. Ranking policy remains TypeScript until dual-run cutover. | **Active** (implements 2026-08-26 Coverage tab plan lock) |
+| 2026-08-26 | **`/owner` Coverage tab (Phase B2):** fourth tab after Ingredient review / User feedback / Analytics. Searchable by store name, location, and checked/usable-in-app (`recipe_ready`). Read-only list over `store_coverage` / `stores`. Same admin-key gate. Not a shopper surface. | **Superseded** (shipped same day — see Phase B2 coverage ledger row) |
+| 2026-08-26 | **No silent market ZIP:** ingest and probes fail closed without `YUM4LESS_INGEST_ZIPS` (or explicit single-ZIP alias). Shopper form ZIP starts empty. `23111` remains CI/E2E/fixture geography and a seed-geocode entry for that typed ZIP only. Next slice: `active_markets` in Postgres. | **Active** |
+| 2026-08-26 | **TrueNAS paste-back:** live volume has `024` (applied 2026-08-24 07:00:02Z). Catalog **438** foods (TheMealDB 265 / seed 97 / weekly-ad-catalog 76); pending reviews **704**; weekly-ad aliases **90**; skips **675**. Ranked in-stock prices **~10.4h** old at paste (07:00–07:06 UTC same day): Kroger API 97/97, Publix 102, Food Lion 62, Kroger ad 35, Aldi 30, Walmart 14. One-night 3am-window evidence; not multi-night cron closed. Do not use local 319/619 as live. Watchtower still does not migrate. | **Active** (narrows 2026-08-25 local≠live; closes “024 not applied” for this volume) |
+| 2026-08-25 | **Local `yum4less_dev` ≠ TrueNAS / yum4less.com:** never copy local catalog, pending-review, or freshness counts onto live docs. When homelab truth is required, the agent gives read-only paste-back commands ([`docs/homelab-deploy.md`](docs/homelab-deploy.md) §4.5); the owner runs them on the NAS and pastes output; then docs update. Watchtower does not migrate; `024` is applied on this live volume (2026-08-26 paste-back). | **Active** |
+| 2026-08-25 | **Universal weekly-ad junk + persist tighten:** same junk SSOT for all chains; junk before fuzzy match; do not persist junk prices; Flipp grocery flyers first; Walmart uses shared Flipp resolver + live scrape. Matching SSOT remains Postgres catalog, not the 97-id seed list. Walmart ranked still deferred. | **Active** (narrows 2026-08-25 junk-skip and 2026-08-22 catalog expansion) |
 | 2026-08-25 | **Skip more weekly-ad junk before `/owner`:** `isWeeklyAdJunkProduct` is the skip SSOT (no duplicate SQL lists). Live ingest and `npm run owner:reject-pending-junk-reviews` reject pending rows that match. Do not skip garden/grill/paper-bare food titles. Peaches/steaks remaining in review are expected until auto-create widens. Do not claim more dinners. | **Active** (narrows 2026-08-23 junk-heuristic follow-up for non-food; auto-create still later) |
 | 2026-08-25 | **Shopping style and dietary advance on tap:** How do you shop? and Dietary focus have no Continue. Either choice (or any dietary option) saves the value and goes to the next screen. Radius, ZIP, pin, stores, and budget still use Continue. | **Active** (narrows 2026-08-20 wizard “arrow/continue on all screens” for those two choice screens) |
 | 2026-08-24 | **Live shopper UI is the onboarding wizard:** `yum4less.com` should show splash → GPS/ZIP wizard and the 6-tab shell. The Settings-first ZIP hero is rollback-only (`backup/settings-ui-plus-catalog` @ `38bad3a`). Catalog expansion stays on that backup and on master. | **Active** |
 | 2026-08-24 | **Owner `/owner` can create catalog food ids:** Yes accepts a kebab-case id (2–56, letters/numbers/hyphens; auto-slugified) plus shopper-facing name and category. Existing ids are reused (name/category ignored); new ids insert `weekly-ad-catalog` then a weekly-ad nickname. Brands/sizes/pack counts do not belong in the id. Public shopper APIs stay read-only. | **Active** (narrows 2026-08-22 Yes/No to include create) |
-| 2026-08-23 | **First live catalog-expansion ingest (local ZIP 23111):** classify path wrote skips, auto-created foods, weekly-ad aliases, and `/owner` pending reviews. Auto-create quality and junk-heuristic gaps are follow-ups; do not claim more dinners. TrueNAS still needs image + `024` migrate. | **Active** (evidence for 2026-08-22 lock; does not change shopper flow) |
+| 2026-08-23 | **First live catalog-expansion ingest (local ZIP 23111):** classify path wrote skips, auto-created foods, weekly-ad aliases, and `/owner` pending reviews. Auto-create quality and junk-heuristic gaps are follow-ups; do not claim more dinners. TrueNAS `024` later applied 2026-08-24 (paste-back 2026-08-26). | **Active** (evidence for 2026-08-22 lock; does not change shopper flow) |
 | 2026-08-22 | **Ingest catalog expansion:** grow `ingredients` from weekly-ad ingest (nicknames + skip list + owner Yes/No). Matching SSOT is Postgres; the 97-id list is seed/fallback and fixture-only. Shopper flow stays sale foods → pantry **1–4 leftovers** → Dinner recommendations. No 50/50 pantry split. TheMealDB stays first recipe library. Public shopper APIs stay read-only; owner writes use `YUM4LESS_FEEDBACK_ADMIN_KEY`. Do not claim more dinners without ingest evidence. | **Active** (supersedes backlog “Ingredient catalog expansion (pending near-miss analysis)”) |
 | 2026-08-21 | **Settings tab FAQ/Terms + return from legal pages:** After setup, Settings shows FAQ and Terms (Feedback keeps them). `/faq` does not link to Terms. Wipe-setup control is **Reset Preferences**. Client Back from `/faq` or `/terms` restores last tab and chrome theme and skips splash; full reload still splash → budget. Prefs write only after hydration so remount does not overwrite stores/theme. | **Active** (narrows 2026-08-20 “not last-tab restore” to reload-only) |
 | 2026-08-21 | **FAQ and Terms pages:** `/faq` lists question-titled articles; `/faq/[slug]` is one article; `/terms` is a short beta disclaimer (estimates, no accounts, no price guarantee, location on-device except ZIP for store search). Circle `?` is a link to an article, not a popover. No extra bottom-nav tab. | **Active** (reverses 2026-08-20 audit Q28 “no FAQ route”) |
@@ -2588,14 +2655,24 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` (junk skip + pending heal) | 2026-08-25 | **1130/1130** pass (202 files) |
+| `npm test` (Phase B2 coverage ledger) | 2026-08-26 | **1165/1165** pass (207 files) |
+| `npm run build` (owner store-coverage route) | 2026-08-26 | **Pass** (Next.js 15.5.21; `/api/owner/store-coverage`) |
+| `npm run test:integration` (026 chain_registry + store_coverage) | 2026-08-26 | **54/54** pass (17 files). First run 52/54 (2 ledger timeouts under parallel `next build`); isolated re-run green. Applied `026` on `yum4less_test` and `yum4less_dev`. |
+| Postgres MCP (`yum4less_dev` — local Docker, not TrueNAS) | 2026-08-26 | `026` applied **2026-08-26 22:06:34Z**. 18 `chain_registry` banners. `store_coverage` **282** mapped / **0** fresh 24h sales. |
+| Semgrep MCP (coverage route/UI) | 2026-08-26 | Scanned unrelated temp copies — **not** a passed scan of B2 files |
+| `npm test` (Phase B active_markets) | 2026-08-26 | **1152/1152** pass (205 files) |
+| `npm run test:integration` (025 markets + ZIP cache) | 2026-08-26 | **53/53** pass (16 files). Applied `025` on `yum4less_dev` and `yum4less_test`. |
+| Postgres MCP (`yum4less_dev` — local Docker, not TrueNAS) | 2026-08-26 | `025` applied **2026-08-26 20:39:09Z**. Tables `active_markets` + `zip_geocode_cache` present. **0** market rows, **0** `23111` seeds, **0** geocode cache rows. |
+| TrueNAS owner paste-back (`yum4less-postgres` / `yum4less_dev`) | 2026-08-26 | `024` applied **2026-08-24 07:00:02Z**; ingredients **438** (themealdb 265 / internal 97 / weekly-ad-catalog 76); pending **704**; weekly-ad aliases **90**; skips **675**. Freshness **~10.4h**: kroger-official-api 97/97, publix 102, food-lion 62, kroger-weekly-ad 35, aldi 30, walmart 14. Newest 07:00–07:06 UTC. App/ingest `:homelab` Up ~24h healthy. Ledger 000–013, 015–024 (no 014 in repo). **`025` not on TrueNAS until operator migrate.** |
+| `npm test` (no silent 23111 default) | 2026-08-26 | **1143/1143** pass (203 files) |
+| Live `probe:walmart-live-scrape` (Flipp + scrape, no persist, Postgres catalog) | 2026-08-25 | Flipp **144**; browser scrape **0**; after junk: match **6** grocery / junk **113** / review **25**. ZIP **23111** |
 | `npm run test:integration` (pending junk heal vs dinner leftover) | 2026-08-25 | **51/51** pass |
 | Postgres MCP (`yum4less_dev` pending heal) | 2026-08-25 | pending **743 → 619**; skips **112 → 236**; **124** rejected. Peaches/steaks/garden salad still pending |
 | `npm run owner:reject-pending-junk-reviews` | 2026-08-25 | scanned=743 rejected=124 remaining=619 on `localhost:5433/yum4less_dev` |
 | Semgrep MCP (junk-heal files) | 2026-08-25 | **Did not scan requested files** (unrelated temp copies) — not a passed scan of this slice |
 | `npm test` (owner console tabs) | 2026-08-25 | **1126/1126** pass (201 files) — superseded by junk-heal suite above |
 | `npm test` (shopping-style + dietary tap-to-continue) | 2026-08-25 | **1126/1126** pass (201 files) |
-| `npm run test:e2e:ci` (tap-to-continue wizard wiring) | 2026-08-25 | **32 passed** / **2 skipped** (build inside gate passed, Next.js 15.5.21) |
+| `npm run test:e2e:ci` (no silent 23111; wizard types ZIP) | 2026-08-26 | **32 passed** / **2 skipped** (build + fixture ingest with explicit `YUM4LESS_INGEST_ZIPS=23111` test geography) |
 | Playwright vs `localhost:3000` | 2026-08-25 | Shopping style: no Continue; Several stores → store picker. Dietary: no Continue; Vegetarian → Ingredients. Project Playwright MCP chrome-for-testing missing; used user Playwright browser |
 | `npx tsc --noEmit` (onboarding wizard on master) | 2026-08-24 | **Pass** |
 | `npm test` (onboarding wizard on master) | 2026-08-24 | **1124/1124** pass (199 files) — superseded by 2026-08-25 suite above |
@@ -2788,7 +2865,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | **Aldi `023` seeded-method mismatch** | **CLOSED (2026-07-16 Wave 2 Part 1)** | Manual heal: deleted `self`/`pointer` graph, re-applied `023` seed SQL; probes true. Pre-heal backup: `backups/yum4less_dev_2026-07-17T00-54-12-961Z.sql`. Expand flags remain OFF. |
 | **Home Ingredients silent on market-search error / empty** | **CLOSED (2026-07-16 Wave 0)** — Was blank when `ingredients` + no `scopedMarket` + not loading. Now `IngredientsMarketUnavailable` matches Deals error alert + idle “Complete Settings…” guidance. |
 | **Coverage Slice 4 weekly-ad fan-out / Slice 7 best-offer+0.55** | **CLOSED (2026-07-09)** — Triage 2026-07-16 confirmed: fan-out/dedupe = Coverage Slice 4; Slice 7 = best-offer persist + confidence 0.55. Do not reopen as “optional fan-out narrowing.” |
-| Homelab deploy + exposure | **Partial:** TrueNAS Custom App + ingest + Watchtower **CLOSED**. Cloudflare Tunnel WAN **CLOSED** (2026-08-04) @ `yum4less.com`. Still open: unattended 3am cron confirm, Watchtower first hourly scan, backup drill |
+| Homelab deploy + exposure | **Partial:** TrueNAS Custom App + ingest + Watchtower **CLOSED**. Cloudflare Tunnel WAN **CLOSED** (2026-08-04) @ `yum4less.com`. 3am ingest **one-night** evidence 2026-08-26 (all ranked sources ~10.4h, 07:00 UTC). Still open: multi-night cron, Watchtower first hourly scan, backup drill |
 | Walmart ranked pricing | Shopper API + Flipp matching work |
 | BJ's ranked pricing | Regional; stub ingest — see Resume for v1 production-ranked chains (Publix + Food Lion shipped 2026-06-29) |
 | Lidl / DG | Stub ingest |
@@ -2868,6 +2945,8 @@ Full chat prose lives in agent transcripts; use these links for deep context.
 
 | When | Topic | Transcript |
 |------|-------|------------|
+| 2026-08-26 | Nationwide markets, DB coverage, no silent 23111 | [Aggregator and catalog alignment](135fee61-b70d-417b-b7c2-7639f6a73a8a) |
+| 2026-08-25 | Aggregators, shelf quotes, local ≠ homelab | [Aggregator and catalog alignment](135fee61-b70d-417b-b7c2-7639f6a73a8a) |
 | 2026-08-25 | Shrink Ingredient review by skipping junk | [Faster ingredient review](34544998-cd03-498a-9d19-e276bc180d85) |
 | 2026-08-24 | Onboarding wizard shipped on `master` (Watchtower) | [Onboarding wizard UI](093dd1be-4914-4da5-b0e7-3e9dc2668289) |
 | 2026-08-20 | Onboarding wizard setup UI on `feat/onboarding-wizard` | [Onboarding wizard UI](093dd1be-4914-4da5-b0e7-3e9dc2668289) |

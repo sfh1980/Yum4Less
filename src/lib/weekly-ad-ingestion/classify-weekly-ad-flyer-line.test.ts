@@ -184,8 +184,16 @@ describe("classifyWeeklyAdFlyerLine", () => {
 
     expect(
       classifyWeeklyAdFlyerLine({
-        productName: "Licensed Toddlers' Character Halloween Slippers",
+        productName: "Avia Women's Bubble Bottom Sneakers",
         chain: "walmart",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Athletic Works Girls Active Graphic Tee with Short Sleeves",
+        chain: "kroger",
         catalog: catalogSnapshot(),
       }),
     ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);

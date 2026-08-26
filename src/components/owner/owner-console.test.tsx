@@ -6,6 +6,22 @@ import { OwnerConsole } from "@/components/owner/owner-console";
 
 const fetchMock = vi.fn();
 
+function jsonOk(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const EMPTY_COVERAGE = {
+  ok: true,
+  stores: [] as const,
+  summaries: [] as const,
+  freshnessHours: 24,
+  hasMore: false,
+  total: 0,
+};
+
 describe("OwnerConsole", () => {
   afterEach(() => {
     fetchMock.mockReset();
@@ -40,6 +56,39 @@ describe("OwnerConsole", () => {
           JSON.stringify({ ok: true, reviews: [], hasMore: false }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
+      }
+      if (url.includes("/api/owner/store-coverage")) {
+        return jsonOk({
+          ok: true,
+          stores: [
+            {
+              storeId: "kroger-mechanicsville",
+              name: "Kroger",
+              chainLabel: "Kroger",
+              city: "Mechanicsville",
+              state: "VA",
+              seen: true,
+              mapped: true,
+              sales: true,
+              usableInApp: true,
+              sourceName: "kroger-official-api",
+            },
+          ],
+          summaries: [
+            {
+              chainId: "kroger",
+              chainLabel: "Kroger",
+              rolloutStage: "ranked",
+              storeCount: 1,
+              mappedCount: 1,
+              salesCount: 1,
+              usableCount: 1,
+            },
+          ],
+          freshnessHours: 24,
+          hasMore: false,
+          total: 1,
+        });
       }
       return new Response(
         JSON.stringify({
@@ -93,6 +142,13 @@ describe("OwnerConsole", () => {
 
     await user.keyboard("{ArrowRight}");
     expect(
+      screen.getByRole("tab", { name: "Coverage" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Coverage" })).toBeInTheDocument();
+    expect(screen.getByText("Usable in app")).toBeInTheDocument();
+
+    await user.keyboard("{ArrowRight}");
+    expect(
       screen.getByRole("tab", { name: "Ingredient review" }),
     ).toHaveAttribute("aria-selected", "true");
 
@@ -122,6 +178,9 @@ describe("OwnerConsole", () => {
           JSON.stringify({ ok: true, reviews: [], hasMore: false }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
+      }
+      if (url.includes("/api/owner/store-coverage")) {
+        return jsonOk(EMPTY_COVERAGE);
       }
       if (url.includes("offset=1")) {
         return new Response(
@@ -376,5 +435,48 @@ describe("OwnerConsole", () => {
       ingredientName: "Imitation Crab Meat",
       category: "protein",
     });
+  });
+
+  it("still unlocks when store coverage needs migrate 026", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/owner/store-coverage")) {
+        return jsonOk(
+          {
+            ok: false,
+            error:
+              "Store coverage could not be loaded. Apply db/init/026 if chain_registry is missing.",
+          },
+          503,
+        );
+      }
+      if (url.includes("/api/feedback")) {
+        return jsonOk({ ok: true, feedback: [], hasMore: false });
+      }
+      if (url.includes("/api/analytics/events")) {
+        return jsonOk({ ok: true, events: [], hasMore: false });
+      }
+      if (url.includes("/api/owner/ingredient-reviews")) {
+        return jsonOk({ ok: true, reviews: [], hasMore: false });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<OwnerConsole />);
+    await user.type(screen.getByLabelText(/admin key/i), "secret-owner-key");
+    await user.click(screen.getByRole("button", { name: /^view$/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Ingredient review" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Coverage" }));
+    expect(
+      screen.getByText(/Apply db\/init\/026 if chain_registry is missing/i),
+    ).toBeInTheDocument();
   });
 });

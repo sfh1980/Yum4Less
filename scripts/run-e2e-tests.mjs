@@ -68,6 +68,8 @@ async function main() {
     CI: "1",
     YUM4LESS_CI_BOOTSTRAP_STORES: "1",
     DATABASE_URL: databaseUrl,
+    // Test geography only — fixture ingest must not inherit a silent production default.
+    YUM4LESS_INGEST_ZIPS: "23111",
   };
   process.env.CI = "1";
   process.env.YUM4LESS_CI_BOOTSTRAP_STORES = "1";

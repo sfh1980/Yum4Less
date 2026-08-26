@@ -9,11 +9,12 @@ import { analyzeWeeklyAdMatchFunnel } from "../src/lib/weekly-ad-ingestion/weekl
 import { WEEKLY_AD_TRACKED_INGREDIENT_IDS } from "../src/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest.ts";
 import { matchWeeklyAdOffers } from "../src/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching.ts";
 import { probeKrogerApiSetup } from "../src/lib/providers/kroger/kroger-api-client.ts";
+import { resolveRequiredProbeZipCode } from "../src/lib/ingest-zip-codes.ts";
 import { loadEnvLocal } from "./lib/load-env-local.mjs";
 
 loadEnvLocal();
 
-const zipCode = process.env.YUM4LESS_INGEST_ZIP ?? "23111";
+const zipCode = resolveRequiredProbeZipCode();
 const trackedIngredientIds = WEEKLY_AD_TRACKED_INGREDIENT_IDS;
 const storeId = "kroger-mechanicsville";
 

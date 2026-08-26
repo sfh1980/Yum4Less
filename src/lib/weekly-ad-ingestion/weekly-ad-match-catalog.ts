@@ -9,6 +9,7 @@ import {
   classifyWeeklyAdFlyerLine,
   type WeeklyAdFlyerClassification,
 } from "@/lib/weekly-ad-ingestion/classify-weekly-ad-flyer-line";
+import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
 import type {
   WeeklyAdChain,
   WeeklyAdOffer,
@@ -96,7 +97,9 @@ export async function expandUnmatchedWeeklyAdOffers(input: {
   const expanded: WeeklyAdOffer[] = [];
 
   for (const offer of input.offers) {
-    if (offer.ingredientId) {
+    const junkMatched =
+      Boolean(offer.ingredientId) && flyerLineLooksLikeJunk(offer.productName);
+    if (offer.ingredientId && !junkMatched) {
       expanded.push(offer);
       continue;
     }
@@ -122,7 +125,10 @@ export async function expandUnmatchedWeeklyAdOffers(input: {
     }
 
     if (resolvedOffers.length === 0) {
-      expanded.push(offer);
+      if (flyerLineLooksLikeJunk(offer.productName)) {
+        continue;
+      }
+      expanded.push({ ...offer, ingredientId: undefined });
     } else {
       expanded.push(...resolvedOffers);
     }

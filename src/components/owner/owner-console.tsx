@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { FeedbackRecentFeed } from "@/components/feedback/feedback-recent-feed";
 import { OwnerAnalyticsFeed } from "@/components/owner/owner-analytics-feed";
+import { OwnerCoveragePanel } from "@/components/owner/owner-coverage-panel";
 import {
   DEFAULT_OWNER_CONSOLE_TAB,
   OWNER_CONSOLE_TABS,
@@ -13,6 +14,11 @@ import {
   FEEDBACK_LIMITS,
   type PublicFeedbackRow,
 } from "@/lib/feedback/feedback-types";
+import type {
+  StoreCoverageRow,
+  StoreCoverageSummary,
+  StoreCoverageUsableFilter,
+} from "@/lib/owner/store-coverage";
 import {
   INGREDIENT_CATEGORIES,
   isIngredientCategory,
@@ -119,13 +125,29 @@ function mergeById<T extends { id: number }>(existing: T[], incoming: T[]): T[] 
   return merged;
 }
 
+function mergeByStoreId(
+  existing: StoreCoverageRow[],
+  incoming: StoreCoverageRow[],
+): StoreCoverageRow[] {
+  const seen = new Set(existing.map((row) => row.storeId));
+  const merged = [...existing];
+  for (const row of incoming) {
+    if (!seen.has(row.storeId)) {
+      merged.push(row);
+      seen.add(row.storeId);
+    }
+  }
+  return merged;
+}
+
+type OwnerListKind = "feedback" | "analytics" | "reviews" | "coverage";
+type LoadWhich = "both" | OwnerListKind;
+
 export function OwnerConsole() {
   const [draftKey, setDraftKey] = useState("");
   const [activeKey, setActiveKey] = useState("");
   const [loadState, setLoadState] = useState<LoadState>("idle");
-  const [loadingMore, setLoadingMore] = useState<
-    "feedback" | "analytics" | "reviews" | null
-  >(null);
+  const [loadingMore, setLoadingMore] = useState<OwnerListKind | null>(null);
   const [error, setError] = useState<string | undefined>();
   const [feedback, setFeedback] = useState<PublicFeedbackRow[]>([]);
   const [events, setEvents] = useState<PublicAnalyticsEventRow[]>([]);
@@ -138,10 +160,25 @@ export function OwnerConsole() {
   const [feedbackHasMore, setFeedbackHasMore] = useState(false);
   const [analyticsHasMore, setAnalyticsHasMore] = useState(false);
   const [reviewsHasMore, setReviewsHasMore] = useState(false);
+  const [coverageHasMore, setCoverageHasMore] = useState(false);
   const [feedbackNextOffset, setFeedbackNextOffset] = useState(0);
   const [analyticsNextOffset, setAnalyticsNextOffset] = useState(0);
   const [reviewsNextOffset, setReviewsNextOffset] = useState(0);
+  const [coverageNextOffset, setCoverageNextOffset] = useState(0);
   const [analyticsNotice, setAnalyticsNotice] = useState<string | undefined>();
+  const [coverageNotice, setCoverageNotice] = useState<string | undefined>();
+  const [coverageStores, setCoverageStores] = useState<StoreCoverageRow[]>([]);
+  const [coverageSummaries, setCoverageSummaries] = useState<StoreCoverageSummary[]>(
+    [],
+  );
+  const [coverageTotal, setCoverageTotal] = useState(0);
+  const [coverageFreshnessHours, setCoverageFreshnessHours] = useState(24);
+  const [coverageQuery, setCoverageQuery] = useState<{
+    nameQuery: string;
+    locationQuery: string;
+    usable: StoreCoverageUsableFilter;
+  }>({ nameQuery: "", locationQuery: "", usable: "all" });
+  const [loadingCoverageSearch, setLoadingCoverageSearch] = useState(false);
   const [activeTab, setActiveTab] = useState<OwnerConsoleTab>(
     DEFAULT_OWNER_CONSOLE_TAB,
   );
@@ -165,7 +202,11 @@ export function OwnerConsole() {
         feedbackOffset: number;
         analyticsOffset: number;
         reviewsOffset: number;
-        which?: "both" | "feedback" | "analytics" | "reviews";
+        coverageOffset: number;
+        which?: LoadWhich;
+        coverageName?: string;
+        coverageLocation?: string;
+        coverageUsable?: StoreCoverageUsableFilter;
       },
     ) => {
       if (!key.trim()) {
@@ -175,32 +216,38 @@ export function OwnerConsole() {
         setEvents([]);
         setReviews([]);
         setReviewDrafts({});
+        setCoverageStores([]);
+        setCoverageSummaries([]);
+        setCoverageTotal(0);
         setFeedbackHasMore(false);
         setAnalyticsHasMore(false);
         setReviewsHasMore(false);
+        setCoverageHasMore(false);
         setFeedbackNextOffset(0);
         setAnalyticsNextOffset(0);
         setReviewsNextOffset(0);
+        setCoverageNextOffset(0);
         setAnalyticsNotice(undefined);
         setReviewNotice(undefined);
+        setCoverageNotice(undefined);
         return;
       }
 
       const which = options.which ?? "both";
       if (options.reset) {
-        setLoadState("loading");
-      } else if (which === "feedback") {
-        setLoadingMore("feedback");
-      } else if (which === "analytics") {
-        setLoadingMore("analytics");
-      } else if (which === "reviews") {
-        setLoadingMore("reviews");
+        if (which === "coverage") {
+          setLoadingCoverageSearch(true);
+        } else {
+          setLoadState("loading");
+        }
+      } else if (which !== "both") {
+        setLoadingMore(which);
       }
       setError(undefined);
 
       try {
         const fetches: Promise<Response>[] = [];
-        const fetchKinds: Array<"feedback" | "analytics" | "reviews"> = [];
+        const fetchKinds: OwnerListKind[] = [];
 
         if (which === "both" || which === "feedback") {
           fetchKinds.push("feedback");
@@ -229,6 +276,26 @@ export function OwnerConsole() {
             ),
           );
         }
+        if (which === "both" || which === "coverage") {
+          fetchKinds.push("coverage");
+          const coverageParams = new URLSearchParams({
+            limit: String(OWNER_PAGE_SIZE),
+            offset: String(options.coverageOffset),
+            usable: options.coverageUsable ?? "all",
+          });
+          if (options.coverageName) {
+            coverageParams.set("name", options.coverageName);
+          }
+          if (options.coverageLocation) {
+            coverageParams.set("location", options.coverageLocation);
+          }
+          fetches.push(
+            fetch(`/api/owner/store-coverage?${coverageParams.toString()}`, {
+              headers: authHeaders(key),
+              cache: "no-store",
+            }),
+          );
+        }
 
         const responses = await Promise.all(fetches);
         if (responses.some((response) => response.status === 401)) {
@@ -240,14 +307,20 @@ export function OwnerConsole() {
           setEvents([]);
           setReviews([]);
           setReviewDrafts({});
+          setCoverageStores([]);
+          setCoverageSummaries([]);
+          setCoverageTotal(0);
           setFeedbackHasMore(false);
           setAnalyticsHasMore(false);
           setReviewsHasMore(false);
+          setCoverageHasMore(false);
           setFeedbackNextOffset(0);
           setAnalyticsNextOffset(0);
           setReviewsNextOffset(0);
+          setCoverageNextOffset(0);
           setAnalyticsNotice(undefined);
           setReviewNotice(undefined);
+          setCoverageNotice(undefined);
           return;
         }
 
@@ -259,12 +332,29 @@ export function OwnerConsole() {
             feedback?: PublicFeedbackRow[];
             events?: PublicAnalyticsEventRow[];
             reviews?: PublicIngredientReviewRow[];
+            stores?: StoreCoverageRow[];
+            summaries?: StoreCoverageSummary[];
+            freshnessHours?: number;
+            total?: number;
             hasMore?: boolean;
             limit?: number;
             offset?: number;
             notice?: string;
             error?: string;
           };
+
+          if (kind === "coverage" && (!response.ok || !json.ok)) {
+            setCoverageStores([]);
+            setCoverageSummaries([]);
+            setCoverageTotal(0);
+            setCoverageHasMore(false);
+            setCoverageNextOffset(0);
+            setCoverageNotice(
+              json.error ??
+                "Store coverage could not be loaded. Apply db/init/026 if chain_registry is missing.",
+            );
+            continue;
+          }
 
           if (!response.ok || !json.ok) {
             setLoadState("error");
@@ -298,7 +388,7 @@ export function OwnerConsole() {
             if (options.reset || json.notice) {
               setAnalyticsNotice(json.notice);
             }
-          } else {
+          } else if (kind === "reviews") {
             const page = json.reviews ?? [];
             setReviews((current) =>
               options.reset ? page : mergeById(current, page),
@@ -314,6 +404,19 @@ export function OwnerConsole() {
               }
               return next;
             });
+          } else {
+            const page = json.stores ?? [];
+            setCoverageStores((current) =>
+              options.reset ? page : mergeByStoreId(current, page),
+            );
+            setCoverageSummaries(json.summaries ?? []);
+            setCoverageTotal(json.total ?? page.length);
+            setCoverageHasMore(Boolean(json.hasMore));
+            setCoverageNextOffset(pageOffset + page.length);
+            if (typeof json.freshnessHours === "number") {
+              setCoverageFreshnessHours(json.freshnessHours);
+            }
+            setCoverageNotice(undefined);
           }
         }
 
@@ -325,6 +428,7 @@ export function OwnerConsole() {
         );
       } finally {
         setLoadingMore(null);
+        setLoadingCoverageSearch(false);
       }
     },
     [],
@@ -339,6 +443,7 @@ export function OwnerConsole() {
       feedbackOffset: 0,
       analyticsOffset: 0,
       reviewsOffset: 0,
+      coverageOffset: 0,
       which: "both",
     });
   }, [activeKey, loadPage]);
@@ -360,14 +465,21 @@ export function OwnerConsole() {
     setEvents([]);
     setReviews([]);
     setReviewDrafts({});
+    setCoverageStores([]);
+    setCoverageSummaries([]);
+    setCoverageTotal(0);
     setFeedbackHasMore(false);
     setAnalyticsHasMore(false);
     setReviewsHasMore(false);
+    setCoverageHasMore(false);
     setFeedbackNextOffset(0);
     setAnalyticsNextOffset(0);
     setReviewsNextOffset(0);
+    setCoverageNextOffset(0);
     setAnalyticsNotice(undefined);
     setReviewNotice(undefined);
+    setCoverageNotice(undefined);
+    setCoverageQuery({ nameQuery: "", locationQuery: "", usable: "all" });
     setActiveTab(DEFAULT_OWNER_CONSOLE_TAB);
   }
 
@@ -375,11 +487,13 @@ export function OwnerConsole() {
     if (!activeKey) {
       return;
     }
+    setCoverageQuery({ nameQuery: "", locationQuery: "", usable: "all" });
     void loadPage(activeKey, {
       reset: true,
       feedbackOffset: 0,
       analyticsOffset: 0,
       reviewsOffset: 0,
+      coverageOffset: 0,
       which: "both",
     });
   }
@@ -393,6 +507,7 @@ export function OwnerConsole() {
       feedbackOffset: feedbackNextOffset,
       analyticsOffset: analyticsNextOffset,
       reviewsOffset: reviewsNextOffset,
+      coverageOffset: coverageNextOffset,
       which: "feedback",
     });
   }
@@ -406,6 +521,7 @@ export function OwnerConsole() {
       feedbackOffset: feedbackNextOffset,
       analyticsOffset: analyticsNextOffset,
       reviewsOffset: reviewsNextOffset,
+      coverageOffset: coverageNextOffset,
       which: "analytics",
     });
   }
@@ -419,7 +535,47 @@ export function OwnerConsole() {
       feedbackOffset: feedbackNextOffset,
       analyticsOffset: analyticsNextOffset,
       reviewsOffset: reviewsNextOffset,
+      coverageOffset: coverageNextOffset,
       which: "reviews",
+    });
+  }
+
+  function handleCoverageSearch(input: {
+    nameQuery: string;
+    locationQuery: string;
+    usable: StoreCoverageUsableFilter;
+  }) {
+    if (!activeKey) {
+      return;
+    }
+    setCoverageQuery(input);
+    void loadPage(activeKey, {
+      reset: true,
+      feedbackOffset: feedbackNextOffset,
+      analyticsOffset: analyticsNextOffset,
+      reviewsOffset: reviewsNextOffset,
+      coverageOffset: 0,
+      which: "coverage",
+      coverageName: input.nameQuery,
+      coverageLocation: input.locationQuery,
+      coverageUsable: input.usable,
+    });
+  }
+
+  function handleLoadMoreCoverage() {
+    if (!activeKey || !coverageHasMore) {
+      return;
+    }
+    void loadPage(activeKey, {
+      reset: false,
+      feedbackOffset: feedbackNextOffset,
+      analyticsOffset: analyticsNextOffset,
+      reviewsOffset: reviewsNextOffset,
+      coverageOffset: coverageNextOffset,
+      which: "coverage",
+      coverageName: coverageQuery.nameQuery,
+      coverageLocation: coverageQuery.locationQuery,
+      coverageUsable: coverageQuery.usable,
     });
   }
 
@@ -826,6 +982,22 @@ export function OwnerConsole() {
               </div>
             ) : null}
           </section>
+          ) : null}
+
+          {activeTab === "coverage" ? (
+            <OwnerCoveragePanel
+              freshnessHours={coverageFreshnessHours}
+              hasMore={coverageHasMore}
+              loadingMore={loadingMore === "coverage"}
+              loadingSearch={loadingCoverageSearch}
+              notice={coverageNotice}
+              onLoadMore={handleLoadMoreCoverage}
+              onSearch={handleCoverageSearch}
+              pageSize={OWNER_PAGE_SIZE}
+              stores={coverageStores}
+              summaries={coverageSummaries}
+              total={coverageTotal}
+            />
           ) : null}
         </div>
       ) : null}

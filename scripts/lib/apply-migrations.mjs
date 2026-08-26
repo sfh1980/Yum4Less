@@ -169,6 +169,10 @@ export function migrationEffectPresent(version, db) {
       );
     case "024":
       return db.tableExists("ingredient_match_skips") && db.tableExists("ingredient_match_reviews");
+    case "025":
+      return db.tableExists("active_markets") && db.tableExists("zip_geocode_cache");
+    case "026":
+      return db.tableExists("chain_registry") && db.tableExists("store_coverage");
     default:
       return false;
   }
