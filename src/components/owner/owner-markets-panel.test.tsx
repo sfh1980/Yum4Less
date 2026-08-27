@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { OwnerMarketsPanel } from "@/components/owner/owner-markets-panel";
+import { NO_RANKED_V1_CHAIN_PREVIEW_NOTICE } from "@/lib/owner/ingest-markets-copy";
 
 const fetchMock = vi.fn();
 
@@ -110,5 +111,37 @@ describe("OwnerMarketsPanel", () => {
     expect(
       screen.queryByRole("button", { name: /Activate/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows a no-ranked-chain warning and still offers Activate", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/owner/markets") && (!init || init.method === undefined)) {
+        return jsonOk({ ok: true, markets: [] });
+      }
+      if (url.includes("/api/owner/markets/preview")) {
+        return jsonOk({
+          ok: true,
+          zipCode: "90210",
+          alreadyActive: false,
+          location: { city: "Beverly Hills", state: "CA" },
+          stores: [{ name: "Walmart", city: "Beverly Hills", state: "CA", kind: "big-box" }],
+          warnings: [NO_RANKED_V1_CHAIN_PREVIEW_NOTICE],
+        });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<OwnerMarketsPanel adminKey="secret-owner-key" />);
+    await user.type(screen.getByLabelText(/^ZIP$/i), "90210");
+    await user.click(screen.getByRole("button", { name: /Check ZIP/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(NO_RANKED_V1_CHAIN_PREVIEW_NOTICE)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Walmart/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Activate 90210/i })).toBeInTheDocument();
   });
 });

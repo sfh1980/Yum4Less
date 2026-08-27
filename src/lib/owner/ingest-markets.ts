@@ -6,8 +6,16 @@ import {
 } from "@/lib/active-markets";
 import { isValidZipCode } from "@/lib/api-request";
 import { resolveZipLocation, type ResolvedZipLocation } from "@/lib/geocoding";
+import {
+  inferStoreChainFromName,
+  SHOPPER_RANKED_V1_CHAINS,
+  type ShopperRankedV1Chain,
+} from "@/lib/chain-rollout-policy";
 import { discoverMapContextStores } from "@/lib/map-context-discovery";
-import type { OwnerMarketStorePreview } from "@/lib/owner/ingest-markets-copy";
+import {
+  NO_RANKED_V1_CHAIN_PREVIEW_NOTICE,
+  type OwnerMarketStorePreview,
+} from "@/lib/owner/ingest-markets-copy";
 import { isWithinContinentalUsBounds } from "@/lib/us-service-area";
 import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
 
@@ -18,6 +26,7 @@ export {
 export {
   INGEST_OVERLAY_NOTICE,
   MISSING_ACTIVE_MARKETS_MESSAGE,
+  NO_RANKED_V1_CHAIN_PREVIEW_NOTICE,
   type OwnerMarketStorePreview,
 } from "@/lib/owner/ingest-markets-copy";
 
@@ -104,6 +113,16 @@ async function previewNearbyStores(input: {
   }
 }
 
+function previewHasShopperRankedV1Chain(
+  stores: OwnerMarketStorePreview[],
+): boolean {
+  return stores.some((store) =>
+    SHOPPER_RANKED_V1_CHAINS.includes(
+      inferStoreChainFromName(store.name) as ShopperRankedV1Chain,
+    ),
+  );
+}
+
 export async function inspectOwnerIngestMarket(
   zipCode: string,
 ): Promise<
@@ -135,6 +154,10 @@ export async function inspectOwnerIngestMarket(
     longitude: resolved.location.longitude,
   });
   const warnings = [...nearby.warnings];
+
+  if (!previewHasShopperRankedV1Chain(nearby.stores)) {
+    warnings.push(NO_RANKED_V1_CHAIN_PREVIEW_NOTICE);
+  }
 
   if (existing?.status === "paused") {
     warnings.push(

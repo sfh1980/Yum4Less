@@ -976,7 +976,7 @@ Issues to resolve **before** relying on unattended cron:
 | **`assert-live-ingest-env` does not require `KROGER_API_ENV=production`** | Cron exits 0 but Kroger official API sync no-ops | Set `KROGER_API_ENV=production` explicitly on ingest env |
 | **`YUM4LESS_INGEST_ZIPS` unset and `active_markets` empty** | Ingest exits non-zero (no `23111` default) | Activate a ZIP in `/owner` Markets (or `npm run markets:activate -- <ZIP>`), or set overlay ZIPs; verify stores in §4.2 SQL |
 | **Map catalog failure is non-fatal** | Cron exit 0 with degraded OSM/catalog | Read warnings in log; rerun `ingest:map-catalog` manually |
-| **Partial weekly-ad chain failure** | Exit **non-zero** if **any** chain errors or any persist failure (code is fail-loud; other chains may still have written) | Scan per-chain `[kroger]` / `[aldi]` lines in log; fix the failed chain |
+| **Partial weekly-ad chain failure** | Exit **non-zero** if **Kroger / Aldi / Publix / Food Lion** error or persist-fail. Walmart / Lidl / Dollar General flyer errors warn and do **not** fail the job | Scan ranked `[kroger]` / `[aldi]` / `[publix]` / `[food-lion]` lines first; unranked issues are expected-degraded |
 | **Playwright / headless deps on Linux** | Kroger scrape fallback fails with browser launch errors | Host: `playwright install-deps`. **Ingest image:** deps baked in |
 | **No interactive prompts in scheduled path** | ✅ None found — safe for no-TTY cron | — |
 | **Parent wrapper does not load `.env.local` before `ensure-test-db`** | ✅ Child TS scripts load it; DB URL defaults match compose | Ingest container: pass env explicitly in Custom App YAML |
@@ -990,6 +990,7 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
+| 2026-08-27 | Weekly-ad exit policy: fail-soft Walmart / Lidl / Dollar General flyer errors; Kroger / Aldi / Publix / Food Lion stay fail-loud. `/owner` Check warns when none of those four banners appear in the first look. |
 | 2026-08-04 | §12 Cloudflare Tunnel **live** (`yum4less.com`); TRUST_PROXY + feedback/analytics ops notes; CI/Dockerfile bake `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` for published app images; shopper UI copy trim cross-ref |
 | 2026-07-26 | §10 / §11 marked **deployed and verified** on TrueNAS (same-stack ingest; sibling Watchtower Custom App; `:homelab` + enable label on app; one-shot dry-run 246/246 @ ZIP `23111`; Watchtower Discord + label-scope logs). Still open: 3am cron, Watchtower first hourly scan, backup drill, Cloudflare Tunnel WAN. Added zsh `!` / single-quote `DATABASE_URL` troubleshooting note. |
 | 2026-07-23 | §10 ingest container (`Dockerfile.ingest`, GHCR `yum4less-ingest`, `YUM4LESS_EXTERNAL_POSTGRES` TCP path); §11 Watchtower label-scoped hourly updates + Shoutrrr notifications; §8 adds `:homelab` float tag for app+ingest; §9.5 app Watchtower label; §4 leftovers explicitly flagged |

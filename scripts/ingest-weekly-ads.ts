@@ -13,7 +13,10 @@ import {
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
-import { shouldFailWeeklyAdIngestExit } from "@/lib/ingest/ingest-script-exit-policy";
+import {
+  isWeeklyAdFailLoudChain,
+  shouldFailWeeklyAdIngestExit,
+} from "@/lib/ingest/ingest-script-exit-policy";
 
 loadEnvLocal();
 
@@ -92,20 +95,37 @@ async function main() {
     console.log(`  ${summary.message}`);
   }
 
-  const persistFailures = allSyncSummaries.reduce(
-    (total, summary) => total + summary.failedCount,
-    0,
-  );
   const chainErrors = allResults.filter((result) => result.status === "error");
+  const unrankedChainErrors = chainErrors.filter(
+    (result) => !isWeeklyAdFailLoudChain(result.chain),
+  );
+  const unrankedPersistFailures = allSyncSummaries.filter(
+    (summary) => summary.failedCount > 0 && !isWeeklyAdFailLoudChain(summary.chain),
+  );
+  const rankedPersistFailures = allSyncSummaries
+    .filter((summary) => isWeeklyAdFailLoudChain(summary.chain))
+    .reduce((total, summary) => total + summary.failedCount, 0);
+
+  if (unrankedChainErrors.length > 0 || unrankedPersistFailures.length > 0) {
+    const unrankedChains = [
+      ...unrankedChainErrors.map((result) => result.chain),
+      ...unrankedPersistFailures.map((summary) => summary.chain),
+    ]
+      .filter((chain): chain is string => Boolean(chain))
+      .filter((chain, index, list) => list.indexOf(chain) === index);
+    console.warn(
+      `\nWeekly-ad unranked chain issue(s) did not fail this run: ${unrankedChains.join(", ")}. Kroger, Aldi, Publix, and Food Lion still fail the job.`,
+    );
+  }
 
   if (shouldFailWeeklyAdIngestExit({ results: allResults, syncSummaries: allSyncSummaries })) {
-    if (persistFailures > 0) {
+    if (rankedPersistFailures > 0) {
       console.error(
-        `\nWeekly-ad ingest finished with ${persistFailures} persist failure(s). See structured error logs above.`,
+        `\nWeekly-ad ingest finished with ${rankedPersistFailures} ranked persist failure(s). See structured error logs above.`,
       );
-    } else if (chainErrors.length > 0) {
+    } else if (chainErrors.some((result) => isWeeklyAdFailLoudChain(result.chain))) {
       console.error(
-        `\nWeekly-ad ingest finished with ${chainErrors.length} chain failure(s). See structured error logs above.`,
+        `\nWeekly-ad ingest finished with ranked chain failure(s). See structured error logs above.`,
       );
     }
     process.exit(1);

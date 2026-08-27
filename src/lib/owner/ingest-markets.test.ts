@@ -26,8 +26,12 @@ vi.mock("@/lib/zip-geocode-cache", () => ({
   rememberIngestZipGeocode: (...args: unknown[]) => rememberIngestZipGeocode(...args),
 }));
 
-const { parseOwnerMarketZipInput, inspectOwnerIngestMarket, activateOwnerIngestMarket } =
-  await import("@/lib/owner/ingest-markets");
+const {
+  parseOwnerMarketZipInput,
+  inspectOwnerIngestMarket,
+  activateOwnerIngestMarket,
+  NO_RANKED_V1_CHAIN_PREVIEW_NOTICE,
+} = await import("@/lib/owner/ingest-markets");
 
 function geocodeOk(zipCode = "23220"): ZipLookupResult {
   return {
@@ -127,6 +131,33 @@ describe("owner ingest markets", () => {
       },
     });
     expect(upsertActiveMarket).not.toHaveBeenCalled();
+    if (inspected.ok) {
+      expect(inspected.result.warnings).not.toContain(NO_RANKED_V1_CHAIN_PREVIEW_NOTICE);
+    }
+  });
+
+  it("warns when the first look has no shopper-ranked v1 chain", async () => {
+    resolveZipLocation.mockResolvedValue(geocodeOk());
+    readIngestMarket.mockResolvedValue(null);
+    discoverMapContextStores.mockResolvedValue({
+      stores: [
+        {
+          name: "Walmart Supercenter",
+          city: "Richmond",
+          state: "VA",
+          kind: "big-box",
+        },
+      ],
+      sources: [],
+    });
+
+    const inspected = await inspectOwnerIngestMarket("23220");
+    expect(inspected.ok).toBe(true);
+    if (!inspected.ok) {
+      return;
+    }
+    expect(inspected.result.warnings).toContain(NO_RANKED_V1_CHAIN_PREVIEW_NOTICE);
+    expect(upsertActiveMarket).not.toHaveBeenCalled();
   });
 
   it("does not fail when the first store look is empty", async () => {
@@ -141,6 +172,7 @@ describe("owner ingest markets", () => {
     }
     expect(inspected.result.stores).toEqual([]);
     expect(inspected.result.warnings.join(" ")).toMatch(/No grocery pins/i);
+    expect(inspected.result.warnings).toContain(NO_RANKED_V1_CHAIN_PREVIEW_NOTICE);
   });
 
   it("skips insert when the ZIP is already active", async () => {
