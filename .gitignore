@@ -37,6 +37,7 @@ docs/application-decision-trees.pdf
 
 # Local TypeScript error scratch dumps (agent/debug — not source of truth)
 .cursor-tsc-errors*.txt
+.tsc-*.txt
 
 # Local Postgres dumps from db:backup / drills (may contain store + price data)
 backups/
