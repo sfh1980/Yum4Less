@@ -3,6 +3,7 @@ export const OWNER_CONSOLE_TABS = [
   { id: "feedback", label: "User feedback" },
   { id: "analytics", label: "Analytics" },
   { id: "coverage", label: "Coverage" },
+  { id: "markets", label: "Markets" },
 ] as const;
 
 export type OwnerConsoleTab = (typeof OWNER_CONSOLE_TABS)[number]["id"];

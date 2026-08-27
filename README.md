@@ -16,6 +16,19 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 **Still deferred:** Cross-device saved meals (needs accounts), cuisine filters (R11), Section H content restyle.
 
+## Nationwide de-hardcoding (2026-08-27)
+
+**A, B1, B2, and C are current** (code on `master`; TrueNAS schema `025` + `026` applied **2026-08-27 00:04Z**). Plan and remaining work → [`docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md).
+
+| Slice | Status |
+|---|---|
+| **A** — no silent ZIP `23111` | Shipped |
+| **B1** — `active_markets` + `zip_geocode_cache` | Shipped (`025`) |
+| **B2** — `chain_registry` + `/owner` Coverage | Shipped (`026`) |
+| **C** — `/owner` Markets ZIP check + activate | Shipped (no new migrate; reuses `025`) |
+
+Keep `YUM4LESS_INGEST_ZIPS` on TrueNAS ingest until you activate at least one ZIP in `/owner` **Markets** (or `npm run markets:activate -- <ZIP>`), then remove the overlay so cron reads the table. Shopper ranking lists stay in TypeScript until a later dual-run cutover. C does **not** auto-queue shopper ZIPs.
+
 ---
 
 ## Quick start (ZIP `23111`) — current UI
@@ -155,8 +168,8 @@ Full list and ingest flags → `.env.example`.
 | `npm run test:all` | Unit + integration |
 | `npm run test:e2e` / `npm run test:e2e:ci` | Playwright browser suite — CI uses port **3100**; see [`e2e/README.md`](e2e/README.md) |
 | `npm run db:up` / `db:down` / `db:reset` / `db:logs` | Postgres **only** on host port **5433** (Compose `db` service) |
-| `npm run db:migrate` | Apply missing `db/init` files (including `025` markets + ZIP cache) |
-| `npm run markets:activate -- <ZIP>` | Insert/activate one ingest market in Postgres (no silent default ZIP) |
+| `npm run db:migrate` | Apply missing `db/init` files (including `025` markets + ZIP cache and `026` chain registry + Coverage) |
+| `npm run markets:activate -- <ZIP>` | CLI backup: insert/activate one ingest market in Postgres (same as `/owner` Markets) |
 | `npm run db:backup` / `db:restore` / `db:backup-restore-drill` | Logical `pg_dump`/`psql` backup + disposable restore drill (see [`docs/homelab-deploy.md`](docs/homelab-deploy.md) §4.4) |
 | `npm run ingest:weekly-ads:fixture` | **CI/rehearsal only** — deterministic weekly ads → Postgres |
 | `npm run ingest:weekly-ads` | Live weekly-ad fetch (HTTP + browser fallback) |
@@ -180,7 +193,7 @@ Live ingest chain-by-chain baseline → [`PROJECT_CONTINUITY.md` → Live weekly
 
 Public `/api/market-search` and `/api/recommendations` reads are **cache-only for ranked prices**: meal totals come from Postgres rows observed within the last **24 hours**. User searches do **not** call live Kroger pricing APIs or write new price rows. **Map pins** merge ingested Postgres stores, cached provider discovery, and (when pins within radius are sparse) ephemeral OpenStreetMap context via Overpass — merged in memory only unless you run ingest scripts.
 
-Schedule one daily ingest on your host (homelab cron, Task Scheduler, etc.). Cron visits **`active_markets`** (status `active`). You can still set `YUM4LESS_INGEST_ZIPS` as a **debug overlay** for one run; if overlay and table are both empty, ingest fails closed. ZIP `23111` is a CI/E2E test geography only, not an app or cron default. After `db:migrate` for `025`, activate a market with `npm run markets:activate -- 23220` (your real ZIP).
+Schedule one daily ingest on your host (homelab cron, Task Scheduler, etc.). Cron visits **`active_markets`** (status `active`). You can still set `YUM4LESS_INGEST_ZIPS` as a **debug overlay** for one run; if overlay and table are both empty, ingest fails closed. ZIP `23111` is a CI/E2E test geography only, not an app or cron default. TrueNAS already has `025`; activate a market from `/owner` **Markets** (or `npm run markets:activate -- 23220`) before dropping the overlay.
 
 **Homelab/Linux step-by-step:** [`docs/homelab-deploy.md`](docs/homelab-deploy.md) — TrueNAS ingest container (§10), Watchtower (§11), host cron fallback (§3), freshness SQL (§4).
 

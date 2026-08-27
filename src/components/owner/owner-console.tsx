@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type Keyboard
 import { FeedbackRecentFeed } from "@/components/feedback/feedback-recent-feed";
 import { OwnerAnalyticsFeed } from "@/components/owner/owner-analytics-feed";
 import { OwnerCoveragePanel } from "@/components/owner/owner-coverage-panel";
+import { OwnerMarketsPanel } from "@/components/owner/owner-markets-panel";
 import {
   DEFAULT_OWNER_CONSOLE_TAB,
   OWNER_CONSOLE_TABS,
@@ -998,6 +999,10 @@ export function OwnerConsole() {
               summaries={coverageSummaries}
               total={coverageTotal}
             />
+          ) : null}
+
+          {activeTab === "markets" ? (
+            <OwnerMarketsPanel adminKey={activeKey} />
           ) : null}
         </div>
       ) : null}

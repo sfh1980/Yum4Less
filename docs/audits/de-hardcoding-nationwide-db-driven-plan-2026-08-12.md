@@ -1,7 +1,19 @@
 # De-hardcoding plan for nationwide, DB-driven operation (2026-08-12)
 
-> **Design only.** No schema DDL, migrations, or code in this pass.
-> Source of truth for what is hardcoded today: [`scale-out-architecture-audit-2026-08-11.md`](scale-out-architecture-audit-2026-08-11.md).
+> Source of truth for the original hardcoded inventory: [`scale-out-architecture-audit-2026-08-11.md`](scale-out-architecture-audit-2026-08-11.md).
+> Current snapshot → [`PROJECT_CONTINUITY.md` → Resume](../../PROJECT_CONTINUITY.md#resume-as-of-2026-08-26).
+
+**Implementation status (as of 2026-08-27):**
+
+| Slice | What | Status |
+|---|---|---|
+| **A** | No silent `23111` — empty shopper ZIP until GPS or typed ZIP+pin; ingest/probes fail closed without overlay or `active_markets` | **Shipped** (code + live shopper) |
+| **B1** | `active_markets` + `zip_geocode_cache` (`025`) — env ZIP list is a debug overlay only | **Shipped** — TrueNAS `025` applied **2026-08-27 00:04:01Z** |
+| **B2** | `chain_registry` + `store_coverage` view + `/owner` Coverage tab (`026`) | **Shipped** — TrueNAS `026` applied **2026-08-27 00:04:01Z** (18 banners seeded) |
+| **C** | `/owner` **Markets**: type ZIP → Check (preview, no insert) → Activate into `active_markets` (`source=ops`, `status=active`). CLI `markets:activate` remains backup. No shopper collect. No ~41k ZIP nightly ingest. | **Shipped** (reuses `025`; no new migrate) |
+| Later | Organic shopper-ZIP waiting list (`source=organic_usage`, paused); `threshold_profiles` + density; per-store scrape TZ; `chain_registry` dual-run cutover (shopper ranking still TypeScript); Slice D identity matcher; new ranked adapters; chain go/no-go | **Not started** |
+
+**Still true after A/B1/B2/C:** `active_markets` starts empty — keep `YUM4LESS_INGEST_ZIPS` overlay until you activate at least one ZIP in `/owner` Markets (or CLI), then drop the overlay. Overlay unset + empty table still **fails closed**. Watchtower does **not** migrate future `db/init` files. Do not flip Walmart ranked. Do not treat local Docker as yum4less.com.
 
 **Goal:** the app works nationwide with **no fallback ZIP**, **no VA-only seed table as a runtime authority**, and **no hand-edited chain lists as the source of truth**. Geography- and chain-specific values (distance thresholds, timezone, rollout membership) come from **durable DB (or derived-from-DB) context**, not from constants / env defaults baked into application logic.
 
@@ -122,7 +134,7 @@ No DDL here — entities and responsibilities only.
 | **A — Fail loud (recommended default)** | Cron exits non-zero: “set `YUM4LESS_INGEST_ZIPS` or enable `YUM4LESS_INGEST_MARKETS_FROM_DB=1`.” |
 | **B — DB-driven** | Select `active_markets` where `status = active`, ordered by priority. Still **no** hardwired ZIP if the table is empty — fail loud: “no active markets.” |
 
-**Organic population (optional later):** when shoppers successfully resolve a ZIP and market-search finds stores, upsert a candidate market row (`source = organic_usage`) — **paused by default** until ops promotes to `active` for paid ingest. That avoids “any ZIP burns scrape quota” while still removing the need for a code default.
+**Organic population (deferred — not this C):** a later slice may upsert shopper-ZIP candidates (`source = organic_usage`, paused until ops activate). **This C** is owner-typed ZIP check + activate only. B1 shipped the table; it does **not** auto-queue shopper cities.
 
 **What determines a market’s existence:** first successful geocode + optional store-coverage signal — not a pre-seeded VA table.
 
@@ -276,7 +288,7 @@ See §6. Entity: `zip_geocode_cache` (+ optional `street_geocode_cache`). Option
 
 Summary counts may sit above the list. v1 is **read-only**; flipping `chain_registry.rollout_stage` is not a button on this tab.
 
-**Status (2026-08-26):** Implemented as `/owner` Coverage + `GET /api/owner/store-coverage`. Needs migrate `026`.
+**Status (2026-08-26 / TrueNAS 2026-08-27 00:04Z):** Implemented as `/owner` Coverage + `GET /api/owner/store-coverage`. **`026` is applied** on the live TrueNAS volume (owner paste-back). Other environments still run `npm run db:migrate`. Missing `026` is a Coverage-tab notice, not a full `/owner` lockout. Shopper ranking lists remain TypeScript until a later dual-run cutover.
 
 ---
 
@@ -427,18 +439,18 @@ If implemented as specified:
 
 ---
 
-## 8. Suggested implementation sequencing (design pointer only)
+## 8. Suggested implementation sequencing
 
-Not a commitment — aligns with the audit’s recommended order:
+Locked product order for this workstream (do not reorder without Decision log): **A → B1 → B2 → C**, then later items. Aligns with the audit; **A / B1 / B2 / C are current** as of 2026-08-27 (TrueNAS `025`/`026`; C is owner Markets UI on existing `025`).
 
-1. Durable `zip_geocode_cache` + fail-loud ingest ZIPs (delete `23111` soft-default).
-2. UI: remove default ZIP; first-run geo/prompt.
-3. `chain_registry` read-path behind a feature flag (dual-run vs TS lists until parity).
-4. `threshold_profiles` + market density heuristic; move constants → `bootstrap` profile.
-5. Per-store/market timezone for weekly-ad browser profile.
-6. `active_markets` (+ optional organic candidates).
-7. Slice D → delete allowlist / known-pair / seed-copy guidance.
-8. Parameterized second-ZIP fixtures/e2e (test debt, not product default).
+1. ~~Durable `zip_geocode_cache` + fail-loud ingest ZIPs (delete `23111` soft-default).~~ **B1 + A shipped.**
+2. ~~UI: remove default ZIP; first-run geo/prompt.~~ **A shipped.**
+3. `chain_registry` table + owner Coverage **shipped (B2)**; shopper **read-path dual-run / cutover vs TS lists still later** (not Phase C).
+4. `threshold_profiles` + market density heuristic; move constants → `bootstrap` profile. **Not started.**
+5. Per-store/market timezone for weekly-ad browser profile. **Not started.**
+6. ~~`active_markets` table.~~ **B1 shipped.** ~~Owner ZIP check + activate.~~ **C shipped.** Organic shopper-ZIP waiting list remains later.
+7. Slice D → delete allowlist / known-pair / seed-copy guidance. **Not started.**
+8. Parameterized second-ZIP fixtures/e2e (test debt, not product default). **Not started.**
 
 ---
 

@@ -48,7 +48,10 @@ Public read-only routes (cache-first; ingest scripts are the write path):
 | `GET /api/feedback` | Recent feedback rows |
 | `GET /api/analytics/events` | Recent Postgres analytics events |
 | `GET/POST /api/owner/ingredient-reviews` | Weekly-ad unmatched-line Yes (nickname or new food id) / No (skip) |
-| `GET /api/owner/store-coverage` | Read-only storefront coverage (seen / mapped / sales / usable-in-app). Needs migrate `026`. |
+| `GET /api/owner/store-coverage` | Read-only storefront coverage (seen / mapped / sales / usable-in-app). TrueNAS has `026` (2026-08-27 00:04Z); other volumes run `db:migrate`. |
+| `GET /api/owner/markets` | List `active_markets` rows (same admin key). |
+| `POST /api/owner/markets/preview` | Check a ZIP (geocode + nearby pins, no insert). |
+| `POST /api/owner/markets/activate` | Activate a ZIP into `active_markets`. |
 
 Live weekly-ad ingest matches flyer lines against Postgres `ingredients` (97-id seed remains fixture SSOT). Unmatched lines skip junk (`isWeeklyAdJunkProduct`), auto-create simple foods, or wait on `/owner`. Live persist also rejects pending reviews that later match junk. Fixture ingest does not write skips/reviews. One-shot heal: `npm run owner:reject-pending-junk-reviews`.
 
@@ -78,7 +81,7 @@ Live weekly-ad ingest matches flyer lines against Postgres `ingredients` (97-id 
 | **Chain weekly-ad page scrape** | Browser/HTTP parsers for ad HTML | Kroger-family, Aldi, Publix, Food Lion |
 | **Kroger product API** (fallback) | Partial last-resort fill when scrape + Flipp return nothing | Kroger only; not full ad coverage |
 
-Ingest runs via scheduled scripts (`npm run ingest:weekly-ads:scheduled`, `ingest:map-catalog`, `sync:provider-prices`) — not on every user search. Watchtower does not migrate. TrueNAS applied `024_ingredient_match_catalog.sql` on **2026-08-24**; **`025` (active_markets + zip_geocode_cache) still needs an operator migrate** on the live volume after this slice’s ingest image lands.
+Ingest runs via scheduled scripts (`npm run ingest:weekly-ads:scheduled`, `ingest:map-catalog`, `sync:provider-prices`) — not on every user search. Watchtower does not migrate. TrueNAS applied `024` on **2026-08-24**, and **`025` + `026`** on **2026-08-27 00:04Z** (owner paste-back). Future `db/init` files still need an operator migrate. `active_markets` stays empty until `/owner` Markets (or `npm run markets:activate -- <ZIP>`). Keep the ingest ZIP overlay until `23111` is an active table row, then drop it.
 
 ### Recipes
 

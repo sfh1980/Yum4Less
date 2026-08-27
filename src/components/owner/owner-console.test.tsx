@@ -22,6 +22,8 @@ const EMPTY_COVERAGE = {
   total: 0,
 };
 
+const EMPTY_MARKETS = { ok: true, markets: [] as const };
+
 describe("OwnerConsole", () => {
   afterEach(() => {
     fetchMock.mockReset();
@@ -90,6 +92,9 @@ describe("OwnerConsole", () => {
           total: 1,
         });
       }
+      if (url.includes("/api/owner/markets")) {
+        return jsonOk(EMPTY_MARKETS);
+      }
       return new Response(
         JSON.stringify({
           ok: true,
@@ -149,6 +154,12 @@ describe("OwnerConsole", () => {
 
     await user.keyboard("{ArrowRight}");
     expect(
+      screen.getByRole("tab", { name: "Markets" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Markets" })).toBeInTheDocument();
+
+    await user.keyboard("{ArrowRight}");
+    expect(
       screen.getByRole("tab", { name: "Ingredient review" }),
     ).toHaveAttribute("aria-selected", "true");
 
@@ -181,6 +192,9 @@ describe("OwnerConsole", () => {
       }
       if (url.includes("/api/owner/store-coverage")) {
         return jsonOk(EMPTY_COVERAGE);
+      }
+      if (url.includes("/api/owner/markets")) {
+        return jsonOk(EMPTY_MARKETS);
       }
       if (url.includes("offset=1")) {
         return new Response(
@@ -458,6 +472,9 @@ describe("OwnerConsole", () => {
       }
       if (url.includes("/api/owner/ingredient-reviews")) {
         return jsonOk({ ok: true, reviews: [], hasMore: false });
+      }
+      if (url.includes("/api/owner/markets")) {
+        return jsonOk(EMPTY_MARKETS);
       }
       throw new Error(`unexpected fetch ${url}`);
     });

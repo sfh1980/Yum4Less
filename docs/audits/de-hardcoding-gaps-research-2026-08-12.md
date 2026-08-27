@@ -1,6 +1,7 @@
 # Research pass — closing gaps in the de-hardcoding plan (2026-08-12)
 
-> **Research and recommendation only.** No schema, migrations, or code.
+> **Research and recommendation only.** No schema, migrations, or code in *this* document.
+> Implementation status for A / B1 / B2 / C lives in [`de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](de-hardcoding-nationwide-db-driven-plan-2026-08-12.md) (A/B1/B2 **current** on TrueNAS as of 2026-08-27 00:04Z; **C** is `/owner` Markets ZIP activate — not an organic waiting list).
 > Sits alongside (does not replace):
 > - [`de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](de-hardcoding-nationwide-db-driven-plan-2026-08-12.md)
 > - [`scale-out-architecture-audit-2026-08-11.md`](scale-out-architecture-audit-2026-08-11.md)

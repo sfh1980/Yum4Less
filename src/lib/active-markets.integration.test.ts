@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import {
   listActiveMarketZipCodes,
+  listIngestMarkets,
   upsertActiveMarket,
 } from "@/lib/active-markets";
 import {
@@ -65,6 +66,11 @@ describe("active_markets and zip_geocode_cache (integration)", () => {
 
     await upsertActiveMarket({ zipCode: TEST_ZIP, source: "ops" });
     expect(await listActiveMarketZipCodes()).toContain(TEST_ZIP);
+
+    const listed = await listIngestMarkets();
+    expect(listed.some((row) => row.zipCode === TEST_ZIP && row.status === "active")).toBe(
+      true,
+    );
 
     await upsertZipGeocodeCache({
       zipCode: TEST_ZIP,
