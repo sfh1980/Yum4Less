@@ -114,7 +114,7 @@ async function main() {
       .filter((chain): chain is string => Boolean(chain))
       .filter((chain, index, list) => list.indexOf(chain) === index);
     console.warn(
-      `\nWeekly-ad unranked chain issue(s) did not fail this run: ${unrankedChains.join(", ")}. Kroger, Aldi, Publix, and Food Lion still fail the job.`,
+      `\nWeekly-ad unranked chain issue(s) did not fail this run: ${unrankedChains.join(", ")}. Ranked banners still fail the job.`,
     );
   }
 

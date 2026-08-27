@@ -96,9 +96,7 @@ export function buildStoreCoverageRow(
   const chainId = matchRegistryChainId(store, registry);
   const chain = registry.find((row) => row.chainId === chainId);
   const sales = store.freshSaleCount > 0;
-  const recipeReady = Boolean(
-    chain?.shopperRanked && !chain.promotionBlocked && sales,
-  );
+  const recipeReady = Boolean(chain?.shopperRanked && sales);
 
   return {
     ...store,

@@ -84,6 +84,23 @@ describe("store display labels", () => {
     ).toBe("Publix (Brandy Creek Commons)");
   });
 
+  it("uses Harris Teeter as the headline, not Kroger family", () => {
+    expect(
+      resolveStoreDisplayHeadline({
+        name: "Harris Teeter",
+        chain: "kroger",
+        sourceName: "kroger-official-api",
+      }),
+    ).toBe("Harris Teeter");
+    expect(
+      formatStoreHeadlineWithOptionalSubtitle({
+        name: "Harris Teeter",
+        chain: "kroger",
+        sourceName: "kroger-official-api",
+      }),
+    ).toBe("Harris Teeter");
+  });
+
   it("normalizes ranked v1 chain casing from OSM brand tags", () => {
     expect(
       resolveStoreDisplayHeadline({

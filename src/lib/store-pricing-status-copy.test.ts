@@ -50,17 +50,17 @@ describe("store pricing status copy", () => {
       buildStoreListStatusPill({
         recommendationEnabled: false,
         rolloutStatus: "coming-soon",
-        chain: "walmart",
+        chain: "bjs",
       }),
-    ).toBe("Context only — no pricing yet");
+    ).toBe("Context only");
 
     expect(
       buildStoreMapPricingLabel({
         recommendationEnabled: false,
         rolloutStatus: "coming-soon",
-        chain: "walmart",
+        chain: "bjs",
       }),
-    ).toBe("No dinner estimates yet");
+    ).toBe("Coming soon — map context only");
   });
 
   it("uses chain-colored ranked map label with verify-in-store wording", () => {

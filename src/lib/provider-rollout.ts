@@ -43,7 +43,7 @@ export type WeeklyAdRolloutContext = {
 };
 
 /** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
-const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>(["lidl"]);
+const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>([]);
 
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
@@ -68,8 +68,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     status: "coming-soon",
     recommendationEnabled: false,
     priority: 3,
-    note:
-      "Shown on the map for nearby planning — dinner price estimates are not available from this store yet.",
+    note: buildDirectionalRolloutNote("Walmart"),
   },
   aldi: {
     chain: "aldi",
@@ -101,9 +100,8 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     label: "Lidl",
     status: "coming-soon",
     recommendationEnabled: false,
-    priority: 99,
-    note:
-      "Lidl sale coverage is being rehearsed for Yum4Less, but dinner price estimates are not available from this store yet.",
+    priority: 5,
+    note: buildDirectionalRolloutNote("Lidl"),
   },
   "trader-joes": {
     chain: "trader-joes",
@@ -168,10 +166,6 @@ function resolveProviderRolloutForBase(
   base: ProviderRolloutEntry,
   weeklyAdContext?: WeeklyAdRolloutContext,
 ): ProviderRolloutEntry {
-  if (base.chain === "walmart") {
-    return resolveWalmartRollout(base, weeklyAdContext);
-  }
-
   if (MEAL_PRICING_COMING_LATER_CHAINS.has(base.chain)) {
     return resolveComingLaterMealPricingRollout(base, weeklyAdContext);
   }
@@ -214,7 +208,7 @@ export function listResolvedProviderRollout(input?: {
   weeklyAdPromotionByChain?: Partial<Record<StoreChain, WeeklyAdRolloutContext>>;
 }): ProviderRolloutEntry[] {
   return listProviderRollout().map((entry) => {
-    if (entry.chain === "walmart" || MEAL_PRICING_COMING_LATER_CHAINS.has(entry.chain)) {
+    if (MEAL_PRICING_COMING_LATER_CHAINS.has(entry.chain)) {
       return entry;
     }
 
@@ -253,19 +247,3 @@ function resolveComingLaterMealPricingRollout(
   };
 }
 
-function resolveWalmartRollout(
-  base: ProviderRolloutEntry,
-  weeklyAdContext?: WeeklyAdRolloutContext,
-): ProviderRolloutEntry {
-  const rehearsalNote =
-    weeklyAdContext?.usesWeeklyAdSource
-      ? " Saved test prices may exist in development; they are not live store deals."
-      : "";
-
-  return {
-    ...base,
-    status: "coming-soon",
-    recommendationEnabled: false,
-    note: `${base.note}${rehearsalNote}`,
-  };
-}

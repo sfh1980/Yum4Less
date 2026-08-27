@@ -29,7 +29,7 @@ function store(
 }
 
 describe("filterSettingsSelectableStores", () => {
-  it("includes Kroger, Aldi, Publix, and Food Lion even when recommendation gates are off", () => {
+  it("includes Kroger, Aldi, Publix, Food Lion, Lidl, and Walmart even when recommendation gates are off", () => {
     const filtered = filterSettingsSelectableStores([
       store({ id: "osm-1", name: "Wawa", chain: "unknown" }),
       store({
@@ -46,6 +46,13 @@ describe("filterSettingsSelectableStores", () => {
         chain: "food-lion",
         recommendationEnabled: false,
       }),
+      store({ id: "lidl-1", name: "Lidl", chain: "lidl", recommendationEnabled: false }),
+      store({
+        id: "walmart-1",
+        name: "Walmart Supercenter",
+        chain: "walmart",
+        recommendationEnabled: false,
+      }),
     ]);
 
     expect(filtered.map((entry) => entry.id)).toEqual([
@@ -53,6 +60,8 @@ describe("filterSettingsSelectableStores", () => {
       "aldi-1",
       "publix-1",
       "food-lion-1",
+      "lidl-1",
+      "walmart-1",
     ]);
   });
 

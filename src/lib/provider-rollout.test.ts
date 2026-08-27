@@ -34,10 +34,18 @@ describe("provider rollout", () => {
     expect(getProviderRolloutForStore("Ralphs").chain).toBe("kroger");
   });
 
-  it("labels Food Lion with shopper-facing estimates copy before promotion passes", () => {
-    const rollout = getProviderRolloutForStore("Food Lion");
+  it("labels Walmart with shopper-facing estimates copy before promotion passes", () => {
+    const rollout = getProviderRolloutForStore("Walmart Supercenter");
 
-    expect(rollout.chain).toBe("food-lion");
+    expect(rollout.chain).toBe("walmart");
+    expect(rollout.note).toContain("saved sale prices");
+    expect(rollout.note).toContain("verify in store");
+  });
+
+  it("labels Lidl with shopper-facing estimates copy before promotion passes", () => {
+    const rollout = getProviderRolloutForStore("Lidl");
+
+    expect(rollout.chain).toBe("lidl");
     expect(rollout.note).toContain("saved sale prices");
     expect(rollout.note).toContain("verify in store");
   });
@@ -132,16 +140,16 @@ describe("resolveProviderRolloutForStore", () => {
     expect(rollout.note).toContain("saved sale prices");
   });
 
-  it("keeps Walmart coming soon even when weekly-ad promotion would pass", () => {
+  it("promotes Walmart to weekly-ad-preview when promotion gates pass", () => {
     const rollout = resolveProviderRolloutForStore("Walmart Supercenter", {
       matchedIngredientCount: 6,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: true,
     });
 
-    expect(rollout.status).toBe("coming-soon");
-    expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toContain("dinner price estimates are not available");
+    expect(rollout.status).toBe("weekly-ad-preview");
+    expect(rollout.recommendationEnabled).toBe(true);
+    expect(rollout.note).toContain("saved sale prices");
   });
 
   it("enables Aldi weekly-ad-preview when promotion gates pass", () => {
@@ -168,16 +176,16 @@ describe("resolveProviderRolloutForStore", () => {
     expect(rollout.note).toContain("saved sale prices");
   });
 
-  it("keeps Lidl coming soon even when weekly-ad observations exist", () => {
+  it("enables Lidl weekly-ad-preview when promotion gates pass", () => {
     const rollout = resolveProviderRolloutForStore("Lidl", {
       matchedIngredientCount: 5,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: true,
     });
 
-    expect(rollout.status).toBe("coming-soon");
-    expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toContain("Saved test prices may exist in development");
+    expect(rollout.status).toBe("weekly-ad-preview");
+    expect(rollout.recommendationEnabled).toBe(true);
+    expect(rollout.note).toContain("saved sale prices");
   });
 
   it("keeps Food Lion limited when weekly-ad source exists but promotion has not passed", () => {
@@ -216,6 +224,25 @@ describe("resolveProviderRolloutForStore", () => {
     );
     expect(rollout.find((entry) => entry.chain === "walmart")?.status).toBe(
       "coming-soon",
+    );
+  });
+
+  it("lists resolved Walmart as weekly-ad-preview when that chain's gates pass", () => {
+    const rollout = listResolvedProviderRollout({
+      weeklyAdPromotionByChain: {
+        walmart: {
+          matchedIngredientCount: 6,
+          usesWeeklyAdSource: true,
+          weeklyAdPromotionPassed: true,
+        },
+      },
+    });
+
+    expect(rollout.find((entry) => entry.chain === "walmart")?.status).toBe(
+      "weekly-ad-preview",
+    );
+    expect(rollout.find((entry) => entry.chain === "walmart")?.recommendationEnabled).toBe(
+      true,
     );
   });
 });

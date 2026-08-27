@@ -23,7 +23,7 @@ Priorities:
 2. Keep contracts explicit and recommendation outcomes explainable.
 3. Prefer small, explicit services over heavy abstractions or premature microservices.
 4. Minimize retained location and preference data.
-5. **v1 ranked chains:** Kroger family, Aldi, Publix, and Food Lion when promotion gates pass; Walmart ranked pricing deferred; other chains map/context unless direction changes — see **`PROJECT_CONTINUITY.md` → Decision log**.
+5. **v1 ranked chains:** Kroger-family banners, Aldi, Publix, Food Lion, Lidl, and Walmart when promotion gates pass; BJ's and other chains stay map/context unless direction changes — see **`PROJECT_CONTINUITY.md` → Decision log**.
 6. Respect existing repository conventions unless the user asks to change them.
 
 Rules:

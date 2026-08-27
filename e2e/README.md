@@ -11,7 +11,7 @@ Committed browser tests (`@playwright/test`) gate merge via `npm run test:e2e:ci
 | `gps-deny.spec.ts` | GPS deny → ZIP + real pin-step continue (no cache seed) |
 | `faq-terms.spec.ts` | `/faq`, `/faq/[slug]`, `/terms`; Settings/Feedback legal links; Back from Terms keeps theme/tab |
 | `mvp-flow.spec.ts` | Happy path, accordion, splash branding, FAQ from map `?`, save-to-Saved |
-| `settings-stores.spec.ts` | Multi-store scoping, four-chain store list, ZIP validation |
+| `settings-stores.spec.ts` | Multi-store scoping, ranked-chain store list, ZIP validation |
 | `coordinate-first.spec.ts` | GPS-primary wizard (`Use GPS`) to ingredients |
 | `coordinate-first-cold.spec.ts` | Cold-start geolocation path before catalog cache warms |
 | `single-store-map-overlay.spec.ts` | Single-store map overlay from ingredients step |

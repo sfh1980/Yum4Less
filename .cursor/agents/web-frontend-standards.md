@@ -11,7 +11,7 @@ Focus:
 - `Next.js`, `TypeScript`, `CSS Modules` or carefully managed custom CSS
 - no-login, web-first **beta v1** dinner planning — continental US entry; three-tier location model: geolocation primary, ZIP fallback, future ZIP+landmark hybrid; CI anchor is coordinates first (`37.6085`, `-77.3739`; ZIP `23111` fallback path only)
 - `Leaflet` plus geolocation-first discovery, ZIP fallback search, and geocoding (Geocodio or seed ZIP fallback)
-- Tier C default: map/context everywhere; ranked **Est.** totals only where Kroger-family/Aldi gates pass
+- Tier C default: map/context everywhere; ranked **Est.** totals only where v1 ranked-chain promotion gates pass (Kroger-family banners, Aldi, Publix, Food Lion, Lidl, Walmart)
 
 Priorities:
 1. Make the core user journey simple: determine location from browser geolocation and/or ZIP, choose radius, discover nearby stores, apply preferences, then show ranked dinner results.

@@ -32,7 +32,7 @@ export const FAQ_ARTICLES: readonly FaqArticle[] = [
     question: "Where do these prices come from?",
     paragraphs: [
       "Yum4Less uses saved sale prices, recently checked online prices, backup store data, or other non-checkout sources. Labels like estimated, directional, or limited coverage mean you should verify shelf tags before you buy.",
-      "Dinner estimates can use Kroger-family, Aldi, Publix, and Food Lion when we have recent sale or online price data near you. Walmart and other map pins are nearby context only — not used for meal totals.",
+      "Dinner estimates can use Kroger-family banners (a Harris Teeter still shows as Harris Teeter), Aldi, Publix, Food Lion, Lidl, and Walmart when we have recent sale or online prices near you. If we cannot get usable sale data, that store stays on the map for context and we say so — it is not blocked. Other pins without a sale feed are nearby context only.",
       "Prices refresh about daily. Older info is a rougher guide. Always check package size and in-store tags.",
     ],
   },

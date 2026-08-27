@@ -12,9 +12,6 @@ export function buildStoreListStatusPill(input: StorePricingStatusInput): string
     if (input.rolloutStatus === "limited-coverage") {
       return "Limited coverage — estimate only";
     }
-    if (input.chain === "walmart") {
-      return "Context only — no pricing yet";
-    }
     return "Context only";
   }
 
@@ -43,10 +40,6 @@ export function buildStoreMapPricingLabel(input: StorePricingStatusInput): strin
       return "Est. store prices — verify in store";
     }
     return "Limited sale coverage — estimate only";
-  }
-
-  if (input.chain === "walmart") {
-    return "No dinner estimates yet";
   }
 
   if (input.rolloutStatus === "limited-coverage") {

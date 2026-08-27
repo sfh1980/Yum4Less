@@ -5,6 +5,7 @@ import {
   getCoordinateSanityPromotionRequirement,
   inferStoreChainFromCatalog,
   inferStoreChainFromName,
+  inferShopperBannerDisplayName,
   listProviderCatalogRolloutChains,
   SETTINGS_SELECTABLE_CHAINS,
   SHOPPER_RANKED_V1_CHAINS,
@@ -47,6 +48,13 @@ describe("chain rollout policy", () => {
     expect(inferStoreChainFromName("Trader Joe's")).toBe("trader-joes");
   });
 
+  it("shows Kroger-family storefronts as their banner, not the family", () => {
+    expect(inferShopperBannerDisplayName("Harris Teeter")).toBe("Harris Teeter");
+    expect(inferShopperBannerDisplayName("Ralphs")).toBe("Ralphs");
+    expect(inferShopperBannerDisplayName("Kroger Mechanicsville")).toBe("Kroger");
+    expect(inferShopperBannerDisplayName("Walmart Supercenter")).toBe("Walmart");
+  });
+
   it("resolves locator-backed catalog stores from sourceName and id before display name", () => {
     expect(
       inferStoreChainFromCatalog({
@@ -87,7 +95,7 @@ describe("chain rollout policy", () => {
       expect.objectContaining({ required: false }),
     );
     expect(getCoordinateSanityPromotionRequirement("walmart").note).toContain(
-      "context-only",
+      "same weekly-ad coverage floors",
     );
   });
 

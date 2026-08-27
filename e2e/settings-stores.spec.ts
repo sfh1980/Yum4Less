@@ -32,6 +32,16 @@ test.describe("Settings store selection", () => {
       await foodLionCheckboxes.nth(index).uncheck();
     }
 
+    const lidlCheckboxes = page.getByRole("checkbox", { name: /Lidl —/ });
+    for (let index = 0; index < await lidlCheckboxes.count(); index += 1) {
+      await lidlCheckboxes.nth(index).uncheck();
+    }
+
+    const walmartCheckboxes = page.getByRole("checkbox", { name: /Walmart —/ });
+    for (let index = 0; index < await walmartCheckboxes.count(); index += 1) {
+      await walmartCheckboxes.nth(index).uncheck();
+    }
+
     await page.getByRole("button", { name: "Continue" }).click();
     await completeWelcomeFlow(page);
 
@@ -58,6 +68,8 @@ test.describe("Settings store selection", () => {
     await expect(page.getByRole("checkbox", { name: /Aldi/ }).first()).toBeVisible();
     await expect(page.getByRole("checkbox", { name: /Publix/ }).first()).toBeVisible();
     await expect(page.getByRole("checkbox", { name: /Food Lion/ }).first()).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: /Lidl/ }).first()).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: /Walmart/ }).first()).toBeVisible();
   });
 });
 

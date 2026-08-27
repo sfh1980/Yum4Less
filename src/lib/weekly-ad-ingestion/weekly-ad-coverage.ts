@@ -110,10 +110,6 @@ export function weeklyAdPromotionGatesPass(
   coverage: WeeklyAdStoreCoverage,
   chain: StoreChain,
 ): boolean {
-  if (chain === "walmart") {
-    return false;
-  }
-
   if (!WEEKLY_AD_RANKED_PRICING_CHAINS.has(chain as WeeklyAdChain)) {
     return false;
   }

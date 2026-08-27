@@ -46,6 +46,8 @@ function assertE2eSettingsBootstrapStores(databaseName) {
     "aldi-mechanicsville",
     "publix-1626",
     "food-lion-mechanicsville",
+    "lidl-laburnum",
+    "walmart-rocketts",
   ];
   for (const storeId of requiredIds) {
     const count = psqlQueryScalar(

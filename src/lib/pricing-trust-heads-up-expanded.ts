@@ -25,7 +25,7 @@ export const PRICING_TRUST_HEADS_UP_DETAIL_SECTIONS: readonly PricingTrustHeadsU
     {
       heading: "Which stores",
       paragraphs: [
-        "Dinner estimates can use Kroger-family, Aldi, Publix, and Food Lion when we have recent sale or online price data near you. Walmart and other map pins are nearby context only — not used for meal totals.",
+        "Dinner estimates can use Kroger-family banners (a Harris Teeter still shows as Harris Teeter), Aldi, Publix, Food Lion, Lidl, and Walmart when we have recent sale or online prices near you. If we cannot get usable sale data, that store stays on the map for context and we say so — it is not blocked. Other pins without a sale feed are nearby context only.",
       ],
     },
     {

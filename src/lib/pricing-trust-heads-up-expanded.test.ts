@@ -15,7 +15,7 @@ describe("pricing-trust-heads-up-expanded", () => {
     expect(text).toContain("estimated");
     expect(text).toContain("directional");
     expect(text).toContain("limited coverage");
-    expect(text).toContain("Kroger-family, Aldi, Publix, and Food Lion");
+    expect(text).toContain("Kroger-family banners");
     expect(text).toContain("Walmart");
     expect(text).toContain("verify");
     expect(text).not.toMatch(/promotion gates/i);

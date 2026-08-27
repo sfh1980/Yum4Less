@@ -30,11 +30,11 @@ const registry: ChainRegistryRow[] = [
   {
     chainId: "walmart",
     displayName: "Walmart",
-    rolloutStage: "map_context",
-    shopperRanked: false,
-    settingsSelectable: false,
+    rolloutStage: "ranked",
+    shopperRanked: true,
+    settingsSelectable: true,
     weeklyAdEligible: true,
-    promotionBlocked: true,
+    promotionBlocked: false,
     flippMerchantName: "Walmart",
     primaryStoreIdPrefixes: ["walmart-"],
     nameMatchFragments: ["walmart"],
@@ -123,7 +123,7 @@ describe("buildStoreCoverageRow", () => {
     expect(row.usableInApp).toBe(true);
   });
 
-  it("does not treat Walmart sale rows as usable ranked dinners", () => {
+  it("treats Walmart sale rows as usable when the banner is shopper-ranked", () => {
     const row = buildStoreCoverageRow(
       store({
         storeId: "walmart-23111",
@@ -134,7 +134,7 @@ describe("buildStoreCoverageRow", () => {
       registry,
     );
     expect(row.sales).toBe(true);
-    expect(row.usableInApp).toBe(false);
+    expect(row.usableInApp).toBe(true);
   });
 });
 

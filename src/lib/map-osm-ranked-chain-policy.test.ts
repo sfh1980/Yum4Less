@@ -156,6 +156,15 @@ describe("map osm ranked chain policy", () => {
         longitude: -77.355424,
       },
       {
+        id: "walmart-b",
+        name: "Walmart Supercenter",
+        kind: "big-box",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.614,
+        longitude: -77.356,
+      },
+      {
         id: "lidl-a",
         name: "Lidl",
         kind: "grocery",
@@ -163,6 +172,15 @@ describe("map osm ranked chain policy", () => {
         state: "VA",
         latitude: 37.6362,
         longitude: -77.3605,
+      },
+      {
+        id: "lidl-b",
+        name: "Lidl",
+        kind: "grocery",
+        city: "Mechanicsville",
+        state: "VA",
+        latitude: 37.637,
+        longitude: -77.3615,
       },
       {
         id: "bjs-a",

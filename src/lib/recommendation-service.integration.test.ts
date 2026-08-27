@@ -176,11 +176,14 @@ describe("recommendation path through Postgres (CI-06)", () => {
       (store) => store.id === "walmart-rocketts",
     );
     if (walmartStore) {
-      expect(walmartStore.recommendationEnabled).toBe(false);
-      expect(walmartStore.rolloutStatus).toBe("coming-soon");
-      expect(walmartStore.rolloutNote).toContain(
-        "dinner price estimates are not available",
-      );
+      expect(walmartStore.chain).toBe("walmart");
+      if (walmartStore.recommendationEnabled) {
+        expect(walmartStore.rolloutStatus).toBe("weekly-ad-preview");
+      } else {
+        expect(["coming-soon", "limited-coverage"]).toContain(
+          walmartStore.rolloutStatus,
+        );
+      }
     }
     expect(searchOfficialProviderStores).toHaveBeenCalled();
     expect(buildProviderPricingPreviews).toHaveBeenCalled();
@@ -192,8 +195,8 @@ describe("recommendation path through Postgres (CI-06)", () => {
     );
 
     expect(experience.market.dataSource).toBe("database");
-    // Fixture Kroger rows fully cover sheet-pan chicken single-store; other dinners
-    // need ingredients Walmart fixture syncs but Walmart stays off ranked pricing.
+    // Fixture Kroger rows fully cover sheet-pan chicken single-store; Walmart
+    // fixture prices can rank when weekly-ad floors pass.
     expect(experience.recommendations.length).toBeGreaterThanOrEqual(1);
 
     const scores = experience.recommendations.map((meal) => meal.score.total);

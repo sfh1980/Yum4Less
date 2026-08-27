@@ -173,6 +173,33 @@ export function migrationEffectPresent(version, db) {
       return db.tableExists("active_markets") && db.tableExists("zip_geocode_cache");
     case "026":
       return db.tableExists("chain_registry") && db.tableExists("store_coverage");
+    case "027":
+      return (
+        db.tableExists("chain_registry") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from chain_registry
+             where chain_id = 'lidl'
+               and shopper_ranked = true
+               and settings_selectable = true
+               and rollout_stage = 'ranked'`,
+          ),
+        ) === 1
+      );
+    case "028":
+      return (
+        db.tableExists("chain_registry") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from chain_registry
+             where chain_id = 'walmart'
+               and shopper_ranked = true
+               and settings_selectable = true
+               and promotion_blocked = false
+               and rollout_stage = 'ranked'`,
+          ),
+        ) === 1
+      );
     default:
       return false;
   }

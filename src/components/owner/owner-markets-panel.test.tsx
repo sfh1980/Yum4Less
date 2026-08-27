@@ -125,7 +125,7 @@ describe("OwnerMarketsPanel", () => {
           zipCode: "90210",
           alreadyActive: false,
           location: { city: "Beverly Hills", state: "CA" },
-          stores: [{ name: "Walmart", city: "Beverly Hills", state: "CA", kind: "big-box" }],
+          stores: [{ name: "BJ's Wholesale Club", city: "Beverly Hills", state: "CA", kind: "big-box" }],
           warnings: [NO_RANKED_V1_CHAIN_PREVIEW_NOTICE],
         });
       }
@@ -141,7 +141,7 @@ describe("OwnerMarketsPanel", () => {
     await waitFor(() => {
       expect(screen.getByText(NO_RANKED_V1_CHAIN_PREVIEW_NOTICE)).toBeInTheDocument();
     });
-    expect(screen.getByText(/Walmart/)).toBeInTheDocument();
+    expect(screen.getByText(/BJ's Wholesale Club/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Activate 90210/i })).toBeInTheDocument();
   });
 });

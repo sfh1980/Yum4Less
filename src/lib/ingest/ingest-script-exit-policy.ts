@@ -10,9 +10,9 @@ export function shouldFailProviderPriceSyncExit(
 }
 
 /**
- * Weekly-ad flyer errors on unranked chains (Walmart, Lidl, Dollar General)
- * must not fail scheduled ingest. Kroger / Aldi / Publix / Food Lion stay
- * fail-loud. Missing `chain` on an error or persist failure stays fail-loud.
+ * Weekly-ad flyer errors on unranked chains (Dollar General research stub)
+ * must not fail scheduled ingest. Shopper-ranked banners stay fail-loud.
+ * Missing `chain` on an error or persist failure stays fail-loud.
  */
 export function isWeeklyAdFailLoudChain(chain: string | undefined): boolean {
   if (!chain) {

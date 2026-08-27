@@ -15,6 +15,7 @@ import {
   resolveProviderRolloutForCatalogStore,
   type StoreChain,
 } from "@/lib/provider-rollout";
+import { inferShopperBannerDisplayName } from "@/lib/chain-rollout-policy";
 import { searchOfficialProviderStores } from "@/lib/provider-market-service";
 import { deriveRankedPricingSource } from "@/lib/price-source-policy";
 import {
@@ -397,7 +398,7 @@ export function buildNearbyStoresForSearch(
           ),
         ),
         chain: rollout.chain,
-        chainLabel: rollout.label,
+        chainLabel: inferShopperBannerDisplayName(store.name) ?? rollout.label,
         rolloutStatus: rollout.status,
         recommendationEnabled: rollout.recommendationEnabled,
         rolloutNote: rollout.note,

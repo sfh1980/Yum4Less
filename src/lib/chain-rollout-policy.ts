@@ -7,6 +7,8 @@ export const SHOPPER_RANKED_V1_CHAINS = [
   "aldi",
   "publix",
   "food-lion",
+  "lidl",
+  "walmart",
 ] as const satisfies readonly StoreChain[];
 
 export type ShopperRankedV1Chain = (typeof SHOPPER_RANKED_V1_CHAINS)[number];
@@ -20,13 +22,11 @@ export const SETTINGS_SELECTABLE_CHAIN_ORDER: StoreChain[] = [
 
 /**
  * Chains eligible for weekly-ad ingest sync and promotion-readiness checks.
- * Includes Walmart so rehearsal/fixture ingest can persist rows, but
- * `weeklyAdPromotionGatesPass()` still hard-blocks Walmart — never promotable yet.
+ * Same set as shopper-ranked v1 — floors in `weeklyAdPromotionGatesPass()` apply
+ * equally, including Walmart.
  */
 export const WEEKLY_AD_RANKED_PRICING_CHAINS = new Set<WeeklyAdChain>([
   ...SHOPPER_RANKED_V1_CHAINS,
-  "lidl",
-  "walmart",
 ]);
 
 /**
@@ -36,8 +36,6 @@ export const WEEKLY_AD_RANKED_PRICING_CHAINS = new Set<WeeklyAdChain>([
  */
 export const PROVIDER_CATALOG_DISPLAY_CHAINS: StoreChain[] = [
   ...SHOPPER_RANKED_V1_CHAINS,
-  "lidl",
-  "walmart",
   "bjs",
 ];
 
@@ -58,30 +56,35 @@ export function listMapContextOnlyCatalogChains(): StoreChain[] {
  */
 export const MAP_CONTEXT_ONLY_NAME_FRAGMENTS = ["costco", "sam's club"] as const;
 
-const KROGER_FAMILY_NAME_MARKERS = [
-  "kroger",
-  "harris teeter",
-  "ralphs",
-  "fred meyer",
-  "king soopers",
-  "smith's",
-  "smiths",
-  "fry's",
-  "frys",
-  "qfc",
-  "mariano",
-  "pick n save",
-  "metro market",
-  "jay c",
-  "food 4 less",
-  "food4less",
-  "dillons",
-  "gerbes",
-  "baker's",
-  "bakers",
-  "city market",
-  "pay less",
+/** Shopper-facing banner names for Kroger-family storefronts. Family is plumbing only. */
+export const KROGER_FAMILY_BANNERS = [
+  { fragment: "harris teeter", label: "Harris Teeter" },
+  { fragment: "food 4 less", label: "Food 4 Less" },
+  { fragment: "food4less", label: "Food 4 Less" },
+  { fragment: "pick n save", label: "Pick n Save" },
+  { fragment: "metro market", label: "Metro Market" },
+  { fragment: "king soopers", label: "King Soopers" },
+  { fragment: "fred meyer", label: "Fred Meyer" },
+  { fragment: "city market", label: "City Market" },
+  { fragment: "pay less", label: "Pay Less" },
+  { fragment: "jay c", label: "Jay C" },
+  { fragment: "ralphs", label: "Ralphs" },
+  { fragment: "fry's", label: "Fry's" },
+  { fragment: "frys", label: "Fry's" },
+  { fragment: "smith's", label: "Smith's" },
+  { fragment: "smiths", label: "Smith's" },
+  { fragment: "qfc", label: "QFC" },
+  { fragment: "mariano", label: "Mariano's" },
+  { fragment: "dillons", label: "Dillons" },
+  { fragment: "gerbes", label: "Gerbes" },
+  { fragment: "baker's", label: "Baker's" },
+  { fragment: "bakers", label: "Baker's" },
+  { fragment: "kroger", label: "Kroger" },
 ] as const;
+
+const KROGER_FAMILY_NAME_MARKERS = KROGER_FAMILY_BANNERS.map(
+  (banner) => banner.fragment,
+);
 
 export const COORDINATE_SANITY_EXCEPTIONS: Record<string, string> = {
   // Add store ids here only after a human has verified the deliberate offset.
@@ -117,6 +120,23 @@ export function getCanonicalShopperChainDisplayName(
   chain: StoreChain,
 ): string | undefined {
   return CANONICAL_SHOPPER_CHAIN_DISPLAY_NAMES[chain];
+}
+
+/** Banner shoppers should see. Harris Teeter stays Harris Teeter, not Kroger. */
+export function inferShopperBannerDisplayName(storeName: string): string | undefined {
+  const normalized = storeName.trim().toLowerCase();
+  if (!normalized) {
+    return undefined;
+  }
+
+  const familyMatch = [...KROGER_FAMILY_BANNERS]
+    .sort((left, right) => right.fragment.length - left.fragment.length)
+    .find((banner) => normalized.includes(banner.fragment));
+  if (familyMatch) {
+    return familyMatch.label;
+  }
+
+  return getCanonicalShopperChainDisplayName(inferStoreChainFromName(storeName));
 }
 
 export function isPublixCatalogSourceName(
@@ -266,7 +286,7 @@ export function getCoordinateSanityPromotionRequirement(
     case "lidl":
       return {
         required: true,
-        note: "Lidl is still pre-promotion; coordinate sanity is part of its required rollout audit.",
+        note: "Lidl promotion audits must pass coordinate sanity before rollout claims expand.",
       };
     case "kroger":
     case "aldi":
@@ -276,10 +296,9 @@ export function getCoordinateSanityPromotionRequirement(
         note: `${chain} remains on the current rollout path until address-backed audit evidence is persisted; do not regress live ranked pricing while stores lack street-address rows.`,
       };
     case "walmart":
-    case "bjs":
       return {
         required: false,
-        note: `${chain} is context-only today, so coordinate sanity is tracked as a catalog audit rather than a ranked-promotion blocker.`,
+        note: `${chain} uses the same weekly-ad coverage floors as other ranked banners; coordinate sanity is tracked as a catalog audit.`,
       };
     default:
       return {

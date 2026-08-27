@@ -1,6 +1,7 @@
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 import {
   getCanonicalShopperChainDisplayName,
+  inferShopperBannerDisplayName,
   isPublixCatalogSourceName,
 } from "@/lib/chain-rollout-policy";
 
@@ -44,6 +45,11 @@ export function formatStoreCityState(
 export function resolveStoreDisplayHeadline(store: StoreDisplayNameInput): string {
   if (isPublixCatalogSourceName(store.sourceName)) {
     return getCanonicalShopperChainDisplayName("publix") ?? "Publix";
+  }
+
+  const bannerFromName = inferShopperBannerDisplayName(store.name);
+  if (bannerFromName) {
+    return bannerFromName;
   }
 
   if (store.chain && store.chain !== "unknown") {

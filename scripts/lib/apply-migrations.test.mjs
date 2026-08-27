@@ -39,7 +39,9 @@ describe("listInitMigrationFiles", () => {
     expect(files).toContain("024_ingredient_match_catalog.sql");
     expect(files).toContain("025_active_markets_and_zip_geocode_cache.sql");
     expect(files).toContain("026_chain_registry_and_store_coverage.sql");
-    expect(files.length).toBeGreaterThanOrEqual(23);
+    expect(files).toContain("027_promote_lidl_shopper_ranked.sql");
+    expect(files).toContain("028_promote_walmart_shopper_ranked.sql");
+    expect(files.length).toBeGreaterThanOrEqual(24);
   });
 });
 
@@ -167,6 +169,60 @@ describe("migrationEffectPresent", () => {
           name === "chain_registry" || name === "store_coverage",
       }),
     ).toBe(true);
+    expect(
+      migrationEffectPresent("027", {
+        ...db,
+        tableExists: (name) => name === "chain_registry",
+        queryScalar: (sql) =>
+          sql.includes("chain_id = 'lidl'") && sql.includes("shopper_ranked = true")
+            ? "1"
+            : "0",
+      }),
+    ).toBe(true);
+    expect(
+      migrationEffectPresent("027", {
+        ...db,
+        tableExists: (name) => name === "chain_registry",
+        queryScalar: () => "0",
+      }),
+    ).toBe(false);
+    expect(
+      migrationEffectPresent("028", {
+        ...db,
+        tableExists: (name) => name === "chain_registry",
+        queryScalar: (sql) =>
+          sql.includes("chain_id = 'walmart'") &&
+          sql.includes("shopper_ranked = true") &&
+          sql.includes("promotion_blocked = false")
+            ? "1"
+            : "0",
+      }),
+    ).toBe(true);
+    expect(
+      migrationEffectPresent("028", {
+        ...db,
+        tableExists: (name) => name === "chain_registry",
+        queryScalar: () => "0",
+      }),
+    ).toBe(false);
+  });
+
+  it("has an effect probe for every db/init migration file", () => {
+    const source = readFileSync(
+      join(process.cwd(), "scripts", "lib", "apply-migrations.mjs"),
+      "utf8",
+    );
+    const start = source.indexOf("export function migrationEffectPresent");
+    const end = source.indexOf("/** @typedef {{");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const body = source.slice(start, end);
+    for (const fileName of listInitMigrationFiles()) {
+      const version = parseMigrationVersion(fileName);
+      expect(body, `missing migrationEffectPresent case for ${fileName}`).toContain(
+        `case "${version}":`,
+      );
+    }
   });
 
   it("022/023 matrix: members<2 → true (vacuous no-op)", () => {

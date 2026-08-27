@@ -453,13 +453,6 @@ export function assertProductionRankedRolloutGates(
   for (const store of rankedStores) {
     expect(store.rolloutStatus).not.toBe("coming-soon");
   }
-
-  for (const store of stores) {
-    if (store.chain === "walmart") {
-      expect(store.recommendationEnabled).toBe(false);
-      expect(store.rolloutStatus).toBe("coming-soon");
-    }
-  }
 }
 
 async function getScopedSelectedStoreIds(page: Page): Promise<string[]> {
@@ -515,7 +508,7 @@ export async function assertMarketSearchStoreResults(
   await closeMapOverlay(page);
 }
 
-export async function assertWalmartContextOnlyOnMap(
+export async function assertWalmartSameFloorsOnMap(
   page: Page,
   stores: PublicNearbyStore[],
 ) {
@@ -524,22 +517,26 @@ export async function assertWalmartContextOnlyOnMap(
     return;
   }
 
-  expect(walmart.recommendationEnabled).toBe(false);
-  expect(walmart.rolloutStatus).toBe("coming-soon");
+  if (walmart.recommendationEnabled) {
+    expect(walmart.rolloutStatus).not.toBe("coming-soon");
+  } else {
+    expect(["coming-soon", "limited-coverage"]).toContain(walmart.rolloutStatus);
+  }
 
   await openMapOverlay(page);
   const storePanel = page.locator(".map-discovery-layout");
   const walmartCard = storePanel.locator(`[data-store-id="${walmart.id}"]`);
 
   if ((await walmartCard.count()) > 0) {
-    await expect(
-      walmartCard.getByText(/Context only|no pricing yet|coming soon/i),
-    ).toBeVisible();
-  } else {
-    // Map list is scoped to Settings-selected ranked stores; Walmart is context-only and not selectable.
-    await expect(
-      storePanel.getByText(/Gray badges.*context only/i),
-    ).toBeVisible();
+    if (walmart.recommendationEnabled) {
+      await expect(
+        walmartCard.getByText(/Est\. (?:sale|store) prices/i),
+      ).toBeVisible();
+    } else {
+      await expect(
+        walmartCard.getByText(/Context only|Limited coverage|Coming soon/i),
+      ).toBeVisible();
+    }
   }
 
   await closeMapOverlay(page);
@@ -558,7 +555,7 @@ export async function runCoreMvpFlow(
 
   if (includeMapAssertions) {
     await assertMarketSearchStoreResults(page, marketBody.market.nearbyStores);
-    await assertWalmartContextOnlyOnMap(page, marketBody.market.nearbyStores);
+    await assertWalmartSameFloorsOnMap(page, marketBody.market.nearbyStores);
   }
 
   await expect(page.getByText(/^Priced$/i)).toHaveCount(0);

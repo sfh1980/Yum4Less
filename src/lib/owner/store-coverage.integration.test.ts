@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { SHOPPER_RANKED_V1_CHAINS } from "@/lib/chain-rollout-policy";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import { listChainRegistry, listStoreCoverage } from "@/lib/owner/store-coverage-repository";
 
@@ -33,8 +34,19 @@ describe("chain_registry and store_coverage (integration)", () => {
       ]),
     );
     expect(registry.find((row) => row.chainId === "kroger")?.shopperRanked).toBe(true);
-    expect(registry.find((row) => row.chainId === "walmart")?.promotionBlocked).toBe(true);
+    expect(registry.find((row) => row.chainId === "lidl")?.shopperRanked).toBe(true);
+    expect(registry.find((row) => row.chainId === "lidl")?.rolloutStage).toBe("ranked");
+    expect(registry.find((row) => row.chainId === "walmart")?.shopperRanked).toBe(true);
+    expect(registry.find((row) => row.chainId === "walmart")?.settingsSelectable).toBe(true);
+    expect(registry.find((row) => row.chainId === "walmart")?.promotionBlocked).toBe(false);
+    expect(registry.find((row) => row.chainId === "walmart")?.rolloutStage).toBe("ranked");
     expect(registry.find((row) => row.chainId === "target")?.rolloutStage).toBe("upcoming");
+    expect(
+      registry
+        .filter((row) => row.shopperRanked)
+        .map((row) => row.chainId)
+        .sort(),
+    ).toEqual([...SHOPPER_RANKED_V1_CHAINS].sort());
 
     const coverage = await listStoreCoverage({
       limit: 10,
@@ -48,7 +60,7 @@ describe("chain_registry and store_coverage (integration)", () => {
     });
     expect(coverage.summaries.find((row) => row.chainId === "walmart")).toMatchObject({
       chainLabel: "Walmart",
-      rolloutStage: "map_context",
+      rolloutStage: "ranked",
     });
   });
 });

@@ -171,7 +171,7 @@ describe("weekly ad coverage", () => {
     expect(weeklyAdPromotionGatesPass(coverage, "kroger")).toBe(false);
   });
 
-  it("never promotes Walmart even with strong weekly-ad coverage", () => {
+  it("promotes Walmart when weekly-ad coverage meets the same floors as other ranked banners", () => {
     const coverage = buildWeeklyAdStoreCoverage({
       storeId: "walmart-rocketts",
       chain: "walmart",
@@ -210,10 +210,10 @@ describe("weekly ad coverage", () => {
     expect(coverage.matchedIngredientCount).toBeGreaterThanOrEqual(
       MIN_WEEKLY_AD_PROMOTION_MATCHES,
     );
-    expect(weeklyAdPromotionGatesPass(coverage, "walmart")).toBe(false);
+    expect(weeklyAdPromotionGatesPass(coverage, "walmart")).toBe(true);
   });
 
-  it("promotes Aldi and Food Lion for ranked weekly-ad pricing when gates pass", () => {
+  it("promotes Aldi, Food Lion, Lidl, and Walmart for ranked weekly-ad pricing when gates pass", () => {
     const strongCoverage = {
       storeId: "aldi-mechanicsville",
       chain: "aldi" as const,
@@ -231,6 +231,18 @@ describe("weekly ad coverage", () => {
       weeklyAdPromotionGatesPass(
         { ...strongCoverage, storeId: "food-lion-mechanicsville", chain: "food-lion" },
         "food-lion",
+      ),
+    ).toBe(true);
+    expect(
+      weeklyAdPromotionGatesPass(
+        { ...strongCoverage, storeId: "lidl-laburnum", chain: "lidl" },
+        "lidl",
+      ),
+    ).toBe(true);
+    expect(
+      weeklyAdPromotionGatesPass(
+        { ...strongCoverage, storeId: "walmart-rocketts", chain: "walmart" },
+        "walmart",
       ),
     ).toBe(true);
   });

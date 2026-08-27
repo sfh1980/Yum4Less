@@ -21,9 +21,9 @@ Source of truth for locked decisions: **`PROJECT_CONTINUITY.md` → [Decision lo
 
 - **Product:** location-aware **dinner** meal planning with budget, ingredient-count, dietary, and one-store vs multi-store preferences.
 - **Geography:** continental US; three-tier location model — browser/mobile **geolocation primary**, **ZIP fallback**, future **ZIP + landmark hybrid** (`us-service-area.ts`). Internal representation is always coordinates; server derives ZIP for ingest when required. CI/E2E anchor: coordinates **`37.6085`, `-77.3739`** primary; ZIP **`23111`** fallback-path tests only — not a hard geo fence.
-- **Default UX (Tier C):** map and nearby-store **context** everywhere; **ranked meal estimates** for Kroger-family, Aldi, Publix, and Food Lion when ingested data and promotion gates pass. Tier C is normal outside those gates, not failure.
-- **v1 ranked chains:** **Kroger family** (official API + weekly-ad fallback), **Aldi**, **Publix**, and **Food Lion** (weekly-ad) when promotion gates pass.
-- **Other chains** (BJ's, Walmart, etc.): map/context or **upcoming releases** — not the current production-ranked scope unless direction changes.
+- **Default UX (Tier C):** map and nearby-store **context** everywhere; **ranked meal estimates** for Kroger-family banners, Aldi, Publix, Food Lion, Lidl, and Walmart when ingested data and promotion gates pass. Tier C is normal outside those gates, not failure.
+- **v1 ranked chains:** **Kroger family** (official API + weekly-ad fallback; shoppers see the **banner** on the building — Harris Teeter stays Harris Teeter), **Aldi**, **Publix**, **Food Lion**, **Lidl**, and **Walmart** (weekly-ad) when promotion gates pass. Same sale/price floors for every ranked banner. Missing estimates stay map context with an honest reason — not a permanent block.
+- **Other chains** (BJ's, etc.): map/context or **upcoming releases** — not the current production-ranked scope unless direction changes.
 - **Auth:** no user accounts in v1.
 - **Hosting:** self-hosted homelab deploy is an **active queued phase** with defined precursors (see **`PROJECT_CONTINUITY.md` → Resume**); not indefinitely deferred.
 - **Labeling:** v1 = **beta** — keep `estimated`, `directional`, `limited coverage`, verify-in-store, and fixture/rehearsal honesty.

@@ -142,7 +142,7 @@ describe("owner ingest markets", () => {
     discoverMapContextStores.mockResolvedValue({
       stores: [
         {
-          name: "Walmart Supercenter",
+          name: "BJ's Wholesale Club",
           city: "Richmond",
           state: "VA",
           kind: "big-box",

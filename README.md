@@ -2,7 +2,7 @@
 
 Yum4Less helps people find **affordable dinner ideas** using nearby grocery stores, weekly-sale data, and practical filters (budget, dietary, single-store vs multi-store shopping). Ranked totals are **estimates** — verify in store before checkout.
 
-**Beta v1** accepts continental US ZIP codes and browser geolocation. The map and store context work broadly; **ranked meal estimates** use **Kroger-family, Aldi, Publix, and Food Lion** when daily ingest and promotion gates pass (Tier C — map/context only — is normal for Walmart and other unsupported chains).
+**Beta v1** accepts continental US ZIP codes and browser geolocation. The map and store context work broadly; **ranked meal estimates** use **Kroger-family banners, Aldi, Publix, Food Lion, Lidl, and Walmart** when daily ingest and promotion gates pass (Tier C — map/context only — is normal when those floors do not pass, and for BJ's and other unsupported chains).
 
 > **Other docs:** [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) — project history, [**redesign plan**](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25), decisions, verification snapshot · [`docs/redesign/redesign-analysis-handoff.md`](docs/redesign/redesign-analysis-handoff.md) — redesign slice handoff summary · [`AGENTS.md`](AGENTS.md) — Cursor agents, MCP, test gates · [Customer feedback](docs/feedback-path.md)
 
@@ -12,7 +12,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 **Slices 1–5** and shell **D1–D6** are **shipped**. Full locks and history → [`PROJECT_CONTINUITY.md` → Redesign plan](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25).
 
-**What shipped:** Splash → GPS or ZIP+pin onboarding; **6-tab** bottom nav (Home, Deals, Cook, Saved, Feedback, Settings); **budget + dietary** → ingredients → pantry → rank → **stacked accordion** results; **TheMealDB** dinners with a full recipe page (short internal writeups are not ranked); store scope from setup/Settings (**Kroger, Aldi, Publix, and Food Lion**); ingredient gate + category chips; map **link + overlay**; session pantry prompt; device-local Saved meals; light/dark theme with **mockup Theme C/D tokens** (D7, 2026-06-26).
+**What shipped:** Splash → GPS or ZIP+pin onboarding; **6-tab** bottom nav (Home, Deals, Cook, Saved, Feedback, Settings); **budget + dietary** → ingredients → pantry → rank → **stacked accordion** results; **TheMealDB** dinners with a full recipe page (short internal writeups are not ranked); store scope from setup/Settings (**Kroger, Aldi, Publix, Food Lion, Lidl, and Walmart**); ingredient gate + category chips; map **link + overlay**; session pantry prompt; device-local Saved meals; light/dark theme with **mockup Theme C/D tokens** (D7, 2026-06-26).
 
 **Still deferred:** Cross-device saved meals (needs accounts), cuisine filters (R11), Section H content restyle.
 
@@ -94,7 +94,7 @@ Without Postgres + ingest, ranked pricing stays empty and map pins remain bootst
 4. The recommendation engine ranks **TheMealDB** recipes that have a full recipe page against ingested prices where gates allow.
 5. Results show **Est.** totals, trust labels, and shopping plans in a **stacked accordion** (one card expanded at a time). **Cook** tab opens results when a rank session exists.
 
-**v1 production-ranked chains:** Kroger family (official API + weekly-ad fallback), Aldi, Publix, and Food Lion (weekly-ad). Walmart and other unsupported chains remain map context only.
+**v1 production-ranked chains:** Kroger-family banners (official API + weekly-ad fallback; Harris Teeter stays Harris Teeter), Aldi, Publix, Food Lion, Lidl, and Walmart (weekly-ad) when promotion gates pass. Same floors for every ranked banner. BJ's and other unsupported chains remain map context only.
 
 **Not shipped:** user accounts, live checkout prices, Saved tab persistence, cuisine chips (R11). **Shipped on hardware:** TrueNAS Custom App (`db`+`app`+`ingest`), Watchtower, Cloudflare Tunnel at [`https://yum4less.com`](https://yum4less.com) — see [`docs/homelab-deploy.md`](docs/homelab-deploy.md).
 
