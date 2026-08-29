@@ -4,9 +4,12 @@ import { getMarketDataSnapshot } from "@/lib/market-repository";
 import { buildWeeklyAdIngestStoreCandidates } from "@/lib/ingest/weekly-ad-ingest-store-selection";
 import {
   filterCatalogStoresNearLocation,
-  resolveIngestRadiusMiles,
   resolveScheduledIngestZipCodes,
 } from "@/lib/store-catalog-sync";
+import {
+  resolveIngestFenceForZip,
+  storePassesIngestFence,
+} from "@/lib/market-ingest-fence";
 import {
   isWeeklyAdChain,
   runWeeklyAdIngestionForStores,
@@ -29,7 +32,6 @@ async function main() {
   enforceFixtureIngestDatabasePolicy();
 
   const zipCodes = await resolveScheduledIngestZipCodes();
-  const radiusMiles = resolveIngestRadiusMiles();
   const { snapshot } = await getMarketDataSnapshot();
 
   const weeklyAdCandidates = buildWeeklyAdIngestStoreCandidates(snapshot.stores);
@@ -40,6 +42,12 @@ async function main() {
   const allSyncSummaries: Awaited<
     ReturnType<typeof runWeeklyAdIngestionForStores>
   >["syncSummaries"] = [];
+
+  const admittedById = new Map<
+    string,
+    { id: string; name: string; chain: (typeof weeklyAdCandidates)[number]["chain"] }
+  >();
+  let flyerZipCode: string | undefined;
 
   for (const zipCode of zipCodes) {
     const locationResult = await resolveLocationInput({ zipCode });
@@ -56,29 +64,54 @@ async function main() {
       zipCode,
     });
 
+    const fence = await resolveIngestFenceForZip(zipCode);
+    if (fence.zctaWarning) {
+      console.warn(`[ingest-fence:${zipCode}] ${fence.zctaWarning}`);
+    }
+
     const nearbyStores = filterCatalogStoresNearLocation(
       weeklyAdCandidates,
       locationResult.location,
-      radiusMiles,
-    ).map(({ id, name, chain }) => ({ id, name, chain }));
-
-    console.log(
-      `Running weekly-ad ingestion for ${nearbyStores.length} chain store(s) within ${radiusMiles} mi of ZIP ${zipCode}...`,
+      fence.ingestMiles,
+    ).filter((store) =>
+      storePassesIngestFence({
+        latitude: store.latitude,
+        longitude: store.longitude,
+        center: locationResult.location,
+        fence,
+      }),
     );
 
-    if (nearbyStores.length === 0) {
-      console.warn(
-        `  No weekly-ad chain stores in catalog within ${radiusMiles} mi of ZIP ${zipCode}. Run map catalog or seed stores first.`,
-      );
-      continue;
-    }
+    console.log(
+      `Admitting ${nearbyStores.length} weekly-ad store(s) within ${fence.ingestMiles} mi ∩ ZIP outline of ${zipCode}...`,
+    );
 
+    for (const store of nearbyStores) {
+      if (!admittedById.has(store.id)) {
+        admittedById.set(store.id, {
+          id: store.id,
+          name: store.name,
+          chain: store.chain,
+        });
+      }
+    }
+    flyerZipCode ??= zipCode;
+  }
+
+  const nearbyStores = [...admittedById.values()];
+  if (nearbyStores.length === 0 || !flyerZipCode) {
+    console.warn(
+      "No weekly-ad chain stores in catalog inside the ingest fence. Run map catalog or seed stores first.",
+    );
+  } else {
+    console.log(
+      `Fetching each weekly-ad banner once, then fanning out to ${nearbyStores.length} admitted store(s) (ZIP ${flyerZipCode}).`,
+    );
     const { results, syncSummaries } = await runWeeklyAdIngestionForStores({
       nearbyStores,
-      zipCode,
+      zipCode: flyerZipCode,
       persistToDatabase: true,
     });
-
     allResults.push(...results);
     allSyncSummaries.push(...syncSummaries);
   }

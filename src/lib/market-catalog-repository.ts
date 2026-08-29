@@ -1,4 +1,5 @@
 import { getDbPool } from "@/lib/db";
+import { boundingBoxForRadiusMiles, getDistanceMiles } from "@/lib/geo-distance";
 import type {
   CatalogIngredient,
   CatalogRecipeRecord,
@@ -46,6 +47,46 @@ export async function loadCatalogStores(): Promise<CatalogStore[]> {
   const storesResult = await getDbPool().query<StoreRow>(STORES_SQL);
   return storesResult.rows.map(mapStoreRow);
 }
+
+export async function listCatalogStoresNearLocation(input: {
+  latitude: number;
+  longitude: number;
+  radiusMiles: number;
+}): Promise<CatalogStore[]> {
+  const box = boundingBoxForRadiusMiles(
+    input.latitude,
+    input.longitude,
+    input.radiusMiles,
+  );
+  const storesResult = await getDbPool().query<StoreRow>(STORES_NEAR_SQL, [
+    box.minLatitude,
+    box.maxLatitude,
+    box.minLongitude,
+    box.maxLongitude,
+  ]);
+
+  return storesResult.rows
+    .map(mapStoreRow)
+    .filter((store) => Number.isFinite(store.latitude) && Number.isFinite(store.longitude))
+    .filter(
+      (store) =>
+        getDistanceMiles(
+          input.latitude,
+          input.longitude,
+          store.latitude,
+          store.longitude,
+        ) <= input.radiusMiles,
+    );
+}
+
+const STORES_NEAR_SQL = `
+  select id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+  from stores
+  where latitude between $1 and $2
+    and longitude between $3 and $4
+    and id not like 'fixture-osm-%'
+`;
+
 
 export async function loadCatalogIngredients(): Promise<CatalogIngredient[]> {
   const ingredientsResult = await getDbPool().query<IngredientRow>(INGREDIENTS_SQL);

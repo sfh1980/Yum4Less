@@ -41,6 +41,17 @@ describe("active_markets and zip_geocode_cache (integration)", () => {
       "zip_geocode_cache",
     ]);
 
+    const densityCols = await pool.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+       where table_name = 'active_markets'
+         and column_name in ('density_class', 'ingest_miles')
+       order by column_name`,
+    );
+    expect(densityCols.rows.map((row) => row.column_name)).toEqual([
+      "density_class",
+      "ingest_miles",
+    ]);
+
     const seededHome = await pool.query<{ n: string }>(
       `select count(*)::text as n from active_markets where zip_code = '23111'`,
     );

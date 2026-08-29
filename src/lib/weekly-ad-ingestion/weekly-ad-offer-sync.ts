@@ -7,6 +7,12 @@ import {
 import { logServerError } from "@/lib/server-log";
 import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
 import { MIN_WEEKLY_AD_MATCH_CONFIDENCE } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import {
+  readWeeklyAdFlyerHash,
+  rememberWeeklyAdFlyerHash,
+  shouldSkipUnchangedFlyerPersist,
+  weeklyAdFlyerContentHash,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import type {
   WeeklyAdIngestionResult,
   WeeklyAdOffer,
@@ -42,6 +48,21 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
   }
 
   const offersToPersist = selectBestWeeklyAdOffersPerIngredient(input.result.offers);
+  const contentHash = weeklyAdFlyerContentHash(offersToPersist);
+  const previousHash = await readWeeklyAdFlyerHash(input.result.chain);
+  if (
+    shouldSkipUnchangedFlyerPersist({
+      previousHash,
+      nextHash: contentHash,
+    })
+  ) {
+    return {
+      ...baseSummary,
+      storeId,
+      skippedCount: offersToPersist.length,
+      message: `${input.result.chain} weekly-ad flyer hash unchanged; skipped PostgreSQL rewrite.`,
+    };
+  }
 
   let syncedCount = 0;
   let skippedCount = 0;
@@ -78,6 +99,12 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
       message: `${input.result.chain} weekly-ad offers were parsed, but none met the minimum ingredient match threshold for PostgreSQL sync.`,
     };
   }
+
+  await rememberWeeklyAdFlyerHash({
+    chain: input.result.chain,
+    contentHash,
+    offerCount: syncedCount,
+  });
 
   return {
     ...baseSummary,

@@ -12,8 +12,12 @@ export type StoreDisplayNameInput = Pick<
   "name" | "chain" | "sourceName"
 >;
 
-function isUnknownLocationValue(value?: string): boolean {
+export function isUnknownLocationValue(value?: string): boolean {
   return value?.trim().toLowerCase() === "unknown";
+}
+
+export function isMissingStoreLocalityPart(value?: string): boolean {
+  return !value?.trim() || isUnknownLocationValue(value);
 }
 
 export function formatStoreCityState(

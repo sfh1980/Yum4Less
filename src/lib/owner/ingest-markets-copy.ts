@@ -12,4 +12,16 @@ export type OwnerMarketStorePreview = {
   city: string;
   state: string;
   kind: string;
+  localityIsApproximate?: boolean;
+  group?: "will-ingest" | "food-only" | "needs-you";
+  inIngestFence?: boolean;
+};
+
+export type OwnerMarketAdmission = {
+  densityClass: "packed" | "urban" | "suburban" | "rural";
+  groceryCountIn8Mi: number;
+  ingestMiles: number;
+  omittedCount: number;
+  headline: string;
+  zctaWarning?: string;
 };

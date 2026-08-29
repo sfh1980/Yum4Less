@@ -436,13 +436,15 @@ export function parseOverpassElements(payload: OverpassResponse): OsmDiscoveredF
       continue;
     }
 
+    const locality = resolveOsmAddressLocality(tags);
+
     stores.push({
       osmType: element.type,
       osmId: element.id,
       name,
       kind: inferStoreKind(shopTag, name),
-      city: tags["addr:city"]?.trim() || "Unknown",
-      state: tags["addr:state"]?.trim() || "Unknown",
+      city: locality.city,
+      state: locality.state,
       latitude,
       longitude,
       shopTag,
@@ -450,6 +452,20 @@ export function parseOverpassElements(payload: OverpassResponse): OsmDiscoveredF
   }
 
   return stores;
+}
+
+/** OSM address tags are often missing; do not invent the sentinel "Unknown". */
+export function resolveOsmAddressLocality(tags: Record<string, string>): {
+  city: string;
+  state: string;
+} {
+  const city =
+    tags["addr:city"]?.trim() ||
+    tags["addr:town"]?.trim() ||
+    tags["addr:suburb"]?.trim() ||
+    "";
+  const state = tags["addr:state"]?.trim() || "";
+  return { city, state };
 }
 
 function inferStoreKind(

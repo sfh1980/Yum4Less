@@ -6,6 +6,7 @@ import {
   INGEST_OVERLAY_NOTICE,
   type OwnerMarketStorePreview,
 } from "@/lib/owner/ingest-markets-copy";
+import { formatOwnerMarketPreviewLine } from "@/lib/owner/owner-market-preview-format";
 
 type OwnerMarketsPanelProps = {
   adminKey: string;
@@ -18,6 +19,7 @@ type PreviewState = {
   alreadyActive: boolean;
   stores: OwnerMarketStorePreview[];
   warnings: string[];
+  headline?: string;
 };
 
 function authHeaders(key: string): HeadersInit {
@@ -94,6 +96,7 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
         stores?: OwnerMarketStorePreview[];
         warnings?: string[];
         location?: { city?: string; state?: string };
+        admission?: { headline?: string };
       };
       if (!response.ok || !json.ok) {
         setError(json.error ?? "That ZIP could not be checked.");
@@ -106,6 +109,7 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
         alreadyActive: Boolean(json.alreadyActive),
         stores: json.stores ?? [],
         warnings: json.warnings ?? [],
+        headline: json.admission?.headline,
       });
     } catch {
       setError("That ZIP could not be checked.");
@@ -161,11 +165,13 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
     >
       <h2>Markets</h2>
       <p className="panel-copy">
-        Add a 5-digit ZIP to <code>active_markets</code> so scheduled ingest
-        visits it. Check first: invalid ZIPs, failed geocode, and locations
-        outside the lower 48 are refused. A short store list here is a first
-        look, not a full catalog. Activating starts scrape budget on the next
-        cron. ZIP 23111 is allowed if you type it — it is not a hidden default.
+        Check first. Invalid ZIPs, failed geocode, and locations outside the
+        lower 48 are refused. The list is grocery and food-capable pins
+        inside the ZIP outline (convenience and bakeries omitted). Ranked
+        banners are listed first. OSM pins without address tags show as near
+        the ZIP city — not a street address. Activating books the ZIP for the
+        next ingest run. ZIP 23111 is allowed if you type it — it is not a
+        hidden default.
       </p>
       <p className="panel-copy">{overlayNotice}</p>
       {listNotice ? (
@@ -208,8 +214,8 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
       {preview ? (
         <div className="owner-market-preview">
           <p className="panel-copy">
-            {preview.zipCode} · {preview.city}, {preview.state}
-            {preview.alreadyActive ? " · already active" : ""}
+            {preview.headline ??
+              `${preview.zipCode} · ${preview.city}, ${preview.state}${preview.alreadyActive ? " · already active" : ""}`}
           </p>
           {preview.warnings.map((warning) => (
             <p className="panel-copy" key={warning}>
@@ -218,10 +224,16 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
           ))}
           {preview.stores.length > 0 ? (
             <ul className="owner-market-store-list">
-              {preview.stores.map((store) => (
-                <li key={`${store.name}-${store.city}-${store.kind}`}>
-                  {store.name}
-                  {store.city ? ` · ${store.city}, ${store.state}` : ""}
+              {preview.stores.map((store, index) => (
+                <li key={`${store.name}-${store.kind}-${index}`}>
+                  {formatOwnerMarketPreviewLine(store)}
+                  {store.group === "food-only"
+                    ? " · food-only"
+                    : store.group === "needs-you"
+                      ? " · needs you"
+                      : store.inIngestFence === false
+                        ? " · outside ingest cap"
+                        : ""}
                 </li>
               ))}
             </ul>
@@ -254,6 +266,9 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
             <li className="owner-coverage-row" key={market.zipCode}>
               <p className="owner-coverage-title">
                 {market.zipCode} · {market.status} · {market.source}
+                {market.densityClass
+                  ? ` · ${market.densityClass} ${market.ingestMiles ?? ""} mi`
+                  : ""}
               </p>
             </li>
           ))}

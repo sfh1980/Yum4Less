@@ -48,6 +48,22 @@ if (ensure.status !== 0) {
   process.exit(ensure.status ?? 1);
 }
 
+if (!weeklyOnly && !providerOnly) {
+  const enqueue = spawnNpx(["tsx", "scripts/enqueue-scheduled-ingest.ts"], {
+    env: process.env,
+  });
+  if (enqueue.status !== 0) {
+    console.warn(
+      `[${new Date().toISOString()}] Ingest job enqueue failed (apply db/init/029 if ingest_jobs is missing). Continuing inline pipeline.`,
+    );
+  } else if (process.env.YUM4LESS_INGEST_QUEUE_WORKER === "1") {
+    console.log(
+      `[${new Date().toISOString()}] YUM4LESS_INGEST_QUEUE_WORKER=1 — 3am enqueue only. Drain with npm run ingest:worker.`,
+    );
+    process.exit(0);
+  }
+}
+
 // Step order: map-catalog → weekly-ad → snap-ensure → provider-sync → themealdb-from-sales → ranked-price-freshness
 // (see src/lib/scheduled-ingest-pipeline.ts + unit test)
 

@@ -1,4 +1,5 @@
 import { getDbPool } from "@/lib/db";
+import type { DensityClass } from "@/lib/market-density";
 
 export type ActiveMarketStatus = "active" | "paused" | "retired";
 export type ActiveMarketSource = "ops" | "organic_usage" | "bootstrap";
@@ -10,6 +11,8 @@ export type ActiveMarketRow = {
   source: ActiveMarketSource;
   latitude: number | null;
   longitude: number | null;
+  densityClass: DensityClass | null;
+  ingestMiles: number | null;
   notes: string | null;
   updatedAt: string | null;
 };
@@ -23,6 +26,8 @@ type ActiveMarketSqlRow = {
   source: ActiveMarketSource;
   latitude: string | number | null;
   longitude: string | number | null;
+  density_class: DensityClass | null;
+  ingest_miles: string | number | null;
   notes: string | null;
   updated_at: Date | string | null;
 };
@@ -39,6 +44,14 @@ function parseOptionalCoordinate(value: string | number | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function parseOptionalMiles(value: string | number | null): number | null {
+  if (value === null) {
+    return null;
+  }
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function mapActiveMarketRow(row: ActiveMarketSqlRow): ActiveMarketRow {
   return {
     zipCode: row.zip_code.trim(),
@@ -47,6 +60,8 @@ function mapActiveMarketRow(row: ActiveMarketSqlRow): ActiveMarketRow {
     source: row.source,
     latitude: parseOptionalCoordinate(row.latitude),
     longitude: parseOptionalCoordinate(row.longitude),
+    densityClass: row.density_class,
+    ingestMiles: parseOptionalMiles(row.ingest_miles),
     notes: row.notes,
     updatedAt:
       row.updated_at instanceof Date
@@ -89,6 +104,8 @@ export async function listIngestMarkets(): Promise<ActiveMarketRow[]> {
         source,
         latitude,
         longitude,
+        density_class,
+        ingest_miles,
         notes,
         updated_at
       from active_markets
@@ -122,6 +139,8 @@ export async function readIngestMarket(
         source,
         latitude,
         longitude,
+        density_class,
+        ingest_miles,
         notes,
         updated_at
       from active_markets
@@ -139,6 +158,8 @@ export async function upsertActiveMarket(input: {
   source?: ActiveMarketSource;
   latitude?: number | null;
   longitude?: number | null;
+  densityClass?: DensityClass | null;
+  ingestMiles?: number | null;
   notes?: string | null;
 }): Promise<void> {
   const zipCode = normalizeZipCode(input.zipCode);
@@ -154,14 +175,18 @@ export async function upsertActiveMarket(input: {
         source,
         latitude,
         longitude,
+        density_class,
+        ingest_miles,
         notes
       )
-      values ($1, 'active', $2, $3, $4, $5)
+      values ($1, 'active', $2, $3, $4, $5, $6, $7)
       on conflict (zip_code) do update set
         status = 'active',
         source = excluded.source,
         latitude = coalesce(excluded.latitude, active_markets.latitude),
         longitude = coalesce(excluded.longitude, active_markets.longitude),
+        density_class = coalesce(excluded.density_class, active_markets.density_class),
+        ingest_miles = coalesce(excluded.ingest_miles, active_markets.ingest_miles),
         notes = coalesce(excluded.notes, active_markets.notes),
         updated_at = now()
     `,
@@ -170,7 +195,28 @@ export async function upsertActiveMarket(input: {
       input.source ?? "ops",
       input.latitude ?? null,
       input.longitude ?? null,
+      input.densityClass ?? null,
+      input.ingestMiles ?? null,
       input.notes ?? null,
     ],
+  );
+}
+
+export async function saveMarketDensity(input: {
+  zipCode: string;
+  densityClass: DensityClass;
+  ingestMiles: number;
+}): Promise<void> {
+  const zipCode = normalizeZipCode(input.zipCode);
+  if (!ZIP5.test(zipCode)) {
+    return;
+  }
+  await getDbPool().query(
+    `
+      update active_markets
+      set density_class = $2, ingest_miles = $3, updated_at = now()
+      where zip_code = $1
+    `,
+    [zipCode, input.densityClass, input.ingestMiles],
   );
 }

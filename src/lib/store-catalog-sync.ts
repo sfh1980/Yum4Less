@@ -1318,7 +1318,12 @@ export async function syncUniversalMapCatalogForZip(input: {
   publixMessage: string;
 }> {
   const { resolveLocationInput } = await import("@/lib/location-resolution");
-  const radiusMiles = input.radiusMiles ?? Number(process.env.YUM4LESS_MAP_CATALOG_RADIUS_MILES ?? 12);
+  const { resolveIngestFenceForZip, storePassesIngestFence } = await import(
+    "@/lib/market-ingest-fence"
+  );
+  const fence = await resolveIngestFenceForZip(input.zipCode);
+  const radiusMiles =
+    input.radiusMiles ?? fence.ingestMiles;
   const locationResult = await resolveLocationInput({ zipCode: input.zipCode });
 
   if (!locationResult.ok) {
@@ -1343,10 +1348,21 @@ export async function syncUniversalMapCatalogForZip(input: {
     zipCode: input.zipCode,
     useFixture: input.useFixture,
   });
+  const fencedDiscoveryStores = discovery.stores.filter((store) =>
+    storePassesIngestFence({
+      latitude: store.latitude,
+      longitude: store.longitude,
+      center: locationResult.location,
+      fence: {
+        ingestMiles: radiusMiles,
+        geometry: fence.geometry,
+      },
+    }),
+  );
 
   const useFixtureIdentity =
     input.useFixture === true || discovery.source === "fixture";
-  const osmStores = discovery.stores.map((store) =>
+  const osmStores = fencedDiscoveryStores.map((store) =>
     buildOsmCatalogStore(store, { fixture: useFixtureIdentity }),
   );
   if (useFixtureIdentity) {
@@ -1374,7 +1390,7 @@ export async function syncUniversalMapCatalogForZip(input: {
       location: locationResult.location,
       zipCode: input.zipCode,
       providerStoreSearches,
-      osmFoodRetailStores: discovery.stores,
+      osmFoodRetailStores: fencedDiscoveryStores,
     });
 
     const { syncPublixContextStoresForZip } = await import("@/lib/publix-catalog-sync");

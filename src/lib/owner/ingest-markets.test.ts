@@ -3,15 +3,18 @@ import type { ZipLookupResult } from "@/lib/geocoding";
 
 const readIngestMarket = vi.fn();
 const upsertActiveMarket = vi.fn();
+const saveMarketDensity = vi.fn();
 const resolveZipLocation = vi.fn();
 const discoverMapContextStores = vi.fn();
 const rememberIngestZipGeocode = vi.fn();
+const listCatalogStoresNearLocation = vi.fn();
 
 vi.mock("@/lib/active-markets", () => ({
   isMissingActiveMarketsSchema: (error: unknown) =>
     /active_markets/i.test(String(error instanceof Error ? error.message : error)),
   readIngestMarket: (...args: unknown[]) => readIngestMarket(...args),
   upsertActiveMarket: (...args: unknown[]) => upsertActiveMarket(...args),
+  saveMarketDensity: (...args: unknown[]) => saveMarketDensity(...args),
 }));
 
 vi.mock("@/lib/geocoding", () => ({
@@ -20,6 +23,11 @@ vi.mock("@/lib/geocoding", () => ({
 
 vi.mock("@/lib/map-context-discovery", () => ({
   discoverMapContextStores: (...args: unknown[]) => discoverMapContextStores(...args),
+}));
+
+vi.mock("@/lib/market-catalog-repository", () => ({
+  listCatalogStoresNearLocation: (...args: unknown[]) =>
+    listCatalogStoresNearLocation(...args),
 }));
 
 vi.mock("@/lib/zip-geocode-cache", () => ({
@@ -55,6 +63,12 @@ describe("owner ingest markets", () => {
     resolveZipLocation.mockReset();
     discoverMapContextStores.mockReset();
     rememberIngestZipGeocode.mockReset();
+    saveMarketDensity.mockReset();
+    listCatalogStoresNearLocation.mockReset();
+  });
+
+  beforeEach(() => {
+    listCatalogStoresNearLocation.mockResolvedValue([]);
   });
 
   it("rejects a body without a 5-digit ZIP", () => {
@@ -112,10 +126,15 @@ describe("owner ingest markets", () => {
     discoverMapContextStores.mockResolvedValue({
       stores: [
         {
+          id: "osm-kroger-1",
           name: "Kroger",
           city: "Richmond",
           state: "VA",
           kind: "grocery",
+          latitude: 37.5467,
+          longitude: -77.4366,
+          sourceName: "openstreetmap-overpass",
+          sourceStoreId: "osm-kroger-1",
         },
       ],
       sources: [],
@@ -130,10 +149,63 @@ describe("owner ingest markets", () => {
         stores: [{ name: "Kroger", city: "Richmond", state: "VA", kind: "grocery" }],
       },
     });
+    if (inspected.ok) {
+      expect(inspected.result.admission.densityClass).toBe("rural");
+      expect(inspected.result.admission.groceryCountIn8Mi).toBe(1);
+    }
     expect(upsertActiveMarket).not.toHaveBeenCalled();
     if (inspected.ok) {
       expect(inspected.result.warnings).not.toContain(NO_RANKED_V1_CHAIN_PREVIEW_NOTICE);
     }
+  });
+
+  it("overlays catalog pins and lists OSM pins without address tags near the ZIP city", async () => {
+    resolveZipLocation.mockResolvedValue(geocodeOk());
+    readIngestMarket.mockResolvedValue(null);
+    listCatalogStoresNearLocation.mockResolvedValue([
+      {
+        id: "kroger-02900529",
+        name: "Kroger",
+        kind: "grocery",
+        city: "Richmond",
+        state: "VA",
+        latitude: 37.5467,
+        longitude: -77.4366,
+        sourceName: "kroger-official-api",
+      },
+    ]);
+    discoverMapContextStores.mockResolvedValue({
+      stores: [
+        {
+          id: "osm-7-11",
+          name: "7-Eleven",
+          city: "Unknown",
+          state: "Unknown",
+          kind: "specialty",
+          latitude: 37.55,
+          longitude: -77.44,
+          sourceName: "openstreetmap-overpass",
+          sourceStoreId: "osm-7-11",
+        },
+      ],
+      sources: [],
+    });
+
+    const inspected = await inspectOwnerIngestMarket("23220");
+    expect(inspected.ok).toBe(true);
+    if (!inspected.ok) {
+      return;
+    }
+    expect(inspected.result.stores[0]).toMatchObject({
+      name: "Kroger",
+      city: "Richmond",
+      state: "VA",
+      localityIsApproximate: false,
+    });
+    expect(inspected.result.stores.some((store) => store.name === "7-Eleven")).toBe(
+      false,
+    );
+    expect(inspected.result.warnings.join(" ")).toMatch(/Omitted 1 convenience\/bakery/i);
   });
 
   it("warns when the first look has no shopper-ranked v1 chain", async () => {
@@ -142,10 +214,15 @@ describe("owner ingest markets", () => {
     discoverMapContextStores.mockResolvedValue({
       stores: [
         {
+          id: "osm-bjs-1",
           name: "BJ's Wholesale Club",
           city: "Richmond",
           state: "VA",
           kind: "big-box",
+          latitude: 37.5467,
+          longitude: -77.4366,
+          sourceName: "openstreetmap-overpass",
+          sourceStoreId: "osm-bjs-1",
         },
       ],
       sources: [],
@@ -185,6 +262,8 @@ describe("owner ingest markets", () => {
       latitude: 37.5467,
       longitude: -77.4366,
       notes: null,
+      densityClass: null,
+      ingestMiles: null,
       updatedAt: "2026-08-27T12:00:00.000Z",
     });
     discoverMapContextStores.mockResolvedValue({ stores: [], sources: [] });
@@ -209,10 +288,24 @@ describe("owner ingest markets", () => {
         latitude: 37.5467,
         longitude: -77.4366,
         notes: "Activated by /owner Markets",
+        densityClass: "rural",
+        ingestMiles: 26,
         updatedAt: "2026-08-27T12:00:00.000Z",
       });
     discoverMapContextStores.mockResolvedValue({
-      stores: [{ name: "Kroger", city: "Richmond", state: "VA", kind: "grocery" }],
+      stores: [
+        {
+          id: "osm-kroger-1",
+          name: "Kroger",
+          city: "Richmond",
+          state: "VA",
+          kind: "grocery",
+          latitude: 37.5467,
+          longitude: -77.4366,
+          sourceName: "openstreetmap-overpass",
+          sourceStoreId: "osm-kroger-1",
+        },
+      ],
       sources: [],
     });
     upsertActiveMarket.mockResolvedValue(undefined);
@@ -228,6 +321,8 @@ describe("owner ingest markets", () => {
       source: "ops",
       latitude: 37.5467,
       longitude: -77.4366,
+      densityClass: "rural",
+      ingestMiles: 26,
       notes: "Activated by /owner Markets",
     });
     expect(rememberIngestZipGeocode).toHaveBeenCalled();

@@ -38,6 +38,7 @@
     "markets:activate": "tsx scripts/activate-ingest-market.ts",
     "ingest:weekly-ads:scheduled": "node scripts/run-scheduled-weekly-ad-ingest.mjs",
     "ingest:weekly-ads:scheduled:fixture": "node scripts/run-scheduled-weekly-ad-ingest.mjs --fixture",
+    "ingest:worker": "tsx scripts/run-ingest-worker.ts",
     "owner:reject-pending-junk-reviews": "tsx scripts/reject-pending-junk-reviews.ts",
     "ingest:weekly-ads:browser": "node scripts/run-weekly-ad-ingest.mjs --browser",
     "ingest:themealdb:from-sales": "node scripts/run-themealdb-import.mjs",

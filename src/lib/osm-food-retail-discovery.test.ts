@@ -5,6 +5,7 @@ import {
   GROCERY_OSM_SHOP_TAG_ALLOWLIST,
   isAllowedGroceryOsmShopTag,
   parseOverpassElements,
+  resolveOsmAddressLocality,
   resolveOsmFoodRetailDisplayName,
   resolveOverpassEndpoints,
 } from "@/lib/osm-food-retail-discovery";
@@ -219,5 +220,28 @@ describe("osm food retail discovery", () => {
         process.env.YUM4LESS_OSM_OVERPASS_MAX_ATTEMPTS = previousAttempts;
       }
     }
+  });
+
+  it("reads town/suburb tags and leaves missing OSM address blank instead of Unknown", () => {
+    expect(resolveOsmAddressLocality({ "addr:town": "Ashland", "addr:state": "VA" })).toEqual(
+      { city: "Ashland", state: "VA" },
+    );
+    expect(resolveOsmAddressLocality({})).toEqual({ city: "", state: "" });
+
+    const stores = parseOverpassElements({
+      elements: [
+        {
+          type: "node",
+          id: 800010,
+          lat: 37.61,
+          lon: -77.33,
+          tags: { name: "7-Eleven", shop: "convenience" },
+        },
+      ],
+    });
+
+    expect(stores).toHaveLength(1);
+    expect(stores[0]?.city).toBe("");
+    expect(stores[0]?.state).toBe("");
   });
 });

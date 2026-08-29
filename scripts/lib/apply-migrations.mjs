@@ -200,6 +200,13 @@ export function migrationEffectPresent(version, db) {
           ),
         ) === 1
       );
+    case "029":
+      return (
+        db.columnExists("active_markets", "density_class") &&
+        db.columnExists("active_markets", "ingest_miles") &&
+        db.tableExists("ingest_jobs") &&
+        db.tableExists("weekly_ad_flyer_hashes")
+      );
     default:
       return false;
   }
