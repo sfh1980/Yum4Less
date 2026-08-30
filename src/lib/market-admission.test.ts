@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { geometryContainsPoint } from "@/lib/geo/point-in-polygon";
+import {
+  geometryContainsPoint,
+  type GeoJsonPolygon,
+} from "@/lib/geo/point-in-polygon";
 import {
   classifyDensityFromGroceryCount,
   ingestMilesForClass,
@@ -15,8 +18,8 @@ import {
   weeklyAdFlyerContentHash,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 
-const squareAround = {
-  type: "Polygon" as const,
+const squareAround: GeoJsonPolygon = {
+  type: "Polygon",
   coordinates: [
     [
       [-77.5, 37.5],
