@@ -7,14 +7,6 @@ import type { StoreChain } from "@/lib/provider-rollout";
 /** Dinner-tracked ingredient count used for coverage rollups and honesty copy. */
 export const TRACKED_DINNER_INGREDIENT_COUNT = INTERNAL_CATALOG_INGREDIENT_IDS.length;
 
-/** v1 ranked chains surfaced in coverage-honesty copy (excludes Walmart). */
-export const RANKED_COVERAGE_HONESTY_CHAINS: readonly StoreChain[] = [
-  "kroger",
-  "publix",
-  "food-lion",
-  "aldi",
-] as const;
-
 const MULTI_STORE_SKEW_THRESHOLD = 0.6;
 
 export type ChainCoverageDepthEntry = {
@@ -46,9 +38,6 @@ export function buildBestChainCoverageDepth(
     if (!store.recommendationEnabled) {
       continue;
     }
-    if (!RANKED_COVERAGE_HONESTY_CHAINS.includes(store.chain)) {
-      continue;
-    }
 
     const matchedIngredientCount = resolveStoreTrackedMatchCount(store);
     const totalTrackedIngredientCount =
@@ -69,9 +58,11 @@ export function buildBestChainCoverageDepth(
     });
   }
 
-  return RANKED_COVERAGE_HONESTY_CHAINS.flatMap((chain) => {
-    const entry = bestByChain.get(chain);
-    return entry ? [entry] : [];
+  return [...bestByChain.values()].sort((left, right) => {
+    if (right.matchedIngredientCount !== left.matchedIngredientCount) {
+      return right.matchedIngredientCount - left.matchedIngredientCount;
+    }
+    return left.chainLabel.localeCompare(right.chainLabel);
   });
 }
 

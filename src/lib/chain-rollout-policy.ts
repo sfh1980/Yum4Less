@@ -1,15 +1,13 @@
+import { KNOWN_DINNER_ADAPTER_CHAIN_IDS } from "@/lib/chain-membership";
 import type { StoreChain } from "@/lib/provider-rollout";
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
-/** Canonical beta v1 chains shoppers may rank and select in Settings. */
-export const SHOPPER_RANKED_V1_CHAINS = [
-  "kroger",
-  "aldi",
-  "publix",
-  "food-lion",
-  "lidl",
-  "walmart",
-] as const satisfies readonly StoreChain[];
+/**
+ * Known dinner-adapter ids (code that exists). Production *membership* is
+ * `chain_registry` via `loadChainMembership()` — do not use this list to
+ * unlock or block dinners.
+ */
+export const SHOPPER_RANKED_V1_CHAINS = KNOWN_DINNER_ADAPTER_CHAIN_IDS;
 
 export type ShopperRankedV1Chain = (typeof SHOPPER_RANKED_V1_CHAINS)[number];
 
@@ -21,9 +19,8 @@ export const SETTINGS_SELECTABLE_CHAIN_ORDER: StoreChain[] = [
 ];
 
 /**
- * Chains eligible for weekly-ad ingest sync and promotion-readiness checks.
- * Same set as shopper-ranked v1 — floors in `weeklyAdPromotionGatesPass()` apply
- * equally, including Walmart.
+ * Known dinner-adapter weekly-ad ids (code that exists). Runtime promotion
+ * eligibility is `chain_registry.shopper_ranked` plus code floors.
  */
 export const WEEKLY_AD_RANKED_PRICING_CHAINS = new Set<WeeklyAdChain>([
   ...SHOPPER_RANKED_V1_CHAINS,

@@ -1,10 +1,14 @@
 import type { StoreChain } from "@/lib/provider-rollout";
 import { getProviderRolloutForStore } from "@/lib/provider-rollout";
 import {
+  FIXTURE_CHAIN_MEMBERSHIP,
+  isShopperRankedChain,
+  type ChainMembershipSnapshot,
+} from "@/lib/chain-membership";
+import {
   MIN_WEEKLY_AD_PROMOTION_CONFIDENCE,
   MIN_WEEKLY_AD_PROMOTION_MATCHES,
   WEEKLY_AD_PROMOTION_FRESHNESS_HOURS,
-  WEEKLY_AD_RANKED_PRICING_CHAINS,
   weeklyAdPromotionGatesPass,
   type WeeklyAdStoreCoverage,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-coverage";
@@ -46,19 +50,23 @@ export function buildWeeklyAdPromotionReadiness(input: {
   chain: StoreChain;
   storeId: string;
   coverage: WeeklyAdStoreCoverage;
+  membership?: ChainMembershipSnapshot;
 }): WeeklyAdPromotionReadiness {
+  const membership = input.membership ?? FIXTURE_CHAIN_MEMBERSHIP;
   const baseRollout = getProviderRolloutForStore(input.storeName);
-  const gates = buildWeeklyAdPromotionGates(input.chain, input.coverage);
+  const gates = buildWeeklyAdPromotionGates(input.chain, input.coverage, membership);
   const gatesPassedCount = gates.filter((gate) => gate.passed).length;
   const weeklyAdRankedPricingEnabled = weeklyAdPromotionGatesPass(
     input.coverage,
     input.chain,
+    membership,
   );
   const overallStatus = getOverallStatus({
     chain: input.chain,
     gatesPassedCount,
     gatesTotal: gates.length,
     weeklyAdRankedPricingEnabled,
+    membership,
   });
 
   return {
@@ -83,9 +91,11 @@ export function buildWeeklyAdPromotionReadiness(input: {
 export function buildWeeklyAdPromotionReadinessForStores(input: {
   stores: Array<{ id: string; name: string; chain: StoreChain }>;
   coverageByStoreId: Map<string, WeeklyAdStoreCoverage>;
+  membership?: ChainMembershipSnapshot;
 }): WeeklyAdPromotionReadiness[] {
+  const membership = input.membership ?? FIXTURE_CHAIN_MEMBERSHIP;
   return input.stores
-    .filter((store) => WEEKLY_AD_RANKED_PRICING_CHAINS.has(store.chain as never))
+    .filter((store) => isShopperRankedChain(membership, store.chain))
     .map((store) =>
       buildWeeklyAdPromotionReadiness({
         storeName: store.name,
@@ -94,6 +104,7 @@ export function buildWeeklyAdPromotionReadinessForStores(input: {
         coverage:
           input.coverageByStoreId.get(store.id) ??
           emptyCoverage(store.id, store.chain),
+        membership,
       }),
     );
 }
@@ -123,13 +134,15 @@ export function buildWeeklyAdPromotionMarketMessage(
 function buildWeeklyAdPromotionGates(
   chain: StoreChain,
   coverage: WeeklyAdStoreCoverage,
+  membership: ChainMembershipSnapshot,
 ): WeeklyAdPromotionGate[] {
+  const approved = isShopperRankedChain(membership, chain);
   return [
     {
       id: "approved-chain",
       label: "Approved rollout chain",
-      passed: WEEKLY_AD_RANKED_PRICING_CHAINS.has(chain as never),
-      note: WEEKLY_AD_RANKED_PRICING_CHAINS.has(chain as never)
+      passed: approved,
+      note: approved
         ? `${chain} is in the approved weekly-ad ranked-pricing rollout.`
         : `${chain} is not in the current weekly-ad ranked-pricing rollout.`,
     },
@@ -182,8 +195,9 @@ function getOverallStatus(input: {
   gatesPassedCount: number;
   gatesTotal: number;
   weeklyAdRankedPricingEnabled: boolean;
+  membership: ChainMembershipSnapshot;
 }): WeeklyAdPromotionReadinessStatus {
-  if (!WEEKLY_AD_RANKED_PRICING_CHAINS.has(input.chain as never)) {
+  if (!isShopperRankedChain(input.membership, input.chain)) {
     return "not-applicable";
   }
 

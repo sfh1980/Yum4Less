@@ -20,6 +20,7 @@ import {
   isWeeklyAdFailLoudChain,
   shouldFailWeeklyAdIngestExit,
 } from "@/lib/ingest/ingest-script-exit-policy";
+import { loadChainMembership } from "@/lib/chain-membership-repository";
 
 loadEnvLocal();
 
@@ -30,6 +31,14 @@ async function main() {
   }
 
   enforceFixtureIngestDatabasePolicy();
+
+  const membership = await loadChainMembership();
+  if (membership.shopperRankedChainIds.length === 0) {
+    console.error(
+      "chain_registry has no shopper_ranked rows. Apply db/init/026+ or check membership before weekly-ad ingest.",
+    );
+    process.exit(1);
+  }
 
   const zipCodes = await resolveScheduledIngestZipCodes();
   const { snapshot } = await getMarketDataSnapshot();
@@ -130,13 +139,14 @@ async function main() {
 
   const chainErrors = allResults.filter((result) => result.status === "error");
   const unrankedChainErrors = chainErrors.filter(
-    (result) => !isWeeklyAdFailLoudChain(result.chain),
+    (result) => !isWeeklyAdFailLoudChain(result.chain, membership),
   );
   const unrankedPersistFailures = allSyncSummaries.filter(
-    (summary) => summary.failedCount > 0 && !isWeeklyAdFailLoudChain(summary.chain),
+    (summary) =>
+      summary.failedCount > 0 && !isWeeklyAdFailLoudChain(summary.chain, membership),
   );
   const rankedPersistFailures = allSyncSummaries
-    .filter((summary) => isWeeklyAdFailLoudChain(summary.chain))
+    .filter((summary) => isWeeklyAdFailLoudChain(summary.chain, membership))
     .reduce((total, summary) => total + summary.failedCount, 0);
 
   if (unrankedChainErrors.length > 0 || unrankedPersistFailures.length > 0) {
@@ -151,12 +161,16 @@ async function main() {
     );
   }
 
-  if (shouldFailWeeklyAdIngestExit({ results: allResults, syncSummaries: allSyncSummaries })) {
+  if (shouldFailWeeklyAdIngestExit({
+    results: allResults,
+    syncSummaries: allSyncSummaries,
+    membership,
+  })) {
     if (rankedPersistFailures > 0) {
       console.error(
         `\nWeekly-ad ingest finished with ${rankedPersistFailures} ranked persist failure(s). See structured error logs above.`,
       );
-    } else if (chainErrors.some((result) => isWeeklyAdFailLoudChain(result.chain))) {
+    } else if (chainErrors.some((result) => isWeeklyAdFailLoudChain(result.chain, membership))) {
       console.error(
         `\nWeekly-ad ingest finished with ranked chain failure(s). See structured error logs above.`,
       );

@@ -65,6 +65,59 @@ describe("filterSettingsSelectableStores", () => {
     ]);
   });
 
+  it("includes Whole Foods, Target, and clubs as selectable context stores without adapters", () => {
+    const filtered = filterSettingsSelectableStores([
+      store({ id: "osm-1", name: "Wawa", chain: "unknown" }),
+      store({
+        id: "mini-1",
+        name: "Harrison Mini Mart",
+        chain: "unknown",
+      }),
+      store({
+        id: "cvs-1",
+        name: "CVS Pharmacy",
+        chain: "unknown",
+      }),
+      store({
+        id: "kroger-1",
+        name: "Kroger Mechanicsville",
+        chain: "kroger",
+        recommendationEnabled: true,
+        distanceMiles: 1,
+      }),
+      store({
+        id: "whole-foods-1",
+        name: "Whole Foods Market",
+        chain: "unknown",
+        recommendationEnabled: false,
+        distanceMiles: 2,
+      }),
+      store({
+        id: "target-1",
+        name: "Target",
+        chain: "unknown",
+        kind: "big-box",
+        recommendationEnabled: false,
+        distanceMiles: 3,
+      }),
+      store({
+        id: "costco-1",
+        name: "Costco",
+        chain: "unknown",
+        kind: "big-box",
+        recommendationEnabled: false,
+        distanceMiles: 4,
+      }),
+    ]);
+
+    expect(filtered.map((entry) => entry.id)).toEqual([
+      "kroger-1",
+      "whole-foods-1",
+      "target-1",
+      "costco-1",
+    ]);
+  });
+
   it("prefers non-OSM Kroger rows when catalog stores exist", () => {
     const filtered = filterSettingsSelectableStores([
       store({
@@ -325,6 +378,25 @@ describe("defaultSelectedStoreIdsForSettings", () => {
     ];
 
     expect(defaultSelectedStoreIdsForSettings(stores, "single-store")).toEqual(["kroger-1"]);
+  });
+
+  it("defaults multi-store to ranked-ready stores when mixed with context-only grocery", () => {
+    const stores = [
+      store({
+        id: "whole-foods-1",
+        name: "Whole Foods Market",
+        chain: "unknown",
+        recommendationEnabled: false,
+      }),
+      store({
+        id: "kroger-1",
+        name: "Kroger",
+        chain: "kroger",
+        recommendationEnabled: true,
+      }),
+    ];
+
+    expect(defaultSelectedStoreIdsForSettings(stores, "multi-store")).toEqual(["kroger-1"]);
   });
 });
 

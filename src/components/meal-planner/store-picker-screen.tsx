@@ -6,6 +6,7 @@ import { SingleStoreMapOverlay } from "@/components/single-store-map-overlay";
 import { WizardContinueButton } from "@/components/meal-planner/wizard-continue-button";
 import {
   filterSettingsSelectableStores,
+  membershipFromMarket,
 } from "@/lib/settings-store-selection";
 import {
   canonicalizeStoreIdsForSettings,
@@ -49,13 +50,16 @@ export function StorePickerScreen({
   onContinue,
   onFactoryReset,
 }: StorePickerScreenProps) {
-  const selectableStores = filterSettingsSelectableStores(market?.nearbyStores ?? []);
+  const selectableStores = filterSettingsSelectableStores(
+    market?.nearbyStores ?? [],
+    membershipFromMarket(market),
+  );
   const [storeMapTarget, setStoreMapTarget] = useState<
     (typeof selectableStores)[number] | null
   >(null);
   const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
   const storesReady = Boolean(market);
-  const storesMissingRankedChains = storesReady && selectableStores.length === 0;
+  const storesMissingGroceryPins = storesReady && selectableStores.length === 0;
   const canSaveSettings =
     storesReady &&
     form.selectedStoreIds.length > 0 &&
@@ -67,7 +71,7 @@ export function StorePickerScreen({
 
   function handleToggle(storeId: string, checked: boolean) {
     const store = selectableStores.find((candidate) => candidate.id === storeId);
-    if (!store?.recommendationEnabled) {
+    if (!store) {
       return;
     }
 
@@ -133,9 +137,9 @@ export function StorePickerScreen({
         </p>
       ) : null}
 
-      {storesMissingRankedChains ? (
+      {storesMissingGroceryPins ? (
         <p className="field-hint" role="status">
-          No stores with dinner estimates showed up in this search area. Go back
+          No grocery stores showed up in this search area. Go back
           and try a larger radius or another ZIP.
         </p>
       ) : null}
@@ -148,16 +152,13 @@ export function StorePickerScreen({
               form.selectedStoreIds,
               store.id,
             );
-            const storeSelectable = store.recommendationEnabled;
+            const hasDinnerEstimates = store.recommendationEnabled;
 
             return (
               <div
                 key={store.id}
-                className={`store-multi-select-option${selected ? " store-multi-select-option--selected" : ""}${!storeSelectable ? " store-multi-select-option--disabled" : ""}`}
+                className={`store-multi-select-option${selected ? " store-multi-select-option--selected" : ""}`}
                 onClick={(event) => {
-                  if (!storeSelectable) {
-                    return;
-                  }
                   const target = event.target as HTMLElement;
                   if (target.closest("input, label, .store-map-pin-button")) {
                     return;
@@ -168,8 +169,7 @@ export function StorePickerScreen({
                 <input
                   id={checkboxId}
                   aria-label={`Select ${formatSettingsStoreOptionLabel(store)}`}
-                  checked={selected && storeSelectable}
-                  disabled={!storeSelectable}
+                  checked={selected}
                   onChange={(event) =>
                     handleToggle(store.id, event.target.checked)
                   }
@@ -178,11 +178,11 @@ export function StorePickerScreen({
                 <label htmlFor={checkboxId} className="store-multi-select-label">
                   <span className="store-multi-select-name">
                     {formatSettingsStoreOptionLabel(store)}
-                    {selected && storeSelectable ? (
+                    {selected ? (
                       <span className="store-multi-select-selected-mark"> Selected</span>
                     ) : null}
                   </span>
-                  {!storeSelectable ? (
+                  {!hasDinnerEstimates ? (
                     <span className="store-multi-select-disabled-note">
                       {store.rolloutNote}
                     </span>

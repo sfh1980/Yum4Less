@@ -50,6 +50,14 @@ export function parsePassedMarketSummary(value: unknown): MarketSummary | null {
     return null;
   }
 
+  if (
+    candidate.shopperRankedChainIds !== undefined &&
+    (!Array.isArray(candidate.shopperRankedChainIds) ||
+      candidate.shopperRankedChainIds.some((id) => typeof id !== "string"))
+  ) {
+    return null;
+  }
+
   for (const store of candidate.nearbyStores) {
     if (
       !store ||

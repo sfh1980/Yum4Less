@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { SHOPPER_RANKED_V1_CHAINS } from "@/lib/chain-rollout-policy";
+import { rankedChainIdsHaveKnownAdapters } from "@/lib/chain-membership";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import { listChainRegistry, listStoreCoverage } from "@/lib/owner/store-coverage-repository";
 
@@ -41,12 +41,11 @@ describe("chain_registry and store_coverage (integration)", () => {
     expect(registry.find((row) => row.chainId === "walmart")?.promotionBlocked).toBe(false);
     expect(registry.find((row) => row.chainId === "walmart")?.rolloutStage).toBe("ranked");
     expect(registry.find((row) => row.chainId === "target")?.rolloutStage).toBe("upcoming");
-    expect(
-      registry
-        .filter((row) => row.shopperRanked)
-        .map((row) => row.chainId)
-        .sort(),
-    ).toEqual([...SHOPPER_RANKED_V1_CHAINS].sort());
+    const rankedIds = registry
+      .filter((row) => row.shopperRanked)
+      .map((row) => row.chainId);
+    expect(rankedIds.length).toBeGreaterThan(0);
+    expect(rankedChainIdsHaveKnownAdapters(rankedIds)).toBe(true);
 
     const coverage = await listStoreCoverage({
       limit: 10,

@@ -1,11 +1,16 @@
-import type { CatalogPriceObservation } from "@/lib/market-catalog-types";
-import { WEEKLY_AD_RANKED_PRICING_CHAINS } from "@/lib/chain-rollout-policy";
-import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
-import type { ProviderPricingCoverageStatus } from "@/lib/providers/provider-types";
-import type { StoreChain } from "@/lib/provider-rollout";
-import { RANKED_PRICE_CACHE_TTL_HOURS } from "@/lib/ranked-price-cache-policy";
+import {
+  FIXTURE_CHAIN_MEMBERSHIP,
+  isShopperRankedChain,
+  type ChainMembershipSnapshot,
+} from "@/lib/chain-membership";
 import { getWeeklyAdSourceName } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
+import { isWeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-registry";
+import type { StoreChain } from "@/lib/provider-rollout";
+import { getPricingCoverageStatus } from "@/lib/providers/provider-price-matching";
+import type { ProviderPricingCoverageStatus } from "@/lib/providers/provider-types";
+import { RANKED_PRICE_CACHE_TTL_HOURS } from "@/lib/ranked-price-cache-policy";
+import type { CatalogPriceObservation } from "@/lib/market-catalog-types";
 
 export const MIN_WEEKLY_AD_PROMOTION_MATCHES = 3;
 export const MIN_WEEKLY_AD_PROMOTION_CONFIDENCE = 0.45;
@@ -109,8 +114,9 @@ export function buildWeeklyAdStoreCoverage(input: {
 export function weeklyAdPromotionGatesPass(
   coverage: WeeklyAdStoreCoverage,
   chain: StoreChain,
+  membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
 ): boolean {
-  if (!WEEKLY_AD_RANKED_PRICING_CHAINS.has(chain as WeeklyAdChain)) {
+  if (!isShopperRankedChain(membership, chain)) {
     return false;
   }
 
@@ -140,7 +146,7 @@ export function weeklyAdPromotionGatesPass(
 }
 
 function getWeeklyAdSourceNameForChain(chain: StoreChain): string | undefined {
-  if (!WEEKLY_AD_RANKED_PRICING_CHAINS.has(chain as WeeklyAdChain)) {
+  if (!isWeeklyAdChain(chain)) {
     return `${chain}-weekly-ad-scrape`;
   }
 

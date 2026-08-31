@@ -16,6 +16,12 @@ import {
   type StoreChain,
 } from "@/lib/provider-rollout";
 import { inferShopperBannerDisplayName } from "@/lib/chain-rollout-policy";
+import {
+  FIXTURE_CHAIN_MEMBERSHIP,
+  isShopperRankedChain,
+  type ChainMembershipSnapshot,
+} from "@/lib/chain-membership";
+import { loadChainMembership } from "@/lib/chain-membership-repository";
 import { searchOfficialProviderStores } from "@/lib/provider-market-service";
 import { deriveRankedPricingSource } from "@/lib/price-source-policy";
 import {
@@ -92,6 +98,7 @@ import {
 export type MarketSearchIdentityOptions = {
   identityLookup?: StoreIdentityLookup;
   env?: StoreIdentityEnv;
+  membership?: ChainMembershipSnapshot;
 };
 
 export async function getMarketSearchExperience(
@@ -108,6 +115,8 @@ export async function getMarketSearchExperience(
       identityLookup: identityOptions?.identityLookup,
       env: identityOptions?.env,
     });
+  const membership =
+    identityOptions?.membership ?? (await loadChainMembership());
 
   const providerStoreSearches = await searchOfficialProviderStores({
     location,
@@ -138,6 +147,7 @@ export async function getMarketSearchExperience(
       location.latitude,
       location.longitude,
       radiusMiles,
+      membership,
     )
   ) {
     const gapFillOutcome = await discoverMapContextStoresWithinBudget({
@@ -164,6 +174,7 @@ export async function getMarketSearchExperience(
             mergedCatalogStores,
             contextCatalogStores,
             MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES,
+            membership,
           );
           contextCatalogStores = filtered.kept;
           suppressedRankedChainConflicts = filtered.suppressedCount;
@@ -247,7 +258,7 @@ export async function getMarketSearchExperience(
     radiusMiles,
     snapshot.priceObservations,
     recipeIngredientIds,
-    { identityLookup, env: storeIdentityEnv },
+    { identityLookup, env: storeIdentityEnv, membership },
   );
   const coverageTrackedIngredients = await resolveKrogerPreviewTrackedIngredients();
   const providerPricingPreviews = await buildProviderPricingPreviews({
@@ -292,6 +303,7 @@ export async function getMarketSearchExperience(
       recipeIngredientIds,
       { identityLookup, env: storeIdentityEnv },
     ),
+    membership,
   });
 
   return {
@@ -313,6 +325,7 @@ export async function getMarketSearchExperience(
       {
         mapDiscoveryNotice,
         usesEphemeralOsmDiscovery,
+        shopperRankedChainIds: [...membership.shopperRankedChainIds],
       },
     ),
   };
@@ -329,6 +342,7 @@ export function buildNearbyStoresForSearch(
   const lookup =
     identityOptions?.identityLookup ?? createDefaultStoreIdentityLookup();
   const env = identityOptions?.env ?? process.env;
+  const membership = identityOptions?.membership ?? FIXTURE_CHAIN_MEMBERSHIP;
 
   return stores
     .map((store) => {
@@ -351,14 +365,14 @@ export function buildNearbyStoresForSearch(
               equivalentStoreIds,
             })
           : null;
+      const rankedEligible = isShopperRankedChain(membership, baseRollout.chain);
       const rollout = resolveProviderRolloutForCatalogStore(store, {
         matchedIngredientCount: coverage.matchedIngredientCount,
         usesWeeklyAdSource: coverage.usesWeeklyAdSource,
-        weeklyAdPromotionPassed: weeklyAdPromotionGatesPass(
-          coverage,
-          baseRollout.chain,
-        ),
+        weeklyAdPromotionPassed:
+          rankedEligible && weeklyAdPromotionGatesPass(coverage, baseRollout.chain, membership),
         krogerOfficialApiPromotionPassed:
+          rankedEligible &&
           officialApiCoverage !== null &&
           krogerOfficialApiPromotionGatesPass(officialApiCoverage),
         freshOfficialApiMatchedCount:
@@ -548,6 +562,7 @@ function buildMarketSummary(
   mapDiscovery?: {
     mapDiscoveryNotice?: string;
     usesEphemeralOsmDiscovery?: boolean;
+    shopperRankedChainIds?: readonly string[];
   },
 ): MarketSummary {
   const recommendationReadyStoreCount = nearbyStores.filter(
@@ -607,6 +622,7 @@ function buildMarketSummary(
     lookupProviderConfigured,
     dataSource,
     saleIngredientChoices,
+    shopperRankedChainIds: [...(mapDiscovery?.shopperRankedChainIds ?? [])],
     ...(mapDiscovery?.mapDiscoveryNotice
       ? { mapDiscoveryNotice: mapDiscovery.mapDiscoveryNotice }
       : {}),

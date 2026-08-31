@@ -1,9 +1,9 @@
 # De-hardcoding plan for nationwide, DB-driven operation (2026-08-12)
 
 > Source of truth for the original hardcoded inventory: [`scale-out-architecture-audit-2026-08-11.md`](scale-out-architecture-audit-2026-08-11.md).
-> Current snapshot → [`PROJECT_CONTINUITY.md` → Resume](../../PROJECT_CONTINUITY.md#resume-as-of-2026-08-26).
+> Current snapshot → [`PROJECT_CONTINUITY.md` → Resume](../../PROJECT_CONTINUITY.md#resume-as-of-2026-08-31).
 
-**Implementation status (as of 2026-08-27):**
+**Implementation status (as of 2026-08-31):**
 
 | Slice | What | Status |
 |---|---|---|
@@ -11,9 +11,10 @@
 | **B1** | `active_markets` + `zip_geocode_cache` (`025`) — env ZIP list is a debug overlay only | **Shipped** — TrueNAS `025` applied **2026-08-27 00:04:01Z** |
 | **B2** | `chain_registry` + `store_coverage` view + `/owner` Coverage tab (`026`) | **Shipped** — TrueNAS `026` applied **2026-08-27 00:04:01Z** (18 banners seeded) |
 | **C** | `/owner` **Markets**: type ZIP → Check (preview, no insert) → Activate into `active_markets` (`source=ops`, `status=active`). CLI `markets:activate` remains backup. No shopper collect. No ~41k ZIP nightly ingest. | **Shipped** (reuses `025`; no new migrate) |
-| Later | Organic shopper-ZIP waiting list (`source=organic_usage`, paused); `threshold_profiles` + density; per-store scrape TZ; `chain_registry` dual-run cutover (shopper ranking still TypeScript); Slice D identity matcher; new ranked adapters; chain go/no-go | **Not started** |
+| **Membership** | Shopper dinner *attempts* + ingest fail-loud read `chain_registry.shopper_ranked`; floors stay in code | **Shipped in repo** (2026-08-31) — live waits Watchtower. TrueNAS already has Lidl/Walmart ranked via `027`/`028`. |
+| Later | Organic shopper-ZIP waiting list; `threshold_profiles`; per-store scrape TZ; banner-per-row with shared adapters; Slice D identity matcher; new ranked adapters; chain go/no-go | **Not started** |
 
-**Still true after A/B1/B2/C:** `active_markets` starts empty — keep `YUM4LESS_INGEST_ZIPS` overlay until you activate at least one ZIP in `/owner` Markets (or CLI), then drop the overlay. Overlay unset + empty table still **fails closed**. Watchtower does **not** migrate future `db/init` files. Do not flip Walmart ranked. Do not treat local Docker as yum4less.com.
+**Still true after A/B1/B2/C:** Overlay unset + empty `active_markets` still **fails closed**. Watchtower does **not** migrate future `db/init` files. Do not treat local Docker as yum4less.com.
 
 **Goal:** the app works nationwide with **no fallback ZIP**, **no VA-only seed table as a runtime authority**, and **no hand-edited chain lists as the source of truth**. Geography- and chain-specific values (distance thresholds, timezone, rollout membership) come from **durable DB (or derived-from-DB) context**, not from constants / env defaults baked into application logic.
 
@@ -288,7 +289,7 @@ See §6. Entity: `zip_geocode_cache` (+ optional `street_geocode_cache`). Option
 
 Summary counts may sit above the list. v1 is **read-only**; flipping `chain_registry.rollout_stage` is not a button on this tab.
 
-**Status (2026-08-26 / TrueNAS 2026-08-27 00:04Z):** Implemented as `/owner` Coverage + `GET /api/owner/store-coverage`. **`026` is applied** on the live TrueNAS volume (owner paste-back). Other environments still run `npm run db:migrate`. Missing `026` is a Coverage-tab notice, not a full `/owner` lockout. Shopper ranking lists remain TypeScript until a later dual-run cutover.
+**Status (2026-08-26 / TrueNAS 2026-08-27 00:04Z; membership 2026-08-31):** Implemented as `/owner` Coverage + `GET /api/owner/store-coverage`. **`026` is applied** on the live TrueNAS volume (owner paste-back). Other environments still run `npm run db:migrate`. Missing `026` is a Coverage-tab notice, not a full `/owner` lockout. Shopper dinner *attempts* and fail-loud ingest read `chain_registry.shopper_ranked` (membership DB-wins in repo; live image waits Watchtower). Floors stay in code.
 
 ---
 
@@ -445,7 +446,7 @@ Locked product order for this workstream (do not reorder without Decision log): 
 
 1. ~~Durable `zip_geocode_cache` + fail-loud ingest ZIPs (delete `23111` soft-default).~~ **B1 + A shipped.**
 2. ~~UI: remove default ZIP; first-run geo/prompt.~~ **A shipped.**
-3. `chain_registry` table + owner Coverage **shipped (B2)**; shopper **read-path dual-run / cutover vs TS lists still later** (not Phase C).
+3. ~~`chain_registry` table + owner Coverage; shopper read-path dual-run later.~~ **B2 shipped.** **Membership DB-wins shipped in repo** (2026-08-31): dinner attempts + fail-loud ingest read `shopper_ranked`. Live yum4less.com waits Watchtower.
 4. `threshold_profiles` + market density heuristic; move constants → `bootstrap` profile. **Not started.**
 5. Per-store/market timezone for weekly-ad browser profile. **Not started.**
 6. ~~`active_markets` table.~~ **B1 shipped.** ~~Owner ZIP check + activate.~~ **C shipped.** Organic shopper-ZIP waiting list remains later.

@@ -8,6 +8,7 @@ import { SingleStoreMapOverlay } from "@/components/single-store-map-overlay";
 import {
   defaultSelectedStoreIdsForSettings,
   filterSettingsSelectableStores,
+  membershipFromMarket,
 } from "@/lib/settings-store-selection";
 import {
   canonicalizeStoreIdsForSettings,
@@ -66,13 +67,14 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const selectableStores = filterSettingsSelectableStores(
     (storeCatalog ?? market)?.nearbyStores ?? [],
+    membershipFromMarket(storeCatalog ?? market),
   );
   const [storeMapTarget, setStoreMapTarget] = useState<
     (typeof selectableStores)[number] | null
   >(null);
   const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
   const storesReady = Boolean(market);
-  const storesMissingRankedChains = storesReady && selectableStores.length === 0;
+  const storesMissingGroceryPins = storesReady && selectableStores.length === 0;
   const canSaveSettings =
     storesReady &&
     form.selectedStoreIds.length > 0 &&
@@ -91,7 +93,7 @@ export function SettingsPanel({
 
   function handleSingleStoreChange(storeId: string) {
     const store = selectableStores.find((candidate) => candidate.id === storeId);
-    if (storeId && !store?.recommendationEnabled) {
+    if (storeId && !store) {
       return;
     }
 
@@ -105,7 +107,7 @@ export function SettingsPanel({
 
   function handleMultiStoreToggle(storeId: string, checked: boolean) {
     const store = selectableStores.find((candidate) => candidate.id === storeId);
-    if (!store?.recommendationEnabled) {
+    if (!store) {
       return;
     }
 
@@ -229,7 +231,6 @@ export function SettingsPanel({
                     <option
                       key={store.id}
                       value={store.id}
-                      disabled={!store.recommendationEnabled}
                     >
                       {formatSettingsStoreOptionLabel(store)}
                       {!store.recommendationEnabled ? ` — ${store.rolloutNote}` : ""}
@@ -268,18 +269,17 @@ export function SettingsPanel({
                     form.selectedStoreIds,
                     store.id,
                   );
-                  const storeSelectable = store.recommendationEnabled;
+                  const hasDinnerEstimates = store.recommendationEnabled;
 
                   return (
                     <div
                       key={store.id}
-                      className={`store-multi-select-option${selected ? " store-multi-select-option--selected" : ""}${!storeSelectable ? " store-multi-select-option--disabled" : ""}`}
+                      className={`store-multi-select-option${selected ? " store-multi-select-option--selected" : ""}`}
                     >
                       <input
                         id={checkboxId}
                         aria-label={`Select ${formatSettingsStoreOptionLabel(store)}`}
-                        checked={selected && storeSelectable}
-                        disabled={!storeSelectable}
+                        checked={selected}
                         onChange={(event) =>
                           handleMultiStoreToggle(store.id, event.target.checked)
                         }
@@ -289,7 +289,7 @@ export function SettingsPanel({
                         <span className="store-multi-select-name">
                           {formatSettingsStoreOptionLabel(store)}
                         </span>
-                        {!storeSelectable ? (
+                        {!hasDinnerEstimates ? (
                           <span className="store-multi-select-disabled-note">
                             {store.rolloutNote}
                           </span>
@@ -314,9 +314,9 @@ export function SettingsPanel({
           )
         ) : null}
 
-        {storesMissingRankedChains ? (
+        {storesMissingGroceryPins ? (
           <p className="field-hint" role="status">
-            No stores with dinner estimates showed up in this search area. Try a
+            No grocery stores showed up in this search area. Try a
             larger radius or another ZIP.
           </p>
         ) : null}

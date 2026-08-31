@@ -18,7 +18,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 ## Nationwide de-hardcoding (2026-08-27)
 
-**A, B1, B2, and C are current** (code on `master`; TrueNAS schema `025` + `026` applied **2026-08-27 00:04Z**). Plan and remaining work → [`docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md).
+**A, B1, B2, C, and membership DB-wins are current in repo** (TrueNAS schema `025` + `026` applied **2026-08-27 00:04Z**; Lidl/Walmart ranked flags via `027`/`028`). Plan and remaining work → [`docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md).
 
 | Slice | Status |
 |---|---|
@@ -26,8 +26,9 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 | **B1** — `active_markets` + `zip_geocode_cache` | Shipped (`025`) |
 | **B2** — `chain_registry` + `/owner` Coverage | Shipped (`026`) |
 | **C** — `/owner` Markets ZIP check + activate | Shipped (no new migrate; reuses `025`) |
+| **Membership** — dinner attempts + fail-loud ingest from `chain_registry.shopper_ranked` | Shipped in repo (live image waits Watchtower) |
 
-Keep `YUM4LESS_INGEST_ZIPS` on TrueNAS ingest until you activate at least one ZIP in `/owner` **Markets** (or `npm run markets:activate -- <ZIP>`), then remove the overlay so cron reads the table. Shopper ranking lists stay in TypeScript until a later dual-run cutover. C does **not** auto-queue shopper ZIPs.
+TrueNAS ingest reads `active_markets` (ZIP `23111` active; overlay unset). Extra ZIP `23220` is next. Dinner attempts follow `chain_registry.shopper_ranked`; match/confidence/freshness floors stay in code. C does **not** auto-queue shopper ZIPs. Live yum4less.com waits on a new app/ingest image.
 
 ---
 

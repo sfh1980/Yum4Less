@@ -80,4 +80,50 @@ describe("StorePickerScreen coverage help", () => {
       "/terms",
     );
   });
+
+  it("lets shoppers select grocery without dinner estimates, including Whole Foods", () => {
+    const kroger = buildTestNearbyStoreSummary({
+      id: "kroger-1",
+      chain: "kroger",
+      chainLabel: "Kroger",
+      recommendationEnabled: true,
+    });
+    const wholeFoods = buildTestNearbyStoreSummary({
+      id: "whole-foods-1",
+      chain: "unknown",
+      chainLabel: "Other stores",
+      name: "Whole Foods Market",
+      recommendationEnabled: false,
+      rolloutNote:
+        "Shown on the map for nearby planning — dinner price estimates are not available from this store yet.",
+    });
+
+    render(
+      createElement(StorePickerScreen, {
+        form: {
+          ...testForm,
+          shoppingStyle: "multi-store",
+          selectedStoreIds: ["kroger-1"],
+        },
+        setShoppingStyleSelection: vi.fn(),
+        market: buildTestMarket({
+          nearbyStores: [kroger, wholeFoods],
+        }),
+        marketSearchLoading: false,
+        marketSearchState: { status: "ready" },
+        showFactoryReset: false,
+        onContinue: vi.fn(),
+        onFactoryReset: vi.fn(),
+      }),
+    );
+
+    const wholeFoodsBox = screen.getByRole("checkbox", {
+      name: /Select Whole Foods Market/i,
+    });
+    expect(wholeFoodsBox).toBeEnabled();
+    expect(wholeFoodsBox).not.toBeChecked();
+    expect(
+      screen.getByText(/dinner price estimates are not available from this store yet/i),
+    ).toBeInTheDocument();
+  });
 });

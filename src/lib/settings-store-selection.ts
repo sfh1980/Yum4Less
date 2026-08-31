@@ -1,9 +1,15 @@
 import { getDistanceMiles } from "@/lib/geo-distance";
-import {
-  SETTINGS_SELECTABLE_CHAIN_ORDER,
-  SETTINGS_SELECTABLE_CHAINS,
-} from "@/lib/chain-rollout-policy";
 import { collapseSameChainCollocatedCatalogStores } from "@/lib/catalog-store-colocated-identity";
+import {
+  FIXTURE_CHAIN_MEMBERSHIP,
+  isSettingsSelectableChain,
+  membershipFromShopperRankedIds,
+  type ChainMembershipSnapshot,
+} from "@/lib/chain-membership";
+import {
+  isConvenienceOrBakeryPin,
+  isPharmacyPin,
+} from "@/lib/owner/owner-market-admission";
 import {
   isFixtureOsmCatalogSource,
   isFixtureOsmStoreId,
@@ -14,6 +20,16 @@ import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 
 /** Keep aligned with MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES in market-store-catalog-merge.ts */
 const SETTINGS_RANKED_CHAIN_DEDUPE_MILES = 1.5;
+
+export function membershipFromMarket(market: {
+  shopperRankedChainIds?: readonly string[];
+} | null | undefined): ChainMembershipSnapshot {
+  if (!market || market.shopperRankedChainIds === undefined) {
+    return FIXTURE_CHAIN_MEMBERSHIP;
+  }
+
+  return membershipFromShopperRankedIds(market.shopperRankedChainIds);
+}
 
 export { SETTINGS_SELECTABLE_CHAINS } from "@/lib/chain-rollout-policy";
 
@@ -45,29 +61,68 @@ function osmStoreConflictsWithCatalogPin(
   );
 }
 
+function settingsDedupeKey(store: NearbyStoreSummary): string {
+  if (store.chain !== "unknown") {
+    return store.chain;
+  }
+  return `name:${store.name.trim().toLowerCase()}`;
+}
+
+function isShopperSettingsGroceryPin(store: NearbyStoreSummary): boolean {
+  if (isShopperExcludedMapFixture(store)) {
+    return false;
+  }
+  if (
+    isConvenienceOrBakeryPin({
+      name: store.name,
+      kind: store.kind,
+    })
+  ) {
+    return false;
+  }
+  if (isPharmacyPin(store.name)) {
+    return false;
+  }
+  return true;
+}
+
+function orderedDedupeKeys(
+  stores: NearbyStoreSummary[],
+  membership: ChainMembershipSnapshot,
+): string[] {
+  const present = new Set(stores.map(settingsDedupeKey));
+  const ranked = membership.shopperRankedChainIds.filter((chain) =>
+    present.has(chain),
+  );
+  const rest = [...present]
+    .filter((key) => !isSettingsSelectableChain(membership, key))
+    .sort();
+  return [...ranked, ...rest];
+}
+
 /**
- * Stores eligible for the Settings dropdown — ranked v1 chains only. Per chain,
- * keep ingested/catalog rows and include live OSM pins unless a catalog row for the
- * same chain is already within map dedupe proximity.
- * Fixture / synthetic OSM rows are never shopper-selectable.
+ * Stores eligible for the Settings / wizard picker — grocery and food-capable
+ * pins in radius, not the TypeScript ranked-chain allowlist. Omit convenience,
+ * bakeries, pharmacies, and map fixtures. Per dedupe key, keep catalog rows and
+ * include live OSM pins unless a catalog row is already within 1.5 mi.
+ * Dinner estimates still require recommendationEnabled / promotion floors.
  */
 export function filterSettingsSelectableStores(
   stores: NearbyStoreSummary[],
+  membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
 ): NearbyStoreSummary[] {
-  const rankedChainStores = stores.filter(
-    (store) =>
-      SETTINGS_SELECTABLE_CHAINS.has(store.chain) &&
-      !isShopperExcludedMapFixture(store),
-  );
+  const groceryStores = stores.filter(isShopperSettingsGroceryPin);
 
-  if (rankedChainStores.length === 0) {
+  if (groceryStores.length === 0) {
     return [];
   }
 
   const pool: NearbyStoreSummary[] = [];
 
-  for (const chain of SETTINGS_SELECTABLE_CHAIN_ORDER) {
-    const chainStores = rankedChainStores.filter((store) => store.chain === chain);
+  for (const key of orderedDedupeKeys(groceryStores, membership)) {
+    const chainStores = groceryStores.filter(
+      (store) => settingsDedupeKey(store) === key,
+    );
     if (chainStores.length === 0) {
       continue;
     }
@@ -88,8 +143,6 @@ export function filterSettingsSelectableStores(
     }
   }
 
-  // Chain-configurable collocated collapse (0.05 default; Kroger 0.15 exception).
-  // Replaces Settings' prior dedupeKrogerStoresByIdentity-only call.
   return collapseSameChainCollocatedCatalogStores(
     [...pool].sort((left, right) => left.distanceMiles - right.distanceMiles),
   );
@@ -98,8 +151,9 @@ export function filterSettingsSelectableStores(
 export function defaultSelectedStoreIdsForSettings(
   stores: NearbyStoreSummary[],
   shoppingStyle: "single-store" | "multi-store",
+  membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
 ): string[] {
-  const selectable = filterSettingsSelectableStores(stores);
+  const selectable = filterSettingsSelectableStores(stores, membership);
   const preferred =
     selectable.find((store) => store.recommendationEnabled) ?? selectable[0];
 

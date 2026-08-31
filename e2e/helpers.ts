@@ -71,6 +71,7 @@ export type MarketSearchBody = {
   ok: boolean;
   market: {
     nearbyStores: PublicNearbyStore[];
+    shopperRankedChainIds?: string[];
   };
 };
 
@@ -245,6 +246,10 @@ export async function completeSettingsZipFlow(
   expect(typeof requestBody.latitude).toBe("number");
   expect(typeof requestBody.longitude).toBe("number");
   assertPublicNearbyStoresSanitized(body.market.nearbyStores);
+  expect(
+    body.market.shopperRankedChainIds?.length ?? 0,
+    "market-search must return chain_registry shopper-ranked ids (membership DB-wins)",
+  ).toBeGreaterThan(0);
   assertProductionRankedRolloutGates(body.market.nearbyStores);
   await chooseShoppingStyle(page, "Several stores");
   await expect(

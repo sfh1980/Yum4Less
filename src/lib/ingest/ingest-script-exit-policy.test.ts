@@ -22,6 +22,23 @@ describe("isWeeklyAdFailLoudChain", () => {
   it("does not fail the job for Dollar General", () => {
     expect(isWeeklyAdFailLoudChain("dollar-general")).toBe(false);
   });
+
+  it("follows the roster snapshot instead of a hardcoded ranked list", () => {
+    expect(
+      isWeeklyAdFailLoudChain("kroger", {
+        shopperRankedChainIds: [],
+        settingsSelectableChainIds: [],
+        weeklyAdEligibleChainIds: [],
+      }),
+    ).toBe(false);
+    expect(
+      isWeeklyAdFailLoudChain("dollar-general", {
+        shopperRankedChainIds: ["dollar-general"],
+        settingsSelectableChainIds: ["dollar-general"],
+        weeklyAdEligibleChainIds: ["dollar-general"],
+      }),
+    ).toBe(true);
+  });
 });
 
 describe("shouldFailProviderPriceSyncExit", () => {

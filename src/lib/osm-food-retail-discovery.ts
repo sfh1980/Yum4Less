@@ -95,6 +95,33 @@ export function isAllowedGroceryOsmShopTag(shopTag: string): shopTag is GroceryO
   return GROCERY_OSM_SHOP_TAG_SET.has(shopTag.trim());
 }
 
+/** Target grocery is often `shop=department_store`; do not keep Marshalls/Kohl's. */
+export function isTargetGroceryBannerName(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  if (!normalized.includes("target")) {
+    return false;
+  }
+  if (
+    normalized.includes("optical") ||
+    normalized.includes("pharmacy") ||
+    normalized.includes("cafe")
+  ) {
+    return false;
+  }
+  return (
+    normalized === "target" ||
+    normalized.startsWith("target ") ||
+    normalized.includes("super target")
+  );
+}
+
+export function shouldKeepOsmFoodRetailShop(shopTag: string, name: string): boolean {
+  if (isAllowedGroceryOsmShopTag(shopTag)) {
+    return true;
+  }
+  return shopTag.trim() === "department_store" && isTargetGroceryBannerName(name);
+}
+
 const FOOD_RETAIL_SHOP_TAGS = GROCERY_OSM_SHOP_TAG_ALLOWLIST.join("|");
 
 let lastOverpassRequestAt = 0;
@@ -323,6 +350,10 @@ function buildOverpassQuery(input: {
     (
       node["shop"~"${FOOD_RETAIL_SHOP_TAGS}"](around:${radiusMeters},${latitude},${longitude});
       way["shop"~"${FOOD_RETAIL_SHOP_TAGS}"](around:${radiusMeters},${latitude},${longitude});
+      node["shop"="department_store"]["name"~"Target",i](around:${radiusMeters},${latitude},${longitude});
+      way["shop"="department_store"]["name"~"Target",i](around:${radiusMeters},${latitude},${longitude});
+      node["shop"="department_store"]["brand"~"Target",i](around:${radiusMeters},${latitude},${longitude});
+      way["shop"="department_store"]["brand"~"Target",i](around:${radiusMeters},${latitude},${longitude});
     );
     out center tags;
   `.trim();
@@ -425,7 +456,7 @@ export function parseOverpassElements(payload: OverpassResponse): OsmDiscoveredF
     const name = resolveOsmFoodRetailDisplayName(tags);
     const shopTag = resolveOsmShopTag(tags);
 
-    if (!name || !shopTag || !isAllowedGroceryOsmShopTag(shopTag)) {
+    if (!name || !shopTag || !shouldKeepOsmFoodRetailShop(shopTag, name)) {
       continue;
     }
 
@@ -480,6 +511,7 @@ function inferStoreKind(
 
   if (
     shopTag === "wholesale" ||
+    shopTag === "department_store" ||
     normalizedName.includes("costco") ||
     normalizedName.includes("sam's club") ||
     normalizedName.includes("bj")

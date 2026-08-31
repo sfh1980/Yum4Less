@@ -4,10 +4,12 @@ import {
   discoverFoodRetailStoresNearLocation,
   GROCERY_OSM_SHOP_TAG_ALLOWLIST,
   isAllowedGroceryOsmShopTag,
+  isTargetGroceryBannerName,
   parseOverpassElements,
   resolveOsmAddressLocality,
   resolveOsmFoodRetailDisplayName,
   resolveOverpassEndpoints,
+  shouldKeepOsmFoodRetailShop,
 } from "@/lib/osm-food-retail-discovery";
 import { getProviderRolloutForStore } from "@/lib/provider-rollout";
 
@@ -148,11 +150,21 @@ describe("osm food retail discovery", () => {
           lon: -77.32,
           tags: { name: "Wawa", shop: "convenience" },
         },
+        {
+          type: "node",
+          id: 800006,
+          lat: 37.6,
+          lon: -77.31,
+          tags: { name: "Target", shop: "department_store" },
+        },
       ],
     });
 
-    expect(stores.map((store) => store.name)).toEqual(["Food Lion", "Wawa"]);
-    expect(stores.every((store) => isAllowedGroceryOsmShopTag(store.shopTag))).toBe(true);
+    expect(stores.map((store) => store.name)).toEqual(["Food Lion", "Wawa", "Target"]);
+    expect(stores.find((store) => store.name === "Target")?.kind).toBe("big-box");
+    expect(shouldKeepOsmFoodRetailShop("department_store", "Target")).toBe(true);
+    expect(shouldKeepOsmFoodRetailShop("department_store", "Marshalls")).toBe(false);
+    expect(isTargetGroceryBannerName("Target Optical")).toBe(false);
   });
 
   it("honors YUM4LESS_OSM_OVERPASS_URL as the first endpoint", () => {

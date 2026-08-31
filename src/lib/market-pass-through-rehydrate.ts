@@ -10,6 +10,8 @@ import { buildProviderCoverageRollup } from "@/lib/provider-coverage-rollup";
 import { searchOfficialProviderStores } from "@/lib/provider-market-service";
 import { buildProviderPricingPreviews } from "@/lib/provider-pricing-preview-service";
 import { resolveKrogerPreviewTrackedIngredients } from "@/lib/provider-search-terms";
+import { membershipFromMarket } from "@/lib/settings-store-selection";
+import type { ChainMembershipSnapshot } from "@/lib/chain-membership";
 import type { MarketSummary, NearbyStoreSummary } from "@/lib/recommendation-types";
 import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
 import type { StoreIdentityLookup } from "@/lib/store-identity-resolvers";
@@ -19,6 +21,7 @@ import type { ResolvedSearchLocation } from "@/lib/location-resolution";
 export type MarketPassThroughIdentityOptions = {
   identityLookup?: StoreIdentityLookup;
   env?: StoreIdentityEnv;
+  membership?: ChainMembershipSnapshot;
 };
 
 /** Build nearby rows for pricing-scope ids not already on the market list. */
@@ -51,7 +54,11 @@ export function buildPricingScopeExtraNearbyStores(input: {
     input.market.radiusMiles,
     input.priceObservations,
     collectRecipeIngredientIdsForRollout(input.recipes),
-    { identityLookup: input.identityLookup, env: input.env },
+    {
+      identityLookup: input.identityLookup,
+      env: input.env,
+      membership: membershipFromMarket(input.market),
+    },
   );
 }
 
@@ -84,7 +91,11 @@ export function rehydratePassedMarketNearbyStores(
       market.radiusMiles,
       snapshot.priceObservations,
       recipeIngredientIds,
-      identityOptions,
+      {
+        ...identityOptions,
+        membership:
+          identityOptions?.membership ?? membershipFromMarket(market),
+      },
     ).map((store) => [store.id, store]),
   );
 

@@ -246,4 +246,26 @@ describe("weekly ad coverage", () => {
       ),
     ).toBe(true);
   });
+
+  it("does not promote a strong flyer when the roster does not rank that chain", () => {
+    const strongCoverage = {
+      storeId: "kroger-mechanicsville",
+      chain: "kroger" as const,
+      matchedIngredientCount: 5,
+      totalRecipeIngredientCount: 6,
+      averageMatchConfidence: 0.88,
+      maxFreshnessHoursAgo: 0,
+      maxFreshnessDaysAgo: 0,
+      coverageStatus: "strong" as const,
+      usesWeeklyAdSource: true,
+    };
+
+    expect(
+      weeklyAdPromotionGatesPass(strongCoverage, "kroger", {
+        shopperRankedChainIds: [],
+        settingsSelectableChainIds: [],
+        weeklyAdEligibleChainIds: [],
+      }),
+    ).toBe(false);
+  });
 });

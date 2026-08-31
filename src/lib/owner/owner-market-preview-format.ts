@@ -1,8 +1,9 @@
+import { inferStoreChainFromName } from "@/lib/chain-rollout-policy";
 import {
-  inferStoreChainFromName,
-  SHOPPER_RANKED_V1_CHAINS,
-  type ShopperRankedV1Chain,
-} from "@/lib/chain-rollout-policy";
+  FIXTURE_CHAIN_MEMBERSHIP,
+  isShopperRankedChain,
+  type ChainMembershipSnapshot,
+} from "@/lib/chain-membership";
 import {
   type OwnerMarketStorePreview,
 } from "@/lib/owner/ingest-markets-copy";
@@ -48,17 +49,22 @@ export function applyZipLocalityFallback(
 export function compareOwnerMarketPreviewStores(
   left: OwnerMarketStorePreview,
   right: OwnerMarketStorePreview,
+  membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
 ): number {
-  const rankDelta = previewPriority(left) - previewPriority(right);
+  const rankDelta =
+    previewPriority(left, membership) - previewPriority(right, membership);
   if (rankDelta !== 0) {
     return rankDelta;
   }
   return left.name.localeCompare(right.name);
 }
 
-function previewPriority(store: OwnerMarketStorePreview): number {
+function previewPriority(
+  store: OwnerMarketStorePreview,
+  membership: ChainMembershipSnapshot,
+): number {
   const chain = inferStoreChainFromName(store.name);
-  if (SHOPPER_RANKED_V1_CHAINS.includes(chain as ShopperRankedV1Chain)) {
+  if (isShopperRankedChain(membership, chain)) {
     return 0;
   }
   if (store.kind === "grocery") {

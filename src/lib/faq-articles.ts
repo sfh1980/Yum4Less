@@ -56,8 +56,8 @@ export const FAQ_ARTICLES: readonly FaqArticle[] = [
     slug: FAQ_SLUG.storeMapCoverage,
     question: "Why do some stores only appear on the map?",
     paragraphs: [
-      "Some stores show dinner estimates. Others appear on the map for planning only. That is normal in many areas.",
-      "Colored badges mark stores with dinner estimates. Gray badges are nearby context — not used for meal totals.",
+      "You can pick grocery stores near you, including stores we do not have sale prices for yet.",
+      "Dinner estimates use saved sale prices when a store has enough coverage. Other selected stores stay on the map for planning — they do not change meal totals.",
       "Yum4Less tracks a set of dinner ingredients and shows estimated sale prices when those ingredients overlap a store’s saved prices. Coverage differs by chain and week.",
     ],
   },

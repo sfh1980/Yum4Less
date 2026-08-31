@@ -46,6 +46,33 @@ describe("chain-coverage-honesty", () => {
     expect(depth[1]?.matchedIngredientCount).toBe(34);
   });
 
+  it("includes Lidl and Walmart in honesty copy when those stores passed floors", () => {
+    const depth = buildBestChainCoverageDepth([
+      ...stores,
+      buildTestNearbyStoreSummary({
+        id: "lidl-1",
+        chain: "lidl",
+        chainLabel: "Lidl",
+        matchedIngredientCount: 40,
+        pricingSourceKind: "weekly-ad",
+      }),
+      buildTestNearbyStoreSummary({
+        id: "walmart-1",
+        chain: "walmart",
+        chainLabel: "Walmart",
+        matchedIngredientCount: 9,
+        pricingSourceKind: "weekly-ad",
+      }),
+    ]);
+    expect(depth.map((entry) => entry.chain)).toEqual([
+      "kroger",
+      "lidl",
+      "publix",
+      "aldi",
+      "walmart",
+    ]);
+  });
+
   it("formats store coverage help from selected stores", () => {
     const model = buildStoreCoverageHelpModel(stores, [
       "kroger-1",

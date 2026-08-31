@@ -2,7 +2,7 @@
 
 Copy-paste guide for a **dedicated Linux / TrueNAS SCALE box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Local proof uses **Docker Compose**; the production-like host path on this project is **TrueNAS Apps “Custom App” YAML** (see [§9](#9-truenas-apps-custom-app--working-deploy)).
 
-**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). Remaining open ops: backup drill.
+**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). **Unattended ingest-worker night closed** (owner paste-back 2026-08-31). **Backup/restore drill closed** (2026-08-31). Remaining open ops: extra ZIP `23220` (`/owner` Check + Activate).
 
 **Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths).
 
@@ -725,7 +725,7 @@ Expect `200`. Then proceed to the ingest container (§10) and freshness checks (
 
 ## 10. Ingest cron container (TrueNAS)
 
-**Status (2026-08-29 owner paste-back; backup drill 2026-08-31):** Unattended 3am cron two-night proof closed. Backup/restore drill closed (276/324/29 round-trip). Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. Nights of **2026-08-28** and **2026-08-29** both logged `Scheduled pricing ingest completed.` (~07:07 UTC) with `[freshness] OK`. Overlay unset; `active_markets` ZIP `23111` only.
+**Status (2026-08-31 owner paste-back):** Unattended 3am cron two-night proof closed. Unattended ingest-worker night closed (enqueue 07:00:01Z; drain 07:01–07:09Z; 6/6 `succeeded`). Backup/restore drill closed (276/324/29 round-trip). Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. Overlay unset; `active_markets` ZIP `23111` only until `/owner` Activate of `23220`.
 
 **Evidence (owner TrueNAS session, ZIP `23111`):**
 - One-shot dry-run (`YUM4LESS_INGEST_ONCE=1`) completed against production data.
@@ -786,7 +786,7 @@ After local tests pass:
 
 Until step 2–3, leave `YUM4LESS_INGEST_QUEUE_WORKER` unset so 3am still runs map-catalog → weekly-ad → … inline (same as today).
 
-Keep ZIP **23111** only until one worker night looks right. Extra ZIP **23220** is later.
+Unattended worker night **closed 2026-08-31**. Extra ZIP **23220** is next (`/owner` Check + Activate). Keep the host Cron Job Enabled.
 
 **Network:** `ingest` **must** share the Custom App compose network with `db` (same YAML stack). Do not publish ingest ports.
 
@@ -929,7 +929,7 @@ Ingest + Watchtower are **deployed** on TrueNAS. Manual one-shot dry-run closed 
 | §4 / ops item | Status |
 |---------------|--------|
 | 1. Confirm Postgres listens `127.0.0.1:5433` only (Compose) / no host publish (TrueNAS) | Ops confirm on box — TrueNAS db already unpublished |
-| 2. Wire scheduled ingest + freshness path | **Closed** — unattended 3am two-night proof (2026-08-28 and 2026-08-29, overlay off) |
+| 2. Wire scheduled ingest + freshness path | **Closed** — unattended 3am two-night proof (2026-08-28 and 2026-08-29) plus ingest-worker Cron Job drain (2026-08-31 07:01–07:09Z, 6/6 `succeeded`) |
 | 3. One successful ingest (non-empty ranked window) | **Closed (manual dry-run)** — 246/246 fresh @ ZIP `23111`; see §10 Status |
 | 4. `db:backup-restore-drill` on TrueNAS target | **Closed (2026-08-31)** — host dump/restore into `yum4less_backup_drill`; counts **276/324/29** matched; drill DB dropped |
 | 5. Public/WAN exposure | **Closed (2026-08-03/04)** — Cloudflare Tunnel → `https://yum4less.com/` ([§12](#12-cloudflare-tunnel-wan--live)) |

@@ -27,6 +27,11 @@ const CONVENIENCE_NAME_FRAGMENTS = [
   "qt ",
   "quicktrip",
   "kwik trip",
+  "mini mart",
+  "minimart",
+  "convenience",
+  "express mart",
+  "corner store",
 ] as const;
 
 const BAKERY_NAME_FRAGMENTS = [
@@ -71,6 +76,11 @@ export function isConvenienceOrBakeryPin(input: {
   return false;
 }
 
+export function isPharmacyPin(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return PHARMACY_NAME_FRAGMENTS.some((fragment) => normalized.includes(fragment));
+}
+
 export function isGroceryPinForDensity(input: {
   name: string;
   kind?: string;
@@ -99,7 +109,7 @@ export function classifyOwnerAdmissionGroup(name: string): OwnerAdmissionGroup {
   if (CLUB_NAME_FRAGMENTS.some((fragment) => normalized.includes(fragment))) {
     return "food-only";
   }
-  if (PHARMACY_NAME_FRAGMENTS.some((fragment) => normalized.includes(fragment))) {
+  if (isPharmacyPin(name)) {
     return "needs-you";
   }
   if (NEEDS_YOU_NAME_FRAGMENTS.some((fragment) => normalized.includes(fragment))) {

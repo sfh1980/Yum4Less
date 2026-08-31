@@ -69,6 +69,14 @@ export function buildTestMarketSummary(
     lookupProviderConfigured: false,
     dataSource: "database",
     saleIngredientChoices: [],
+    shopperRankedChainIds: [
+      "kroger",
+      "aldi",
+      "publix",
+      "food-lion",
+      "lidl",
+      "walmart",
+    ],
     message: "Fixture market search.",
     ...overrides,
   };

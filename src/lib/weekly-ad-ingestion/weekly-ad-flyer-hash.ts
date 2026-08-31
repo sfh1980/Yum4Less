@@ -68,9 +68,53 @@ export async function rememberWeeklyAdFlyerHash(input: {
   }
 }
 
+/**
+ * True when this persist batch already has enough in-stock weekly-ad rows for
+ * every target store. Hash-only skip is unsafe after a wipe that leaves a
+ * partial leftover (e.g. 2 rows when promotion needs 3+).
+ */
+export async function weeklyAdObservationsExistForStores(input: {
+  storeIds: readonly string[];
+  sourceName: string;
+  minObservationsPerStore: number;
+}): Promise<boolean> {
+  const storeIds = [...new Set(input.storeIds.filter(Boolean))];
+  const minObservationsPerStore = Math.max(1, input.minObservationsPerStore);
+  if (!flyerHashDbEnabled() || storeIds.length === 0) {
+    return false;
+  }
+
+  try {
+    const result = await getDbPool().query<{ store_id: string; n: string | number }>(
+      `
+        select store_id, count(*)::int as n
+        from price_observations
+        where store_id = any($1::text[])
+          and in_stock
+          and source_name = $2
+        group by store_id
+      `,
+      [storeIds, input.sourceName],
+    );
+    const counts = new Map(
+      result.rows.map((row) => [row.store_id, Number(row.n) || 0]),
+    );
+    return storeIds.every(
+      (storeId) => (counts.get(storeId) ?? 0) >= minObservationsPerStore,
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function shouldSkipUnchangedFlyerPersist(input: {
   previousHash: string | null;
   nextHash: string;
+  targetStoresHaveObservations: boolean;
 }): boolean {
-  return Boolean(input.previousHash) && input.previousHash === input.nextHash;
+  return (
+    Boolean(input.previousHash) &&
+    input.previousHash === input.nextHash &&
+    input.targetStoresHaveObservations
+  );
 }

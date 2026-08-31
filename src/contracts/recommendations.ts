@@ -119,6 +119,11 @@ export type MarketSummary = {
   dataSource: MarketDataSource;
   /** Sale/API/scrape ingredient rows near the search point for optional shopper selection. */
   saleIngredientChoices: SaleIngredientChoice[];
+  /**
+   * Chain ids from `chain_registry.shopper_ranked` for this search. Client
+   * picker sort and honesty copy use this — not a hardcoded TypeScript list.
+   */
+  shopperRankedChainIds?: string[];
   /** Honest notice when search-time OSM discovery is degraded, sparse, or ephemeral. */
   mapDiscoveryNotice?: string;
   /** True when any visible pin came from ephemeral search-time OSM merge (not Postgres). */

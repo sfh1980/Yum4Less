@@ -53,6 +53,7 @@ describe("market admission helpers", () => {
 
   it("omits convenience and bakeries from inventory and density grocery counts", () => {
     expect(isConvenienceOrBakeryPin({ name: "7-Eleven" })).toBe(true);
+    expect(isConvenienceOrBakeryPin({ name: "Harrison Mini Mart" })).toBe(true);
     expect(isConvenienceOrBakeryPin({ name: "Kroger" })).toBe(false);
     expect(isGroceryPinForDensity({ name: "7-Eleven", kind: "specialty" })).toBe(
       false,
@@ -68,15 +69,30 @@ describe("market admission helpers", () => {
     expect(classifyOwnerAdmissionGroup("Giant")).toBe("needs-you");
   });
 
-  it("skips flyer persist when the content hash is unchanged", () => {
+  it("skips flyer persist when the content hash is unchanged and rows still exist", () => {
     const hash = weeklyAdFlyerContentHash([
       { productName: "Chicken", price: 5, saleLabel: "sale" },
     ]);
     expect(
-      shouldSkipUnchangedFlyerPersist({ previousHash: hash, nextHash: hash }),
+      shouldSkipUnchangedFlyerPersist({
+        previousHash: hash,
+        nextHash: hash,
+        targetStoresHaveObservations: true,
+      }),
     ).toBe(true);
     expect(
-      shouldSkipUnchangedFlyerPersist({ previousHash: null, nextHash: hash }),
+      shouldSkipUnchangedFlyerPersist({
+        previousHash: null,
+        nextHash: hash,
+        targetStoresHaveObservations: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldSkipUnchangedFlyerPersist({
+        previousHash: hash,
+        nextHash: hash,
+        targetStoresHaveObservations: false,
+      }),
     ).toBe(false);
   });
 });

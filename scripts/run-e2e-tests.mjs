@@ -62,6 +62,28 @@ function assertE2eSettingsBootstrapStores(databaseName) {
   }
 }
 
+/** Fail closed if fixture ingest skipped a rewrite after price_observations were wiped. */
+function assertE2eFixtureWeeklyAdPrices(databaseName) {
+  const requiredIds = [
+    "kroger-mechanicsville",
+    "aldi-mechanicsville",
+    "publix-1626",
+    "food-lion-mechanicsville",
+    "walmart-rocketts",
+  ];
+  for (const storeId of requiredIds) {
+    const count = psqlQueryScalar(
+      databaseName,
+      `select count(*) from price_observations where store_id = '${storeId.replace(/'/g, "''")}' and in_stock;`,
+    );
+    if (Number(count) < 3) {
+      throw new Error(
+        `e2e prep: expected at least 3 in-stock price_observations for ${storeId} in ${databaseName} (found count=${count}). Flyer-hash skip must not leave dinner rows missing after a test wipe.`,
+      );
+    }
+  }
+}
+
 async function main() {
   const databaseUrl = resolveE2eDatabaseUrl();
   const databaseName = databaseNameFromUrl(databaseUrl);
@@ -124,6 +146,7 @@ async function main() {
   );
   psqlApplySqlContent(databaseName, themealdbRankSql);
   assertE2eSettingsBootstrapStores(databaseName);
+  assertE2eFixtureWeeklyAdPrices(databaseName);
 
   const playwrightEnv = { ...ciEnv };
   delete playwrightEnv.PLAYWRIGHT_SKIP_WEBSERVER;

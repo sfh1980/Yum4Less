@@ -45,7 +45,7 @@ import {
   filterSelectedStoreIdsAgainstSelectable,
 } from "@/lib/store-identity-settings-lookup";
 import { scopeMarketSummaryToSelectedStoresForMap } from "@/lib/store-identity-map-pin-resolve";
-import { defaultSelectedStoreIdsForSettings, filterSettingsSelectableStores } from "@/lib/settings-store-selection";
+import { defaultSelectedStoreIdsForSettings, filterSettingsSelectableStores, membershipFromMarket } from "@/lib/settings-store-selection";
 import { mergeSuggestedPantryChecklist } from "@/lib/recipe-plan-coverage";
 import {
   clearSavedMeals,
@@ -685,15 +685,14 @@ export function useMealPlanner() {
       setSelectedStoreId(undefined);
       setSelectedIngredientIds([]);
       setForm((current) => {
-        const selectable = filterSettingsSelectableStores(result.market.nearbyStores);
-        const enabledSelectableIds = new Set(
-          selectable
-            .filter((store) => store.recommendationEnabled)
-            .map((store) => store.id),
+        const selectable = filterSettingsSelectableStores(
+          result.market.nearbyStores,
+          membershipFromMarket(result.market),
         );
+        const selectableIds = new Set(selectable.map((store) => store.id));
         const persistedSelection = filterSelectedStoreIdsAgainstSelectable(
           current.selectedStoreIds,
-          enabledSelectableIds,
+          selectableIds,
         );
         const selectedStoreIds =
           persistedSelection.length > 0
@@ -1146,7 +1145,10 @@ export function useMealPlanner() {
   }
 
   function handleShoppingStyleChange(shoppingStyle: FormState["shoppingStyle"]) {
-    const selectable = filterSettingsSelectableStores(market?.nearbyStores ?? []);
+    const selectable = filterSettingsSelectableStores(
+      market?.nearbyStores ?? [],
+      membershipFromMarket(market),
+    );
     setForm((current) => ({
       ...current,
       shoppingStyle,

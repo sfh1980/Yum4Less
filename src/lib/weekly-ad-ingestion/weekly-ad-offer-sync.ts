@@ -12,6 +12,7 @@ import {
   rememberWeeklyAdFlyerHash,
   shouldSkipUnchangedFlyerPersist,
   weeklyAdFlyerContentHash,
+  weeklyAdObservationsExistForStores,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import type {
   WeeklyAdIngestionResult,
@@ -50,10 +51,19 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
   const offersToPersist = selectBestWeeklyAdOffersPerIngredient(input.result.offers);
   const contentHash = weeklyAdFlyerContentHash(offersToPersist);
   const previousHash = await readWeeklyAdFlyerHash(input.result.chain);
+  const targetStoreIds = [
+    ...new Set(offersToPersist.map((offer) => offer.storeId).filter(Boolean)),
+  ];
+  const targetStoresHaveObservations = await weeklyAdObservationsExistForStores({
+    storeIds: targetStoreIds,
+    sourceName: getWeeklyAdSourceName(input.result.chain),
+    minObservationsPerStore: offersToPersist.length,
+  });
   if (
     shouldSkipUnchangedFlyerPersist({
       previousHash,
       nextHash: contentHash,
+      targetStoresHaveObservations,
     })
   ) {
     return {

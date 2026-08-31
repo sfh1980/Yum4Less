@@ -3,13 +3,23 @@ import {
   listMapContextOnlyCatalogChains,
   MAP_CONTEXT_ONLY_NAME_FRAGMENTS,
   SETTINGS_SELECTABLE_CHAINS,
-  SHOPPER_RANKED_V1_CHAINS,
 } from "@/lib/chain-rollout-policy";
+import {
+  FIXTURE_CHAIN_MEMBERSHIP,
+  shopperRankedChainSet,
+  type ChainMembershipSnapshot,
+} from "@/lib/chain-membership";
 import { isMapContextCatalogStore } from "@/lib/map-context-types";
 import { getProviderRolloutForCatalogStore, type StoreChain } from "@/lib/provider-rollout";
 
-/** Beta v1 chains with Postgres/provider ingest paths — OSM must not override these on the map. */
+/** Known dinner-adapter keys — merge radius fallback when membership is not passed. */
 export const MAP_RANKED_CHAIN_KEYS: Set<StoreChain> = SETTINGS_SELECTABLE_CHAINS;
+
+function mapRankedChainKeySet(
+  membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
+): Set<string> {
+  return shopperRankedChainSet(membership);
+}
 
 export type MapOsmRankedChainPolicy =
   | "suppress-conflicts"
@@ -94,6 +104,7 @@ export function listOsmGapFillTriggerReasons(
   latitude: number,
   longitude: number,
   radiusMiles: number,
+  membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
 ): OsmGapFillTriggerReason[] {
   const storesInRadius = filterPostgresStoresWithinRadius(
     dbStores,
@@ -103,10 +114,14 @@ export function listOsmGapFillTriggerReasons(
   );
   const reasons: OsmGapFillTriggerReason[] = [];
 
-  for (const chain of SHOPPER_RANKED_V1_CHAINS) {
-    const pinCount = countStoresForChain(storesInRadius, chain);
+  for (const chain of membership.shopperRankedChainIds) {
+    const pinCount = countStoresForChain(storesInRadius, chain as StoreChain);
     if (pinCount < MAP_RANKED_CHAIN_MIN_DB_PINS) {
-      reasons.push({ kind: "ranked-chain-sparse", chain, pinCount });
+      reasons.push({
+        kind: "ranked-chain-sparse",
+        chain: chain as StoreChain,
+        pinCount,
+      });
     }
   }
 
@@ -132,18 +147,27 @@ export function needsSearchTimeOsmGapFill(
   latitude: number,
   longitude: number,
   radiusMiles: number,
+  membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
 ): boolean {
-  return listOsmGapFillTriggerReasons(dbStores, latitude, longitude, radiusMiles)
-    .length > 0;
+  return listOsmGapFillTriggerReasons(
+    dbStores,
+    latitude,
+    longitude,
+    radiusMiles,
+    membership,
+  ).length > 0;
 }
 
-function isIngestedRankedChainStore(store: CatalogStore): boolean {
+function isIngestedRankedChainStore(
+  store: CatalogStore,
+  rankedKeys: Set<string>,
+): boolean {
   if (isMapContextCatalogStore(store)) {
     return false;
   }
 
   const chain = getProviderRolloutForCatalogStore(store).chain;
-  return MAP_RANKED_CHAIN_KEYS.has(chain);
+  return rankedKeys.has(chain);
 }
 
 /**
@@ -154,7 +178,9 @@ export function filterMapContextCatalogStoresConflictingWithIngestedRankedChains
   baseStores: CatalogStore[],
   contextStores: CatalogStore[],
   dedupeProximityMiles: number,
+  membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
 ): { kept: CatalogStore[]; suppressedCount: number } {
+  const rankedKeys = mapRankedChainKeySet(membership);
   const kept: CatalogStore[] = [];
   let suppressedCount = 0;
 
@@ -166,13 +192,13 @@ export function filterMapContextCatalogStoresConflictingWithIngestedRankedChains
 
     const candidateChain = getProviderRolloutForCatalogStore(candidate).chain;
 
-    if (!MAP_RANKED_CHAIN_KEYS.has(candidateChain)) {
+    if (!rankedKeys.has(candidateChain)) {
       kept.push(candidate);
       continue;
     }
 
     const conflicts = baseStores.some((base) => {
-      if (!isIngestedRankedChainStore(base)) {
+      if (!isIngestedRankedChainStore(base, rankedKeys)) {
         return false;
       }
 
