@@ -339,6 +339,20 @@ Logical dumps use `pg_dump` / `psql` **inside** the `yum4less-postgres` containe
 | `npm run db:restore -- --file=backups/<dump>.sql --database=yum4less_restore_scratch` | Restore into a **non-dev** target (drops/recreates that DB) |
 | `npm run db:backup-restore-drill` | **Proof drill:** dump source → restore into disposable `yum4less_backup_drill` → assert store / `price_observations` / `schema_migrations` counts match → drop drill DB |
 
+**Logical dumps on TrueNAS** use `pg_dump` **inside** `yum4less-postgres` from the **NAS host** (the ingest container has no Docker socket). Owner proof **2026-08-31:** dump → restore `yum4less_backup_drill` → **276** stores / **324** observations / **29** migrations matched → drop drill DB.
+
+Do not restore into `yum4less_dev`. Host paste:
+
+```bash
+sudo docker exec yum4less-postgres pg_dump -U postgres -d yum4less_dev --no-owner --no-acl > /tmp/yum4less_backup_drill.sql
+sudo docker exec yum4less-postgres psql -U postgres -d postgres -c "DROP DATABASE IF EXISTS yum4less_backup_drill;"
+sudo docker exec yum4less-postgres psql -U postgres -d postgres -c "CREATE DATABASE yum4less_backup_drill;"
+sudo docker exec -i yum4less-postgres psql -U postgres -d yum4less_backup_drill -v ON_ERROR_STOP=1 < /tmp/yum4less_backup_drill.sql
+# compare count(*) on stores / price_observations / schema_migrations, then:
+sudo docker exec yum4less-postgres psql -U postgres -d postgres -c "DROP DATABASE IF EXISTS yum4less_backup_drill;"
+rm -f /tmp/yum4less_backup_drill.sql
+```
+
 **Protected restore:** restoring into `yum4less_dev` (or `postgres` / templates) is refused unless you pass `--i-understand-destructively-restore-dev`. Prefer restore-into-scratch + cutover over in-place overwrite.
 
 **Suggested nightly cron (same host as ingest):**
@@ -532,7 +546,7 @@ Local Compose still **builds** the app from source. The ingest image is TrueNAS/
 
 ## 9. TrueNAS Apps Custom App — working deploy
 
-**Status (2026-07-22; ingest/Watchtower 2026-07-26; Cloudflare Tunnel 2026-08-03/04):** App + Postgres Custom App stack is **up and healthy**. **Ingest** ([§10](#10-ingest-cron-container-truenas)) is in the **same** `yum4less` Custom App; **Watchtower** ([§11](#11-watchtower-auto-update)) is a **sibling** Custom App. **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)) publishes **`https://yum4less.com/`**. App image runs `:homelab` with the Watchtower enable label. Still open: backup/restore drill on target.
+**Status (2026-07-22; ingest/Watchtower 2026-07-26; Cloudflare Tunnel 2026-08-03/04; backup drill 2026-08-31):** App + Postgres Custom App stack is **up and healthy**. **Ingest** ([§10](#10-ingest-cron-container-truenas)) is in the **same** `yum4less` Custom App; **Watchtower** ([§11](#11-watchtower-auto-update)) is a **sibling** Custom App. **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)) publishes **`https://yum4less.com/`**. Backup/restore drill **closed**. App image runs `:homelab` with the Watchtower enable label.
 ### 9.1 Datasets (real paths used)
 
 | Dataset | Role |
@@ -711,7 +725,7 @@ Expect `200`. Then proceed to the ingest container (§10) and freshness checks (
 
 ## 10. Ingest cron container (TrueNAS)
 
-**Status (2026-08-29 owner paste-back): Unattended 3am cron two-night proof closed.** Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. Nights of **2026-08-28** and **2026-08-29** both logged `Scheduled pricing ingest completed.` (~07:07 UTC) with `[freshness] OK`. Overlay unset; `active_markets` ZIP `23111` only. **Still open:** backup/restore drill.
+**Status (2026-08-29 owner paste-back; backup drill 2026-08-31):** Unattended 3am cron two-night proof closed. Backup/restore drill closed (276/324/29 round-trip). Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. Nights of **2026-08-28** and **2026-08-29** both logged `Scheduled pricing ingest completed.` (~07:07 UTC) with `[freshness] OK`. Overlay unset; `active_markets` ZIP `23111` only.
 
 **Evidence (owner TrueNAS session, ZIP `23111`):**
 - One-shot dry-run (`YUM4LESS_INGEST_ONCE=1`) completed against production data.
@@ -917,7 +931,7 @@ Ingest + Watchtower are **deployed** on TrueNAS. Manual one-shot dry-run closed 
 | 1. Confirm Postgres listens `127.0.0.1:5433` only (Compose) / no host publish (TrueNAS) | Ops confirm on box — TrueNAS db already unpublished |
 | 2. Wire scheduled ingest + freshness path | **Closed** — unattended 3am two-night proof (2026-08-28 and 2026-08-29, overlay off) |
 | 3. One successful ingest (non-empty ranked window) | **Closed (manual dry-run)** — 246/246 fresh @ ZIP `23111`; see §10 Status |
-| 4. `db:backup-restore-drill` on TrueNAS target | **Still open** |
+| 4. `db:backup-restore-drill` on TrueNAS target | **Closed (2026-08-31)** — host dump/restore into `yum4less_backup_drill`; counts **276/324/29** matched; drill DB dropped |
 | 5. Public/WAN exposure | **Closed (2026-08-03/04)** — Cloudflare Tunnel → `https://yum4less.com/` ([§12](#12-cloudflare-tunnel-wan--live)) |
 | 6. Prod env flags on app | Confirm after each Watchtower recreate: `TRUST_PROXY_HEADERS=1`, `YUM4LESS_TRUSTED_PROXY_VERIFIED=1`, feedback/analytics as desired |
 | Watchtower first hourly scan | **Still open** — startup logs verified; first scheduled poll not yet confirmed |
