@@ -20,10 +20,21 @@ export const KNOWN_DINNER_ADAPTER_CHAIN_IDS = [
   "food-lion",
   "lidl",
   "walmart",
+  "dollar-general",
 ] as const;
 
 export type KnownDinnerAdapterChainId =
   (typeof KNOWN_DINNER_ADAPTER_CHAIN_IDS)[number];
+
+/** Seeded `shopper_ranked` set after Lidl map-context demotion (`030`). */
+export const FIXTURE_SHOPPER_RANKED_CHAIN_IDS = [
+  "kroger",
+  "aldi",
+  "publix",
+  "food-lion",
+  "walmart",
+  "dollar-general",
+] as const;
 
 /** Empty roster — no chain is attempted for dinners (fail closed). */
 export const EMPTY_CHAIN_MEMBERSHIP: ChainMembershipSnapshot = {
@@ -37,8 +48,8 @@ export const EMPTY_CHAIN_MEMBERSHIP: ChainMembershipSnapshot = {
  * Production market-search and ingest must call `loadChainMembership()`.
  */
 export const FIXTURE_CHAIN_MEMBERSHIP: ChainMembershipSnapshot = {
-  shopperRankedChainIds: [...KNOWN_DINNER_ADAPTER_CHAIN_IDS],
-  settingsSelectableChainIds: [...KNOWN_DINNER_ADAPTER_CHAIN_IDS],
+  shopperRankedChainIds: [...FIXTURE_SHOPPER_RANKED_CHAIN_IDS],
+  settingsSelectableChainIds: [...FIXTURE_SHOPPER_RANKED_CHAIN_IDS],
   weeklyAdEligibleChainIds: [...KNOWN_DINNER_ADAPTER_CHAIN_IDS],
 };
 

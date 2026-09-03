@@ -140,7 +140,7 @@ function sanitizeProviderPriceObservationSyncForPublicApi(
   const { internalStoreId: _internalStoreId, ...rest } = summary;
   return {
     ...rest,
-    message: redactInternalStoreIds(rest.message),
+    message: redactInternalStoreIds(rest.message, [summary.internalStoreId]),
   };
 }
 
@@ -150,7 +150,10 @@ function sanitizeWeeklyAdIngestionStatusForPublicApi(
   const { storeId: _storeId, sourceName: _sourceName, ...rest } = summary;
   return {
     ...rest,
-    message: redactInternalStoreIds(rest.message),
+    message: redactInternalStoreIds(rest.message, [
+      summary.storeId,
+      summary.sourceName,
+    ]),
   };
 }
 
@@ -161,6 +164,43 @@ function sanitizeWeeklyAdPromotionReadinessForPublicApi(
   return rest;
 }
 
-function redactInternalStoreIds(message: string): string {
-  return message.replace(/\b[a-z0-9]+(?:-[a-z0-9]+)+\b/gi, "the selected store");
+const PUBLIC_STORE_PLACEHOLDER = "the selected store";
+
+/**
+ * OSM / SNAP / fixture catalog ids, plus kebab tokens that include a digit
+ * (`kroger-02900511`, `publix-1626`). Does not match English hyphens like
+ * `all-time` or `weekly-ad`.
+ */
+const LEFTOVER_CATALOG_IDENTITY_RE =
+  /\b(?:osm-(?:way|node|relation)-\d+|fixture-osm-[a-z0-9-]+|snap-[a-z0-9-]+|[a-z][a-z0-9]*-(?:[a-z0-9]*\d[a-z0-9]*)(?:-[a-z0-9]+)*)\b/gi;
+
+function uniqueLongestFirst(
+  values: readonly (string | null | undefined)[],
+): string[] {
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const value of values) {
+    const id = value?.trim();
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids.sort((left, right) => right.length - left.length);
+}
+
+/**
+ * Hide internal store / source ids in diagnostic sentences. Replace only known
+ * identifiers (and leftover catalog-shaped tokens), not every hyphenated word.
+ */
+export function redactInternalStoreIds(
+  message: string,
+  knownInternalIds: readonly (string | null | undefined)[] = [],
+): string {
+  let redacted = message;
+  for (const id of uniqueLongestFirst(knownInternalIds)) {
+    redacted = redacted.split(id).join(PUBLIC_STORE_PLACEHOLDER);
+  }
+  return redacted.replace(LEFTOVER_CATALOG_IDENTITY_RE, PUBLIC_STORE_PLACEHOLDER);
 }

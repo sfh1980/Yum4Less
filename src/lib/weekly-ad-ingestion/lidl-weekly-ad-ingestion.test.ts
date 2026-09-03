@@ -1,11 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLidlWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/lidl-weekly-ad-ingestion";
+import { LIDL_WEEKLY_AD_HUB_URL } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import * as flippResolver from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import * as pageFetcher from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
 
 const originalFixtureFlag = process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
 
 describe("lidl weekly ad ingestion", () => {
+  it("uses the live leaflets hub, not the 404 weekly-ads path", () => {
+    expect(LIDL_WEEKLY_AD_HUB_URL).toContain("/c/offers-leaflets/");
+    expect(LIDL_WEEKLY_AD_HUB_URL).not.toContain("/weekly-ads");
+  });
+
   beforeEach(() => {
     delete process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
   });

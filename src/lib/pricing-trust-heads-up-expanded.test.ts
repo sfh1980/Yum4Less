@@ -17,6 +17,7 @@ describe("pricing-trust-heads-up-expanded", () => {
     expect(text).toContain("limited coverage");
     expect(text).toContain("Kroger-family banners");
     expect(text).toContain("Walmart");
+    expect(text).toContain("Lidl stays on the map");
     expect(text).toContain("verify");
     expect(text).not.toMatch(/promotion gates/i);
     expect(text).not.toMatch(/daily ingest/i);

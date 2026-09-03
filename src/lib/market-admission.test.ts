@@ -6,10 +6,16 @@ import {
 import {
   classifyDensityFromGroceryCount,
   ingestMilesForClass,
+  INGEST_ZCTA_SAFETY_CAP_MILES,
   pickPersistedIngestMiles,
 } from "@/lib/market-density";
 import {
+  classifyAndMilesFromGroceryCount,
+  storePassesIngestFence,
+} from "@/lib/market-ingest-fence";
+import {
   classifyOwnerAdmissionGroup,
+  formatDensityHeadline,
   isConvenienceOrBakeryPin,
   isGroceryPinForDensity,
 } from "@/lib/owner/owner-market-admission";
@@ -38,6 +44,12 @@ describe("market admission helpers", () => {
     expect(classifyDensityFromGroceryCount(3)).toBe("suburban");
     expect(classifyDensityFromGroceryCount(1)).toBe("rural");
     expect(ingestMilesForClass("urban")).toBe(9);
+    expect(ingestMilesForClass("packed")).toBe(6);
+    expect(INGEST_ZCTA_SAFETY_CAP_MILES).toBe(26);
+    expect(classifyAndMilesFromGroceryCount(12)).toEqual({
+      densityClass: "packed",
+      ingestMiles: 26,
+    });
   });
 
   it("auto-widens ingest miles and never shrinks a saved value", () => {
@@ -49,6 +61,61 @@ describe("market admission helpers", () => {
   it("treats a point inside a polygon as in the ZCTA and a far point as out", () => {
     expect(geometryContainsPoint(squareAround, -77.37, 37.61)).toBe(true);
     expect(geometryContainsPoint(squareAround, -78, 38)).toBe(false);
+  });
+
+  it("admits grocery pins in the ZIP outline out to the 26 mi cap, not the density circle", () => {
+    const center = { latitude: 37.55, longitude: -77.45 };
+    const hugeZipOutline: GeoJsonPolygon = {
+      type: "Polygon",
+      coordinates: [
+        [
+          [-79, 37],
+          [-76, 37],
+          [-76, 39],
+          [-79, 39],
+          [-79, 37],
+        ],
+      ],
+    };
+    const tenMilesNorth = { latitude: 37.6946, longitude: -77.45 };
+    const thirtyMilesNorth = { latitude: 37.984, longitude: -77.45 };
+
+    expect(
+      storePassesIngestFence({
+        ...tenMilesNorth,
+        center,
+        fence: { ingestMiles: 6, geometry: hugeZipOutline },
+      }),
+    ).toBe(false);
+    expect(
+      storePassesIngestFence({
+        ...tenMilesNorth,
+        center,
+        fence: { ingestMiles: 26, geometry: hugeZipOutline },
+      }),
+    ).toBe(true);
+    expect(
+      storePassesIngestFence({
+        ...thirtyMilesNorth,
+        center,
+        fence: { ingestMiles: 26, geometry: hugeZipOutline },
+      }),
+    ).toBe(false);
+  });
+
+  it("names the ZIP-outline ingest cap in the Check headline", () => {
+    expect(
+      formatDensityHeadline({
+        zipCode: "23220",
+        city: "Richmond",
+        state: "VA",
+        densityClass: "packed",
+        groceryCountIn8Mi: 20,
+        ingestMiles: 26,
+      }),
+    ).toBe(
+      "23220 · Richmond, VA · packed (20 grocery pins in 8 mi) · ingest ZIP outline (cap 26 mi)",
+    );
   });
 
   it("omits convenience and bakeries from inventory and density grocery counts", () => {
@@ -63,7 +130,7 @@ describe("market admission helpers", () => {
 
   it("groups ranked banners, food-only variety/clubs, and Target as needs-you", () => {
     expect(classifyOwnerAdmissionGroup("Harris Teeter")).toBe("will-ingest");
-    expect(classifyOwnerAdmissionGroup("Dollar General")).toBe("food-only");
+    expect(classifyOwnerAdmissionGroup("Dollar General")).toBe("will-ingest");
     expect(classifyOwnerAdmissionGroup("Costco")).toBe("food-only");
     expect(classifyOwnerAdmissionGroup("Target")).toBe("needs-you");
     expect(classifyOwnerAdmissionGroup("Giant")).toBe("needs-you");

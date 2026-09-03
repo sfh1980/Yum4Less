@@ -18,7 +18,11 @@ import { resolveZctaGeometry } from "@/lib/geo/zcta-boundary";
 import { listCatalogStoresNearLocation } from "@/lib/market-catalog-repository";
 import type { CatalogStore } from "@/lib/market-catalog-types";
 import { mergeCatalogStoresForMap } from "@/lib/market-store-catalog-merge";
-import { DENSITY_CLASSIFY_RADIUS_MILES, pickPersistedIngestMiles } from "@/lib/market-density";
+import {
+  DENSITY_CLASSIFY_RADIUS_MILES,
+  INGEST_ZCTA_SAFETY_CAP_MILES,
+  pickPersistedIngestMiles,
+} from "@/lib/market-density";
 import {
   classifyAndMilesFromGroceryCount,
   storePassesIngestFence,
@@ -55,7 +59,7 @@ export {
   type OwnerMarketStorePreview,
 } from "@/lib/owner/ingest-markets-copy";
 
-export const OWNER_MARKET_PREVIEW_RADIUS_MILES = 26;
+export const OWNER_MARKET_PREVIEW_RADIUS_MILES = INGEST_ZCTA_SAFETY_CAP_MILES;
 export const OWNER_MARKET_PREVIEW_STORE_LIMIT = 40;
 export const OWNER_MARKET_PREVIEW_TIMEOUT_MS = 12_000;
 
@@ -165,7 +169,7 @@ async function previewNearbyStores(input: {
   const zcta = await resolveZctaGeometry({ zipCode: input.zipCode });
   if (!zcta.ok) {
     warnings.push(
-      `ZIP outline unavailable (${zcta.error}). Showing pins in the density circle only.`,
+      `ZIP outline unavailable (${zcta.error}). Showing pins in the ${ingestMiles} mi circle only.`,
     );
   }
 
@@ -179,7 +183,7 @@ async function previewNearbyStores(input: {
         latitude: store.latitude,
         longitude: store.longitude,
         center: { latitude: input.latitude, longitude: input.longitude },
-        fence: { ingestMiles: OWNER_MARKET_PREVIEW_RADIUS_MILES, geometry: zcta.geometry },
+        fence: { ingestMiles, geometry: zcta.geometry },
       });
     }
     return (
@@ -273,9 +277,12 @@ function previewHasShopperRankedV1Chain(
   stores: OwnerMarketStorePreview[],
   membership: ChainMembershipSnapshot,
 ): boolean {
-  return stores.some((store) =>
-    isShopperRankedChain(membership, inferStoreChainFromName(store.name)),
-  );
+  return stores.some((store) => {
+    const chain = inferStoreChainFromName(store.name);
+    return (
+      chain !== "dollar-general" && isShopperRankedChain(membership, chain)
+    );
+  });
 }
 
 export async function inspectOwnerIngestMarket(

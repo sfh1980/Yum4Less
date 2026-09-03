@@ -205,6 +205,17 @@ describe("migrationEffectPresent", () => {
         queryScalar: () => "0",
       }),
     ).toBe(false);
+    expect(
+      migrationEffectPresent("031", {
+        ...db,
+        tableExists: (name) => name === "chain_registry",
+        queryScalar: (sql) =>
+          sql.includes("chain_id = 'dollar-general'") &&
+          sql.includes("shopper_ranked = true")
+            ? "1"
+            : "0",
+      }),
+    ).toBe(true);
   });
 
   it("has an effect probe for every db/init migration file", () => {

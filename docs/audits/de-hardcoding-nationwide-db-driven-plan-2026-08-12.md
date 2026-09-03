@@ -12,7 +12,7 @@
 | **B2** | `chain_registry` + `store_coverage` view + `/owner` Coverage tab (`026`) | **Shipped** — TrueNAS `026` applied **2026-08-27 00:04:01Z** (18 banners seeded) |
 | **C** | `/owner` **Markets**: type ZIP → Check (preview, no insert) → Activate into `active_markets` (`source=ops`, `status=active`). CLI `markets:activate` remains backup. No shopper collect. No ~41k ZIP nightly ingest. | **Shipped** (reuses `025`; no new migrate) |
 | **Membership** | Shopper dinner *attempts* + ingest fail-loud read `chain_registry.shopper_ranked`; floors stay in code | **Shipped in repo** (2026-08-31) — live waits Watchtower. TrueNAS already has Lidl/Walmart ranked via `027`/`028`. |
-| Later | Organic shopper-ZIP waiting list; `threshold_profiles`; per-store scrape TZ; banner-per-row with shared adapters; Slice D identity matcher; new ranked adapters; chain go/no-go | **Not started** |
+| Later | Organic shopper-ZIP waiting list; `threshold_profiles`; per-store scrape TZ; banner-per-row with shared adapters; Slice D identity matcher; new ranked adapters; chain go/no-go (docs only, far future) | **Not started** — membership was the first remaining task after A/B1/B2/C |
 
 **Still true after A/B1/B2/C:** Overlay unset + empty `active_markets` still **fails closed**. Watchtower does **not** migrate future `db/init` files. Do not treat local Docker as yum4less.com.
 

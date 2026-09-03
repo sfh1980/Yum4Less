@@ -16,6 +16,7 @@ import {
   type StoreChain,
 } from "@/lib/provider-rollout";
 import { inferShopperBannerDisplayName } from "@/lib/chain-rollout-policy";
+import { isDinnerEligibleForNearbyMarket } from "@/lib/dollar-general-dinner-eligibility";
 import {
   FIXTURE_CHAIN_MEMBERSHIP,
   isShopperRankedChain,
@@ -343,6 +344,9 @@ export function buildNearbyStoresForSearch(
     identityOptions?.identityLookup ?? createDefaultStoreIdentityLookup();
   const env = identityOptions?.env ?? process.env;
   const membership = identityOptions?.membership ?? FIXTURE_CHAIN_MEMBERSHIP;
+  const nearbyChains = stores.map(
+    (store) => getProviderRolloutForCatalogStore(store).chain,
+  );
 
   return stores
     .map((store) => {
@@ -366,11 +370,18 @@ export function buildNearbyStoresForSearch(
             })
           : null;
       const rankedEligible = isShopperRankedChain(membership, baseRollout.chain);
+      const weeklyAdPromotionPassed =
+        rankedEligible &&
+        weeklyAdPromotionGatesPass(coverage, baseRollout.chain, membership) &&
+        isDinnerEligibleForNearbyMarket({
+          chain: baseRollout.chain,
+          nearbyChains,
+          membership,
+        });
       const rollout = resolveProviderRolloutForCatalogStore(store, {
         matchedIngredientCount: coverage.matchedIngredientCount,
         usesWeeklyAdSource: coverage.usesWeeklyAdSource,
-        weeklyAdPromotionPassed:
-          rankedEligible && weeklyAdPromotionGatesPass(coverage, baseRollout.chain, membership),
+        weeklyAdPromotionPassed,
         krogerOfficialApiPromotionPassed:
           rankedEligible &&
           officialApiCoverage !== null &&
@@ -569,7 +580,10 @@ function buildMarketSummary(
     (store) => store.recommendationEnabled,
   ).length;
   const saleIngredientChoices = buildNearbySaleIngredientChoices({
-    nearbyStores: nearbyStores.filter((store) => store.recommendationEnabled),
+    nearbyStores: nearbyStores.filter(
+      (store) =>
+        store.recommendationEnabled || store.pricingSourceKind === "weekly-ad",
+    ),
     priceObservations: snapshot.priceObservations,
     ingredients: snapshot.ingredients ?? [],
   });

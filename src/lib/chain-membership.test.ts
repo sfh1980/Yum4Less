@@ -48,12 +48,19 @@ describe("chain membership snapshot", () => {
     expect(membershipFromShopperRankedIds([])).toEqual(EMPTY_CHAIN_MEMBERSHIP);
   });
 
-  it("treats fixture ranked ids as known dinner adapters", () => {
+  it("treats fixture ranked ids as known dinner adapters and keeps Lidl off the ranked roster", () => {
     expect(
       rankedChainIdsHaveKnownAdapters(FIXTURE_CHAIN_MEMBERSHIP.shopperRankedChainIds),
     ).toBe(true);
     expect(rankedChainIdsHaveKnownAdapters(["kroger", "target"])).toBe(false);
     expect(KNOWN_DINNER_ADAPTER_CHAIN_IDS).toContain("walmart");
+    expect(KNOWN_DINNER_ADAPTER_CHAIN_IDS).toContain("lidl");
+    expect(KNOWN_DINNER_ADAPTER_CHAIN_IDS).toContain("dollar-general");
+    expect(FIXTURE_CHAIN_MEMBERSHIP.shopperRankedChainIds).not.toContain("lidl");
+    expect(FIXTURE_CHAIN_MEMBERSHIP.shopperRankedChainIds).toContain(
+      "dollar-general",
+    );
+    expect(FIXTURE_CHAIN_MEMBERSHIP.weeklyAdEligibleChainIds).toContain("lidl");
   });
 
   it("does not treat an empty roster as shopper-ranked", () => {

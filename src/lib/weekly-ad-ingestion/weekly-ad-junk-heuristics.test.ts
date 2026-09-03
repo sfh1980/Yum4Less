@@ -61,6 +61,18 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(
       isWeeklyAdJunkProduct("Razer Basilisk V3 Ergonomic Wired Gaming Mouse"),
     ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Ninja French Door 8-in-1 Countertop Oven, with Smart Surroundair Technology and Air Fry Function, Dishwasher Safe, 6 Pieces, FO100 Silver",
+      ),
+    ).toBe(true);
+    expect(isWeeklyAdJunkProduct("Tidy Cats Clumping Cat Litter")).toBe(true);
+    expect(isWeeklyAdJunkProduct("Purina Beggin' Strips Dog Treats")).toBe(true);
+    expect(isWeeklyAdJunkProduct("Heart to Tail Pet Bed")).toBe(true);
+    expect(isWeeklyAdJunkProduct("Pedigree Puppy Chow Complete Puppy Food")).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Estee Lauder Advanced Night Repair Serum Duo"),
+    ).toBe(true);
   });
 
   it("does not skip dinner foods that junk used to false-hit", () => {
@@ -75,6 +87,11 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(isWeeklyAdJunkProduct("Mama Cozzi's Pizza Kitchen Pizza Dough")).toBe(false);
     expect(isWeeklyAdJunkProduct("Short ribs")).toBe(false);
     expect(isWeeklyAdJunkProduct("Iced tea")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Ball Park Hot Dogs")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Catfish Fillets")).toBe(false);
+    expect(isWeeklyAdJunkProduct("PET Evaporated Milk")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Daisy Sour Cream")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Filippo Berio Extra Virgin Olive Oil")).toBe(false);
   });
 
   it("treats either the raw title or the normalized label as junk", () => {

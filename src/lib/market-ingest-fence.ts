@@ -3,9 +3,8 @@ import { getDistanceMiles } from "@/lib/geo-distance";
 import { pointInZcta, resolveZctaGeometry } from "@/lib/geo/zcta-boundary";
 import type { GeoJsonGeometry } from "@/lib/geo/point-in-polygon";
 import {
-  BOOTSTRAP_INGEST_MILES,
+  INGEST_ZCTA_SAFETY_CAP_MILES,
   classifyDensityFromGroceryCount,
-  ingestMilesForClass,
   pickPersistedIngestMiles,
   type DensityClass,
 } from "@/lib/market-density";
@@ -44,12 +43,9 @@ export async function resolveIngestFenceForZip(zipCode: string): Promise<IngestF
   const market = await readIngestMarket(zipCode).catch(() => null);
   const savedMiles = market?.ingestMiles ?? null;
   const densityClass = market?.densityClass ?? null;
-  const computedMiles = densityClass
-    ? ingestMilesForClass(densityClass)
-    : BOOTSTRAP_INGEST_MILES;
   const ingestMiles = pickPersistedIngestMiles({
     savedMiles,
-    computedMiles,
+    computedMiles: INGEST_ZCTA_SAFETY_CAP_MILES,
   });
 
   const zcta = await resolveZctaGeometry({ zipCode });
@@ -59,7 +55,7 @@ export async function resolveIngestFenceForZip(zipCode: string): Promise<IngestF
       densityClass,
       ingestMiles,
       geometry: null,
-      zctaWarning: `ZIP outline unavailable (${zcta.error}). Listing/ingest uses the density circle only.`,
+      zctaWarning: `ZIP outline unavailable (${zcta.error}). Listing/ingest uses the ${ingestMiles} mi circle only.`,
     };
   }
 
@@ -75,9 +71,8 @@ export function classifyAndMilesFromGroceryCount(groceryCountIn8Mi: number): {
   densityClass: DensityClass;
   ingestMiles: number;
 } {
-  const densityClass = classifyDensityFromGroceryCount(groceryCountIn8Mi);
   return {
-    densityClass,
-    ingestMiles: ingestMilesForClass(densityClass),
+    densityClass: classifyDensityFromGroceryCount(groceryCountIn8Mi),
+    ingestMiles: INGEST_ZCTA_SAFETY_CAP_MILES,
   };
 }

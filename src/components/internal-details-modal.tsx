@@ -460,7 +460,7 @@ export function InternalDetailsModal({
               <strong>Provider promotion readiness</strong> is a checklist of gates that
               would need to pass before provider preview pricing could influence ranked
               meal totals. Production rollout uses the same sale-coverage floors for
-              Kroger-family banners, Aldi, Publix, Food Lion, Lidl, and Walmart.
+              Kroger-family banners, Aldi, Publix, Food Lion, and Walmart. Lidl is map context until a store-bound sale feed exists.
               If sale data is missing, the store stays map context with an honest
               reason — not a permanent block.
             </p>

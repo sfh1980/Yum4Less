@@ -213,7 +213,7 @@ describe("weekly ad coverage", () => {
     expect(weeklyAdPromotionGatesPass(coverage, "walmart")).toBe(true);
   });
 
-  it("promotes Aldi, Food Lion, Lidl, and Walmart for ranked weekly-ad pricing when gates pass", () => {
+  it("promotes Aldi, Food Lion, and Walmart for ranked weekly-ad pricing when gates pass", () => {
     const strongCoverage = {
       storeId: "aldi-mechanicsville",
       chain: "aldi" as const,
@@ -238,7 +238,7 @@ describe("weekly ad coverage", () => {
         { ...strongCoverage, storeId: "lidl-laburnum", chain: "lidl" },
         "lidl",
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       weeklyAdPromotionGatesPass(
         { ...strongCoverage, storeId: "walmart-rocketts", chain: "walmart" },

@@ -52,7 +52,6 @@ export function buildTestMarket(
       "aldi",
       "publix",
       "food-lion",
-      "lidl",
       "walmart",
     ],
     message: "Fixture market search.",

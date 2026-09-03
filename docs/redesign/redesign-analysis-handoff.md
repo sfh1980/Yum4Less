@@ -38,7 +38,7 @@
 | **4** | Stacked accordion meal cards | **Done** |
 | **5** | Welcome flow + Settings gate + tap steps + opt-in deletion | **Done** |
 | **D1–D6** | 5-tab shell, interim theme, ingredient gate, map overlay, session pantry | **Done** |
-| **D7** | Mockup color/tokens port (colors only) | **Done (2026-06-26)** — owner browser verify pending |
+| **D7** | Mockup color/tokens port (colors only) | **Done (2026-06-26)** — owner browser verify **CLOSED** 2026-08-31 |
 
 ---
 
@@ -70,17 +70,15 @@ Settings tab (if first visit / factory reset / incomplete prefs)
 | Tokens | Mockup names + trust/urgency/price/danger/tag roles |
 | Components | Buttons, flat panels, bottom nav, map chrome — keep Settings theme select |
 
-**Gate:** `npm test` **549/549**; `npm run build` pass; Playwright MCP light+dark trust labels OK; **owner browser verify pending**.
+**Gate:** `npm test` **549/549**; `npm run build` pass; Playwright MCP light+dark trust labels OK; owner browser verify **CLOSED** 2026-08-31.
 
 ---
 
 ## Deferred (after D7)
 
-- Saved tab **persistence**
-- Cuisine/ethnic chips (**R11** — hide until DB tags)
-- Pantry affecting ranking
-- Mockup layout polish (Cook FAB, full mockup Home shell)
-- Homelab deploy (separate queue)
+- Saved tab **cross-device** persistence (device-local shipped; paused with accounts)
+- Cuisine/ethnic chips (**R11** — hide until recipes have a cuisine facet)
+- Homelab scrape automation M128 (robots/auto-pause/kill-switch) — containers/cron already shipped
 
 ---
 

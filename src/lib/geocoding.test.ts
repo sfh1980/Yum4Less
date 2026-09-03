@@ -1,4 +1,14 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { readZipGeocodeCache } = vi.hoisted(() => ({
+  readZipGeocodeCache: vi.fn(),
+}));
+
+vi.mock("@/lib/zip-geocode-cache", () => ({
+  readZipGeocodeCache,
+  upsertZipGeocodeCache: vi.fn(),
+}));
+
 import { deleteProcessEnvKey } from "@/lib/test-only/process-env-test-helpers";
 import { restoreTestNodeEnv, stubTestNodeEnv } from "@/lib/test-env";
 import {
@@ -12,30 +22,36 @@ const originalCi = process.env.CI;
 const originalGithubActions = process.env.GITHUB_ACTIONS;
 
 describe("resolveZipLocation", () => {
+  beforeEach(() => {
+    resetZipLocationCacheForTests();
+    readZipGeocodeCache.mockReset();
+    readZipGeocodeCache.mockResolvedValue(null);
+  });
+
   afterEach(() => {
     resetZipLocationCacheForTests();
-    process.env.GEOCODIO_API_KEY = originalGeocodioKey;
-    if (originalNodeEnv === undefined) {
-      deleteProcessEnvKey("NODE_ENV");
+    if (originalGeocodioKey === undefined) {
+      deleteProcessEnvKey("GEOCODIO_API_KEY");
     } else {
-      stubTestNodeEnv(originalNodeEnv);
+      process.env.GEOCODIO_API_KEY = originalGeocodioKey;
     }
+    restoreTestNodeEnv(originalNodeEnv);
     if (originalCi === undefined) {
-      delete process.env.CI;
+      deleteProcessEnvKey("CI");
     } else {
       process.env.CI = originalCi;
     }
     if (originalGithubActions === undefined) {
-      delete process.env.GITHUB_ACTIONS;
+      deleteProcessEnvKey("GITHUB_ACTIONS");
     } else {
       process.env.GITHUB_ACTIONS = originalGithubActions;
     }
   });
 
   it("returns the seeded local ZIP when no API key is configured in development", async () => {
-    delete process.env.GEOCODIO_API_KEY;
+    deleteProcessEnvKey("GEOCODIO_API_KEY");
     stubTestNodeEnv("development");
-    delete process.env.CI;
+    deleteProcessEnvKey("CI");
 
     const result = await resolveZipLocation("23111");
 
@@ -48,9 +64,9 @@ describe("resolveZipLocation", () => {
   });
 
   it("reuses the first resolved coords for the same ZIP within a process", async () => {
-    delete process.env.GEOCODIO_API_KEY;
+    deleteProcessEnvKey("GEOCODIO_API_KEY");
     stubTestNodeEnv("development");
-    delete process.env.CI;
+    deleteProcessEnvKey("CI");
 
     const first = await resolveZipLocation("23111");
     const second = await resolveZipLocation("23111");
@@ -63,10 +79,10 @@ describe("resolveZipLocation", () => {
   });
 
   it("refuses seed ZIP fallback in production when GEOCODIO_API_KEY is missing", async () => {
-    delete process.env.GEOCODIO_API_KEY;
+    deleteProcessEnvKey("GEOCODIO_API_KEY");
     stubTestNodeEnv("production");
-    delete process.env.CI;
-    delete process.env.GITHUB_ACTIONS;
+    deleteProcessEnvKey("CI");
+    deleteProcessEnvKey("GITHUB_ACTIONS");
 
     const result = await resolveZipLocation("23111");
 
@@ -78,7 +94,7 @@ describe("resolveZipLocation", () => {
   });
 
   it("allows seed ZIP fallback in production only under CI runners", async () => {
-    delete process.env.GEOCODIO_API_KEY;
+    deleteProcessEnvKey("GEOCODIO_API_KEY");
     stubTestNodeEnv("production");
     process.env.CI = "true";
 
@@ -93,8 +109,8 @@ describe("resolveZipLocation", () => {
   it("refuses seed fallback in production when Geocodio fails", async () => {
     process.env.GEOCODIO_API_KEY = "test-key";
     stubTestNodeEnv("production");
-    delete process.env.CI;
-    delete process.env.GITHUB_ACTIONS;
+    deleteProcessEnvKey("CI");
+    deleteProcessEnvKey("GITHUB_ACTIONS");
 
     vi.stubGlobal(
       "fetch",
@@ -115,7 +131,7 @@ describe("resolveZipLocation", () => {
   });
 
   it("returns a clear error for unsupported ZIPs without live geocoding", async () => {
-    delete process.env.GEOCODIO_API_KEY;
+    deleteProcessEnvKey("GEOCODIO_API_KEY");
 
     const result = await resolveZipLocation("99999");
 

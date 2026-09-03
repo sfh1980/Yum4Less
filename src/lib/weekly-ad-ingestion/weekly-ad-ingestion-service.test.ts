@@ -23,7 +23,7 @@ describe("weekly ad ingestion service", () => {
     }
   });
 
-  it("registers live scrapers for six configured chains plus the Dollar General stub", () => {
+  it("registers live scrapers for seven configured chains including Dollar General", () => {
     const clients = getWeeklyAdIngestionClients();
 
     expect(clients.map((client) => client.chain)).toEqual([
@@ -41,6 +41,9 @@ describe("weekly ad ingestion service", () => {
     expect(clients.find((client) => client.chain === "kroger")?.configured).toBe(true);
     expect(clients.find((client) => client.chain === "walmart")?.configured).toBe(true);
     expect(clients.find((client) => client.chain === "lidl")?.configured).toBe(true);
+    expect(clients.find((client) => client.chain === "dollar-general")?.configured).toBe(
+      true,
+    );
   });
 
   it("parses and matches Aldi fixture offers for tracked ingredients", async () => {
@@ -311,6 +314,29 @@ describe("weekly ad ingestion service", () => {
     expect(result.offers.some((offer) => offer.ingredientId === "black-beans")).toBe(true);
     expect(result.offers.some((offer) => offer.ingredientId === "tofu")).toBe(true);
     expect(result.offers.some((offer) => offer.ingredientId === "jasmine-rice")).toBe(true);
+  });
+
+  it("parses Dollar General fixture offers for tracked pantry ingredients", async () => {
+    const { createDollarGeneralWeeklyAdIngestionClient } = await import(
+      "@/lib/weekly-ad-ingestion/dollar-general-weekly-ad-ingestion"
+    );
+    const client = createDollarGeneralWeeklyAdIngestionClient();
+    const result = await client.ingestWeeklyAd({
+      chain: "dollar-general",
+      storeId: "dollar-general-market-highland",
+      storeName: "Dollar General Market",
+      zipCode: "23111",
+      trackedIngredientIds: [
+        "spaghetti",
+        "black-beans",
+        "corn-tortillas",
+        "olive-oil",
+      ],
+    });
+
+    expect(result.status).toBe("cached");
+    expect(result.offers.some((offer) => offer.ingredientId === "spaghetti")).toBe(true);
+    expect(result.offers.some((offer) => offer.ingredientId === "black-beans")).toBe(true);
   });
 });
 

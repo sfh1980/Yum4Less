@@ -176,6 +176,22 @@ describe("classifyWeeklyAdFlyerLine", () => {
 
     expect(
       classifyWeeklyAdFlyerLine({
+        productName: "Tidy Cats Clumping Cat Litter",
+        chain: "walmart",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Estee Lauder Advanced Night Repair Serum Duo",
+        chain: "walmart",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
         productName: "Libman 24-Inch Cotton Dust Mop",
         chain: "walmart",
         catalog: catalogSnapshot(),
@@ -194,6 +210,15 @@ describe("classifyWeeklyAdFlyerLine", () => {
       classifyWeeklyAdFlyerLine({
         productName: "Athletic Works Girls Active Graphic Tee with Short Sleeves",
         chain: "kroger",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName:
+          "Ninja French Door 8-in-1 Countertop Oven, with Smart Surroundair Technology and Air Fry Function, Dishwasher Safe, 6 Pieces, FO100 Silver",
+        chain: "walmart",
         catalog: catalogSnapshot(),
       }),
     ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);

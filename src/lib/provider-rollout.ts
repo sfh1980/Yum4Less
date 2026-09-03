@@ -43,7 +43,7 @@ export type WeeklyAdRolloutContext = {
 };
 
 /** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
-const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>([]);
+const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>(["lidl"]);
 
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
@@ -101,7 +101,8 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     status: "coming-soon",
     recommendationEnabled: false,
     priority: 5,
-    note: buildDirectionalRolloutNote("Lidl"),
+    note:
+      "Shown on the map for nearby planning — Lidl circulars we can fetch are not bound to this store, so dinner price estimates are not available from Lidl yet.",
   },
   "trader-joes": {
     chain: "trader-joes",
@@ -119,7 +120,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 99,
     note:
-      "Shown on the map for nearby planning — dinner price estimates are not available from this store yet.",
+      "Dollar General dinner estimates use a packaged/pantry weekly ad when this is the main grocery stop nearby and coverage floors pass. Totals are directional estimates from an area circular — verify in store.",
   },
   unknown: {
     chain: "unknown",
@@ -171,11 +172,15 @@ function resolveProviderRolloutForBase(
   }
 
   if (weeklyAdContext?.weeklyAdPromotionPassed) {
+    const note =
+      base.chain === "dollar-general"
+        ? `Dollar General meal prices use a packaged/pantry weekly ad (${weeklyAdContext.matchedIngredientCount} matched ingredients), not a full supermarket. Totals are directional estimates from an area circular — verify price, package size, and tags in store.`
+        : `${base.label} meal prices use saved sale prices (${weeklyAdContext.matchedIngredientCount} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`;
     return {
       ...base,
       status: "weekly-ad-preview",
       recommendationEnabled: true,
-      note: `${base.label} meal prices use saved sale prices (${weeklyAdContext.matchedIngredientCount} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`,
+      note,
     };
   }
 

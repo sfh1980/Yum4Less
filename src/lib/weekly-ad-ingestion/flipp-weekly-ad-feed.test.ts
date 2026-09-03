@@ -3,6 +3,7 @@ import {
   buildFlippWeeklyAdSearchUrl,
   fetchFlippSearchOffersForMerchant,
   parseFlippWeeklyAdItems,
+  parseFlippWeeklyAdItemsForMerchant,
   selectFlyersForWeeklyAdPersist,
 } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 
@@ -142,5 +143,29 @@ describe("flipp-weekly-ad-feed", () => {
     ]);
 
     expect(selected).toEqual([expect.objectContaining({ id: 10 })]);
+  });
+
+  it("drops Dollar General general-merchandise Flipp lines when Food is tagged", () => {
+    const offers = parseFlippWeeklyAdItemsForMerchant(
+      [
+        {
+          name: "Clover Valley Spaghetti",
+          current_price: 1,
+          merchant_name: "Dollar General",
+          _L1: "Food, Beverages & Tobacco",
+        },
+        {
+          name: "LEGO Classic Bricks",
+          current_price: 12.99,
+          merchant_name: "Dollar General",
+          _L1: "Toys & Games",
+        },
+      ],
+      "Dollar General",
+    );
+
+    expect(offers.map((offer) => offer.productName)).toEqual([
+      "Clover Valley Spaghetti",
+    ]);
   });
 });

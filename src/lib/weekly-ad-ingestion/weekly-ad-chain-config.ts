@@ -1,5 +1,9 @@
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
+/** Live Lidl US leaflets index. `/weekly-ads` 404s. CMS id can drift. */
+export const LIDL_WEEKLY_AD_HUB_URL =
+  "https://www.lidl.com/c/offers-leaflets/s10092873";
+
 export type WeeklyAdFetchStrategy = "http" | "browser" | "browser-fallback";
 
 export type WeeklyAdChainConfig = {
@@ -77,18 +81,20 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
     fetchStrategy: "browser-fallback",
     browserWaitSelector:
       "#weekly-ad-offers-data, [data-weekly-ad-product], [class*='weekly'], iframe",
-    researchTargets: ["https://www.lidl.com/weekly-ads"],
+    researchTargets: [LIDL_WEEKLY_AD_HUB_URL],
     termsNote:
-      "Lidl weekly-ad offers use the Flipp syndicated feed first, then optional direct page scrape when the feed is empty. Verify current deals in store before checkout.",
+      "Lidl weekly-ad ingest uses the Flipp ZIP feed, then optional hub HTML scrape. Those circulars are not store-bound, so Lidl stays map context — not dinner totals. Verify in store before checkout.",
   },
   {
     chain: "dollar-general",
-    label: "Dollar General weekly ad ingestion (research)",
-    implementation: "research-stub",
-    fetchStrategy: "http",
-    researchTargets: ["https://www.dollargeneral.com/weekly-ads"],
+    label: "Dollar General weekly ad ingestion",
+    implementation: "live-scraper",
+    fetchStrategy: "browser-fallback",
+    browserWaitSelector:
+      "#weekly-ad-offers-data, [data-weekly-ad-product], [class*='weekly'], iframe",
+    researchTargets: ["https://www.dollargeneral.com/deals/weekly-ads"],
     termsNote:
-      "Dollar General Market has limited grocery coverage; ingestion is lower priority for dinner planning.",
+      "Dollar General weekly-ad offers use the Flipp syndicated feed first (ZIP circular, not this building's shelf). Direct pages wrap a Flipp embed. Prices are directional packaged/pantry sales — verify in store before checkout.",
   },
 ];
 

@@ -9,6 +9,7 @@ import { createFoodLionWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion
 import { createPublixWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-ingestion";
 import { createKrogerWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-ingestion";
 import { createLidlWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/lidl-weekly-ad-ingestion";
+import { createDollarGeneralWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/dollar-general-weekly-ad-ingestion";
 import { createWalmartWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/walmart-weekly-ad-ingestion";
 import {
   groupWeeklyAdIngestStoresByChain,
@@ -30,7 +31,6 @@ import type {
   WeeklyAdIngestionResult,
   WeeklyAdOfferSyncSummary,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
-import { createResearchWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/weekly-ad-research-ingestion";
 import { rejectPendingReviewsMatchingJunk } from "@/lib/owner/ingredient-review-repository";
 import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
 import { logServerError } from "@/lib/server-log";
@@ -59,7 +59,7 @@ export function getWeeklyAdIngestionClients(): WeeklyAdIngestionClient[] {
     createKrogerWeeklyAdIngestionClient(),
     createWalmartWeeklyAdIngestionClient(),
     createLidlWeeklyAdIngestionClient(),
-    createResearchWeeklyAdIngestionClient("dollar-general"),
+    createDollarGeneralWeeklyAdIngestionClient(),
   ];
 }
 

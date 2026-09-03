@@ -4,6 +4,7 @@ import { clearMapSearchOsmCacheForTests } from "@/lib/map-search-osm-cache";
 import { buildZip23111RankingSnapshot } from "@/lib/recommendation-service-ranking.fixture";
 import { zip23111MechanicsvilleLocation } from "@/lib/recommendation-service-ranking.fixture";
 import * as mapContextDiscovery from "@/lib/map-context-discovery";
+import { FIXTURE_CHAIN_MEMBERSHIP } from "@/lib/chain-membership";
 
 const { buildProviderPricingPreviews, searchOfficialProviderStores, getMarketDataSnapshot } =
   vi.hoisted(() => ({
@@ -36,6 +37,7 @@ describe("getMarketSearchExperience map merge", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
   });
 
@@ -200,7 +202,6 @@ describe("getMarketSearchExperience map merge", () => {
   });
 
   it("returns the initial market quickly when map-context discovery exceeds the budget", async () => {
-    vi.useFakeTimers();
     vi.stubEnv("YUM4LESS_MAP_SEARCH_GAP_FILL_TIMEOUT_MS", "50");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
@@ -245,14 +246,16 @@ describe("getMarketSearchExperience map merge", () => {
         }),
     );
 
-    const resultPromise = getMarketSearchExperience(
+    const startedAt = Date.now();
+    const { market } = await getMarketSearchExperience(
       12,
       zip23111MechanicsvilleLocation,
       false,
+      { membership: FIXTURE_CHAIN_MEMBERSHIP },
     );
-    await vi.advanceTimersByTimeAsync(60);
-    const { market } = await resultPromise;
+    const elapsedMs = Date.now() - startedAt;
 
+    expect(elapsedMs).toBeLessThan(1_000);
     expect(market.nearbyStores.some((store) => store.id.startsWith("osm-"))).toBe(false);
     expect(market.usesEphemeralOsmDiscovery).toBeUndefined();
     expect(market.mapDiscoveryNotice).toMatch(/background discovery warms/i);
@@ -260,7 +263,6 @@ describe("getMarketSearchExperience map merge", () => {
       expect.stringContaining("deferred map context discovery"),
     );
 
-    await vi.advanceTimersByTimeAsync(5_000);
     warnSpy.mockRestore();
   });
 });

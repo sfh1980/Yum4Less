@@ -457,6 +457,7 @@ export function assertProductionRankedRolloutGates(
 
   for (const store of rankedStores) {
     expect(store.rolloutStatus).not.toBe("coming-soon");
+    expect(store.chain).not.toBe("dollar-general");
   }
 }
 

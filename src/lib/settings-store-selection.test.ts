@@ -29,7 +29,7 @@ function store(
 }
 
 describe("filterSettingsSelectableStores", () => {
-  it("includes Kroger, Aldi, Publix, Food Lion, Lidl, and Walmart even when recommendation gates are off", () => {
+  it("includes Kroger, Aldi, Publix, Food Lion, Walmart, and Lidl even when recommendation gates are off", () => {
     const filtered = filterSettingsSelectableStores([
       store({ id: "osm-1", name: "Wawa", chain: "unknown" }),
       store({
@@ -60,8 +60,8 @@ describe("filterSettingsSelectableStores", () => {
       "aldi-1",
       "publix-1",
       "food-lion-1",
-      "lidl-1",
       "walmart-1",
+      "lidl-1",
     ]);
   });
 

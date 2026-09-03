@@ -92,7 +92,7 @@ async function main() {
     );
 
     console.log(
-      `Admitting ${nearbyStores.length} weekly-ad store(s) within ${fence.ingestMiles} mi ∩ ZIP outline of ${zipCode}...`,
+      `Admitting ${nearbyStores.length} weekly-ad store(s) within ZIP outline (cap ${fence.ingestMiles} mi) of ${zipCode}...`,
     );
 
     for (const store of nearbyStores) {

@@ -36,6 +36,10 @@ const WEEKLY_AD_CHAINS = [
   { storeId: "kroger-mechanicsville", priceSource: "kroger-weekly-ad-scrape" },
   { storeId: "publix-1626", priceSource: "publix-weekly-ad-scrape" },
   { storeId: "walmart-rocketts", priceSource: "walmart-weekly-ad-scrape" },
+  {
+    storeId: "dollar-general-market-highland",
+    priceSource: "dollar-general-weekly-ad-scrape",
+  },
 ] as const;
 
 /** Maps legacy fixture day buckets to hours within the 24h promotion gate. */

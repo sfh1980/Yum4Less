@@ -2,7 +2,7 @@
 
 Copy-paste guide for a **dedicated Linux / TrueNAS SCALE box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Local proof uses **Docker Compose**; the production-like host path on this project is **TrueNAS Apps “Custom App” YAML** (see [§9](#9-truenas-apps-custom-app--working-deploy)).
 
-**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). **Unattended ingest-worker night closed** (owner paste-back 2026-08-31). **Backup/restore drill closed** (2026-08-31). Remaining open ops: extra ZIP `23220` (`/owner` Check + Activate).
+**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). **Unattended ingest-worker night closed** (owner paste-back 2026-08-31). **Backup/restore drill closed** (2026-08-31). Remaining open ops: TheMealDB **dev test key**. Watchtower pull and extra ZIP **`23220`** first ingest **closed** (owner paste 2026-09-01).
 
 **Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths).
 
@@ -503,7 +503,7 @@ Set `TRUST_PROXY_HEADERS=1` only when a trusted proxy strips client `X-Forwarded
 
 ## 7. Production-ranked scope reminder
 
-As of this doc, **shopper-facing ranked meal totals** use **Kroger-family banners, Aldi, Publix, Food Lion, Lidl, and Walmart** when weekly-ad (or Kroger official API) promotion gates pass. Same floors for every ranked banner. Missing estimates stay map context with an honest reason. See [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Decision log.
+As of this doc, **shopper-facing ranked meal totals** use **Kroger-family banners, Aldi, Publix, Food Lion, and Walmart** when weekly-ad (or Kroger official API) promotion gates pass. Same floors for every ranked banner. Lidl stays map context until a store-bound sale feed exists. Missing estimates stay map context with an honest reason. See [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Decision log.
 
 ---
 
@@ -786,7 +786,7 @@ After local tests pass:
 
 Until step 2–3, leave `YUM4LESS_INGEST_QUEUE_WORKER` unset so 3am still runs map-catalog → weekly-ad → … inline (same as today).
 
-Unattended worker night **closed 2026-08-31**. Extra ZIP **23220** is next (`/owner` Check + Activate). Keep the host Cron Job Enabled.
+Unattended worker night **closed 2026-08-31**. Extra ZIP **23220** is Activated; first ingest is the 3am worker. Keep the host Cron Job Enabled.
 
 **Network:** `ingest` **must** share the Custom App compose network with `db` (same YAML stack). Do not publish ingest ports.
 
@@ -934,7 +934,7 @@ Ingest + Watchtower are **deployed** on TrueNAS. Manual one-shot dry-run closed 
 | 4. `db:backup-restore-drill` on TrueNAS target | **Closed (2026-08-31)** — host dump/restore into `yum4less_backup_drill`; counts **276/324/29** matched; drill DB dropped |
 | 5. Public/WAN exposure | **Closed (2026-08-03/04)** — Cloudflare Tunnel → `https://yum4less.com/` ([§12](#12-cloudflare-tunnel-wan--live)) |
 | 6. Prod env flags on app | Confirm after each Watchtower recreate: `TRUST_PROXY_HEADERS=1`, `YUM4LESS_TRUSTED_PROXY_VERIFIED=1`, feedback/analytics as desired |
-| Watchtower first hourly scan | **Still open** — startup logs verified; first scheduled poll not yet confirmed |
+| Watchtower first hourly scan | **Closed** (owner 2026-09-01 paste) — 2026-08-31 22:55Z `Updated=2` (`72c6591` / `bfe5bf4`); later hourly sessions `Updated=0` |
 
 ---
 
@@ -1007,7 +1007,7 @@ Issues to resolve **before** relying on unattended cron:
 | **`assert-live-ingest-env` does not require `KROGER_API_ENV=production`** | Cron exits 0 but Kroger official API sync no-ops | Set `KROGER_API_ENV=production` explicitly on ingest env |
 | **`YUM4LESS_INGEST_ZIPS` unset and `active_markets` empty** | Ingest exits non-zero (no `23111` default) | Activate a ZIP in `/owner` Markets (or `npm run markets:activate -- <ZIP>`), or set overlay ZIPs; verify stores in §4.2 SQL |
 | **Map catalog failure is non-fatal** | Cron exit 0 with degraded OSM/catalog | Read warnings in log; rerun `ingest:map-catalog` manually |
-| **Partial weekly-ad chain failure** | Exit **non-zero** if **Kroger / Aldi / Publix / Food Lion / Lidl** error or persist-fail. Walmart / Dollar General flyer errors warn and do **not** fail the job | Scan ranked `[kroger]` / `[aldi]` / `[publix]` / `[food-lion]` / `[lidl]` lines first; unranked issues are expected-degraded |
+| **Partial weekly-ad chain failure** | Exit **non-zero** if **Kroger / Aldi / Publix / Food Lion / Walmart / Dollar General** error or persist-fail. Lidl flyer errors warn and do **not** fail the job | Scan ranked `[kroger]` / `[aldi]` / `[publix]` / `[food-lion]` / `[walmart]` / `[dollar-general]` lines first; Lidl issues are expected-degraded |
 | **Playwright / headless deps on Linux** | Kroger scrape fallback fails with browser launch errors | Host: `playwright install-deps`. **Ingest image:** deps baked in |
 | **No interactive prompts in scheduled path** | ✅ None found — safe for no-TTY cron | — |
 | **Parent wrapper does not load `.env.local` before `ensure-test-db`** | ✅ Child TS scripts load it; DB URL defaults match compose | Ingest container: pass env explicitly in Custom App YAML |
@@ -1021,7 +1021,7 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
-| 2026-08-27 | Lidl shopper-ranked when weekly-ad promotion gates pass. Weekly-ad exit policy fail-loud now includes Lidl; Walmart / Dollar General stay fail-soft. |
+| 2026-09-03 | Dollar General live Flipp ingest + food-desert dinners (`031`). Same floors as other ranked banners. Sale list can show DG weekly-ad rows without ranking. Lidl stays fail-soft. |
 | 2026-08-04 | §12 Cloudflare Tunnel **live** (`yum4less.com`); TRUST_PROXY + feedback/analytics ops notes; CI/Dockerfile bake `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` for published app images; shopper UI copy trim cross-ref |
 | 2026-07-26 | §10 / §11 marked **deployed and verified** on TrueNAS (same-stack ingest; sibling Watchtower Custom App; `:homelab` + enable label on app; one-shot dry-run 246/246 @ ZIP `23111`; Watchtower Discord + label-scope logs). Still open: 3am cron, Watchtower first hourly scan, backup drill, Cloudflare Tunnel WAN. Added zsh `!` / single-quote `DATABASE_URL` troubleshooting note. |
 | 2026-07-23 | §10 ingest container (`Dockerfile.ingest`, GHCR `yum4less-ingest`, `YUM4LESS_EXTERNAL_POSTGRES` TCP path); §11 Watchtower label-scoped hourly updates + Shoutrrr notifications; §8 adds `:homelab` float tag for app+ingest; §9.5 app Watchtower label; §4 leftovers explicitly flagged |

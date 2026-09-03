@@ -42,12 +42,14 @@ describe("provider rollout", () => {
     expect(rollout.note).toContain("verify in store");
   });
 
-  it("labels Lidl with shopper-facing estimates copy before promotion passes", () => {
+  it("labels Lidl as map context, not dinner estimates", () => {
     const rollout = getProviderRolloutForStore("Lidl");
 
     expect(rollout.chain).toBe("lidl");
-    expect(rollout.note).toContain("saved sale prices");
-    expect(rollout.note).toContain("verify in store");
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toContain("map");
+    expect(rollout.note).not.toContain("saved sale prices");
   });
 
   it("lists catalog rollout entries for shopper-facing chains", () => {
@@ -58,6 +60,7 @@ describe("provider rollout", () => {
       "food-lion",
       "lidl",
       "walmart",
+      "dollar-general",
       "bjs",
     ]);
   });
@@ -176,16 +179,29 @@ describe("resolveProviderRolloutForStore", () => {
     expect(rollout.note).toContain("saved sale prices");
   });
 
-  it("enables Lidl weekly-ad-preview when promotion gates pass", () => {
-    const rollout = resolveProviderRolloutForStore("Lidl", {
-      matchedIngredientCount: 5,
+  it("enables Dollar General weekly-ad-preview when promotion gates pass", () => {
+    const rollout = resolveProviderRolloutForStore("Dollar General Market", {
+      matchedIngredientCount: 4,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: true,
     });
 
     expect(rollout.status).toBe("weekly-ad-preview");
     expect(rollout.recommendationEnabled).toBe(true);
-    expect(rollout.note).toContain("saved sale prices");
+    expect(rollout.note).toMatch(/area circular/i);
+    expect(rollout.note).toMatch(/packaged\/pantry/i);
+  });
+
+  it("keeps Lidl coming soon even when weekly-ad coverage would pass floors", () => {
+    const rollout = resolveProviderRolloutForStore("Lidl", {
+      matchedIngredientCount: 5,
+      usesWeeklyAdSource: true,
+      weeklyAdPromotionPassed: true,
+    });
+
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toContain("not used for dinner totals");
   });
 
   it("keeps Food Lion limited when weekly-ad source exists but promotion has not passed", () => {

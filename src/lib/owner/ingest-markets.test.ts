@@ -152,6 +152,10 @@ describe("owner ingest markets", () => {
     if (inspected.ok) {
       expect(inspected.result.admission.densityClass).toBe("rural");
       expect(inspected.result.admission.groceryCountIn8Mi).toBe(1);
+      expect(inspected.result.admission.ingestMiles).toBe(26);
+      expect(inspected.result.admission.headline).toMatch(
+        /ingest ZIP outline \(cap 26 mi\)/,
+      );
     }
     expect(upsertActiveMarket).not.toHaveBeenCalled();
     if (inspected.ok) {

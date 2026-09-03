@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeMarketSummaryForPublicApi } from "@/lib/public-api-response-sanitizer";
+import {
+  redactInternalStoreIds,
+  sanitizeMarketSummaryForPublicApi,
+} from "@/lib/public-api-response-sanitizer";
 import type { MarketSummary } from "@/lib/recommendation-service";
 import { buildTestNearbyStoreSummary } from "@/lib/test-fixtures/contract-fixtures";
 
@@ -236,5 +239,55 @@ describe("sanitizeMarketSummaryForPublicApi", () => {
       "kroger-mechanicsville",
       "publix-1626",
     ]);
+  });
+
+  it("keeps weekly-ad status English while redacting store and source ids", () => {
+    const sanitized = sanitizeMarketSummaryForPublicApi(
+      buildMarketSummary({
+        weeklyAdIngestionStatus: [
+          {
+            chain: "kroger",
+            storeId: "kroger-02900511",
+            sourceName: "kroger-weekly-ad-scrape",
+            observationCount: 29,
+            lastCapturedAt: "2026-09-01T07:10:00.000Z",
+            message:
+              "29 all-time scraped weekly-ad row(s) in PostgreSQL for kroger-02900511 (kroger-weekly-ad-scrape); not a freshness signal.",
+          },
+        ],
+      }),
+    );
+
+    const statusMessage = sanitized.weeklyAdIngestionStatus[0]?.message ?? "";
+    expect(statusMessage).toContain("all-time");
+    expect(statusMessage).toContain("weekly-ad");
+    expect(statusMessage).toContain("not a freshness signal");
+    expect(statusMessage).not.toContain("kroger-02900511");
+    expect(statusMessage).not.toContain("kroger-weekly-ad-scrape");
+    expect(statusMessage).not.toMatch(
+      /29 the selected store scraped the selected store row\(s\)/,
+    );
+  });
+});
+
+describe("redactInternalStoreIds", () => {
+  it("does not treat hyphenated English as a store id", () => {
+    expect(
+      redactInternalStoreIds(
+        "6 all-time scraped weekly-ad row(s) in PostgreSQL for kroger-mechanicsville (kroger-weekly-ad); not a freshness signal.",
+        ["kroger-mechanicsville", "kroger-weekly-ad"],
+      ),
+    ).toBe(
+      "6 all-time scraped weekly-ad row(s) in PostgreSQL for the selected store (the selected store); not a freshness signal.",
+    );
+  });
+
+  it("still redacts leftover OSM catalog ids in prose", () => {
+    expect(
+      redactInternalStoreIds(
+        "Coverage includes osm-way-466009776 in this radius.",
+        [],
+      ),
+    ).toBe("Coverage includes the selected store in this radius.");
   });
 });

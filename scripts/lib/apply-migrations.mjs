@@ -174,15 +174,18 @@ export function migrationEffectPresent(version, db) {
     case "026":
       return db.tableExists("chain_registry") && db.tableExists("store_coverage");
     case "027":
+      // 030 demotes Lidl after 027 promoted it. Treat either state as 027-applied
+      // so docker-style full init does not re-run 027 and undo 030.
       return (
         db.tableExists("chain_registry") &&
         Number(
           db.queryScalar(
             `select count(*) from chain_registry
              where chain_id = 'lidl'
-               and shopper_ranked = true
-               and settings_selectable = true
-               and rollout_stage = 'ranked'`,
+               and (
+                 (shopper_ranked = true and settings_selectable = true and rollout_stage = 'ranked')
+                 or (shopper_ranked = false and settings_selectable = false and rollout_stage = 'map_context')
+               )`,
           ),
         ) === 1
       );
@@ -206,6 +209,32 @@ export function migrationEffectPresent(version, db) {
         db.columnExists("active_markets", "ingest_miles") &&
         db.tableExists("ingest_jobs") &&
         db.tableExists("weekly_ad_flyer_hashes")
+      );
+    case "030":
+      return (
+        db.tableExists("chain_registry") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from chain_registry
+             where chain_id = 'lidl'
+               and shopper_ranked = false
+               and settings_selectable = false
+               and rollout_stage = 'map_context'`,
+          ),
+        ) === 1
+      );
+    case "031":
+      return (
+        db.tableExists("chain_registry") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from chain_registry
+             where chain_id = 'dollar-general'
+               and shopper_ranked = true
+               and settings_selectable = true
+               and rollout_stage = 'ranked'`,
+          ),
+        ) === 1
       );
     default:
       return false;

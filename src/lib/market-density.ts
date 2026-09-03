@@ -14,9 +14,17 @@ export const DENSITY_CLASS_BASE_MILES: Record<DensityClass, number> = {
   rural: 25,
 };
 
-/** First night / missing class — urban 8+1. */
+/** First night / missing class — urban 8+1. Kept for density math; admission uses the ZIP-outline cap. */
 export const BOOTSTRAP_INGEST_MILES =
   DENSITY_CLASS_BASE_MILES.urban + DENSITY_MILE_BUFFER;
+
+/**
+ * Nightly ingest and Owner Check share this mile cap around the ZIP geocode.
+ * The Census ZIP outline is the tighter clip when it loads. Rural density
+ * miles (25+1) — wide enough for giant ZCTAs, not unbounded.
+ */
+export const INGEST_ZCTA_SAFETY_CAP_MILES =
+  DENSITY_CLASS_BASE_MILES.rural + DENSITY_MILE_BUFFER;
 
 export const DENSITY_GROCERY_COUNT_MIN: Record<DensityClass, number> = {
   packed: 12,

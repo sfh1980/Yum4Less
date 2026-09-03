@@ -22,6 +22,7 @@ describe("chain rollout policy", () => {
       "food-lion",
       "lidl",
       "walmart",
+      "dollar-general",
       "bjs",
     ]);
     expect([...WEEKLY_AD_RANKED_PRICING_CHAINS]).toEqual([
@@ -31,6 +32,7 @@ describe("chain rollout policy", () => {
       "food-lion",
       "lidl",
       "walmart",
+      "dollar-general",
     ]);
   });
 
@@ -83,7 +85,7 @@ describe("chain rollout policy", () => {
       expect.objectContaining({ required: true }),
     );
     expect(getCoordinateSanityPromotionRequirement("lidl")).toEqual(
-      expect.objectContaining({ required: true }),
+      expect.objectContaining({ required: false }),
     );
     expect(getCoordinateSanityPromotionRequirement("kroger")).toEqual(
       expect.objectContaining({ required: false }),
@@ -96,6 +98,9 @@ describe("chain rollout policy", () => {
     );
     expect(getCoordinateSanityPromotionRequirement("walmart").note).toContain(
       "same weekly-ad coverage floors",
+    );
+    expect(getCoordinateSanityPromotionRequirement("dollar-general").note).toContain(
+      "no other ranked grocer",
     );
   });
 

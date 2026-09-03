@@ -286,8 +286,8 @@ export const fixturePriceObservations: CatalogPriceObservation[] = [
   { storeId: "trader-joes-short-pump", ingredientId: "green-onion", price: 0.89, freshnessDaysAgo: 1, inStock: true },
   { storeId: "trader-joes-short-pump", ingredientId: "olive-oil", price: 2.99, freshnessDaysAgo: 3, inStock: true },
 
-  { storeId: "dollar-general-market-highland", ingredientId: "spaghetti", price: 1.25, freshnessDaysAgo: 5, inStock: true },
-  { storeId: "dollar-general-market-highland", ingredientId: "black-beans", price: 1.15, freshnessDaysAgo: 5, inStock: true },
-  { storeId: "dollar-general-market-highland", ingredientId: "corn-tortillas", price: 2.15, freshnessDaysAgo: 5, inStock: false },
-  { storeId: "dollar-general-market-highland", ingredientId: "olive-oil", price: 2.75, freshnessDaysAgo: 5, inStock: true },
+  { storeId: "dollar-general-market-highland", ingredientId: "spaghetti", price: 1.25, freshnessDaysAgo: 0, freshnessHoursAgo: 6, inStock: true, priceSource: "dollar-general-weekly-ad-scrape", priceSourceKind: "weekly-ad", matchConfidence: 0.82 },
+  { storeId: "dollar-general-market-highland", ingredientId: "black-beans", price: 1.15, freshnessDaysAgo: 0, freshnessHoursAgo: 6, inStock: true, priceSource: "dollar-general-weekly-ad-scrape", priceSourceKind: "weekly-ad", matchConfidence: 0.8 },
+  { storeId: "dollar-general-market-highland", ingredientId: "corn-tortillas", price: 2.15, freshnessDaysAgo: 0, freshnessHoursAgo: 6, inStock: false, priceSource: "dollar-general-weekly-ad-scrape", priceSourceKind: "weekly-ad", matchConfidence: 0.78 },
+  { storeId: "dollar-general-market-highland", ingredientId: "olive-oil", price: 2.75, freshnessDaysAgo: 0, freshnessHoursAgo: 6, inStock: true, priceSource: "dollar-general-weekly-ad-scrape", priceSourceKind: "weekly-ad", matchConfidence: 0.77 },
 ];

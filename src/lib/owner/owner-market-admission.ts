@@ -99,10 +99,10 @@ export function isGroceryPinForDensity(input: {
 
 export function classifyOwnerAdmissionGroup(name: string): OwnerAdmissionGroup {
   const chain = inferStoreChainFromName(name);
-  if ((WEEKLY_AD_CHAINS as readonly string[]).includes(chain) && chain !== "dollar-general") {
+  if ((WEEKLY_AD_CHAINS as readonly string[]).includes(chain)) {
     return "will-ingest";
   }
-  if (chain === "dollar-general" || chain === "bjs") {
+  if (chain === "bjs") {
     return "food-only";
   }
   const normalized = name.trim().toLowerCase();
@@ -138,5 +138,5 @@ export function formatDensityHeadline(input: {
   alreadyActive?: boolean;
 }): string {
   const active = input.alreadyActive ? " · already active" : "";
-  return `${input.zipCode} · ${input.city}, ${input.state} · ${input.densityClass} (${input.groceryCountIn8Mi} grocery pins in 8 mi) · ingest ${input.ingestMiles} mi${active}`;
+  return `${input.zipCode} · ${input.city}, ${input.state} · ${input.densityClass} (${input.groceryCountIn8Mi} grocery pins in 8 mi) · ingest ZIP outline (cap ${input.ingestMiles} mi)${active}`;
 }

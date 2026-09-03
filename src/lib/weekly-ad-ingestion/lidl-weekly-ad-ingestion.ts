@@ -6,6 +6,7 @@ import {
   matchWeeklyAdOffers,
   weeklyAdMatchFieldsFromIngest,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
+import { LIDL_WEEKLY_AD_HUB_URL } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import { fetchWeeklyAdPageContent } from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
 import { parseWeeklyAdHtml } from "@/lib/weekly-ad-ingestion/parse-weekly-ad-html";
 import type {
@@ -15,7 +16,7 @@ import type {
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 const FIXTURE_FILE_NAME = "lidl-weekly-ad-sample.html";
-const LIDL_WEEKLY_AD_URL = "https://www.lidl.com/weekly-ads";
+const LIDL_WEEKLY_AD_URL = LIDL_WEEKLY_AD_HUB_URL;
 const LIDL_FLIPP_MERCHANT = "Lidl";
 
 export function createLidlWeeklyAdIngestionClient(): WeeklyAdIngestionClient {

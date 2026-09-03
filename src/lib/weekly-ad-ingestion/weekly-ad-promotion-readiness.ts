@@ -1,5 +1,8 @@
-import type { StoreChain } from "@/lib/provider-rollout";
-import { getProviderRolloutForStore } from "@/lib/provider-rollout";
+import { isDinnerEligibleForNearbyMarket } from "@/lib/dollar-general-dinner-eligibility";
+import {
+  getProviderRolloutForStore,
+  type StoreChain,
+} from "@/lib/provider-rollout";
 import {
   FIXTURE_CHAIN_MEMBERSHIP,
   isShopperRankedChain,
@@ -51,16 +54,19 @@ export function buildWeeklyAdPromotionReadiness(input: {
   storeId: string;
   coverage: WeeklyAdStoreCoverage;
   membership?: ChainMembershipSnapshot;
+  nearbyChains?: readonly string[];
 }): WeeklyAdPromotionReadiness {
   const membership = input.membership ?? FIXTURE_CHAIN_MEMBERSHIP;
   const baseRollout = getProviderRolloutForStore(input.storeName);
   const gates = buildWeeklyAdPromotionGates(input.chain, input.coverage, membership);
   const gatesPassedCount = gates.filter((gate) => gate.passed).length;
-  const weeklyAdRankedPricingEnabled = weeklyAdPromotionGatesPass(
-    input.coverage,
-    input.chain,
-    membership,
-  );
+  const weeklyAdRankedPricingEnabled =
+    weeklyAdPromotionGatesPass(input.coverage, input.chain, membership) &&
+    isDinnerEligibleForNearbyMarket({
+      chain: input.chain,
+      nearbyChains: input.nearbyChains ?? [input.chain],
+      membership,
+    });
   const overallStatus = getOverallStatus({
     chain: input.chain,
     gatesPassedCount,
@@ -94,6 +100,7 @@ export function buildWeeklyAdPromotionReadinessForStores(input: {
   membership?: ChainMembershipSnapshot;
 }): WeeklyAdPromotionReadiness[] {
   const membership = input.membership ?? FIXTURE_CHAIN_MEMBERSHIP;
+  const nearbyChains = input.stores.map((store) => store.chain);
   return input.stores
     .filter((store) => isShopperRankedChain(membership, store.chain))
     .map((store) =>
@@ -105,6 +112,7 @@ export function buildWeeklyAdPromotionReadinessForStores(input: {
           input.coverageByStoreId.get(store.id) ??
           emptyCoverage(store.id, store.chain),
         membership,
+        nearbyChains,
       }),
     );
 }

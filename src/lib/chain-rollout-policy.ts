@@ -282,8 +282,8 @@ export function getCoordinateSanityPromotionRequirement(
       };
     case "lidl":
       return {
-        required: true,
-        note: "Lidl promotion audits must pass coordinate sanity before rollout claims expand.",
+        required: false,
+        note: "Lidl is map context until a store-bound sale feed exists; coordinate sanity is a catalog audit, not a dinner-promotion gate.",
       };
     case "kroger":
     case "aldi":
@@ -296,6 +296,11 @@ export function getCoordinateSanityPromotionRequirement(
       return {
         required: false,
         note: `${chain} uses the same weekly-ad coverage floors as other ranked banners; coordinate sanity is tracked as a catalog audit.`,
+      };
+    case "dollar-general":
+      return {
+        required: false,
+        note: "Dollar General uses the same weekly-ad coverage floors; dinners also require no other ranked grocer nearby. Coordinate sanity is a catalog audit.",
       };
     default:
       return {

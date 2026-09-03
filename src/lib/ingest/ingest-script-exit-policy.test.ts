@@ -10,17 +10,14 @@ describe("isWeeklyAdFailLoudChain", () => {
     expect(isWeeklyAdFailLoudChain(undefined)).toBe(true);
   });
 
-  it("keeps Kroger, Aldi, Publix, Food Lion, Lidl, and Walmart fail-loud", () => {
+  it("keeps Kroger, Aldi, Publix, Food Lion, Walmart, and Dollar General fail-loud", () => {
     expect(isWeeklyAdFailLoudChain("kroger")).toBe(true);
     expect(isWeeklyAdFailLoudChain("aldi")).toBe(true);
     expect(isWeeklyAdFailLoudChain("publix")).toBe(true);
     expect(isWeeklyAdFailLoudChain("food-lion")).toBe(true);
-    expect(isWeeklyAdFailLoudChain("lidl")).toBe(true);
     expect(isWeeklyAdFailLoudChain("walmart")).toBe(true);
-  });
-
-  it("does not fail the job for Dollar General", () => {
-    expect(isWeeklyAdFailLoudChain("dollar-general")).toBe(false);
+    expect(isWeeklyAdFailLoudChain("dollar-general")).toBe(true);
+    expect(isWeeklyAdFailLoudChain("lidl")).toBe(false);
   });
 
   it("follows the roster snapshot instead of a hardcoded ranked list", () => {
@@ -84,9 +81,7 @@ describe("shouldFailWeeklyAdIngestExit", () => {
     expect(
       shouldFailWeeklyAdIngestExit({
         results: [{ status: "live", chain: "kroger" }],
-        syncSummaries: [
-          { failedCount: 2, chain: "dollar-general" },
-        ],
+        syncSummaries: [{ failedCount: 2, chain: "lidl" }],
       }),
     ).toBe(false);
   });
@@ -115,29 +110,28 @@ describe("shouldFailWeeklyAdIngestExit", () => {
     ).toBe(true);
   });
 
-  it("returns false when only Dollar General errors", () => {
+  it("returns true when Dollar General errors", () => {
     expect(
       shouldFailWeeklyAdIngestExit({
         results: [
           { status: "live", chain: "kroger" },
-          { status: "error", chain: "dollar-general" },
-        ],
-        syncSummaries: [{ failedCount: 0, chain: "kroger" }],
-      }),
-    ).toBe(false);
-  });
-
-  it("returns true when Lidl errors even if unranked chains also error", () => {
-    expect(
-      shouldFailWeeklyAdIngestExit({
-        results: [
-          { status: "live", chain: "kroger" },
-          { status: "error", chain: "lidl" },
           { status: "error", chain: "dollar-general" },
         ],
         syncSummaries: [{ failedCount: 0, chain: "kroger" }],
       }),
     ).toBe(true);
+  });
+
+  it("does not fail the job when only Lidl errors", () => {
+    expect(
+      shouldFailWeeklyAdIngestExit({
+        results: [
+          { status: "live", chain: "kroger" },
+          { status: "error", chain: "lidl" },
+        ],
+        syncSummaries: [{ failedCount: 0, chain: "kroger" }],
+      }),
+    ).toBe(false);
   });
 
   it("returns false when all chains succeed and no persist failures", () => {

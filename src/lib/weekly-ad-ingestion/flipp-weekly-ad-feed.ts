@@ -10,7 +10,8 @@ export type FlippWeeklyAdMerchantName =
   | "Publix"
   | "ALDI"
   | "Food Lion"
-  | "Lidl";
+  | "Lidl"
+  | "Dollar General";
 
 export type FlippWeeklyAdItem = {
   name?: string;
@@ -21,6 +22,7 @@ export type FlippWeeklyAdItem = {
   sale_story?: string | null;
   valid_to?: string | null;
   merchant_name?: string;
+  _L1?: string | null;
 };
 
 export type FlippWeeklyAdSearchResponse = {
@@ -306,16 +308,31 @@ export function parseFlippWeeklyAdItems(items: FlippWeeklyAdItem[]): WeeklyAdRaw
   return offers;
 }
 
+/** Keep uncategorized lines; drop GM departments on mixed circulars such as Dollar General. */
+export function flippItemLooksLikeGroceryFood(item: FlippWeeklyAdItem): boolean {
+  const department = item._L1?.trim() ?? "";
+  if (!department) {
+    return true;
+  }
+
+  return /food|grocery|produce|meat|dairy|frozen|beverage|drink|deli|bakery/i.test(
+    department,
+  );
+}
+
 export function parseFlippWeeklyAdItemsForMerchant(
   items: FlippWeeklyAdItem[],
   merchantName: string,
 ): WeeklyAdRawOffer[] {
   const normalizedMerchant = merchantName.toLowerCase();
-  return parseFlippWeeklyAdItems(
-    items.filter((item) =>
-      item.merchant_name?.toLowerCase().includes(normalizedMerchant),
-    ),
+  const merchantItems = items.filter((item) =>
+    item.merchant_name?.toLowerCase().includes(normalizedMerchant),
   );
+  const groceryItems =
+    normalizedMerchant === "dollar general"
+      ? merchantItems.filter(flippItemLooksLikeGroceryFood)
+      : merchantItems;
+  return parseFlippWeeklyAdItems(groceryItems);
 }
 
 function normalizeFlippWeeklyAdItem(item: FlippWeeklyAdItem): WeeklyAdRawOffer | null {
