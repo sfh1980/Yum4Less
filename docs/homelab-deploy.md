@@ -934,7 +934,7 @@ Ingest + Watchtower are **deployed** on TrueNAS. Manual one-shot dry-run closed 
 | 4. `db:backup-restore-drill` on TrueNAS target | **Closed (2026-08-31)** — host dump/restore into `yum4less_backup_drill`; counts **276/324/29** matched; drill DB dropped |
 | 5. Public/WAN exposure | **Closed (2026-08-03/04)** — Cloudflare Tunnel → `https://yum4less.com/` ([§12](#12-cloudflare-tunnel-wan--live)) |
 | 6. Prod env flags on app | Confirm after each Watchtower recreate: `TRUST_PROXY_HEADERS=1`, `YUM4LESS_TRUSTED_PROXY_VERIFIED=1`, feedback/analytics as desired |
-| Watchtower first hourly scan | **Closed** (owner 2026-09-01 paste) — 2026-08-31 22:55Z `Updated=2` (`72c6591` / `bfe5bf4`); later hourly sessions `Updated=0` |
+| Watchtower first hourly scan | **Closed** (owner 2026-09-01 paste) — 2026-08-31 22:55Z `Updated=2` (`72c6591` / `bfe5bf4`); later hourly sessions `Updated=0`. **2026-09-03 23:55Z** `Updated=2` again — app `73645334fbd8`, ingest `1aa2eb2dec54` (owner migrate `030`/`031` after pull). |
 
 ---
 

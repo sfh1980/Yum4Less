@@ -73,6 +73,80 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(
       isWeeklyAdJunkProduct("Estee Lauder Advanced Night Repair Serum Duo"),
     ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("My Texas House Cambria Swivel Outdoor Dining Chair"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Beautiful 5 in 1 Electric Skillet - Expandable up to 7 Qt with Glass Lid, White Icing by Drew Barrymore",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "FitRx SmartBell Gym, 60 lbs. 4-in-1 Adjustable Interchangeable Dumbbell, Barbell, and Kettlebell Weight Set, Black",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Restored Premium Dyson Airwrap™ Multi-styler Complete Long Diffuse | Nickel/Copper (Refurbished)",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "GE Profile™ Opal™ Nugget Ice Maker + Side Tank, Countertop Icemaker, Stainless Steel, 33lbs Daily Ice Production",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Beautiful 10-Cup Food Processor with Accessories, Cornflower Blue by Drew Barrymore",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Instant Pot 6Qt RIO Chef Series 7-in-1 Multi-Cooker, Pressure Cooker, Slow Cook, & More, Black",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("My Texas House Cambria Outdoor Dining Table"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Restored Premium Dyson Airstrait™ Straightener | Amber Silk (Refurbished)",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        'Samsung 34" Odyssey G55T WQHD 165Hz 1ms(MPRT) AMD FreeSync HDR Curved Gaming Monitor - LC34G55TWDNXZA',
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "VIZIO 55 in Mini LED Quantum 4K QLED HDR Smart TV, 2026 Model, VQM55C-10",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Nutrafol Women's Hair Serum, Supports Visibly Thicker and Stronger Hair, Vegan, Lightweight and Fast-Absorbing",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Cosco Kids Entrada Infant & Toddler Convertible Car Seat, Baby Car Seat, Shady Day, Grey",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("London by Burberry, Eau De Parfum, Perfume for Women"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Zevo Max Flying Insect Indoor Fly Trap: Easy, Mess-Free Solution - Light Trap Catches & Kills House Flies, Fruit Flies, Gnats, & More (1 Plug in Device & 4 Cartridges)",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Altec Lansing Hydra Jolt 2.0 Everything Proof Wireless Magnetic Portable Bluetooth Speaker, Periwinkle Blue White, IMW1202-PERIWT",
+      ),
+    ).toBe(true);
   });
 
   it("does not skip dinner foods that junk used to false-hit", () => {
@@ -92,6 +166,8 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(isWeeklyAdJunkProduct("PET Evaporated Milk")).toBe(false);
     expect(isWeeklyAdJunkProduct("Daisy Sour Cream")).toBe(false);
     expect(isWeeklyAdJunkProduct("Filippo Berio Extra Virgin Olive Oil")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Swanson TV Dinners")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Great Value Ice Cream")).toBe(false);
   });
 
   it("treats either the raw title or the normalized label as junk", () => {

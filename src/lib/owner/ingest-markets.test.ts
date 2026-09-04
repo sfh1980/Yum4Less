@@ -191,6 +191,28 @@ describe("owner ingest markets", () => {
           sourceName: "openstreetmap-overpass",
           sourceStoreId: "osm-7-11",
         },
+        {
+          id: "osm-capt-gregs",
+          name: "Capt Gregs Seafood",
+          city: "Mechanicsville",
+          state: "VA",
+          kind: "grocery",
+          latitude: 37.55,
+          longitude: -77.43,
+          sourceName: "openstreetmap-overpass",
+          sourceStoreId: "osm-capt-gregs",
+        },
+        {
+          id: "osm-joes",
+          name: "Joe's",
+          city: "Unknown",
+          state: "Unknown",
+          kind: "grocery",
+          latitude: 37.54,
+          longitude: -77.43,
+          sourceName: "openstreetmap-overpass",
+          sourceStoreId: "osm-joes",
+        },
       ],
       sources: [],
     });
@@ -206,10 +228,10 @@ describe("owner ingest markets", () => {
       state: "VA",
       localityIsApproximate: false,
     });
-    expect(inspected.result.stores.some((store) => store.name === "7-Eleven")).toBe(
-      false,
+    expect(inspected.result.stores.map((store) => store.name)).toEqual(["Kroger"]);
+    expect(inspected.result.warnings.join(" ")).toMatch(
+      /Omitted 3 convenience, bakery, specialty, or independent/i,
     );
-    expect(inspected.result.warnings.join(" ")).toMatch(/Omitted 1 convenience\/bakery/i);
   });
 
   it("warns when the first look has no shopper-ranked v1 chain", async () => {

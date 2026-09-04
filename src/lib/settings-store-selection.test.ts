@@ -118,6 +118,35 @@ describe("filterSettingsSelectableStores", () => {
     ]);
   });
 
+  it("omits convenience, bakeries, specialty, and independent OSM grocery leftovers", () => {
+    const filtered = filterSettingsSelectableStores([
+      store({ id: "snack-1", name: "Snack Shop", chain: "unknown", kind: "grocery" }),
+      store({ id: "dash-1", name: "Dash In", chain: "unknown", kind: "specialty" }),
+      store({ id: "fas-1", name: "Fas Mart", chain: "unknown", kind: "grocery" }),
+      store({
+        id: "bake-1",
+        name: "Lark Bake Shoppe",
+        chain: "unknown",
+        kind: "grocery",
+      }),
+      store({
+        id: "seafood-1",
+        name: "Capt Gregs Seafood",
+        chain: "unknown",
+        kind: "grocery",
+      }),
+      store({ id: "joes-1", name: "Joe's", chain: "unknown", kind: "grocery" }),
+      store({
+        id: "kroger-1",
+        name: "Kroger Mechanicsville",
+        chain: "kroger",
+        recommendationEnabled: true,
+      }),
+    ]);
+
+    expect(filtered.map((entry) => entry.id)).toEqual(["kroger-1"]);
+  });
+
   it("prefers non-OSM Kroger rows when catalog stores exist", () => {
     const filtered = filterSettingsSelectableStores([
       store({

@@ -32,8 +32,8 @@ import {
   formatDensityHeadline,
   formatOmittedPinsNotice,
   classifyOwnerAdmissionGroup,
-  isConvenienceOrBakeryPin,
   isGroceryPinForDensity,
+  isOwnerCheckListedPin,
 } from "@/lib/owner/owner-market-admission";
 import {
   NO_RANKED_V1_CHAIN_PREVIEW_NOTICE,
@@ -173,9 +173,9 @@ async function previewNearbyStores(input: {
     );
   }
 
-  const omitted = merged.filter((store) => isConvenienceOrBakeryPin(store));
+  const omitted = merged.filter((store) => !isOwnerCheckListedPin(store));
   const listedPins = merged.filter((store) => {
-    if (isConvenienceOrBakeryPin(store)) {
+    if (!isOwnerCheckListedPin(store)) {
       return false;
     }
     if (zcta.ok) {

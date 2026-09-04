@@ -166,8 +166,9 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
       <h2>Markets</h2>
       <p className="panel-copy">
         Check first. Invalid ZIPs, failed geocode, and locations outside the
-        lower 48 are refused. The list is grocery and food-capable pins
-        inside the ZIP outline (convenience and bakeries omitted). Ranked
+        lower 48 are refused.         The list is recognized grocery banners, clubs, and Target/Whole Foods
+        inside the ZIP outline (convenience, bakeries, specialty, and
+        independent leftovers omitted). Ranked
         banners are listed first. OSM pins without address tags show as near
         the ZIP city — not a street address. Activating books the ZIP for the
         next ingest run. ZIP 23111 is allowed if you type it — it is not a

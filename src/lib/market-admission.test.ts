@@ -118,14 +118,26 @@ describe("market admission helpers", () => {
     );
   });
 
-  it("omits convenience and bakeries from inventory and density grocery counts", () => {
+  it("omits convenience, bakeries, specialty, and independent grocery leftovers from density counts", () => {
     expect(isConvenienceOrBakeryPin({ name: "7-Eleven" })).toBe(true);
     expect(isConvenienceOrBakeryPin({ name: "Harrison Mini Mart" })).toBe(true);
+    expect(isConvenienceOrBakeryPin({ name: "Lark Bake Shoppe" })).toBe(true);
     expect(isConvenienceOrBakeryPin({ name: "Kroger" })).toBe(false);
     expect(isGroceryPinForDensity({ name: "7-Eleven", kind: "specialty" })).toBe(
       false,
     );
+    expect(isGroceryPinForDensity({ name: "Fas Mart", kind: "grocery" })).toBe(
+      false,
+    );
+    expect(
+      isGroceryPinForDensity({ name: "Capt Gregs Seafood", kind: "grocery" }),
+    ).toBe(false);
+    expect(isGroceryPinForDensity({ name: "Joe's", kind: "grocery" })).toBe(false);
     expect(isGroceryPinForDensity({ name: "Kroger", kind: "grocery" })).toBe(true);
+    expect(
+      isGroceryPinForDensity({ name: "Whole Foods Market", kind: "grocery" }),
+    ).toBe(true);
+    expect(isGroceryPinForDensity({ name: "Target", kind: "big-box" })).toBe(true);
   });
 
   it("groups ranked banners, food-only variety/clubs, and Target as needs-you", () => {

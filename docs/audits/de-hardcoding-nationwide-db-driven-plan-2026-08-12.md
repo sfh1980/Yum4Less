@@ -3,7 +3,7 @@
 > Source of truth for the original hardcoded inventory: [`scale-out-architecture-audit-2026-08-11.md`](scale-out-architecture-audit-2026-08-11.md).
 > Current snapshot → [`PROJECT_CONTINUITY.md` → Resume](../../PROJECT_CONTINUITY.md#resume-as-of-2026-08-31).
 
-**Implementation status (as of 2026-08-31):**
+**Implementation status (as of 2026-09-03):**
 
 | Slice | What | Status |
 |---|---|---|
@@ -11,7 +11,7 @@
 | **B1** | `active_markets` + `zip_geocode_cache` (`025`) — env ZIP list is a debug overlay only | **Shipped** — TrueNAS `025` applied **2026-08-27 00:04:01Z** |
 | **B2** | `chain_registry` + `store_coverage` view + `/owner` Coverage tab (`026`) | **Shipped** — TrueNAS `026` applied **2026-08-27 00:04:01Z** (18 banners seeded) |
 | **C** | `/owner` **Markets**: type ZIP → Check (preview, no insert) → Activate into `active_markets` (`source=ops`, `status=active`). CLI `markets:activate` remains backup. No shopper collect. No ~41k ZIP nightly ingest. | **Shipped** (reuses `025`; no new migrate) |
-| **Membership** | Shopper dinner *attempts* + ingest fail-loud read `chain_registry.shopper_ranked`; floors stay in code | **Shipped in repo** (2026-08-31) — live waits Watchtower. TrueNAS already has Lidl/Walmart ranked via `027`/`028`. |
+| **Membership** | Shopper dinner *attempts* + ingest fail-loud read `chain_registry.shopper_ranked`; floors stay in code | **Shipped live** (Watchtower **2026-09-03 23:55Z**; `030`/`031` migrate **23:59:42Z**). Lidl is map-context; Dollar General is shopper-ranked with a food-desert dinner gate; Walmart stays ranked. |
 | Later | Organic shopper-ZIP waiting list; `threshold_profiles`; per-store scrape TZ; banner-per-row with shared adapters; Slice D identity matcher; new ranked adapters; chain go/no-go (docs only, far future) | **Not started** — membership was the first remaining task after A/B1/B2/C |
 
 **Still true after A/B1/B2/C:** Overlay unset + empty `active_markets` still **fails closed**. Watchtower does **not** migrate future `db/init` files. Do not treat local Docker as yum4less.com.
