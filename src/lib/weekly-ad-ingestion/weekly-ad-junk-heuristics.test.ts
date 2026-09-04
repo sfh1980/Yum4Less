@@ -144,9 +144,37 @@ describe("isWeeklyAdJunkProduct", () => {
     ).toBe(true);
     expect(
       isWeeklyAdJunkProduct(
-        "Altec Lansing Hydra Jolt 2.0 Everything Proof Wireless Magnetic Portable Bluetooth Speaker, Periwinkle Blue White, IMW1202-PERIWT",
+        "Altec Lansing Hydra Jolt 2.0 Everything-Proof Wireless Magnetic Bluetooth Portable Speaker for Travel, Black",
       ),
     ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Beautiful 6-Speed Electric Hand Mixer, Lavender by Drew Barrymore"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Jessica Simpson Women's and Women's Plus Eydie Tee"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("NETGEAR WiFi 6 Router (RAX5) – Security Features, AX1600 Wireless Speed"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("PUR Faucet Mount Water Filtration System, Vertical, White, FM3333B"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Great Value Low Streaking Wet Mopping Cloths, Lavender, 24 Count"),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct(
+        "Glade® Scent Flow PlugIns® Air Freshener Starter Kit, Clean Linen, 1 Device + 1 Refill",
+      ),
+    ).toBe(true);
+    expect(
+      isWeeklyAdJunkProduct("Zep Home Pro Mold and Mildew Stain Eraser and Cleaner, Clean Fresh Scent"),
+    ).toBe(true);
+    expect(isWeeklyAdJunkProduct("Totino's Pizza Rolls")).toBe(true);
+    expect(isWeeklyAdJunkProduct("Little Debbie Fall Cakes")).toBe(true);
+    expect(isWeeklyAdJunkProduct("HOSTESS DONETTES")).toBe(true);
+    expect(isWeeklyAdJunkProduct("Stouffer's Family Size Dinners")).toBe(true);
+    expect(isWeeklyAdJunkProduct("KEURIG DONUT SHOP OR GREEN MOUNTAIN")).toBe(true);
   });
 
   it("does not skip dinner foods that junk used to false-hit", () => {
@@ -168,6 +196,14 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(isWeeklyAdJunkProduct("Filippo Berio Extra Virgin Olive Oil")).toBe(false);
     expect(isWeeklyAdJunkProduct("Swanson TV Dinners")).toBe(false);
     expect(isWeeklyAdJunkProduct("Great Value Ice Cream")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Kraft Salad Dressing")).toBe(false);
+    expect(isWeeklyAdJunkProduct("A.1. Steak Sauce")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Marketside Caesar Salad Kit, 14.55 oz Bag (Fresh)")).toBe(
+      false,
+    );
+    expect(isWeeklyAdJunkProduct("Martin's Potato Slider Rolls")).toBe(false);
+    expect(isWeeklyAdJunkProduct("OLD EL PASO DINNER KIT")).toBe(false);
+    expect(isWeeklyAdJunkProduct("RESER'S AMERICAN CLASSICS SIDES")).toBe(false);
   });
 
   it("treats either the raw title or the normalized label as junk", () => {
