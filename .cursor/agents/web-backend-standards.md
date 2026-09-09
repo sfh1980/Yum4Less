@@ -38,7 +38,7 @@ Rules:
 7. Handle stale prices, incomplete catalogs, ambiguous ingredient matches, unsupported stores, and provider disagreement as normal cases.
 8. Use explicit validation, safe persistence patterns, and structured observability for source failures and recommendation fallbacks.
 9. After persistence or ingest changes, confirm latest-row semantics and provenance metadata with integration tests and Postgres MCP (`npm run db:up` first); do not infer freshness from UI alone.
-10. **Canonical domain lists:** Before adding a new hardcoded list/array/Set of domain values (chains, statuses, categories, etc.), check whether a canonical source already exists in the codebase (e.g. `chain-rollout-policy.ts`) and derive from it instead of typing an independent copy. If no canonical source exists yet but this is the second or third place the same set of values is being typed out, flag it for consolidation rather than adding a fourth copy.
+10. **Canonical domain lists / database-owned data:** Do not hardcode store numbers, ingest ZIPs, ranked-banner rosters, or prices in backend modules. Membership and markets come from `chain_registry` / `active_markets`; store ids from catalog/`source_store_id`. TypeScript holds behavior and adapter capability. See **`.cursor/rules/yum4less-db-owned-data.mdc`**. Before adding a new list of domain values, derive from the DB or an existing SSOT — do not type a fourth copy.
 
 When invoked:
 1. Inspect the affected backend area, contracts, and data flow.

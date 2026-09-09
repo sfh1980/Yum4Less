@@ -30,6 +30,7 @@ Priorities:
 3. Chain-isolated failures — one blocked chain must not silently disable others.
 4. Preserve scheduled pipeline order; document any intentional deviation in Decision log.
 5. Respect **`yum4less-database-ingest-workflow.mdc`** for persist-failure and exit-code rules.
+6. **Database-owned data:** never hardcode store numbers, ingest ZIPs, banner rosters, or prices in adapters. Resolve from `active_markets` / `stores` / `chain_registry` or the retailer, then persist. See **`yum4less-db-owned-data.mdc`**.
 
 Rules:
 

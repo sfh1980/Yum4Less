@@ -54,6 +54,8 @@ try {
         ''
         'Invoke project agents with @verifier, @web-frontend-standards, @web-backend-standards, @database-codegen-standards, @ingest-standards, @testing-cicd-standards, or @senior-auditor when the orchestration trigger table applies.'
         ''
+        'Database-owned data: TypeScript is behavior only. Stores, ZIPs, chain membership, catalog pins, prices, and ingredients live in Postgres — never hardcoded in adapters (see .cursor/rules/yum4less-db-owned-data.mdc).'
+        ''
         'Continuity journal: after material slices, update PROJECT_CONTINUITY.md — changelog at top, refresh Resume, update Decision log / verification snapshot when applicable; no chat summaries (transcript index links only). See .cursor/rules/yum4less-continuity-journal.mdc'
         ''
         'Do not claim verified, CI green, or merge-ready without test/MCP evidence.'

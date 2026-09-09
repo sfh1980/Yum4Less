@@ -7,7 +7,7 @@ alwaysApply: true
 
 Use this rule on **every implementation slice**. Do not mark work verified, complete, or merge-ready until the checklist for the touched area passes.
 
-See also: `AGENTS.md`, **`.cursor/rules/yum4less-testing-and-release-gates.mdc`** (test gates + MCP detail), **`.cursor/rules/yum4less-product-and-trust.mdc`** (scope + trust), **`.cursor/rules/yum4less-scale-awareness.mdc`** (symptom vs root-cause on every fix), and project agents in `.cursor/agents/`.
+See also: `AGENTS.md`, **`.cursor/rules/yum4less-testing-and-release-gates.mdc`** (test gates + MCP detail), **`.cursor/rules/yum4less-product-and-trust.mdc`** (scope + trust), **`.cursor/rules/yum4less-scale-awareness.mdc`** (symptom vs root-cause on every fix), **`.cursor/rules/yum4less-db-owned-data.mdc`** (behavior in code; stores/ZIPs/membership/catalog/prices in Postgres), and project agents in `.cursor/agents/`.
 
 ## User question routing (every conversation)
 

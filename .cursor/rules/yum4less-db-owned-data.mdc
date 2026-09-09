@@ -1,0 +1,31 @@
+---
+description: Backend holds behavior; Postgres holds operational facts (stores, ZIPs, membership, catalog, prices)
+alwaysApply: true
+---
+
+# Yum4Less Database-Owned Data
+
+**Owner lock:** TypeScript is **behavior only** (fetch, parse, match, persist, validate). If a value would change when we add a ZIP, a store, a banner, or a food, it belongs in **Postgres**, not a source file.
+
+## Must live in the database (or be resolved at runtime from it / the retailer)
+
+- Activated markets / ingest ZIPs → `active_markets` (no silent `23111` in live paths)
+- Chain membership (who we attempt for dinners / weekly-ad) → `chain_registry`
+- Store pins, retailer store numbers, Kroger location ids → `stores` / identities / `source_store_id`
+- Sale prices and weekly-ad offers → `price_observations`
+- Ingredient catalog and aliases → `ingredients` and related tables
+
+**Wrong:** `const TARGET_STORE = 1968` in a Target adapter. **Right:** ZIP or coordinates → locator → persist `source_store_id` on the catalog pin → fetch by that id. Other ZIPs reuse the same adapter.
+
+## Allowed in code
+
+- Control flow and parsers (how to call a locator, how to parse JSON)
+- Adapter **capability** (a function exists for Target) — not the roster of which banners are ranked
+- Secrets and ops flags → environment variables, never Postgres and never committed files
+- Test/CI **inputs** in `yum4less_test` seed, `db/ci/`, or spec fixtures — not in production ingest modules
+
+## Do not grow leftover constants
+
+Existing promotion floors and name-fragment lists are not a license to hardcode more stores, ZIPs, or chain rosters. Do not add per-chain copies. If a new constant is really data, put it in Postgres (or ask) instead of another TypeScript array.
+
+Env ZIP lists (`YUM4LESS_INGEST_ZIPS`) are a debug overlay, not the catalog of markets.

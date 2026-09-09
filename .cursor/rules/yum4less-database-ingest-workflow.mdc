@@ -12,6 +12,7 @@ Applies when editing schema, seed, market repository, or weekly-ad ingest. **Com
 
 - Schema changes belong in `db/init/`; do not use MCP SQL as a write path.
 - Ingest scripts are the primary write path; public API routes stay read-only by default.
+- **Database-owned facts** (markets, store numbers, membership, catalog pins, prices, ingredients) → **`.cursor/rules/yum4less-db-owned-data.mdc`**. Adapters resolve and persist; they do not hardcode Target `1968`, ZIP `23111`, or banner rosters.
 
 ## Persist failure visibility (Phase 1 audit — H5, H6, H7)
 

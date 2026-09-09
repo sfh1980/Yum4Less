@@ -2,7 +2,7 @@
 
 Index for Cursor **project agents**, **MCP servers**, and the **verification floor**. Detail lives in agent files (`.cursor/agents/`), orchestration rules, and scoped workflow rules — not here.
 
-**Mandatory on every slice:** [`.cursor/rules/yum4less-agent-orchestration.mdc`](.cursor/rules/yum4less-agent-orchestration.mdc) (routing, trigger table, before-done checklist). **Every fix response** also includes the Scale check block from [`.cursor/rules/yum4less-scale-awareness.mdc`](.cursor/rules/yum4less-scale-awareness.mdc).
+**Mandatory on every slice:** [`.cursor/rules/yum4less-agent-orchestration.mdc`](.cursor/rules/yum4less-agent-orchestration.mdc) (routing, trigger table, before-done checklist). **Every fix response** also includes the Scale check block from [`.cursor/rules/yum4less-scale-awareness.mdc`](.cursor/rules/yum4less-scale-awareness.mdc). **Operational facts** (stores, ZIPs, membership, catalog, prices) live in Postgres — [`.cursor/rules/yum4less-db-owned-data.mdc`](.cursor/rules/yum4less-db-owned-data.mdc).
 
 > **Also:** [`README.md`](README.md) · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) (decisions + redesign plan)
 

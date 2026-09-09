@@ -16,7 +16,7 @@ Does this fix resolve today's specific symptom correctly, with no unintended sid
 Is this fix addressing a root cause, or patching a symptom of a deeper structural pattern that will recur as the app scales? Specifically:
 
 - Is there a shared abstraction (function, model, component, config) being used in a context it wasn't designed for?
-- Is there a hardcoded value, parallel list, or duplicated definition that will need to be manually kept in sync as the app grows?
+- Is there a hardcoded value, parallel list, or duplicated definition that will need to be manually kept in sync as the app grows? Store numbers, ZIPs, membership, catalog, and prices belong in Postgres — **`yum4less-db-owned-data.mdc`**.
 - Is there a missing separation of concerns (one thing doing two jobs) that will produce a new variant of this bug when a new feature/chain/surface is added?
 
 If Q2 reveals a deeper pattern: the fix **MUST** address the root cause, not just the symptom. If the root-cause fix is out of scope for this slice, it **MUST** be explicitly flagged with a **Scale risk: [description]** note so it lands in the owner's backlog — not silently deferred.
