@@ -34,6 +34,7 @@
 
 ### Working today (honest)
 
+- **CI audit unblock (2026-09-09, local):** Next **15.5.25**, sharp **0.35.4**, js-yaml **4.3.2** so `npm audit --audit-level=high` can pass and `publish-ingest-image` can run. Live images stay on **2026-09-04** until Watchtower pulls. Then junk heal. Do **not** claim more dinners.
 - **Pharmacy/seltzer/paper junk skip (2026-09-09, local):** `isWeeklyAdJunkProduct` now skips the owner-queue pharmacy, seltzer/soda, bath tissue, bouquet, cereal/bar, and leftover GM titles. Live `/owner` does **not** drop until Watchtower pulls this ingest image, then persist ingest or `owner:reject-pending-junk-reviews`. Steaks, Eggo, ziti, Caesar kit stay foods. Do **not** claim more dinners.
 - **Settings picker omit + GM junk skip (2026-09-04, live):** Watchtower **01:55Z** — app `55ad51dac9b6`, ingest `6b541e14fc3f` (`42c655c`). Grep confirms `isRecognizedGroceryBannerPin`, `bluetooth`, `little debbie`. Hard-refresh the shopper UI. Second junk heal **rejected=0** (971 pending). Do **not** claim more dinners.
 - **Dollar General Flipp ingest + food-desert dinners (2026-09-03, live):** Watchtower **23:55Z** `Updated=2`; owner migrate **`030`/`031`** **23:59:42Z**. Live `chain_registry`: Lidl `map_context`; Dollar General `shopper_ranked`. Same floors; dinners only when no other ranked grocer is nearby. Do **not** claim more dinners in `23111`. Ingredient-review junk skips wait for the next persist ingest (or `owner:reject-pending-junk-reviews`).
@@ -260,6 +261,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-09-09 — Unblock CI audit so Watchtower can publish ingest
+
+**Theme:** Master push `9b2e1fa` (junk skip) never published `:homelab` because `npm audit --audit-level=high` failed on Next / sharp / js-yaml advisories. Watchtower had nothing new to pull.
+
+**Shipped:** `next` **15.5.21 → 15.5.25**; `overrides.sharp` **0.35.3 → 0.35.4**; `overrides.js-yaml` **4.3.1 → 4.3.2**. Did not use `npm audit fix --force`. Vitest mocker remains a **moderate** advisory (does not fail `--audit-level=high`).
+
+**Limits:** Live `/owner` still waits for CI `publish-ingest-image` + Watchtower pull + junk heal. Do not claim CI green until that run finishes.
+
+**Evidence:** local `npm audit --audit-level=high` exit 0 (2 moderate vitest). `npx tsc --noEmit` pass. `npm test` **1237/1237** (217 files). `npm run build` Next **15.5.25**.
 
 ### 2026-09-09 — Skip pharmacy / seltzer / soda / paper / flower owner-queue leftovers
 
@@ -3035,7 +3046,11 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` (pharmacy/seltzer/paper junk skip) | 2026-09-09 | Junk+classify **10/10**. Full suite **1235 passed / 2 failed** (217 files): Aldi live Flipp 15s timeouts. Not CI green. |
+| `npm audit --audit-level=high` (Next 15.5.25 / sharp 0.35.4 / js-yaml 4.3.2) | 2026-09-09 | Exit 0. 2 moderate vitest mocker leftovers. |
+| `npm test` (after Next 15.5.25 bump) | 2026-09-09 | **1237/1237** pass (217 files) |
+| `npx tsc --noEmit` (Next 15.5.25) | 2026-09-09 | Pass |
+| `npm run build` (Next 15.5.25) | 2026-09-09 | **Pass** |
+| `npm test` (pharmacy/seltzer/paper junk skip) | 2026-09-09 | Junk+classify **10/10**. Full suite later **1237/1237** after the audit bump. |
 | TrueNAS Watchtower `ec84286` (owner paste) | 2026-09-04 | `Updated=2` at **00:55Z** — app `32bf2c300872`, ingest `f1c6fa510914`. Postgres Up 4 days. Site 200. Greps: `dining chairs`, `isRecognizedGroceryBannerPin`. No migrate. |
 | TrueNAS Watchtower + `030`/`031` (owner paste) | 2026-09-03 | `Updated=2` at **23:55Z** — app `73645334fbd8`, ingest `1aa2eb2dec54`. Postgres Up 4 days. Site 200. Migrate **030/031** **23:59:42Z**. Lidl `map_context`; Dollar General `shopper_ranked`. |
 | `npm test` (Walmart GM leftover junk titles) | 2026-09-03 | **1237/1237** pass (217 files) |
