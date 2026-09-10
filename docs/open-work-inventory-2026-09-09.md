@@ -6,7 +6,7 @@ Point-in-time list of **open tasks, slices, and ops**. Compiled from [`PROJECT_C
 
 GitHub issues on `sfh1980/Yum4Less`: **0 open** (checked 2026-09-09). Tracking lives in Resume / Home / this inventory.
 
-Last live TrueNAS paste-back in Resume: **2026-09-05**. Nothing here claims freshness or image SHAs after that date.
+Last live TrueNAS paste-back in Resume: **2026-09-10** (junk heal **902 → 617**). Image SHAs after 2026-09-04 still need a fresh `docker inspect` paste if you want them in Resume.
 
 ---
 
@@ -32,7 +32,7 @@ Adapters must not hardcode store numbers, ingest ZIPs, or banner rosters. Facts 
 | 1 | Keep the TrueNAS ingest-worker **Cron Job Enabled** | 3am only enqueues; worker drains | Do not disable while overlay is off |
 | 2 | Hard-refresh yum4less.com **Settings** and **Owner Check** | Confirm Fas Mart / Dash In / Capt Gregs / bakeries / Joe’s are off the store list | Map may still show those pins. Code shipped live 2026-09-04 (`isRecognizedGroceryBannerPin`). `stores` has no `zip`/`chain_key`, so SQL cannot prove the omit |
 | 3 | Optional live SQL | `chain_registry` flags; Walmart / Dollar General / Lidl in-stock observation counts; `schema_migrations` with `version::int` | Ledger query still needed — `version` is text. Last heartbeat: Walmart / DG / Lidl had **no** in-stock ranked rows |
-| 4 | After Watchtower pulls the **2026-09-10** leftover-junk ingest image, run `owner:reject-pending-junk-reviews` | Live image still predates Halloween/GM/drink skip (heal **rejected=0** / **902** remaining on 2026-09-10) | Until that pull, heal **rejected=0**. After pull, expect a large drop; leftover steaks/salads/sauces/Eggo/ziti still need `/owner` Yes |
+| 4 | After Watchtower pulls the **post-heal** junk image, run `owner:reject-pending-junk-reviews` again | Live still on `44e4e16` (902→617). Next skip list is local until publish | After pull, expect another drop; leftover steaks/salads/dough/Eggo/ziti still need `/owner` Yes |
 | 5 | TheMealDB **dev test key** on live ingest | Known ops gap | Not a merge-gate; replace with a production key when ready |
 | 6 | Remember: Watchtower **does not migrate** | Future `db/init` files need ingest migrate or `npm run db:migrate` on the NAS | `030`/`031` applied 2026-09-03 23:59:42Z |
 | 7 | Local `yum4less_dev` ≠ yum4less.com | Catalog sizes and pending reviews differ | Docs and agents only update live numbers from owner paste-back |

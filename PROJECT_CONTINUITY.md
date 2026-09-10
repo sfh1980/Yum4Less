@@ -6,7 +6,7 @@
 
 ## Resume (as of 2026-09-10)
 
-**Owner lock:** Membership cutover **shipped in code** — `chain_registry` drives who we *attempt* for dinners / fail-loud ingest; **floors stay in code**. **Adapters do not hardcode stores/ZIPs/rosters** — Postgres holds those facts (`.cursor/rules/yum4less-db-owned-data.mdc`). Thin sale coverage ⇒ pin stays tracked, dinners stay off. **Lidl lock (2026-09-03):** map/context only until a store-bound sale feed exists — no ranked dinners, no store-finder scrape work. **Dollar General (2026-09-03):** Flipp-first ZIP circular ingest; directional sales can show without dinners; dinner totals only when **no other shopper-ranked grocer is nearby** and the **same** floors pass (area circular, not that building’s shelf). Banner grain later via **shared adapter keys**. Owner Check brand lists stay research. **Ingest fence:** nightly ingest admits grocery pins in the **Census ZIP outline** with a **26 mi** safety cap — same set Owner Check lists. Shopper map stays pin + radius. Neighbor-ZIP pins on that map need those ZIPs Activated too. **Next product work:** Flipp + scrape yield in `23111` (Walmart thin coverage; Target / BJ's). Full open-task list → [`docs/open-work-inventory-2026-09-09.md`](docs/open-work-inventory-2026-09-09.md) (point-in-time; Resume stays live status). **Live yum4less.com Watchtower-pulled 2026-09-04 01:55Z** (app `55ad51dac9b6`, ingest `6b541e14fc3f`; `42c655c` junk skip + store-list omit on the box). Stack **Up 21h** as of owner paste-back 2026-09-05. Nightly worker **6/6 `succeeded`** every `run_date` **2026-08-31 through 2026-09-05**. Freshness **`[OK] 428/428`** (~11h; Kroger API 194, Publix 111, Aldi 44, Food Lion 41, Kroger weekly-ad verify-touch 38). Walmart / Dollar General / Lidl had **no in-stock ranked heartbeat rows**. Second junk heal **scanned=971 rejected=0 remaining=971**. **`030`/`031`** remain applied from **2026-09-03 23:59:42Z** (ledger query still needed — `version` is text). Extra ZIP **`23220`** stays active. TheMealDB **dev test key** is a known ops gap.
+**Owner lock:** Membership cutover **shipped in code** — `chain_registry` drives who we *attempt* for dinners / fail-loud ingest; **floors stay in code**. **Adapters do not hardcode stores/ZIPs/rosters** — Postgres holds those facts (`.cursor/rules/yum4less-db-owned-data.mdc`). Thin sale coverage ⇒ pin stays tracked, dinners stay off. **Lidl lock (2026-09-03):** map/context only until a store-bound sale feed exists — no ranked dinners, no store-finder scrape work. **Dollar General (2026-09-03):** Flipp-first ZIP circular ingest; directional sales can show without dinners; dinner totals only when **no other shopper-ranked grocer is nearby** and the **same** floors pass (area circular, not that building’s shelf). Banner grain later via **shared adapter keys**. Owner Check brand lists stay research. **Ingest fence:** nightly ingest admits grocery pins in the **Census ZIP outline** with a **26 mi** safety cap — same set Owner Check lists. Shopper map stays pin + radius. Neighbor-ZIP pins on that map need those ZIPs Activated too. **Next product work:** Flipp + scrape yield in `23111` (Walmart thin coverage; Target / BJ's). Full open-task list → [`docs/open-work-inventory-2026-09-09.md`](docs/open-work-inventory-2026-09-09.md) (point-in-time; Resume stays live status). **Live yum4less.com Watchtower-pulled 2026-09-04 01:55Z** (app `55ad51dac9b6`, ingest `6b541e14fc3f`; `42c655c` junk skip + store-list omit on the box). Stack **Up 21h** as of owner paste-back 2026-09-05. Nightly worker **6/6 `succeeded`** every `run_date` **2026-08-31 through 2026-09-05**. Freshness **`[OK] 428/428`** (~11h; Kroger API 194, Publix 111, Aldi 44, Food Lion 41, Kroger weekly-ad verify-touch 38). Walmart / Dollar General / Lidl had **no in-stock ranked heartbeat rows**. Junk heal **2026-09-10: scanned=902 rejected=285 remaining=617** (`44e4e16` skip list on the ingest box). **`030`/`031`** remain applied from **2026-09-03 23:59:42Z** (ledger query still needed — `version` is text). Extra ZIP **`23220`** stays active. TheMealDB **dev test key** is a known ops gap.
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
@@ -34,7 +34,8 @@
 
 ### Working today (honest)
 
-- **Leftover Halloween/GM/drink junk skip (2026-09-10, local):** `isWeeklyAdJunkProduct` now skips the pasted 902-row leftover queue’s Halloween collection, Aldi GM, bottled drinks, snack crackers, baby food, frozen singles, and Walmart toys. Live `/owner` does **not** drop until Watchtower pulls this ingest image, then persist ingest or `owner:reject-pending-junk-reviews`. Steaks, salads, sauces, buns, Eggo, ziti stay foods. Do **not** claim more dinners.
+- **Second leftover junk skip (2026-09-10, local):** After live heal **902→617**, remaining drinks/snacks/pharmacy/prepared pizza (LunchMakers, Evian, Wild Mike’s, Oral-B, HappyBaby) now match `isWeeklyAdJunkProduct`. Steaks, salads, pizza dough, Eggo, ziti, iced tea, Pretzilla buns stay foods. Live `/owner` does **not** drop until Watchtower pulls this image, then heal again. Do **not** claim more dinners.
+- **Leftover Halloween/GM/drink junk skip (2026-09-10, live heal):** `owner:reject-pending-junk-reviews` **scanned=902 rejected=285 remaining=617**. Prior heal on the same 902 was **rejected=0**, so the `44e4e16` skip list is on the ingest box. Leftover rows are mostly grocery-shaped (steaks, salads, sauces, buns, Eggo, ziti) plus any junk the matcher still misses. Dump remaining if you want another skip pass; otherwise Yes in `/owner`. Do **not** claim more dinners.
 - **CI audit unblock (2026-09-09, local):** Next **15.5.25**, sharp **0.35.4**, js-yaml **4.3.2** so `npm audit --audit-level=high` can pass and `publish-ingest-image` can run. Live images stay on **2026-09-04** until Watchtower pulls. Then junk heal. Do **not** claim more dinners.
 - **Pharmacy/seltzer/paper junk skip (2026-09-09, local):** `isWeeklyAdJunkProduct` now skips the owner-queue pharmacy, seltzer/soda, bath tissue, bouquet, cereal/bar, and leftover GM titles. Live `/owner` does **not** drop until Watchtower pulls this ingest image, then persist ingest or `owner:reject-pending-junk-reviews`. Steaks, Eggo, ziti, Caesar kit stay foods. Do **not** claim more dinners.
 - **Settings picker omit + GM junk skip (2026-09-04, live):** Watchtower **01:55Z** — app `55ad51dac9b6`, ingest `6b541e14fc3f` (`42c655c`). Grep confirms `isRecognizedGroceryBannerPin`, `bluetooth`, `little debbie`. Hard-refresh the shopper UI. Second junk heal **rejected=0** (971 pending). Do **not** claim more dinners.
@@ -263,15 +264,25 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 ## Changelog (newest first)
 
+### 2026-09-10 — Skip leftover drinks / snacks / pharmacy after 902→617 heal
+
+**Theme:** Live heal dropped Halloween/GM junk to **617** pending. The dump was mostly dinner grocery plus a second wave of bottled water, energy drinks, candy, baby pouches, Oral-B, and prepared pizza.
+
+**Shipped:** Same SSOT: HappyBaby/HappyTot one-word forms; Evian/Deer Park/Liquid Death; LunchMakers/Harvest Snaps/Nature Valley; Wild Mike’s / CPK / deli pizza (not dough); Oral-B; `toothbrush(?:es)?` so singular toothbrush matches; `frito-?lay` so hyphenated Frito-Lay matches. Do not use bare pizza, tea, pretzel, muffin, coffee, water, or drumstick (pizza dough, iced tea, Pretzilla buns, English muffins, StarKist in water, chicken drumsticks).
+
+**Limits:** Leftover steaks, salads, sauces, dough, Eggo, ziti, cheddar, broth, and produce still need `/owner` Yes. Live queue stays until Watchtower pulls this ingest image, then heal again. Does not invent more dinners.
+
+**Evidence:** `npx vitest run` junk + classify **10/10**. Full `npm test` this session **1237/1237** (217 files).
+
 ### 2026-09-10 — Skip leftover Halloween / GM / drink / snack owner-queue titles
 
 **Theme:** After the pharmacy/seltzer heal (`rejected=0`, **902** pending), the live CSV was still mostly Aldi Halloween/furniture/apparel, bottled drinks, snack crackers, baby food, frozen singles, and Walmart toys — not dinner foods.
 
 **Shipped:** Same SSOT (`isWeeklyAdJunkProduct`): Halloween collection/plush; SOHL/Crane/Serra GM; Pokémon; dehydrator/parchment/gallon bags; croissants/breakfast bowls/energy bars; meal kits/pizza singles/frozen dinners; seltzer/PurAqua/Bodyarmor/Guinness stout; wine brands that never say wine (La Marca, Stella Rosa, Meiomi); fruit snacks/gummies/taquitos/crackers; baby food/Gerber; toys (Intex/Play Day/Little Tikes); title `Each` / laundry `GAIN`. Plural `entrées` now matches. Do not use bare pizza, tea, pad, paper, pretzel, or each-as-substring (pizza dough, iced tea, Pretzilla buns).
 
-**Limits:** Leftover steaks, salads, sauces, buns, Eggo, ziti, cheddar, broth, grains, and produce still need `/owner` Yes. Live queue does not drop until Watchtower pulls this ingest image, then persist ingest or `owner:reject-pending-junk-reviews`. Does not invent more Walmart food SKUs or more dinners.
+**Limits:** Live heal **2026-09-10:** **scanned=902 rejected=285 remaining=617**. Leftover steaks, salads, sauces, buns, Eggo, ziti, cheddar, broth, grains, and produce still need `/owner` Yes. Does not invent more Walmart food SKUs or more dinners.
 
-**Evidence:** `npx vitest run` junk + classify **10/10**. Full `npm test` this session **1237/1237** (217 files).
+**Evidence:** `npx vitest run` junk + classify **10/10**. Full `npm test` this session **1237/1237** (217 files). Live heal paste-back **scanned=902 rejected=285 remaining=617**.
 
 ### 2026-09-09 — Unblock CI audit so Watchtower can publish ingest
 
@@ -3057,6 +3068,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (post-heal drinks/snacks/pharmacy junk skip) | 2026-09-10 | Junk+classify **10/10**. Full suite **1237/1237** (217 files). |
+| TrueNAS `owner:reject-pending-junk-reviews` (`44e4e16` leftover junk) | 2026-09-10 | **scanned=902 rejected=285 remaining=617** (prior heal on same 902 was rejected=0) |
 | `npm test` (Halloween/GM/drink leftover junk skip) | 2026-09-10 | Junk+classify **10/10**. Full suite **1237/1237** (217 files). |
 | `npm audit --audit-level=high` (Next 15.5.25 / sharp 0.35.4 / js-yaml 4.3.2) | 2026-09-09 | Exit 0. 2 moderate vitest mocker leftovers. |
 | `npm test` (after Next 15.5.25 bump) | 2026-09-09 | **1237/1237** pass (217 files) |

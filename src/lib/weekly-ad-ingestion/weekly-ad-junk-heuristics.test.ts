@@ -463,6 +463,95 @@ describe("isWeeklyAdJunkProduct", () => {
     for (const title of leftoverQueue20260910) {
       expect(isWeeklyAdJunkProduct(title), title).toBe(true);
     }
+    const leftoverAfterHeal20260910 = [
+      "Benton's Breakfast Biscuits",
+      "Mama Cozzi's Pizza Kitchen Pepperoni Cauliflower Deli Pizza",
+      "Arizona or Lipton Tea",
+      "Armour LunchMakers",
+      "Clearly Canadian",
+      "Deer Park Water",
+      "DeMet's Turtles Minis",
+      "Devils Backbone or Starr Hill",
+      "Devour Big Bowl",
+      "Donut Shop or McCafé Coffee",
+      "Earth's Best Organic Veggie Puffs",
+      "Edwards Pies",
+      "Entenmann's Little Bites Muffins",
+      "Evian or Fiji Water",
+      "FROLLIES",
+      "Fruit Bites or Braided Strudel",
+      "GHOST OR BLOOM ENERGY",
+      "Jet Dry",
+      "Jumex Nectar",
+      "Kellogg's Multipacks",
+      "Kinder Bueno Frozen Dessert or Cones",
+      "King Arthur Gluten Free Baking Mixes",
+      "Lavazza Coffee",
+      "Lindt Excellence Bar",
+      "Lindy's Italian or Swirled Italian Ice",
+      "Nature'S Promise Organic Seaweed Snacks",
+      "Prep Chef Protein Starter",
+      "Snack Pies",
+      "Snyder's Pretzel Pieces",
+      "Solti Organic Super Shots",
+      "Three Notch'd",
+      "Trü Frü Frozen Chocolate Covered Fruit",
+      "Truvia Packets",
+      "UKROP'S CHOCOLATE FUDGE PIE",
+      "Wild Mike's Pizza",
+      "Bakery Fresh Muffins",
+      "Calbee Harvest Snaps",
+      "Cherry Pie",
+      "Farm Rich Appetizers",
+      "Frito-Lay or Nabisco Multipack",
+      "Nature Valley Bars",
+      "Nestlé Drumstick Cones",
+      "Oyster Bay, Josh Whites or Ruffino",
+      "Seattle's Best Coffee",
+      "Any 1 HappyBaby Yogis 1-oz or HappyTot Bestie Bars 3.7-oz",
+      "Any 2 Stacy's or Sabra Items",
+      "Any 2 Core Power 26 or 42-g",
+      "Azo",
+      "Belvita Breakfast Biscuits",
+      "Blue Lizard Sun Care Products",
+      "Boogie Baby Products",
+      "Breathe Right",
+      "California Pizza Kitchen Pizza",
+      "Centrum",
+      "Crest 3DWhitestrips Dental Whitening Kit",
+      "Dial Foaming Hand Wash",
+      "Donuts, 6-Count",
+      "El Monterey Burritos",
+      "Eveready Readyflex LED Floating Lantern",
+      "Febreze Trash Odor Fighter Starter Kit",
+      "Gatorlyte Electrolyte Beverage",
+      "Harry's Razor Handle",
+      "Hefty Press to Close Bags",
+      "Liquid Death Mountain Water",
+      "Listerine",
+      "Magic Mind Shots",
+      "Mr. Clean Clean Freak Multi-Purpose Cleaner",
+      "Nabisco Wheat Thins Snacks",
+      "Nerds Gummy Clusters",
+      "Oral-B Toothbrush, or Floss or Floss Picks",
+      "Publix Children's Profen IB",
+      "Publix Deli Ultimate Sub",
+      "Q-tips",
+      "Revlon Colorsilk",
+      "Sargento Balanced Breaks Snack",
+      "Solo Plastic Cups",
+      "Sparkling Ice",
+      "State Fair Corn Dogs",
+      "Stem Insecticides",
+      "Therabreath Oral or Mouth Rinse",
+      "Traeger Premium Hardwood Pellets",
+      "Tuscanini Pizza",
+      "Vitafusion or L'il Critters",
+      "Wise Cheez Doodles Corn Snacks",
+    ];
+    for (const title of leftoverAfterHeal20260910) {
+      expect(isWeeklyAdJunkProduct(title), title).toBe(true);
+    }
   });
 
   it("does not skip dinner foods that junk used to false-hit", () => {
@@ -538,6 +627,22 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(isWeeklyAdJunkProduct("Green Giant Boxed Vegetables")).toBe(false);
     expect(isWeeklyAdJunkProduct("Food Lion Broth")).toBe(false);
     expect(isWeeklyAdJunkProduct("Hanover Beans")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Lipton Iced Tea Family Size")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Pretzilla Soft Pretzel Burger Buns")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Bays English Muffins")).toBe(false);
+    expect(
+      isWeeklyAdJunkProduct("Newman's Own Pizza or Farm Rich Meatballs"),
+    ).toBe(false);
+    expect(isWeeklyAdJunkProduct("Sabra Guacamole")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Italian Pizza Dough")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Simple Mills Gluten Free Pizza Dough")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Gorton's Fish Sticks or Fillets")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Foster Farms Take Out Crispy Wings")).toBe(false);
+    expect(isWeeklyAdJunkProduct("GreenWise Organic Coffee")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Thomas' English Muffins")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Publix Smoked Ribs")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Whole Brisket")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Oscar Mayer Meat Wieners")).toBe(false);
   });
 
   it("treats either the raw title or the normalized label as junk", () => {
