@@ -365,6 +365,104 @@ describe("isWeeklyAdJunkProduct", () => {
     for (const title of ownerQueuePharmacyDrinksPaper) {
       expect(isWeeklyAdJunkProduct(title), title).toBe(true);
     }
+    const leftoverQueue20260910 = [
+      "Each",
+      "THE HALLOWEEN COLLECTION LED Hanging Ghost",
+      'THE HALLOWEEN COLLECTION 36" Posable Skeleton',
+      "Disney Halloween Plush",
+      "SOHL Furniture Rectangular Storage Ottoman",
+      "Crane Ladies' or Men's Rain Jacket",
+      "Serra Ladies' Game Day Pajamas",
+      "Pokémon Booster Pack",
+      "Ambiano Digital Food Dehydrator",
+      "Boulder Parchment Paper",
+      "Boulder Press & Seal Gallon Bags",
+      "Benton's 100 Calorie Snack Packs",
+      "Bake Shop Mini or Large Croissants",
+      "Breakfast Best Breakfast Bowl",
+      "Elevation Protein Energy Bars",
+      "Choeur Chocolate Assortment",
+      "Fusia Takeout Box",
+      "Park Street Deli Asian Meal Kit",
+      "Reggano Cheesy Skillet Dinner",
+      "Mama Cozzi's Pizza Kitchen Deep Dish Pizza Singles 4-Pack",
+      "Polar Seltzer",
+      "PurAqua Sparkling Frost Water",
+      "Bodyarmor",
+      "Alani Energy",
+      "Celsius Original or Vibe",
+      "4 Mega Rolls Angel Soft",
+      "Always Radiant or Infinity Flexfoam Pads",
+      "Tena Moderate 20-ct., UltraThin 30-ct. or Heavy Absorbency 14-ct. Pads",
+      "Allegra Adult 24-Hour Tablets",
+      "CareOne Acetaminophen",
+      "Alka-Seltzer Cold 20–36-ct., Coricidin HBP 16–24-ct. or 12-oz or Afrin 15–30-mL",
+      "8-Pack Guinness Draught Stout",
+      "Mike's Hard Lemonade",
+      "J. Lohr, Stella Rosa or Clos du Bois",
+      "La Marca or Whitehaven",
+      "Betty Crocker or Mott's Fruit Snacks",
+      "El Monterey Taquitos",
+      "Lance Crackers",
+      "Always My Baby Training Pants",
+      "Beech-Nut Organics Baby Food",
+      "Any 2 Gerber 2nd Foods Tubs",
+      "Intex Pink Transparent Lounge Float",
+      "Play Day Hopscotch Rings, 20 Pieces",
+      "Fitflop Women's Rally e01 Multi-Knit Trainers",
+      "Scoop Women's Day Lace Trim Top",
+      "Serra Ladies' Game Day Top",
+      "Dip® Tee",
+      "Rubbermaid Food Storage Set",
+      "Melii Harvest Meal Prep or Snackle",
+      "Kind Bars",
+      "RXBars",
+      "Clif ZBars",
+      "Smucker's Uncrustables",
+      "Caulipower Pizza",
+      "Any 1 Danimals Smoothie",
+      "Ensure Nutrition Shake",
+      "Powerade",
+      "HAWAIIAN PUNCH",
+      "Big K",
+      "Gold Peak Tea",
+      "Glacéau Smartwater",
+      "4 Inch Mini Roses",
+      "6 INCH ASSORTED FALL MUMS",
+      "Glad Tall Kitchen Bags",
+      "Heathy Choice Power or Max Bowls, or Dolly Parton's Entrées",
+      "Dr. Praeger's Entrées",
+      "Chef's Cupboard Protein Ramen Cup",
+      "Millville Protein Crunchy Granola",
+      "Friendly Farms Kefir",
+      "Simply Fruit Drink or Ade",
+      "Any Medium Fountain Drink",
+      "Orgain Organic Protein Powder",
+      "Nature Made Melatonin Gummies",
+      "Lunch Buddies Crustless PB&J Sandwiches",
+      "Little Tikes Hoop it up! Play Center, 3-in-1 Sports 25 Ball Value Pack, Indoor and Outdoor Play for Children 3 to 6 Years Old",
+      "GAIN",
+      "Food Lion Ground Coffee",
+      "Dunkin' Coffee",
+      "POWER UP TRAIL MIX",
+      "TAKIS",
+      "Pillsbury Flaky or Grands! juniors Biscuits",
+      "Jell-O Gelatin or Pudding",
+      "Food Lion Drinks",
+      "Happy Tot or Happy Baby Organic Baby Food",
+      "Outshine Bars",
+      "Blue Bunny Novelties",
+      "BOMB POP",
+      "Hi-C or Hawaiian Punch",
+      "MINUTE MAID ZERO OR SIMPLY ADES",
+      "MiO Water Enhancer",
+      "Earth Grown Plant-Based Protein Meal",
+      "Simple Truth Protein Bowl",
+      "Ryl Tea Single",
+    ];
+    for (const title of leftoverQueue20260910) {
+      expect(isWeeklyAdJunkProduct(title), title).toBe(true);
+    }
   });
 
   it("does not skip dinner foods that junk used to false-hit", () => {
@@ -421,6 +519,25 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(isWeeklyAdJunkProduct("Rosina Meatballs")).toBe(false);
     expect(isWeeklyAdJunkProduct("Schweid & Sons Gourmet Burgers")).toBe(false);
     expect(isWeeklyAdJunkProduct("StarKist Solid White Albacore in Water")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Priano Gnocchi")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Specially Selected Brioche Burger Buns")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Fresh Black Angus Chuck Roast")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Park Street Deli Assorted Fresh Guacamole")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Burman's Assorted BBQ Sauce")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Cantaloupe")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Simply Nature Organic 90 Second Grains")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Almond Breeze or Planet Oat")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Beyond Plant-Based Product")).toBe(false);
+    expect(isWeeklyAdJunkProduct("GreenWise Organic Spices")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Ball Park Hot Dog Buns")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Emporium Selection Deli-Sliced Havarti or Gouda")).toBe(
+      false,
+    );
+    expect(isWeeklyAdJunkProduct("Park Street Deli Sirloin Tips in Gravy")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Fresh Guajillo Roast")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Green Giant Boxed Vegetables")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Food Lion Broth")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Hanover Beans")).toBe(false);
   });
 
   it("treats either the raw title or the normalized label as junk", () => {
