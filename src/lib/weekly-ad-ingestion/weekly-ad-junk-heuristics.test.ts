@@ -552,6 +552,45 @@ describe("isWeeklyAdJunkProduct", () => {
     for (const title of leftoverAfterHeal20260910) {
       expect(isWeeklyAdJunkProduct(title), title).toBe(true);
     }
+    const leftoverAfterHeal20260913 = [
+      "Cottonelle",
+      "Dial",
+      "Keebler Caddy",
+      "Kevin's Meals",
+      "Ziploc",
+      "Dash of That® Silicone Oven Mitt",
+      "GoodCook® Bakeware",
+      'GoodCook® Everyday Ceramic Nonstick 3-Quart Sauce Pan or 11" Griddle',
+      "Any 2 Happy Family Pouches",
+      "Bakerly Crepes",
+      "Patak's Meal",
+      "Chomp Chomplings Sticks",
+      "Del Monte Fruit Cups",
+      "Del Monte Fruit Naturals Snacks",
+      "Dole Açai Bowl",
+      "Gogo Dairy Protein Dairy Snack On The Go",
+      "GreenWise Organic Fruit Chews",
+      "GreenWise Organic Cranberry Nut Mix",
+      "GreenWise Organic Tea",
+      "GT's Alive Ancient Mushroom Elixir",
+      "Gutzy Fruitpods",
+      "Odom's Tennessee Pride Sandwiches",
+      "Oh Snap! Snacks",
+      "Ritz Cracker Sandwiches",
+      "Red Rose 100-ct. or Black Decaf Tea 48-ct.",
+      "Scott & Jon's Bowl",
+      "Blue Zones Kitchen Bowl",
+      "Summ! Items",
+      "Super Coffee Protein Enhanced Coffee Shake",
+      "Café El Aguila Espresso Coffee",
+      "Tazo Tea",
+      "Uncle Matt's Organic Superfruit Punch",
+      "Publix Sweetener With Sucralose",
+      "Chocolate and Almond Bretzel Pastry",
+    ];
+    for (const title of leftoverAfterHeal20260913) {
+      expect(isWeeklyAdJunkProduct(title), title).toBe(true);
+    }
   });
 
   it("does not skip dinner foods that junk used to false-hit", () => {
@@ -643,6 +682,15 @@ describe("isWeeklyAdJunkProduct", () => {
     expect(isWeeklyAdJunkProduct("Publix Smoked Ribs")).toBe(false);
     expect(isWeeklyAdJunkProduct("Whole Brisket")).toBe(false);
     expect(isWeeklyAdJunkProduct("Oscar Mayer Meat Wieners")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Lipton Cold Brew Tea Family Size")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Bear Creek Soup Mix")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Everyday Gourmet Quiche")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Dockside Classics")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Hormel Gatherings Snack Tray Lunch Meats")).toBe(
+      false,
+    );
+    expect(isWeeklyAdJunkProduct("Pretzilla Soft Pretzel Bites")).toBe(false);
+    expect(isWeeklyAdJunkProduct("GreenWise Puff Pastry Sheets")).toBe(false);
   });
 
   it("treats either the raw title or the normalized label as junk", () => {

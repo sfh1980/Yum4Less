@@ -550,7 +550,7 @@ const JUNK_PATTERNS: RegExp[] = [
   /\bfruit snacks?\b/i,
   /\bgummies\b/i,
   /\btaquitos\b/i,
-  /\bcrackers\b/i,
+  /\bcrackers?\b/i,
   /\btraining pants\b/i,
   /\bbaby foods?\b/i,
   /\bgerber\b/i,
@@ -753,7 +753,7 @@ const JUNK_PATTERNS: RegExp[] = [
   /\beat fresco\b/i,
   /\bmama mancini\b/i,
   /\bsmoothies?\b/i,
-  /\bacai bowl\b/i,
+  /\ba[cç]ai bowls?\b/i,
   /\bgoodpop\b/i,
   /\bcool whip\b/i,
   /\btoll house\b/i,
@@ -810,6 +810,46 @@ const JUNK_PATTERNS: RegExp[] = [
   /\bpie slices\b/i,
   /\bfruit pies?\b/i,
   /\bedwards pies?\b/i,
+  // Remaining after live heal 2026-09-13 (617→429): paper/soap/cookware/snacks.
+  // Do not use bare oven, pizza, tea, pretzel, coffee, or victory
+  // (TV dinners, pizza dough, iced tea, Pretzilla buns).
+  /\bcottonelle\b/i,
+  /\bziploc\b/i,
+  /\bkeebler\b/i,
+  /\bkevin'?s meals\b/i,
+  /\boven mitts?\b/i,
+  /\bgoodcook\b/i,
+  /\bbakeware\b/i,
+  /\bsauce pans?\b/i,
+  /\bhappy family\b/i,
+  /\bcrepes\b/i,
+  /\bpatak'?s meal\b/i,
+  /\bchomplings\b/i,
+  /\bchomp\b/i,
+  /\bfruit cups\b/i,
+  /\bfruit naturals\b/i,
+  /\bfruit chews\b/i,
+  /\bgogo dairy\b/i,
+  /\bnut mix\b/i,
+  /\belixir\b/i,
+  /\bgutzy\b/i,
+  /\bfruitpods\b/i,
+  /\btennessee pride\b/i,
+  /\boh snap\b/i,
+  /\bcoffee shake\b/i,
+  /\bsuper coffee\b/i,
+  /\bred rose\b/i,
+  /\bdecaf tea\b/i,
+  /\btazo\b/i,
+  /\bsuperfruit\b/i,
+  /\bespresso coffee\b/i,
+  /\bscott & jon\b/i,
+  /\bblue zones\b/i,
+  /\bbretzel\b/i,
+  /\bsucralose\b/i,
+  /\bsweetener\b/i,
+  /\borganic tea\b/i,
+  /summ!/i,
 ];
 
 export function isWeeklyAdJunkProduct(productName: string): boolean {
@@ -821,6 +861,9 @@ export function isWeeklyAdJunkProduct(productName: string): boolean {
     return true;
   }
   if (/^gain$/i.test(trimmed)) {
+    return true;
+  }
+  if (/^dial$/i.test(trimmed)) {
     return true;
   }
   return JUNK_PATTERNS.some((pattern) => pattern.test(trimmed));
