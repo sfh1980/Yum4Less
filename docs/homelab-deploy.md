@@ -404,6 +404,22 @@ select
 "
 ```
 
+Catalog vs leftover `/owner` grocery (read-only). Dry-run the conservative Yes/No planner **after** Watchtower has an ingest image that includes `owner:resolve-pending-reviews`:
+
+```bash
+sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "
+select id, name, category
+from ingredients
+order by id;
+"
+
+sudo docker exec yum4less-ingest npm run owner:resolve-pending-reviews
+# If the dry-run Yes/No/Skip lines look right:
+sudo docker exec yum4less-ingest npm run owner:resolve-pending-reviews -- --apply
+```
+
+Dry-run does not write. `--apply` uses the same `/owner` Yes/No path (nicknames + create-if-missing). Skip rows stay pending. Do not SQL-update `ingredient_match_reviews`. Do not claim more dinners.
+
 Only after `025` is in `schema_migrations`:
 
 ```bash

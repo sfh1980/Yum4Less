@@ -40,6 +40,7 @@
     "ingest:weekly-ads:scheduled:fixture": "node scripts/run-scheduled-weekly-ad-ingest.mjs --fixture",
     "ingest:worker": "tsx scripts/run-ingest-worker.ts",
     "owner:reject-pending-junk-reviews": "tsx scripts/reject-pending-junk-reviews.ts",
+    "owner:resolve-pending-reviews": "tsx scripts/resolve-pending-ingredient-reviews.ts",
     "ingest:weekly-ads:browser": "node scripts/run-weekly-ad-ingest.mjs --browser",
     "ingest:themealdb:from-sales": "node scripts/run-themealdb-import.mjs",
     "check:ranked-price-freshness": "tsx scripts/check-ranked-price-freshness.ts",

@@ -6,7 +6,7 @@ Point-in-time list of **open tasks, slices, and ops**. Compiled from [`PROJECT_C
 
 GitHub issues on `sfh1980/Yum4Less`: **0 open** (checked 2026-09-09). Tracking lives in Resume / Home / this inventory.
 
-Last live TrueNAS paste-back in Resume: **2026-09-13** (junk heal **429 remaining**, rejected=0). CI published ingest for `4a57fd4` on 2026-09-10; container SHA still needs a `docker inspect` paste if you want it in Resume.
+Last live TrueNAS paste-back in Resume: **2026-09-14** (`ingredient_match_reviews`: **165** accepted / **231** pending / **1562** rejected; junk heal earlier that day was **393** remaining).
 
 ---
 
@@ -32,7 +32,7 @@ Adapters must not hardcode store numbers, ingest ZIPs, or banner rosters. Facts 
 | 1 | Keep the TrueNAS ingest-worker **Cron Job Enabled** | 3am only enqueues; worker drains | Do not disable while overlay is off |
 | 2 | Hard-refresh yum4less.com **Settings** and **Owner Check** | Confirm Fas Mart / Dash In / Capt Gregs / bakeries / Joe’s are off the store list | Map may still show those pins. Code shipped live 2026-09-04 (`isRecognizedGroceryBannerPin`). `stores` has no `zip`/`chain_key`, so SQL cannot prove the omit |
 | 3 | Optional live SQL | `chain_registry` flags; Walmart / Dollar General / Lidl in-stock observation counts; `schema_migrations` with `version::int` | Ledger query still needed — `version` is text. Last heartbeat: Walmart / DG / Lidl had **no** in-stock ranked rows |
-| 4 | After Watchtower pulls the **2026-09-13** paper/cookware skip image, run `owner:reject-pending-junk-reviews` | Live still at **429** grocery-shaped leftover (`rejected=0`) | After pull, expect a small drop (Cottonelle/GoodCook/Açai/etc.); steaks/salads/dough/Eggo/ziti still need `/owner` Yes. Do **not** skip title `Victory` |
+| 4 | Yes leftover grocery in `/owner` (231 pending) | Owner pass **2026-09-14** cut 393 → **231** (165 accepted / 1562 rejected). Publix 198 | Dry-run `owner:resolve-pending-reviews` after ingest image pulls; `--apply` only if the plan looks right. Do **not** SQL-reject remaining. Heal does **not** auto-Yes. |
 | 5 | TheMealDB **dev test key** on live ingest | Known ops gap | Not a merge-gate; replace with a production key when ready |
 | 6 | Remember: Watchtower **does not migrate** | Future `db/init` files need ingest migrate or `npm run db:migrate` on the NAS | `030`/`031` applied 2026-09-03 23:59:42Z |
 | 7 | Local `yum4less_dev` ≠ yum4less.com | Catalog sizes and pending reviews differ | Docs and agents only update live numbers from owner paste-back |

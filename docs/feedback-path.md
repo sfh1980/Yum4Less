@@ -48,7 +48,7 @@ Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FE
 
 On Yes, fill **Canonical food id** (lowercase kebab-case, 2–56 characters; spaces/capitals are formatted on save), **Shopper-facing name**, and **category**. If the id already exists, name and category are ignored and the flyer title becomes a nickname. If it does not exist, Yes inserts `ingredients` (`weekly-ad-catalog`) then the nickname. Example: `imitation-crab` / Imitation crab / protein. Do not encode brands, sizes, or pack counts in the id.
 
-Non-food flyer lines are skipped at ingest (`isWeeklyAdJunkProduct`) and can be healed from the existing pending queue with `npm run owner:reject-pending-junk-reviews` (defaults to `yum4less_dev`; not a public API). Dinner leftovers such as peaches and steaks stay in review until auto-create widens. That does not add shopper dinners by itself.
+Non-food flyer lines are skipped at ingest (`isWeeklyAdJunkProduct`) and can be healed from the existing pending queue with `npm run owner:reject-pending-junk-reviews` (defaults to `yum4less_dev`; not a public API). Leftover grocery can be dry-run mapped with `npm run owner:resolve-pending-reviews` and written with `-- --apply` (same Yes/No path as `/owner`; skip leaves the row pending). That does not add shopper dinners by itself.
 
 Analytics are shown **grouped by session** (all loaded events for each `session_id`). Responses include `hasMore` so the console can offer the next page without dumping the full table at once.
 
