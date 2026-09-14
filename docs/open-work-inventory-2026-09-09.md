@@ -6,7 +6,7 @@ Point-in-time list of **open tasks, slices, and ops**. Compiled from [`PROJECT_C
 
 GitHub issues on `sfh1980/Yum4Less`: **0 open** (checked 2026-09-09). Tracking lives in Resume / Home / this inventory.
 
-Last live TrueNAS paste-back in Resume: **2026-09-14** (`ingredient_match_reviews`: **165** accepted / **231** pending / **1562** rejected; junk heal earlier that day was **393** remaining).
+Last live TrueNAS paste-back in Resume: **2026-09-14** (`chain_registry` 18 banners; Walmart in-stock **19/19** in 24h; DG/Lidl **0**; ledger **000–013, 015–031**; app `:homelab` **19:43Z**).
 
 ---
 
@@ -29,13 +29,8 @@ Adapters must not hardcode store numbers, ingest ZIPs, or banner rosters. Facts 
 
 | # | Task | Why it is still open | Notes |
 |---|---|---|---|
-| 1 | Keep the TrueNAS ingest-worker **Cron Job Enabled** | 3am only enqueues; worker drains | Do not disable while overlay is off |
-| 2 | Hard-refresh yum4less.com **Settings** and **Owner Check** | Confirm Fas Mart / Dash In / Capt Gregs / bakeries / Joe’s are off the store list | Map may still show those pins. Code shipped live 2026-09-04 (`isRecognizedGroceryBannerPin`). `stores` has no `zip`/`chain_key`, so SQL cannot prove the omit |
-| 3 | Optional live SQL | `chain_registry` flags; Walmart / Dollar General / Lidl in-stock observation counts; `schema_migrations` with `version::int` | Ledger query still needed — `version` is text. Last heartbeat: Walmart / DG / Lidl had **no** in-stock ranked rows |
-| 4 | Yes leftover grocery in `/owner` (231 pending) | Owner pass **2026-09-14** cut 393 → **231** (165 accepted / 1562 rejected). Publix 198 | Dry-run `owner:resolve-pending-reviews` after ingest image pulls; `--apply` only if the plan looks right. Do **not** SQL-reject remaining. Heal does **not** auto-Yes. |
-| 5 | TheMealDB **dev test key** on live ingest | Known ops gap | Not a merge-gate; replace with a production key when ready |
-| 6 | Remember: Watchtower **does not migrate** | Future `db/init` files need ingest migrate or `npm run db:migrate` on the NAS | `030`/`031` applied 2026-09-03 23:59:42Z |
-| 7 | Local `yum4less_dev` ≠ yum4less.com | Catalog sizes and pending reviews differ | Docs and agents only update live numbers from owner paste-back |
+| 1 | Yes leftover grocery in `/owner` (~27 skip, then ingest/Clear obvious) | **App** pulled **2026-09-14 19:43Z**; **ingest** image not inspected this paste | If ingest also has the planner: **Clear obvious** for smashburgers/filet/baba leftovers. Sides/mystery sauces still skip. Do **not** SQL-reject. |
+| 2 | TheMealDB **dev test key** on live ingest | Known ops gap | Not a merge-gate; replace with a production key when ready |
 
 ---
 
@@ -48,7 +43,7 @@ This is the **active coverage bucket**. Thin sale data keeps pins tracked; dinne
 | State | Detail |
 |---|---|
 | Ranked | `shopper_ranked` on live (`028`). Same floors as other ranked banners |
-| Yield | Flipp grocery flyer exists for `23111`; match rate is junk-heavy (live probe example: 144 offers → ~113 junk / ~6 grocery matches). Heartbeat had **no** in-stock ranked Walmart rows as of 2026-09-05 |
+| Yield | Flipp grocery flyer exists for `23111`; match rate is junk-heavy (older probe: 144 offers → ~113 junk / ~6 grocery matches). Live **2026-09-14:** Walmart in-stock **19** rows, **19** in 24h, newest **07:09:43Z** |
 | Scrape | `walmart.com/store/weekly-ads` hits Akamai/PX (`Robot or human?` in Playwright; HTTP 521 on GET). Parser looks for `#weekly-ad-offers-data`, which the captcha page does not emit |
 | Agreed, **not coded** (2026-09-07) | Pause walmart.com HTML scrape when Flipp has offers (Food Lion already does Flipp-first / scrape-only-if-empty). Do not add stealth browsers or paid residential proxies |
 | Do not | Claim more Walmart dinners; bypass WAF; hardcode store numbers |
@@ -76,8 +71,8 @@ This is the **active coverage bucket**. Thin sale data keeps pins tracked; dinne
 
 | Banner | Status | Open work |
 |---|---|---|
-| **Lidl** | Map context (`030`). Flipp/hub ingest fail-soft. No Lidl flyer in `23111` on last paste-backs | Do **not** add store-finder scrape or ranked dinners until a store-bound licensed feed exists |
-| **Dollar General** | Flipp ZIP circular ingest live (`031`). Directional sales can show. Dinners only when **no other shopper-ranked grocer is nearby** and the same floors pass | `23111` has other grocers, so DG dinners stay off there. Area circular, not that building’s shelf |
+| **Lidl** | Map context (`030`). Flipp/hub ingest fail-soft. **2026-09-14:** **0** `lidl-weekly-ad-scrape` in-stock rows | Do **not** add store-finder scrape or ranked dinners until a store-bound licensed feed exists |
+| **Dollar General** | Flipp ZIP circular ingest live (`031`). Directional sales can show. Dinners only when **no other shopper-ranked grocer is nearby** and the same floors pass | `23111` has other grocers, so DG dinners stay off there. **2026-09-14:** **0** in-stock `dollar-general-weekly-ad-scrape` rows |
 | **Kroger / Aldi / Publix / Food Lion** | Ranked when ingest + floors pass. Last heartbeat had in-stock rows | Not the yield-gap bucket. Publix Q1 Settings alignment is a separate slice (below) |
 
 ---
@@ -110,12 +105,17 @@ Identity Phase 0 locks that stay in force (implementation may still be open for 
 
 ## 4. Ops leftovers (homelab / ingest)
 
-Homelab deploy precursors that were blocking go-live are **closed** (Custom App, ingest container, Watchtower, Cloudflare Tunnel, two-night 3am, unattended worker, backup drill). OPEN-BLOCKS on the readiness verdict is **empty**. Remaining:
+Homelab deploy precursors that were blocking go-live are **closed** (Custom App, ingest container, Watchtower, Cloudflare Tunnel, two-night 3am, unattended worker, **15-night `ingest_jobs` proof 2026-09-14**, backup drill). OPEN-BLOCKS on the readiness verdict is **empty**. Remaining:
 
 | Item | Status | Notes |
 |---|---|---|
 | Extra ZIP `23220` first ingest | **Closed** 2026-09-01 | Worker 6/6 succeeded; both `23111` and `23220` active |
 | Watchtower hourly scan | **Closed** as the live `:homelab` pull mechanism | Not a missing job |
+| Unattended 3am + worker (ongoing proof) | **Closed** 2026-09-14 | `ingest_jobs` **15** nights **2026-08-31–2026-09-14**, each **6/6 succeeded**, enqueue ~07:00:03Z. Do not disable the worker Cron Job. |
+| Local `yum4less_dev` ≠ yum4less.com (open task) | **Closed** 2026-09-14 | Two databases by design. No MCP-to-TrueNAS, no daily dump, no DB rename. Live numbers still come from NAS paste-back ([`docs/homelab-deploy.md`](homelab-deploy.md) §4.5). |
+| Watchtower migrate reminder (open task) | **Closed** 2026-09-14 | Watchtower still does not run SQL. 3am ingest prep applies pending `db/init`. Hand `sudo docker exec yum4less-ingest npm run db:migrate` only if you need it before morning. |
+| Store-list omit on yum4less.com (hard-refresh) | **Closed** 2026-09-14 | App `:homelab` created **2026-09-14T19:43:47Z**. `fas mart` in shopper JS (`page.js` + chunks). Map may still show those pins. Eyeball Settings is optional, not an open task. |
+| Optional live SQL snapshot | **Closed** 2026-09-14 | `chain_registry` 18 rows as expected (`030`/`031` flags). Walmart **19/19** fresh in-stock. DG and Lidl **0**. Ledger **000–013, 015–031** (`version` is text; no `014` in repo). |
 | Backup/restore drill | **Closed** 2026-08-31 | Host dump → `yum4less_backup_drill` counts matched; drill DB dropped. Nightly backup cron still optional |
 | TheMealDB production key | **Open** | Live ingest still logs **dev test key** |
 | Website `robots.txt` for `/owner` | **Open** (SEO leftover) | Not scrape-compliance M128. `/robots.txt` and `/sitemap.xml` were 404 on an earlier live check |
@@ -203,13 +203,13 @@ Keep these next to the coverage bucket so they are not lost in chat:
 
 Use this only as a negative checklist. Detail stays in Resume.
 
-Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain, Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
+Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
 
 ---
 
 ## 10. Suggested pick-up order
 
-1. Ops: Cron Job on; hard-refresh store lists; optional live SQL.
+1. Ops: leftover grocery **ingest** image if Clear obvious is missing.
 2. Product: **Walmart Flipp-only scrape skip** *or* **Target ZIP-generic ingest adapter** (dinners off). Same coverage bucket; pick one.
 3. Then BJ’s Flipp confirm, or Slice D / Publix Q1 if coverage is paused.
 4. Leave accounts, cuisine, go/no-go, and M128 automation until you reprioritize.
@@ -218,8 +218,8 @@ Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `m
 
 ## Sources
 
-- [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Resume (as of 2026-09-05), changelog 2026-08-31 backlog honesty + 2026-09-07 db-owned-data, Deferred backlog, Decision log
-- Home note Open loops / Next actions (as of 2026-09-05 status block)
+- [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Resume (as of 2026-09-14 live SQL paste), changelog, Decision log
+- Home note Open loops / Next actions (as of 2026-09-14 status)
 - [`docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md)
 - [`docs/audits/homelab-readiness-verdict.md`](audits/homelab-readiness-verdict.md)
 - 2026-09-07 Target weekly-ad / store-locator probes (not in production ingest)

@@ -18,7 +18,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 ## Nationwide de-hardcoding (2026-08-27)
 
-**A, B1, B2, C, and membership DB-wins are current in repo** (TrueNAS schema `025` + `026` applied **2026-08-27 00:04Z**; Lidl/Walmart ranked flags via `027`/`028`). Plan and remaining work → [`docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md).
+**A, B1, B2, C, and membership DB-wins are current in repo and on live** (TrueNAS `025`/`026` **2026-08-27**; Walmart ranked `028`; Lidl map-context `030`; Dollar General ranked `031`). Live paste-back **2026-09-14**. Plan and remaining work → [`docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md).
 
 | Slice | Status |
 |---|---|
@@ -26,9 +26,9 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 | **B1** — `active_markets` + `zip_geocode_cache` | Shipped (`025`) |
 | **B2** — `chain_registry` + `/owner` Coverage | Shipped (`026`) |
 | **C** — `/owner` Markets ZIP check + activate | Shipped (no new migrate; reuses `025`) |
-| **Membership** — dinner attempts + fail-loud ingest from `chain_registry.shopper_ranked` | Shipped in repo (live image waits Watchtower) |
+| **Membership** — dinner attempts + fail-loud ingest from `chain_registry.shopper_ranked` | Shipped (live `030`/`031` applied) |
 
-TrueNAS ingest reads `active_markets` (ZIP `23111` active; overlay unset). Extra ZIP `23220` is next. Dinner attempts follow `chain_registry.shopper_ranked`; match/confidence/freshness floors stay in code. C does **not** auto-queue shopper ZIPs. Live yum4less.com waits on a new app/ingest image.
+TrueNAS ingest reads `active_markets` (`23111` + `23220` active; overlay unset). Dinner attempts follow `chain_registry.shopper_ranked`; match/confidence/freshness floors stay in code. C does **not** auto-queue shopper ZIPs. Live ledger is **000–013, 015–031**. Current product status → [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) Resume.
 
 ---
 
@@ -181,7 +181,7 @@ Full list and ingest flags → `.env.example`.
 | `npm run ingest:weekly-ads:scheduled` | **Daily cron wrapper** — map catalog → weekly-ad ingest (live matching vs Postgres `ingredients`; unmatched lines skip / auto-create / `/owner` review) → provider sync → TheMealDB import |
 | `npm run ingest:weekly-ads:scheduled:fixture` | Rehearsal cron path (CI/tests — fixture weekly ads only) |
 | `npm run owner:reject-pending-junk-reviews` | One-shot: reject pending `/owner` flyer lines that match current junk heuristics (`yum4less_dev`; not a public API) |
-| `npm run owner:resolve-pending-reviews` | Dry-run leftover `/owner` grocery Yes/No plans against the live catalog. Pass `-- --apply` to write through the same owner path (aliases + create-if-missing). Does not claim more dinners. |
+| `npm run owner:resolve-pending-reviews` | Dry-run leftover `/owner` grocery Yes/No plans against the live catalog. Pass `-- --apply` to write (same path as `/owner` **Clear obvious**). Live ingest also files obvious lines so they do not re-queue. Does not claim more dinners. |
 | `npm run probe:kroger-api` | Kroger OAuth + store pricing probe (owner-only, not CI) |
 | `npm run probe:publix-api` | Publix store-locator probe (owner-only, not CI) |
 | `npm run probe:kroger-live-scrape` | Kroger weekly-ad live scrape probe |

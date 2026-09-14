@@ -6,6 +6,7 @@ import {
 } from "@/lib/ingredient-id";
 import { resolveCanonicalSimpleFood } from "@/lib/weekly-ad-ingestion/weekly-ad-simple-food";
 import { isFixtureIngestMode } from "@/lib/fixture-ingest-policy";
+import { planPendingReviewResolution } from "@/lib/owner/pending-review-auto-resolve";
 import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
 import {
   insertIngredientIfMissing,
@@ -251,4 +252,95 @@ async function resolveAcceptedIngredient(input: {
 
   const createdId = await insertIngredientIfMissing(suggested);
   return { ok: true, ingredientId: createdId };
+}
+
+export type ObviousPendingReviewSummary = {
+  yes: number;
+  no: number;
+  skip: number;
+  appliedOk: number;
+  appliedFail: number;
+};
+
+/** Dry-run or apply the leftover grocery planner to every pending /owner row. */
+export async function applyObviousPendingReviews(input: {
+  apply: boolean;
+}): Promise<ObviousPendingReviewSummary> {
+  const summary: ObviousPendingReviewSummary = {
+    yes: 0,
+    no: 0,
+    skip: 0,
+    appliedOk: 0,
+    appliedFail: 0,
+  };
+
+  if (isFixtureIngestMode()) {
+    return summary;
+  }
+
+  const pool = getDbPool();
+  const existing = await pool.query<{ id: string }>(`select id from ingredients`);
+  const existingIds = new Set(existing.rows.map((row) => row.id));
+  const pending = await pool.query<{
+    normalized_label: string;
+    raw_product_name: string;
+  }>(
+    `
+      select normalized_label, raw_product_name
+      from ingredient_match_reviews
+      where status = 'pending'
+      order by seen_at desc, id desc
+    `,
+  );
+
+  for (const row of pending.rows) {
+    const plan = planPendingReviewResolution(row.raw_product_name, {
+      normalizedLabel: row.normalized_label,
+      existingIds,
+    });
+
+    if (plan.action === "skip") {
+      summary.skip += 1;
+      continue;
+    }
+
+    if (plan.action === "no") {
+      summary.no += 1;
+      if (!input.apply) {
+        continue;
+      }
+      const result = await resolveIngredientReview({
+        normalizedLabel: row.normalized_label,
+        decision: "no",
+      });
+      if (result.ok) {
+        summary.appliedOk += 1;
+      } else {
+        summary.appliedFail += 1;
+      }
+      continue;
+    }
+
+    summary.yes += 1;
+    if (!input.apply) {
+      continue;
+    }
+    const result = await resolveIngredientReview({
+      normalizedLabel: row.normalized_label,
+      decision: "yes",
+      ingredientId: plan.ingredientId,
+      ingredientName: plan.ingredientName,
+      category: plan.category,
+    });
+    if (result.ok) {
+      summary.appliedOk += 1;
+      if (result.ingredientId) {
+        existingIds.add(result.ingredientId);
+      }
+    } else {
+      summary.appliedFail += 1;
+    }
+  }
+
+  return summary;
 }

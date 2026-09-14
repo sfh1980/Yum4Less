@@ -362,6 +362,75 @@ describe("OwnerConsole", () => {
     });
   });
 
+  it("posts Clear obvious and reloads leftover reviews", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (typeof init?.method === "string" && init.method === "POST") {
+        return jsonOk({
+          ok: true,
+          yes: 3,
+          no: 1,
+          skip: 2,
+          appliedOk: 4,
+          appliedFail: 0,
+        });
+      }
+      if (url.includes("/api/feedback")) {
+        return jsonOk({ ok: true, feedback: [], hasMore: false });
+      }
+      if (url.includes("/api/analytics/events")) {
+        return jsonOk({ ok: true, events: [], hasMore: false });
+      }
+      if (url.includes("/api/owner/store-coverage")) {
+        return jsonOk(EMPTY_COVERAGE);
+      }
+      if (url.includes("/api/owner/markets")) {
+        return jsonOk(EMPTY_MARKETS);
+      }
+      return jsonOk({
+        ok: true,
+        reviews: [
+          {
+            id: 7,
+            normalizedLabel: "bartlett pears",
+            rawProductName: "Bartlett Pears",
+            chain: "kroger",
+            seenAt: "2026-08-22T00:00:00.000Z",
+            suggestedIngredientId: "pears",
+            suggestedName: "Pears",
+            suggestedCategory: "produce",
+          },
+        ],
+        hasMore: false,
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<OwnerConsole />);
+
+    await user.type(screen.getByLabelText(/admin key/i), "secret-owner-key");
+    await user.click(screen.getByRole("button", { name: /^view$/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /clear obvious/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /clear obvious/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Cleared 4 obvious lines/i)).toBeInTheDocument();
+    });
+    const clearPost = fetchMock.mock.calls.find(
+      (call) =>
+        String(call[0]).includes("/api/owner/ingredient-reviews") &&
+        call[1]?.method === "POST" &&
+        String(call[1]?.body).includes("clear-obvious"),
+    );
+    expect(JSON.parse(String(clearPost?.[1]?.body))).toEqual({
+      action: "clear-obvious",
+    });
+  });
+
   it("explains food-id format and posts a new id with name and category", async () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

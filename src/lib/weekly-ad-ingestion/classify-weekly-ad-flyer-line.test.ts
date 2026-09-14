@@ -231,8 +231,8 @@ describe("classifyWeeklyAdFlyerLine", () => {
       }),
     ).toEqual([
       expect.objectContaining({
-        action: "review",
-        normalizedLabel: expect.stringContaining("garden salad"),
+        action: "auto-create",
+        ingredient: expect.objectContaining({ id: "lettuce" }),
       }),
     ]);
 
@@ -244,8 +244,8 @@ describe("classifyWeeklyAdFlyerLine", () => {
       }),
     ).toEqual([
       expect.objectContaining({
-        action: "review",
-        normalizedLabel: expect.stringContaining("grill mates"),
+        action: "auto-create",
+        ingredient: expect.objectContaining({ id: "grill-seasoning" }),
       }),
     ]);
 
@@ -257,8 +257,8 @@ describe("classifyWeeklyAdFlyerLine", () => {
       }),
     ).toEqual([
       expect.objectContaining({
-        action: "review",
-        normalizedLabel: expect.stringContaining("peaches"),
+        action: "auto-create",
+        ingredient: expect.objectContaining({ id: "peaches" }),
       }),
     ]);
 
@@ -270,9 +270,25 @@ describe("classifyWeeklyAdFlyerLine", () => {
       }),
     ).toEqual([
       expect.objectContaining({
-        action: "review",
-        normalizedLabel: expect.stringContaining("steaks"),
+        action: "auto-create",
+        ingredient: expect.objectContaining({ id: "beef-steak" }),
       }),
     ]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Ghirardelli Sauce",
+        chain: "publix",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "obvious-no" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Chick-fil-A Sauce",
+        chain: "publix",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "review" })]);
   });
 });

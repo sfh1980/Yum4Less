@@ -8,12 +8,14 @@ const originalDatabaseUrl = process.env.DATABASE_URL;
 
 const listPendingIngredientReviews = vi.fn();
 const resolveIngredientReview = vi.fn();
+const applyObviousPendingReviews = vi.fn();
 
 vi.mock("@/lib/owner/ingredient-review-repository", () => ({
   INGREDIENT_REVIEW_LIMITS: { default: 50, max: 100 },
   listPendingIngredientReviews: (...args: unknown[]) =>
     listPendingIngredientReviews(...args),
   resolveIngredientReview: (...args: unknown[]) => resolveIngredientReview(...args),
+  applyObviousPendingReviews: (...args: unknown[]) => applyObviousPendingReviews(...args),
 }));
 
 vi.mock("@/lib/location-resolution", () => ({
@@ -38,6 +40,7 @@ describe("/api/owner/ingredient-reviews", () => {
     resetRateLimitsForTests();
     listPendingIngredientReviews.mockReset();
     resolveIngredientReview.mockReset();
+    applyObviousPendingReviews.mockReset();
     restoreEnv("YUM4LESS_FEEDBACK_ADMIN_KEY", originalFeedbackAdminKey);
     restoreEnv("DATABASE_URL", originalDatabaseUrl);
   });
@@ -202,6 +205,38 @@ describe("/api/owner/ingredient-reviews", () => {
       ok: false,
       error: expect.stringMatching(/kebab-case/i),
     });
+    expect(resolveIngredientReview).not.toHaveBeenCalled();
+  });
+
+  it("clears obvious pending reviews when the admin key is valid", async () => {
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "test-admin-key";
+    process.env.DATABASE_URL = "postgres://yum4less/test";
+    applyObviousPendingReviews.mockResolvedValue({
+      yes: 3,
+      no: 1,
+      skip: 2,
+      appliedOk: 4,
+      appliedFail: 0,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/owner/ingredient-reviews", {
+        method: "POST",
+        headers: { Authorization: "Bearer test-admin-key" },
+        body: JSON.stringify({ action: "clear-obvious" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      yes: 3,
+      no: 1,
+      skip: 2,
+      appliedOk: 4,
+      appliedFail: 0,
+    });
+    expect(applyObviousPendingReviews).toHaveBeenCalledWith({ apply: true });
     expect(resolveIngredientReview).not.toHaveBeenCalled();
   });
 

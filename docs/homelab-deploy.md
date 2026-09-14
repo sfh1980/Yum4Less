@@ -2,7 +2,7 @@
 
 Copy-paste guide for a **dedicated Linux / TrueNAS SCALE box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Local proof uses **Docker Compose**; the production-like host path on this project is **TrueNAS Apps “Custom App” YAML** (see [§9](#9-truenas-apps-custom-app--working-deploy)).
 
-**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). **Unattended ingest-worker night closed** (owner paste-back 2026-08-31). **Backup/restore drill closed** (2026-08-31). Remaining open ops: TheMealDB **dev test key**. Watchtower pull and extra ZIP **`23220`** first ingest **closed** (owner paste 2026-09-01).
+**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). **Unattended ingest-worker night closed** (owner paste-back 2026-08-31). **15-night `ingest_jobs` rollup closed** (owner paste-back 2026-09-14: **2026-08-31 through 2026-09-14**, each **6/6 succeeded**, enqueue ~07:00:03Z). **Backup/restore drill closed** (2026-08-31). Remaining open ops: TheMealDB **dev test key**. Watchtower pull and extra ZIP **`23220`** first ingest **closed** (owner paste 2026-09-01).
 
 **Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths).
 
@@ -93,7 +93,7 @@ docker ps --filter name=yum4less-
 
 Schema is applied from `db/init/` on first **db** container start (physical SQL only — the ledger table is created but **not populated** until the first migration pass). **`schema_migrations` is the source of truth** for which init files have been applied; `npm run db:migrate` or any path that runs `ensure-test-db.mjs` reconciles the ledger (backfill on existing volumes, apply missing files such as `015`/`016` on long-lived dev DBs).
 
-After each deploy that adds or changes files under `db/init/` (including **`025_active_markets_and_zip_geocode_cache.sql`** for ingest markets + ZIP cache and **`026_chain_registry_and_store_coverage.sql`** for the `/owner` Coverage tab), run migrate from the ingest container. **TrueNAS already applied `025` and `026` (2026-08-27 00:04Z).** Future init files still need an operator migrate — Watchtower does not.
+After each deploy that adds or changes files under `db/init/` (including **`025_active_markets_and_zip_geocode_cache.sql`** for ingest markets + ZIP cache and **`026_chain_registry_and_store_coverage.sql`** for the `/owner` Coverage tab), **3am scheduled ingest** applies pending SQL (`ensure-test-db`). **TrueNAS already applied `025` and `026` (2026-08-27 00:04Z).** Watchtower does not migrate. Hand `npm run db:migrate` on the ingest container only if you need the file before morning.
 
 ```bash
 docker compose up -d db
@@ -365,7 +365,7 @@ Rotate or prune `backups/` yourself (e.g. keep 14 days). After a real restore in
 
 ### 4.5 Owner paste-back snapshot (local ≠ live)
 
-Local Docker `yum4less_dev` (Cursor Postgres MCP on **5433**) is **not** the TrueNAS volume behind `https://yum4less.com/`. When an agent needs live catalog / ingest / migration truth, it should give these **read-only** commands; paste the output back; then docs may be updated. Watchtower does **not** migrate new `db/init` files by itself; scheduled ingest Postgres prep can apply them. Live ledger includes **`024`** (`applied_at` 2026-08-24 07:00:02Z), **`025` + `026`** (`applied_at` **2026-08-27 00:04:01Z**), and **`027` + `028`** (`applied_at` **2026-08-28 07:00:02–03Z**, owner paste-back **2026-08-29**). If a later migration is missing from `schema_migrations`, skip queries that need those tables.
+Local Docker `yum4less_dev` (Cursor Postgres MCP on **5433**) is **not** the TrueNAS volume behind `https://yum4less.com/`. When an agent needs live catalog / ingest / migration truth, it should give these **read-only** commands; paste the output back; then docs may be updated. Watchtower does **not** migrate new `db/init` files by itself; scheduled ingest Postgres prep can apply them. Live ledger (owner paste-back **2026-09-14**): **`000`–`013`, `015`–`031`** (`version` is text; there is no `014` in the repo). Notable `applied_at`: **`024`** 2026-08-24 07:00:02Z, **`025`/`026`** 2026-08-27 00:04:01Z, **`027`/`028`** 2026-08-28 07:00:02–03Z, **`029`** 2026-08-30 07:00:03Z, **`030`/`031`** 2026-09-03 23:59:42Z. If a later migration is missing from `schema_migrations`, skip queries that need those tables.
 
 On the NAS (TrueNAS Custom App names from §9):
 
@@ -456,11 +456,29 @@ order by newest desc;
 "
 ```
 
+Nightly 3am enqueue + worker drain (3am Eastern = **07:00Z** in daylight time). Missing `run_date` = that night did not enqueue:
+
+```bash
+sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "
+select
+  run_date,
+  count(*)::int as jobs,
+  count(*) filter (where status = 'succeeded')::int as succeeded,
+  count(*) filter (where status = 'failed')::int as failed,
+  min(created_at) as first_queued,
+  max(finished_at) as last_finished
+from ingest_jobs
+where run_date >= current_date - 14
+group by run_date
+order by run_date desc;
+"
+```
+
 Do not dump secrets, `.env`, or admin keys. If a table is missing, paste the error — that is useful (usually means a migration after `024` is not applied).
 
 **2026-08-26 snapshot (this volume):** ingredients 438; pending reviews 704; weekly-ad aliases 90; skips 675. Freshness ~10.4h: Kroger API 97/97, Publix 102, Food Lion 62, Kroger weekly-ad 35, Aldi 30, Walmart 14 (newest 07:00–07:06 UTC). See `PROJECT_CONTINUITY.md` Resume.
 
-**Verify the drill once per host** before treating unattended cron as foundation-complete:
+**Backup/restore drill** (already closed on this host 2026-08-31). Re-run only if you rebuild the NAS:
 
 ```bash
 cd /opt/yum4less
@@ -741,7 +759,7 @@ Expect `200`. Then proceed to the ingest container (§10) and freshness checks (
 
 ## 10. Ingest cron container (TrueNAS)
 
-**Status (2026-08-31 owner paste-back):** Unattended 3am cron two-night proof closed. Unattended ingest-worker night closed (enqueue 07:00:01Z; drain 07:01–07:09Z; 6/6 `succeeded`). Backup/restore drill closed (276/324/29 round-trip). Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. Overlay unset; `active_markets` ZIP `23111` only until `/owner` Activate of `23220`.
+**Status (2026-09-14 owner paste-back):** Unattended 3am cron two-night proof closed. Unattended ingest-worker night closed. **15-night `ingest_jobs` rollup closed** (`run_date` **2026-08-31 through 2026-09-14**, each **6/6 `succeeded`**, `first_queued` ~07:00:03Z). Backup/restore drill closed (276/324/29 round-trip). Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. Overlay unset; `active_markets` includes **`23111`** and **`23220`**.
 
 **Evidence (owner TrueNAS session, ZIP `23111`):**
 - One-shot dry-run (`YUM4LESS_INGEST_ONCE=1`) completed against production data.
@@ -802,7 +820,7 @@ After local tests pass:
 
 Until step 2–3, leave `YUM4LESS_INGEST_QUEUE_WORKER` unset so 3am still runs map-catalog → weekly-ad → … inline (same as today).
 
-Unattended worker night **closed 2026-08-31**. Extra ZIP **23220** is Activated; first ingest is the 3am worker. Keep the host Cron Job Enabled.
+Unattended worker night **closed 2026-08-31**. **15-night standing proof closed 2026-09-14** (`ingest_jobs` **2026-08-31 through 2026-09-14**, each **6/6 succeeded**). Extra ZIP **23220** is Activated. Do not disable the host worker Cron Job.
 
 **Network:** `ingest` **must** share the Custom App compose network with `db` (same YAML stack). Do not publish ingest ports.
 
@@ -945,7 +963,7 @@ Ingest + Watchtower are **deployed** on TrueNAS. Manual one-shot dry-run closed 
 | §4 / ops item | Status |
 |---------------|--------|
 | 1. Confirm Postgres listens `127.0.0.1:5433` only (Compose) / no host publish (TrueNAS) | Ops confirm on box — TrueNAS db already unpublished |
-| 2. Wire scheduled ingest + freshness path | **Closed** — unattended 3am two-night proof (2026-08-28 and 2026-08-29) plus ingest-worker Cron Job drain (2026-08-31 07:01–07:09Z, 6/6 `succeeded`) |
+| 2. Wire scheduled ingest + freshness path | **Closed** — unattended 3am two-night proof (2026-08-28 and 2026-08-29), ingest-worker Cron Job drain (2026-08-31), and **15-night `ingest_jobs` rollup** (2026-08-31 through 2026-09-14, each 6/6 `succeeded`, enqueue ~07:00:03Z) |
 | 3. One successful ingest (non-empty ranked window) | **Closed (manual dry-run)** — 246/246 fresh @ ZIP `23111`; see §10 Status |
 | 4. `db:backup-restore-drill` on TrueNAS target | **Closed (2026-08-31)** — host dump/restore into `yum4less_backup_drill`; counts **276/324/29** matched; drill DB dropped |
 | 5. Public/WAN exposure | **Closed (2026-08-03/04)** — Cloudflare Tunnel → `https://yum4less.com/` ([§12](#12-cloudflare-tunnel-wan--live)) |

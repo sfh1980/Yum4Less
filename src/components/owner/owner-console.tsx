@@ -157,6 +157,7 @@ export function OwnerConsole() {
     {},
   );
   const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [clearingObvious, setClearingObvious] = useState(false);
   const [reviewNotice, setReviewNotice] = useState<string | undefined>();
   const [feedbackHasMore, setFeedbackHasMore] = useState(false);
   const [analyticsHasMore, setAnalyticsHasMore] = useState(false);
@@ -643,6 +644,64 @@ export function OwnerConsole() {
     }
   }
 
+  async function handleClearObvious() {
+    if (!activeKey) {
+      return;
+    }
+    setClearingObvious(true);
+    setReviewNotice(undefined);
+    try {
+      const response = await fetch("/api/owner/ingredient-reviews", {
+        method: "POST",
+        headers: {
+          ...authHeaders(activeKey),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "clear-obvious" }),
+      });
+      const json = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        yes?: number;
+        no?: number;
+        skip?: number;
+        appliedOk?: number;
+        appliedFail?: number;
+      };
+      if (response.status === 401) {
+        setLoadState("error");
+        setError(
+          "Wrong or missing admin key, or YUM4LESS_FEEDBACK_ADMIN_KEY is not set on the server.",
+        );
+        return;
+      }
+      if (!response.ok || !json.ok) {
+        setReviewNotice(json.error ?? "Obvious flyer lines could not be cleared.");
+        return;
+      }
+      const failed = json.appliedFail ?? 0;
+      setReviewNotice(
+        failed > 0
+          ? `Cleared ${json.appliedOk ?? 0} obvious lines. ${failed} could not be saved. ${json.skip ?? 0} still need a look.`
+          : `Cleared ${json.appliedOk ?? 0} obvious lines (${json.yes ?? 0} yes, ${json.no ?? 0} no). ${json.skip ?? 0} still need a look.`,
+      );
+      await loadPage(activeKey, {
+        reset: true,
+        feedbackOffset: 0,
+        analyticsOffset: 0,
+        reviewsOffset: 0,
+        coverageOffset: 0,
+        which: "reviews",
+      });
+    } catch {
+      setReviewNotice(
+        "Obvious flyer lines could not be cleared. Check the network and try again.",
+      );
+    } finally {
+      setClearingObvious(false);
+    }
+  }
+
   function handleTabKeyDown(
     event: KeyboardEvent<HTMLButtonElement>,
     currentTab: OwnerConsoleTab,
@@ -760,6 +819,7 @@ export function OwnerConsole() {
             <p className="panel-copy">
               Unclear weekly-ad lines wait here. Yes attaches the flyer wording
               to a food id (creates the id when it is new). No remembers a skip.
+              Clear obvious files leftover grocery the same way ingest will.
               Shoppers never see these until the next ingest prices them. Pantry
               leftovers stay 1-4 items.
             </p>
@@ -791,6 +851,16 @@ export function OwnerConsole() {
                   baking, or frozen.
                 </li>
               </ol>
+            </div>
+            <div className="action-row">
+              <button
+                className="secondary-button"
+                disabled={clearingObvious || reviewingId !== null}
+                onClick={() => void handleClearObvious()}
+                type="button"
+              >
+                {clearingObvious ? "Clearing…" : "Clear obvious"}
+              </button>
             </div>
             {reviewNotice ? (
               <p className="panel-copy" role="status">
@@ -883,7 +953,7 @@ export function OwnerConsole() {
                     <div className="action-row">
                       <button
                         className="primary-button"
-                        disabled={reviewingId === row.id}
+                        disabled={reviewingId === row.id || clearingObvious}
                         onClick={() => void handleReviewDecision(row, "yes")}
                         type="button"
                       >
@@ -891,7 +961,7 @@ export function OwnerConsole() {
                       </button>
                       <button
                         className="secondary-button"
-                        disabled={reviewingId === row.id}
+                        disabled={reviewingId === row.id || clearingObvious}
                         onClick={() => void handleReviewDecision(row, "no")}
                         type="button"
                       >

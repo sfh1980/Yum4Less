@@ -147,11 +147,11 @@ async function applyClassification(input: {
   const { classification, offer, catalog } = input;
 
   if (classification.action === "skip") {
-    if (classification.reason === "junk") {
+    if (classification.reason === "junk" || classification.reason === "obvious-no") {
       await insertSkipIfMissing({
         normalizedLabel: classification.normalizedLabel,
         rawProductName: offer.productName,
-        reason: "junk-heuristic",
+        reason: classification.reason === "junk" ? "junk-heuristic" : "obvious-no",
       });
       catalog.skipLabels.add(classification.normalizedLabel);
     }

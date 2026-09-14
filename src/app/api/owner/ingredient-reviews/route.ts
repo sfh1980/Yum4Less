@@ -15,6 +15,7 @@ import {
   INGREDIENT_REVIEW_LIMITS,
   resolveIngredientReview,
   listPendingIngredientReviews,
+  applyObviousPendingReviews,
   type IngredientReviewDecision,
 } from "@/lib/owner/ingredient-review-repository";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
@@ -78,12 +79,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: parsedBody.error }, { status: 400 });
   }
 
-  const validated = parseIngredientReviewDecision(parsedBody.body);
+  const validated = parseIngredientReviewPost(parsedBody.body);
   if (!validated.ok) {
     return NextResponse.json({ ok: false, error: validated.error }, { status: 400 });
   }
 
   try {
+    if (validated.kind === "clear-obvious") {
+      const summary = await applyObviousPendingReviews({ apply: true });
+      return NextResponse.json({ ok: true, ...summary });
+    }
+
     const result = await resolveIngredientReview(validated.decision);
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
@@ -108,6 +114,28 @@ type ParsedReviewDecision = {
   ingredientName?: string;
   category?: IngredientCategory;
 };
+
+function parseIngredientReviewPost(
+  body: unknown,
+):
+  | { ok: true; kind: "clear-obvious" }
+  | { ok: true; kind: "decision"; decision: ParsedReviewDecision }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { ok: false, error: "Review payload is invalid." };
+  }
+
+  const record = body as Record<string, unknown>;
+  if (record.action === "clear-obvious") {
+    return { ok: true, kind: "clear-obvious" };
+  }
+
+  const parsed = parseIngredientReviewDecision(body);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return { ok: true, kind: "decision", decision: parsed.decision };
+}
 
 function parseIngredientReviewDecision(
   body: unknown,

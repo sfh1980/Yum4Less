@@ -92,4 +92,22 @@ describe("pending review auto-resolve", () => {
   it("leaves unmatched grocery pending", () => {
     expect(planPendingReviewResolution("Mystery Aisle Widget").action).toBe("skip");
   });
+
+  it("maps smashburgers, filet mignon, baba ganoush, and grill mates", () => {
+    expect(
+      planPendingReviewResolution("Schweid & Sons Signature Smashburgers"),
+    ).toMatchObject({ action: "yes", ingredientId: "ground-beef" });
+    expect(planPendingReviewResolution("Verde Farms Filet Mignon")).toMatchObject({
+      action: "yes",
+      ingredientId: "beef-steak",
+    });
+    expect(
+      planPendingReviewResolution("Haig's Delicacies Baba Ghannouge"),
+    ).toMatchObject({ action: "yes", ingredientId: "baba-ganoush" });
+    expect(
+      planPendingReviewResolution(
+        "McCormick Grill Mates 30 Minute Montreal Steak Marinade",
+      ),
+    ).toMatchObject({ action: "yes", ingredientId: "grill-seasoning" });
+  });
 });

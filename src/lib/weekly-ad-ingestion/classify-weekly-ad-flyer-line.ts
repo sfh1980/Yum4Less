@@ -5,6 +5,7 @@ import {
   normalizeWeeklyAdFlyerLabel,
   splitWeeklyAdOrLabels,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-label-normalize";
+import { planPendingReviewResolution } from "@/lib/owner/pending-review-auto-resolve";
 import { resolveCanonicalSimpleFood } from "@/lib/weekly-ad-ingestion/weekly-ad-simple-food";
 import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
@@ -17,7 +18,7 @@ export type WeeklyAdMatchCatalogSnapshot = {
 };
 
 export type WeeklyAdFlyerClassification =
-  | { action: "skip"; reason: "skip-table" | "junk"; normalizedLabel: string }
+  | { action: "skip"; reason: "skip-table" | "junk" | "obvious-no"; normalizedLabel: string }
   | {
       action: "match";
       ingredientId: string;
@@ -108,6 +109,36 @@ function classifyOneFlyerPart(input: {
     return {
       action: "auto-create",
       ingredient: created,
+      nickname: input.rawProductName,
+      normalizedLabel,
+    };
+  }
+
+  const existingIds = new Set(input.catalog.ingredients.map((ingredient) => ingredient.id));
+  const plan = planPendingReviewResolution(input.rawProductName, {
+    normalizedLabel,
+    existingIds,
+  });
+  if (plan.action === "no") {
+    return { action: "skip", reason: "obvious-no", normalizedLabel };
+  }
+  if (plan.action === "yes") {
+    if (existingIds.has(plan.ingredientId)) {
+      return {
+        action: "match",
+        ingredientId: plan.ingredientId,
+        matchConfidence: 0.92,
+        saveAlias: true,
+        normalizedLabel,
+      };
+    }
+    return {
+      action: "auto-create",
+      ingredient: {
+        id: plan.ingredientId,
+        name: plan.ingredientName,
+        category: plan.category,
+      },
       nickname: input.rawProductName,
       normalizedLabel,
     };
