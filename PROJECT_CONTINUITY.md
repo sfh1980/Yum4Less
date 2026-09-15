@@ -34,6 +34,7 @@
 
 ### Working today (honest)
 
+- **Walmart Flipp-first scrape skip (2026-09-15):** Same operating shape as Food Lion — Flipp first; walmart.com scrape only if Flipp is empty. Walmart keeps its own page fetcher/parser. Does **not** claim more dinners.
 - **Website `robots.ts` (2026-09-15, closed):** `src/app/robots.ts` disallows `/owner` and `/api/` for crawlers. Not a lock on `/owner` (admin key still required). Optional live check after Watchtower: body should include `Disallow: /owner`. Do **not** claim people who know the URL cannot open it.
 - **Leftover grocery / Clear obvious on live (2026-09-15, ops closed):** App + ingest `:homelab` created **2026-09-14 21:43Z** after `d3e9396` publish. Planner + **Clear obvious** confirmed on the box. Dry-run **yes=3 no=0 skip=34**. Owner monitors Ingredient review as needed; skip titles stay human. Do **not** SQL-reject. Do **not** claim more dinners.
 - **Live SQL snapshot (2026-09-14):** 18 `chain_registry` rows; ranked dinners attempted for Kroger / Aldi / Publix / Food Lion / Walmart / Dollar General; Lidl map-context. Walmart in-stock **19/19** in 24h. DG and Lidl **0**. Migrations **000–013, 015–031**. Closes the optional live-SQL ops item. Does **not** claim more dinners (19 Walmart rows ≠ promotion floors).
@@ -70,7 +71,7 @@
 - **Universal map catalog (Slice 4A):** `npm run ingest:map-catalog` (+ fixture variant) discovers food retail via OSM Overpass + chain locators; upserts map-context `stores` rows on **cron only**; OSM attribution when OSM pins visible
 - **Publix + Food Lion + Walmart gates:** weekly-ad promotion gates for shopper-ranked v1 chains; **production-ranked when ingest and promotion gates pass** (same path as Kroger-family and Aldi weekly-ad rollout). Dollar General uses those floors **and** a food-desert nearby-chain gate. Lidl is map context (2026-09-03 lock) — not a dinner-promotion path.
 - **Daily ingest path:** `npm run ingest:weekly-ads:scheduled` (+ fixture rehearsal variant) runs **map-catalog before weekly-ad**, then provider sync + TheMealDB
-- **Weekly-ad chain status:** Aldi, Food Lion, Walmart, and Dollar General remain Flipp-first; Publix scrape stays primary with Flipp supplemental ingredient backfill. Those banners are Settings-selectable. Dollar General dinners also need the food-desert gate. Lidl Flipp/hub ingest stays fail-soft and **does not rank**. Thin Flipp or scrape misses stay map context with an honest reason.
+- **Weekly-ad chain status:** Aldi, Food Lion, Walmart, and Dollar General remain Flipp-first (scrape only when Flipp is empty for those paths); Publix scrape stays primary with Flipp supplemental ingredient backfill. Those banners are Settings-selectable. Dollar General dinners also need the food-desert gate. Lidl Flipp/hub ingest stays fail-soft and **does not rank**. Thin Flipp or scrape misses stay map context with an honest reason.
 - **Store scope:** shopping style + store picker (single/multi); unselected stores hidden from map, ingredients, and rank; prefs persisted in localStorage (`setupComplete` marker — slice 5 routes on this)
 - **Recipe ranking:** TheMealDB dinners with a numeric meal-page id and enough sale overlap; short internal-library writeups stay in the catalog but are **not** ranked
 - **TheMealDB on search:** ranking reads Postgres imports cache-first; **search-time refresh removed** — cron/script only (`npm run ingest:themealdb:from-sales`); scheduled-refresh notice when imports stale/empty; full-recipe link on cards when `source_recipe_id` is numeric
@@ -270,6 +271,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-09-15 — Walmart Flipp-first scrape skip (Food Lion shape)
+
+**Theme:** Stop wasting nightly work on captcha-blocked walmart.com when Flipp already returned the circular.
+
+**Shipped:** `walmart-weekly-ad-ingestion.ts` mirrors Food Lion: Flipp first; `fetchWalmartWeeklyAdPage` only when Flipp returns **0** offers. Walmart keeps its own fetcher/parser (not Food Lion’s HTML path). Chain `termsNote` updated. Unit tests: skip scrape when Flipp has offers; scrape fallback when empty; captcha error path.
+
+**Limits:** Does not invent more Walmart dinners. Junk + `/owner` review still cut GM noise. Live after ingest Watchtower pull. Not M128 scrape automation.
+
+**Evidence:** `npx vitest run` Walmart + Food Lion ingest tests **7/7**. Full `npm test` **1251/1251** (220 files).
 
 ### 2026-09-15 — Website `robots.ts` for `/owner` (closed)
 
@@ -3036,6 +3047,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-09-15 | **Walmart Flipp-first / scrape-only-if-empty:** Same operating shape as Food Lion. When Flipp returns offers, skip walmart.com HTML. Retailer page scrape (Walmart’s own fetcher/parser) runs only if Flipp is empty. Does not invent more dinners. Not stealth/WAF bypass. | **Active** (implements 2026-09-07 research; narrows 2026-08-25 “always attempts page scrape”) |
 | 2026-09-14 | **Optional live SQL snapshot is not an open task.** TrueNAS paste: 18 registry banners; Walmart 19/19 fresh in-stock; DG/Lidl 0; ledger through `031`. Re-run §4.5 when flags or thin-banner yield need a new date, not as standing Do now. | **Closed** |
 | 2026-09-14 | **Store-list omit on yum4less.com is not an open click-task.** Live app image contains `fas mart` omit code (Watchtower recreate **2026-09-14 19:43Z**). Map may still show convenience/bakery/Joe’s pins. Optional hard-refresh is not a standing inventory item. | **Closed** (narrows 2026-09-03 store lists = recognized banners) |
 | 2026-09-14 | **Pending `db/init` is not an open Watchtower task.** 3am ingest prep applies missing SQL. Hand `npm run db:migrate` on `yum4less-ingest` only if you need it before morning. Watchtower still does not migrate. Do not auto-reset live Postgres. | **Closed** (open-task only; Watchtower-does-not-SQL fact unchanged) |
@@ -3076,7 +3088,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 | 2026-08-26 | **No silent market ZIP:** ingest and probes fail closed without `YUM4LESS_INGEST_ZIPS` (or explicit single-ZIP alias) **or** `active_markets`. Shopper form ZIP starts empty. `23111` remains CI/E2E/fixture geography and a seed-geocode entry for that typed ZIP only. | **Active** (narrowed: B1 shipped; TrueNAS `025` applied) |
 | 2026-08-26 | **TrueNAS paste-back:** live volume has `024` (applied 2026-08-24 07:00:02Z). Catalog **438** foods (TheMealDB 265 / seed 97 / weekly-ad-catalog 76); pending reviews **704**; weekly-ad aliases **90**; skips **675**. Ranked in-stock prices **~10.4h** old at paste (07:00–07:06 UTC same day): Kroger API 97/97, Publix 102, Food Lion 62, Kroger ad 35, Aldi 30, Walmart 14. One-night 3am-window evidence; not multi-night cron closed. Do not use local 319/619 as live. Watchtower still does not migrate. | **Active** (narrows 2026-08-25 local≠live; closes “024 not applied” for this volume) |
 | 2026-08-25 | **Local `yum4less_dev` ≠ TrueNAS / yum4less.com:** never copy local catalog, pending-review, or freshness counts onto live docs. When homelab truth is required, the agent gives read-only paste-back commands ([`docs/homelab-deploy.md`](docs/homelab-deploy.md) §4.5); the owner runs them on the NAS and pastes output; then docs update. Watchtower does not migrate; `024` is applied on this live volume (2026-08-26 paste-back). | **Active** (open inventory task closed 2026-09-14; paste-back rule unchanged) |
-| 2026-08-25 | **Universal weekly-ad junk + persist tighten:** same junk SSOT for all chains; junk before fuzzy match; do not persist junk prices; Flipp grocery flyers first; Walmart uses shared Flipp resolver + live scrape. Matching SSOT remains Postgres catalog, not the 97-id seed list. Walmart ranked still deferred. | **Active** (narrows 2026-08-25 junk-skip and 2026-08-22 catalog expansion) |
+| 2026-08-25 | **Universal weekly-ad junk + persist tighten:** same junk SSOT for all chains; junk before fuzzy match; do not persist junk prices; Flipp grocery flyers first; Walmart uses shared Flipp resolver. Matching SSOT remains Postgres catalog, not the 97-id seed list. | **Narrowed** (2026-09-15 Walmart scrape-only-if-empty; 2026-08-27 Walmart same floors supersedes “ranked deferred”) |
 | 2026-08-25 | **Skip more weekly-ad junk before `/owner`:** `isWeeklyAdJunkProduct` is the skip SSOT (no duplicate SQL lists). Live ingest and `npm run owner:reject-pending-junk-reviews` reject pending rows that match. Do not skip garden/grill/paper-bare food titles. Obvious leftover grocery (steaks, peaches, smashburgers) now files via `planPendingReviewResolution` on ingest and **Clear obvious**. Do not claim more dinners. | **Narrowed** (2026-09-14 obvious grocery planner) |
 | 2026-08-25 | **Shopping style and dietary advance on tap:** How do you shop? and Dietary focus have no Continue. Either choice (or any dietary option) saves the value and goes to the next screen. Radius, ZIP, pin, stores, and budget still use Continue. | **Active** (narrows 2026-08-20 wizard “arrow/continue on all screens” for those two choice screens) |
 | 2026-08-24 | **Live shopper UI is the onboarding wizard:** `yum4less.com` should show splash → GPS/ZIP wizard and the 6-tab shell. The Settings-first ZIP hero is rollback-only (`backup/settings-ui-plus-catalog` @ `38bad3a`). Catalog expansion stays on that backup and on master. | **Active** |
@@ -3186,6 +3198,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | TrueNAS live SQL (`chain_registry` / Walmart·DG·Lidl / ledger) | 2026-09-14 | Ranked: kroger, aldi, publix, food-lion, walmart, dollar-general. Lidl `map_context`. Walmart **19/19** in 24h. DG/Lidl **0**. Migrations **000–013, 015–031**. |
 | TrueNAS `yum4less-app` store-list omit (`fas mart`) | 2026-09-14 | `:homelab` created **2026-09-14T19:43:47Z**. Grep hits `page.js` + two chunks. |
 | TrueNAS `ingest_jobs` 3am + worker (15 nights) | 2026-09-14 | **2026-08-31 through 2026-09-14**: each night **6 jobs / 6 succeeded / 0 failed**; `first_queued` ~**07:00:03Z**. |
+| `npm test` (Walmart Flipp-first scrape skip) | 2026-09-15 | **1251/1251** pass (220 files) |
 | `npm test` (obvious grocery ingest + Clear obvious) | 2026-09-14 | **1246/1246** pass (218 files) |
 | `npm run build` (owner review POST `clear-obvious`) | 2026-09-14 | **Pass** (Next.js 15.5.25) |
 | Semgrep MCP (owner review + ingest classify) | 2026-09-14 | Timed out — **not** a passed scan of these files |

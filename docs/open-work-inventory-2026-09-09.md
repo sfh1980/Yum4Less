@@ -46,7 +46,7 @@ This is the **active coverage bucket**. Thin sale data keeps pins tracked; dinne
 | Ranked | `shopper_ranked` on live (`028`). Same floors as other ranked banners |
 | Yield | Flipp grocery flyer exists for `23111`; match rate is junk-heavy (older probe: 144 offers → ~113 junk / ~6 grocery matches). Live **2026-09-14:** Walmart in-stock **19** rows, **19** in 24h, newest **07:09:43Z** |
 | Scrape | `walmart.com/store/weekly-ads` hits Akamai/PX (`Robot or human?` in Playwright; HTTP 521 on GET). Parser looks for `#weekly-ad-offers-data`, which the captcha page does not emit |
-| Agreed, **not coded** (2026-09-07) | Pause walmart.com HTML scrape when Flipp has offers (Food Lion already does Flipp-first / scrape-only-if-empty). Do not add stealth browsers or paid residential proxies |
+| **Shipped 2026-09-15** | Pause walmart.com HTML scrape when Flipp has offers (Food Lion shape; Walmart keeps its own fetcher/parser). Do not add stealth browsers or paid residential proxies |
 | Do not | Claim more Walmart dinners; bypass WAF; hardcode store numbers |
 
 ### 2.2 Target (no adapter)
@@ -85,7 +85,7 @@ Ordered as product next, then identity, then API honesty, then new-chain queue.
 | Slice | What is left | Status | Suggested owner |
 |---|---|---|---|
 | **Target ingest adapter** | ZIP-generic locator + promotions JSON parser + catalog `source_store_id`; shared junk/matcher; fail-soft; tests. No hardcoded store id | Research done; **not implemented** | `@ingest-standards` |
-| **Walmart Flipp-only scrape skip** | If Flipp returns offers, skip retailer HTML (match Food Lion). Provenance labels stay honest | Agreed 2026-09-07; **not implemented** | `@ingest-standards` |
+| **Walmart Flipp-only scrape skip** | If Flipp returns offers, skip retailer HTML (match Food Lion shape; Walmart keeps own fetcher/parser) | **Closed** 2026-09-15 | `@ingest-standards` |
 | **BJ’s yield / adapter** | Confirm Flipp circular; decide map-context vs ingest-only vs later ranked | Not started | `@ingest-standards` |
 | **Option A Slice D** | Batch proximity/name matcher at ingest. Unblocks safer identity expand beyond the Aldi allowlist | **Open.** Slices 1–6 closed 2026-07-11. Flags `YUM4LESS_STORE_IDENTITY_EXPAND` and `AUTO_CONFIRM` stay **OFF** | `@database-codegen-standards` |
 | **Wave 2 Q1 (Publix)** | Policy locked **Q1=1B**: Publix locator pins are Settings-selectable catalog. Code: remove Publix from `isMapContextCatalogStore`; merge/suppress tests; Settings+map smoke | **Not started** (policy 2026-07-16) | `@web-frontend-standards` |
@@ -185,7 +185,7 @@ Keep these next to the coverage bucket so they are not lost in chat:
 
 1. **Database-owned data rule** — **shipped** (`.cursor/rules/yum4less-db-owned-data.mdc` + session hook). Promotion floors and name-fragment lists were **not** migrated.
 2. **Target store bind is ZIP-generic** — locator + `store_promotions?store_id=`; Mechanicsville example is `1968`.
-3. **Walmart HTML scrape is not beating Flipp** — pause scrape when Flipp has offers.
+3. **Walmart HTML scrape is not beating Flipp** — **shipped 2026-09-15:** pause scrape when Flipp has offers (Food Lion shape).
 4. **Do not** add Camoufox / Patchright / curl_cffi / SeleniumBase / Botasaurus / paid residential proxy as the default ingest layer.
 5. **Camoufox / Patchright / curl_cffi were not live-tested** in that session (not installed).
 
@@ -205,15 +205,15 @@ Keep these next to the coverage bucket so they are not lost in chat:
 
 Use this only as a negative checklist. Detail stays in Resume.
 
-Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
+Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
 
 ---
 
 ## 10. Suggested pick-up order
 
-1. Product: **Walmart Flipp-only scrape skip** *or* **Target ZIP-generic ingest adapter** (dinners off). Same coverage bucket; pick one.
+1. Product: **Target ZIP-generic ingest adapter** (dinners off), or BJ’s Flipp confirm.
 2. Ops: TheMealDB **production key** when you have one (not a merge gate).
-3. Then BJ’s Flipp confirm, or Slice D / Publix Q1 if coverage is paused.
+3. Then Slice D / Publix Q1 if coverage is paused.
 4. Leave accounts, cuisine, go/no-go, and M128 automation until you reprioritize.
 
 ---

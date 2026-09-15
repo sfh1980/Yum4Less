@@ -1,5 +1,4 @@
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
-import { mergeWeeklyAdRawOffers } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
@@ -69,38 +68,56 @@ async function ingestWalmartWeeklyAd(
     let retrievalLabel = flippResult.retrievalLabel;
     let provenance: WeeklyAdIngestionResult["provenance"] = "weekly-ad-partner-feed";
     let fallbackUsed = true;
+    let directScrapeBlocked = false;
+    let captureHtml = "";
+    let captureNetworkJsonBodies: string[] | undefined;
 
-    const pageFetch = await fetchWalmartWeeklyAdPage({ url: sourceUrl });
-    const scrapedOffers = parseWalmartWeeklyAd({
-      html: pageFetch.html,
-      networkJsonBodies: pageFetch.networkJsonBodies,
-    });
+    // Same shape as Food Lion: Flipp first; retailer HTML only when the feed is empty.
+    // Walmart keeps its own page fetcher/parser — do not share Food Lion's HTML path.
+    if (rawOffers.length === 0) {
+      try {
+        const pageFetch = await fetchWalmartWeeklyAdPage({ url: sourceUrl });
+        captureHtml = pageFetch.html;
+        captureNetworkJsonBodies = pageFetch.networkJsonBodies;
+        rawOffers = parseWalmartWeeklyAd({
+          html: pageFetch.html,
+          networkJsonBodies: pageFetch.networkJsonBodies,
+        });
+        retrievalLabel = `${pageFetch.method} scrape`;
+        provenance =
+          pageFetch.method === "browser" ? "weekly-ad-scrape" : "weekly-ad-partner-feed";
+        fallbackUsed = pageFetch.method === "browser";
 
-    if (scrapedOffers.length > 0) {
-      rawOffers = mergeWeeklyAdRawOffers(rawOffers, scrapedOffers);
-      retrievalLabel = `${pageFetch.method} scrape + ${flippResult.retrievalLabel}`;
-      provenance =
-        pageFetch.method === "browser" ? "weekly-ad-scrape" : "weekly-ad-partner-feed";
-      fallbackUsed = true;
-    } else if (pageFetch.html && rawOffers.length === 0) {
-      captureWeeklyAdArtifacts({
-        chain: "walmart",
-        zipCode: input.zipCode,
-        sourceUrl,
-        html: pageFetch.html,
-        networkJsonBodies: pageFetch.networkJsonBodies,
-        errorMessage:
-          "Walmart browser/HTTP scrape returned HTML but no parseable weekly-ad offers.",
-      });
+        if (rawOffers.length === 0 && pageFetch.html) {
+          captureWeeklyAdArtifacts({
+            chain: "walmart",
+            zipCode: input.zipCode,
+            sourceUrl,
+            html: pageFetch.html,
+            networkJsonBodies: pageFetch.networkJsonBodies,
+            errorMessage:
+              "Walmart browser/HTTP scrape returned HTML but no parseable weekly-ad offers.",
+          });
+        }
+      } catch (scrapeError) {
+        directScrapeBlocked = true;
+        if (rawOffers.length === 0) {
+          throw scrapeError;
+        }
+      }
     }
 
     if (rawOffers.length === 0) {
+      const blockedNote = directScrapeBlocked
+        ? " Walmart weekly-ad pages often block automated access (captcha/WAF)."
+        : "";
       captureWeeklyAdArtifacts({
         chain: "walmart",
         zipCode: input.zipCode,
         sourceUrl,
-        html: "",
-        errorMessage: "No Walmart weekly-ad offers returned from Flipp or browser scrape.",
+        html: captureHtml,
+        networkJsonBodies: captureNetworkJsonBodies,
+        errorMessage: `Walmart Flipp lookup and direct page scrape returned no parseable weekly-ad offers.${blockedNote}`,
       });
 
       return {
@@ -112,7 +129,7 @@ async function ingestWalmartWeeklyAd(
         configured: true,
         fallbackUsed: true,
         offers: [],
-        message: `${label} could not load Walmart weekly-ad offers for ZIP ${input.zipCode} via Flipp or browser scrape.`,
+        message: `${label} could not load Walmart weekly-ad offers for ZIP ${input.zipCode} via Flipp syndicated feed or direct page scrape.${blockedNote}`,
         fetchedAt,
         termsNote,
       };
@@ -150,6 +167,11 @@ async function ingestWalmartWeeklyAd(
       errorMessage: error instanceof Error ? error.message : "unknown fetch error",
     });
 
+    const blockedHint =
+      error instanceof Error && /\b(403|captcha|WAF|robot)\b/i.test(error.message)
+        ? " Flipp syndicated feed also returned no offers."
+        : "";
+
     return {
       chain: "walmart",
       label,
@@ -161,7 +183,7 @@ async function ingestWalmartWeeklyAd(
       offers: [],
       message:
         error instanceof Error
-          ? `${label} fetch failed: ${error.message}`
+          ? `${label} fetch failed: ${error.message}${blockedHint}`
           : `${label} fetch failed with an unknown error.`,
       fetchedAt,
       termsNote,

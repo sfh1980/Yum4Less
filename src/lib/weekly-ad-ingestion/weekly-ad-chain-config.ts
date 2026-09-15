@@ -72,7 +72,7 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
     browserWaitSelector: "#weekly-ad-offers-data, [data-weekly-ad-product], [data-automation-id*='weekly']",
     researchTargets: ["https://www.walmart.com/store/weekly-ads"],
     termsNote:
-      "Walmart weekly-ad offers use the shared Flipp resolver (grocery flyers when tagged) plus a live page scrape. Non-food lines are skipped by the same junk heuristic as every other chain. Verify current deals in store before checkout.",
+      "Walmart weekly-ad offers use the Flipp syndicated feed first (grocery flyers when tagged) because walmart.com weekly-ad pages often block automated access. Browser scrape runs only when the feed is empty. Non-food lines are skipped by the same junk heuristic as every other chain. Verify current deals in store before checkout.",
   },
   {
     chain: "lidl",
