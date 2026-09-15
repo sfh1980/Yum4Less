@@ -16,6 +16,7 @@ const baseRecipe = (overrides: Partial<CatalogRecipeRecord>): CatalogRecipeRecor
   difficulty: "easy",
   tags: [],
   dietaryTags: [],
+  cuisineTags: [],
   ingredients: [],
   steps: [],
   ...overrides,

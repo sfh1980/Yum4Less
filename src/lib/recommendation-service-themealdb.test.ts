@@ -55,6 +55,7 @@ const themealdbRecipe = {
   difficulty: "medium" as const,
   tags: ["casserole"],
   dietaryTags: ["quick" as const],
+  cuisineTags: ["japanese" as const],
   ingredients: [
     { ingredientId: "chicken-thighs", displayName: "Chicken thighs", quantityNote: "1 lb" },
     { ingredientId: "garlic", displayName: "Garlic", quantityNote: "2 cloves" },

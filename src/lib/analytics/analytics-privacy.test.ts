@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { validateAnalyticsProperties } from "@/lib/analytics/analytics-privacy";
+import {
+  ANALYTICS_EVENT_PROPERTY_ALLOWLISTS,
+  CLIENT_STAMPED_ANALYTICS_TRUST_DIMS,
+} from "@/lib/analytics/analytics-validation";
 
 describe("analytics privacy", () => {
   it("accepts coarse primitive properties", () => {
@@ -39,5 +43,14 @@ describe("analytics privacy", () => {
       ok: false,
       error: "Analytics property names are invalid.",
     });
+  });
+
+  it("documents client-stamped trust dims as allowlisted but non-authoritative", () => {
+    const allowlisted = new Set(
+      Object.values(ANALYTICS_EVENT_PROPERTY_ALLOWLISTS).flat(),
+    );
+    for (const dim of CLIENT_STAMPED_ANALYTICS_TRUST_DIMS) {
+      expect(allowlisted.has(dim)).toBe(true);
+    }
   });
 });

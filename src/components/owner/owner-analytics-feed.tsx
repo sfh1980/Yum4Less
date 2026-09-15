@@ -78,7 +78,10 @@ export function OwnerAnalyticsFeed({ rows, notice }: OwnerAnalyticsFeedProps) {
           <p className="panel-copy">
             Showing {rows.length} event{rows.length === 1 ? "" : "s"} across{" "}
             {sessions.length} session{sessions.length === 1 ? "" : "s"} (loaded
-            pages).
+            pages). Client-stamped properties such as{" "}
+            <code>market_data_source</code>, <code>has_fallback_notice</code>, and{" "}
+            <code>recommendation_enabled</code> are directional only — not trust
+            ground truth.
           </p>
           {sessions.map((session) => (
             <section

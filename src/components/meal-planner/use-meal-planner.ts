@@ -211,6 +211,9 @@ export function useMealPlanner() {
   const [isInternalDetailsOpen, setIsInternalDetailsOpen] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string>();
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
+  const [selectedCuisineIds, setSelectedCuisineIds] = useState<
+    import("@/lib/cuisine-chips").CuisineChipId[]
+  >([]);
   const [ingredientPickMode, setIngredientPickMode] = useState<IngredientPickMode>("unset");
   const [isMapOverlayOpen, setIsMapOverlayOpen] = useState(false);
   const [isZipCenterPickerOpen, setIsZipCenterPickerOpen] = useState(false);
@@ -1225,6 +1228,7 @@ export function useMealPlanner() {
         recipeSource: getDefaultRecipeSource(),
         selectedStoreIds: preferences.selectedStoreIds,
         ...(selectedIngredientIds.length > 0 ? { selectedIngredientIds } : {}),
+        ...(selectedCuisineIds.length > 0 ? { selectedCuisineIds } : {}),
         ...(pantryIds.length > 0 ? { pantryIngredientIds: pantryIds } : {}),
         ...(options?.includeIngredientCatalog ? { includeIngredientCatalog: true } : {}),
         market: trimMarketForRankingPassThrough(scopedMarket ?? market),
@@ -1319,7 +1323,7 @@ export function useMealPlanner() {
         });
       }
     },
-    [market, activeLocationRequest, form, selectedIngredientIds, scopedMarket],
+    [market, activeLocationRequest, form, selectedIngredientIds, selectedCuisineIds, scopedMarket],
   );
 
   useEffect(() => {
@@ -1397,6 +1401,7 @@ export function useMealPlanner() {
       recipeSource: getDefaultRecipeSource(),
       selectedStoreIds: preferences.selectedStoreIds,
       ...(selectedIngredientIds.length > 0 ? { selectedIngredientIds } : {}),
+      ...(selectedCuisineIds.length > 0 ? { selectedCuisineIds } : {}),
       ...(pantryIngredientIds.length > 0 ? { pantryIngredientIds } : {}),
       market: trimMarketForRankingPassThrough(scopedMarket ?? market),
       zipCode:
@@ -1534,6 +1539,19 @@ export function useMealPlanner() {
     setSelectedIngredientIds([]);
   }
 
+  function handleToggleCuisine(cuisineId: import("@/lib/cuisine-chips").CuisineChipId) {
+    setSelectedCuisineIds((current) => {
+      if (current.includes(cuisineId)) {
+        return current.filter((id) => id !== cuisineId);
+      }
+      return [...current, cuisineId];
+    });
+  }
+
+  function handleClearCuisines() {
+    setSelectedCuisineIds([]);
+  }
+
   function handleUseAllIngredients() {
     setIngredientPickMode("all");
     setSelectedIngredientIds([]);
@@ -1648,6 +1666,9 @@ export function useMealPlanner() {
     handleToggleIngredient,
     handleSelectAllIngredients,
     handleClearIngredientSelection,
+    selectedCuisineIds,
+    handleToggleCuisine,
+    handleClearCuisines,
     handleUseAllIngredients,
     handlePickIngredientsManually,
     handleTogglePantryChecklistItem,

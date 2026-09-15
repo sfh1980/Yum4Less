@@ -15,7 +15,7 @@
 | Welcome | Budget + dietary on Home welcome step | — |
 | Stores | Selected stores only in map/ingredients/rank scope | — |
 | Settings dropdown | Kroger, Aldi, Publix, and Food Lion listed regardless of promotion gates (`settings-store-selection.ts`) | — |
-| Ingredients | All-sale vs manual gate; search + category chips; no 40-ID cap | Cuisine chips (R11) |
+| Ingredients | All-sale vs manual gate; search + category chips; no 40-ID cap | ~~Cuisine chips (R11)~~ **shipped 2026-09-15** |
 | Results count | No `dinnersWanted`; eligibility-only count | — |
 | Results UI | Stacked accordion (one expanded at a time) | — |
 | TheMealDB | **2026-08-20:** shopper list is TheMealDB with a full recipe page only (supersedes 2026-06-25 merged internal + TheMealDB). Opt-in UI still deleted | — |
@@ -77,7 +77,7 @@ Settings tab (if first visit / factory reset / incomplete prefs)
 ## Deferred (after D7)
 
 - Saved tab **cross-device** persistence (device-local shipped; paused with accounts)
-- Cuisine/ethnic chips (**R11** — hide until recipes have a cuisine facet)
+- ~~Cuisine/ethnic chips (**R11** — hide until recipes have a cuisine facet)~~ **shipped 2026-09-15**
 - Homelab scrape automation M128 (robots/auto-pause/kill-switch) — containers/cron already shipped
 
 ---

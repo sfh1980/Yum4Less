@@ -79,7 +79,7 @@ No item from the consolidated sources meets the bar (data exposure, data corrupt
 | SNAP matching OFF / SNAP merge exclusion | Intentional |
 | Walmart / BJ's / Lidl meal pricing | Context-only / coming later |
 | User accounts | Out of v1 |
-| Saved persistence / cuisine R11 | Deferred; Saved already honest |
+| Saved persistence (cross-device) | Deferred; device-local Saved already honest. Cuisine R11 **shipped 2026-09-15** |
 | Slice D batch matcher | Not started; flags OFF |
 | M128/M151 scrape automation | Manual pause only; Decision log Active |
 | OSRM driving distance on discovery | Straight-line labeled |

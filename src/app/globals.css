@@ -429,6 +429,14 @@ select {
   margin: 0.75rem 0;
 }
 
+.cuisine-chip-toolbar {
+  margin: 0 0 1rem;
+}
+
+.cuisine-chip-toolbar .field-hint {
+  margin-bottom: 0.35rem;
+}
+
 .chip-button {
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--panel-border);

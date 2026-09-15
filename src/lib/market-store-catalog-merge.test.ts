@@ -133,4 +133,36 @@ describe("market store catalog merge", () => {
     expect(merged.some((store) => store.id === "osm-node-900006")).toBe(false);
     expect(MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES).toBeGreaterThanOrEqual(1);
   });
+
+  it("prefers Publix store-locator over nearby OSM Publix (Q1=1B merge priority)", () => {
+    const publixLocator = {
+      id: "publix-1626",
+      name: "Publix",
+      kind: "grocery" as const,
+      city: "Mechanicsville",
+      state: "VA",
+      latitude: 37.6109,
+      longitude: -77.3358,
+      sourceName: "publix-store-locator",
+    };
+    const osmPublix = {
+      id: "osm-node-9001626",
+      name: "Publix",
+      kind: "grocery" as const,
+      city: "Mechanicsville",
+      state: "VA",
+      latitude: 37.611,
+      longitude: -77.336,
+      sourceName: "openstreetmap-overpass",
+    };
+
+    const merged = mergeCatalogStoresForMap([publixLocator], [osmPublix]);
+    const publixPins = merged.filter((store) =>
+      store.name.toLowerCase().includes("publix"),
+    );
+
+    expect(publixPins).toHaveLength(1);
+    expect(publixPins[0]?.id).toBe("publix-1626");
+    expect(publixPins[0]?.sourceName).toBe("publix-store-locator");
+  });
 });

@@ -6,7 +6,7 @@ Point-in-time list of **open tasks, slices, and ops**. Compiled from [`PROJECT_C
 
 GitHub issues on `sfh1980/Yum4Less`: **0 open** (checked 2026-09-09). Tracking lives in Resume / Home / this inventory.
 
-Last live TrueNAS paste-back in Resume: **2026-09-15** (Clear obvious ops **closed**; app+ingest `:homelab` created **2026-09-14 21:43Z** after `d3e9396`). Prior SQL snapshot **2026-09-14** (`chain_registry` 18 banners; Walmart in-stock **19/19** in 24h; DG/Lidl **0**; ledger **000–013, 015–031**). Docs refresh **2026-09-15:** BJ’s Flipp confirm (map/context); Bright Data MCP **paused**.
+Last live TrueNAS paste-back in Resume: **2026-09-15** (Clear obvious ops **closed**; app+ingest `:homelab` created **2026-09-14 21:43Z** after `d3e9396`). Prior SQL snapshot **2026-09-14** (`chain_registry` 18 banners; Walmart in-stock **19/19** in 24h; DG/Lidl **0**; ledger **000–013, 015–031**). Docs refresh **2026-09-15:** BJ’s Flipp confirm (map/context); Bright Data MCP **paused**; **Walmart yield plan closed**; **Scale risk A closed**; **Cuisine chips R11 closed** (`033`).
 
 ---
 
@@ -37,17 +37,16 @@ Adapters must not hardcode store numbers, ingest ZIPs, or banner rosters. Facts 
 
 ## 2. Next product work — Flipp + scrape yield (`23111`)
 
-This is the **active coverage bucket**. Thin sale data keeps pins tracked; dinners stay off until floors pass. Not a coupon or checkout path. Lidl is **not** in this dinner chase.
+Remaining coverage for **Target** (dinners off) and **BJ’s** (map/context). Thin sale data keeps pins tracked; dinners stay off until floors pass. Not a coupon or checkout path. Lidl is **not** in this dinner chase.
 
-### 2.1 Walmart (adapter exists; yield is thin)
+### 2.1 Walmart — **closed** 2026-09-15 (plan locked)
 
 | State | Detail |
 |---|---|
 | Ranked | `shopper_ranked` on live (`028`). Same floors as other ranked banners |
-| Yield | Flipp grocery flyer exists for `23111`; match rate is junk-heavy (older probe: 144 offers → ~113 junk / ~6 grocery matches). Live **2026-09-14:** Walmart in-stock **19** rows, **19** in 24h, newest **07:09:43Z** |
-| Scrape | `walmart.com/store/weekly-ads` hits Akamai/PX (`Robot or human?` in Playwright; HTTP 521 on GET). Parser looks for `#weekly-ad-offers-data`, which the captcha page does not emit |
-| **Shipped 2026-09-15** | Pause walmart.com HTML scrape when Flipp has offers (Food Lion shape; Walmart keeps its own fetcher/parser). Do not add stealth browsers or paid residential proxies |
-| Do not | Claim more Walmart dinners; bypass WAF; hardcode store numbers |
+| **Closed plan** | **Flipp is the main circular feed**; walmart.com scrape only if Flipp is empty (shipped). **Noise → junk SSOT + `/owner` Ingredient review** (Yes food / No skip) — not a new scrape or paid-proxy chase |
+| Yield note | Flyer can still be junk-heavy (older probe: 144 → ~113 junk / ~6 grocery). Live **2026-09-14:** **19** in-stock / **19** in 24h. Improving usable food is ongoing **ops** via `/owner`, not an open coding slice |
+| Do not | Claim more Walmart dinners from thin matches; bypass WAF; hardcode store numbers; reopen stealth/proxy work |
 
 ### 2.2 Target (adapter shipped; dinners off)
 
@@ -76,7 +75,7 @@ This is the **active coverage bucket**. Thin sale data keeps pins tracked; dinne
 |---|---|---|
 | **Lidl** | Map context (`030`). Flipp/hub ingest fail-soft. **2026-09-14:** **0** `lidl-weekly-ad-scrape` in-stock rows | Do **not** add store-finder scrape or ranked dinners until a store-bound licensed feed exists |
 | **Dollar General** | Flipp ZIP circular ingest live (`031`). Directional sales can show. Dinners only when **no other shopper-ranked grocer is nearby** and the same floors pass | `23111` has other grocers, so DG dinners stay off there. **2026-09-14:** **0** in-stock `dollar-general-weekly-ad-scrape` rows |
-| **Kroger / Aldi / Publix / Food Lion** | Ranked when ingest + floors pass. Last heartbeat had in-stock rows | Not the yield-gap bucket. Publix Q1 Settings alignment is a separate slice (below) |
+| **Kroger / Aldi / Publix / Food Lion** | Ranked when ingest + floors pass. Last heartbeat had in-stock rows | Not the yield-gap bucket. Publix Q1 map align **closed** 2026-09-15 |
 
 ---
 
@@ -88,19 +87,21 @@ Ordered as product next, then identity, then API honesty, then new-chain queue.
 |---|---|---|---|
 | **Target ingest adapter** | ZIP-generic locator + promotions JSON parser + catalog `source_store_id`; shared junk/matcher; fail-soft; tests. No hardcoded store id | **Closed** 2026-09-15 (dinners still off) | `@ingest-standards` |
 | **Walmart Flipp-only scrape skip** | If Flipp returns offers, skip retailer HTML (match Food Lion shape; Walmart keeps own fetcher/parser) | **Closed** 2026-09-15 | `@ingest-standards` |
+| **Walmart Flipp yield (product)** | Thin/junk-heavy circular → dinners stay floored. Settled: Flipp primary + `/owner` review; no new adapter/scrape chase | **Closed** 2026-09-15 (owner lock) | `@ingest-standards` |
 | **BJ’s yield / adapter** | Flipp confirm done (thin absolute prices). Stay map/context; no adapter. Bright Data paused | **Flipp confirm done** 2026-09-15; adapter deferred | `@ingest-standards` |
 | **Option A Slice D** | Batch proximity/name matcher at ingest. Unblocks safer identity expand beyond the Aldi allowlist | **Open.** Slices 1–6 closed 2026-07-11. Flags `YUM4LESS_STORE_IDENTITY_EXPAND` and `AUTO_CONFIRM` stay **OFF** | `@database-codegen-standards` |
-| **Wave 2 Q1 (Publix)** | Policy locked **Q1=1B**: Publix locator pins are Settings-selectable catalog. Code: remove Publix from `isMapContextCatalogStore`; merge/suppress tests; Settings+map smoke | **Not started** (policy 2026-07-16) | `@web-frontend-standards` |
+| **Wave 2 Q1 (Publix)** | Policy locked **Q1=1B**: Publix locator pins are Settings-selectable catalog. Code: remove Publix from `isMapContextCatalogStore`; merge/suppress tests | **Closed** 2026-09-15 | `@web-frontend-standards` |
 | **Scale risk B** | Shared `assertMarketDataAvailable()` + honest 503 / UI outage surfaces so DB outage is never “no stores” | **Closed** 2026-09-15 | `@web-backend-standards` |
-| **Scale risk A** | Client-trust audit across all public API routes (not only rank pass-through) | Deferred until traffic increase / public-launch bar | `@verifier` + `@web-backend-standards` |
+| **Scale risk A** | Client-trust audit across all public API routes (not only rank pass-through) | **Closed** 2026-09-15 (audited; pantry spoof tests + analytics non-authoritative note) | `@verifier` + `@web-backend-standards` |
 | **Dollar Tree** | Locator source, chain id pattern, ingest feasibility, catalog fit vs private-label SKUs | **Queued.** Dollar General is live; Tree is not | `@ingest-standards` |
 | **Banner-per-row** | One `chain_registry` row per shopper banner (Harris Teeter ≠ Kroger) with **shared** adapter keys. Display already banner-grain | Roster grain **not split** | `@database-codegen-standards` |
 | **M128/M151 scrape automation** | robots.txt check before scheduled scrape; auto-pause one chain on 403/WAF; owner kill switch independent of cron | **Not started in code.** Manual pause only today. Containers/cron/Watchtower **are** shipped | `@ingest-standards` |
-| **Cuisine chips (R11)** | Filter dinners by cuisine. Hidden until recipes have a cuisine facet in Postgres (`tags[]` / `dietary_tags[]` today) | Deferred | `@web-frontend-standards` |
+| **Cuisine chips (R11)** | Curated 10 chips; hide until ≥2 rankable dinners; `cuisine_tags` + TheMealDB area map | **Closed** 2026-09-15 (data + UI; live after migrate `033` + app/ingest pull) | `@web-frontend-standards` |
 | **Q34/Q35 compact Settings** | Closed for now (wizard reuse). Reopen only if owner wants a different compact form | Closed unless reopened | — |
 
-Identity Phase 0 locks that stay in force (implementation may still be open for Q1 only):
+Identity Phase 0 locks that stay in force (implementation may still be open for Q2/Q3 policy only; **Q1 code closed 2026-09-15**):
 
+- **Q1=1B** — Publix locator = Settings-selectable catalog (**implemented** — not map-context)
 - **Q2=2A** — ephemeral search-time OSM/provider pins stay **excluded** from identity linking and coordinate reconciliation
 - **Q3=3B** — three-layer store existence is intentional (DB / map merge / Settings). Do not “converge” into one list
 
@@ -187,7 +188,7 @@ Keep these next to the coverage bucket so they are not lost in chat:
 
 1. **Database-owned data rule** — **shipped** (`.cursor/rules/yum4less-db-owned-data.mdc` + session hook). Promotion floors and name-fragment lists were **not** migrated.
 2. **Target store bind is ZIP-generic** — **shipped 2026-09-15:** locator + `store_promotions?store_id=`; Mechanicsville example is `1968` (never hardcoded).
-3. **Walmart HTML scrape is not beating Flipp** — **shipped 2026-09-15:** pause scrape when Flipp has offers (Food Lion shape).
+3. **Walmart HTML scrape is not beating Flipp** — **shipped 2026-09-15:** pause scrape when Flipp has offers (Food Lion shape). **Yield plan closed 2026-09-15:** Flipp + `/owner` Ingredient review (not stealth/proxy).
 4. **Do not** add Camoufox / Patchright / curl_cffi / SeleniumBase / Botasaurus / paid residential proxy as the default ingest layer.
 5. **Camoufox / Patchright / curl_cffi were not live-tested** in that session (not installed).
 
@@ -207,16 +208,16 @@ Keep these next to the coverage bucket so they are not lost in chat:
 
 Use this only as a negative checklist. Detail stays in Resume.
 
-Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), Scale risk B empty-vs-unavailable API+UI (**2026-09-15**), Target weekly-ad ingest adapter dinners-off (**2026-09-15**, `032`), BJ’s Flipp confirm + **Bright Data MCP usage paused** (**2026-09-15**, docs only), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
+Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), **Walmart yield plan** Flipp + `/owner` review (**2026-09-15**), Scale risk B empty-vs-unavailable API+UI (**2026-09-15**), **Scale risk A** client-trust API audit (**2026-09-15**), **Cuisine chips R11** curated + hide-empty (**2026-09-15**, `033`), Target weekly-ad ingest adapter dinners-off (**2026-09-15**, `032`), BJ’s Flipp confirm + **Bright Data MCP usage paused** (**2026-09-15**, docs only), Wave 2 **Q1 Publix map-context align** (**2026-09-15**), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
 
 ---
 
 ## 10. Suggested pick-up order
 
-1. Product: Next Flipp/scrape yield work (Walmart thin coverage). BJ’s Flipp confirm **done** (map/context; thin prices). Target adapter shipped (dinners off). Bright Data **paused**.
-2. Ops: TheMealDB **production key** when you have one (not a merge gate).
-3. Then Slice D / Publix Q1 if coverage is paused.
-4. Leave accounts, cuisine, go/no-go, and M128 automation until you reprioritize.
+1. Product (optional): Target live `032` / Watchtower if you want ingest proving Target circulars; BJ’s stays map/context. **Walmart yield plan closed** (Flipp + `/owner`). Scale risk A **closed**. Cuisine chips R11 **closed**.
+2. Ops: TheMealDB **production key** when you have one (not a merge gate). Ongoing: `/owner` Ingredient review as needed. Live: migrate `033` + Watchtower for cuisine chips.
+3. Then Slice D if you want identity expand next. Publix Q1 **closed** 2026-09-15.
+4. Leave accounts, go/no-go, and M128 automation until you reprioritize.
 
 ---
 

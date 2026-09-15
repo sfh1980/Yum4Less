@@ -8,6 +8,19 @@ import { validateAnalyticsProperties } from "@/lib/analytics/analytics-privacy";
 
 const EVENT_NAME_SET = new Set<string>(ANALYTICS_EVENT_NAMES);
 const SESSION_ID_PATTERN = /^[a-f0-9-]{16,64}$/i;
+
+/**
+ * Client-stamped dims allowed on analytics events. Honest shopper code sends
+ * server-derived values, but a malicious client can poison these fields.
+ * They are **not** authoritative for trust/pricing claims — use Postgres /
+ * recommendation responses for ground truth (Scale risk A).
+ */
+export const CLIENT_STAMPED_ANALYTICS_TRUST_DIMS = [
+  "market_data_source",
+  "has_fallback_notice",
+  "recommendation_enabled",
+] as const;
+
 export const ANALYTICS_EVENT_PROPERTY_ALLOWLISTS: Record<
   AnalyticsEventName,
   readonly string[]

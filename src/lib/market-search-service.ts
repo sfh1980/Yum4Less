@@ -55,6 +55,8 @@ import {
   type WeeklyAdPromotionReadiness,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-promotion-readiness";
 import { buildNearbySaleIngredientChoices } from "@/lib/sale-ingredient-offers";
+import { countCuisineFacets } from "@/lib/cuisine-chips";
+import { buildCuisineFacetRecipePool } from "@/lib/ranking-recipe-pool";
 import {
   discoverMapContextStores,
   mapContextCandidateToCatalogStore,
@@ -587,6 +589,20 @@ function buildMarketSummary(
     priceObservations: snapshot.priceObservations,
     ingredients: snapshot.ingredients ?? [],
   });
+  const pricingStoreIds = nearbyStores
+    .filter(
+      (store) =>
+        store.recommendationEnabled || store.pricingSourceKind === "weekly-ad",
+    )
+    .map((store) => store.id);
+  const cuisineFacetCounts = countCuisineFacets(
+    buildCuisineFacetRecipePool({
+      recipes: snapshot.recipes,
+      priceObservations: snapshot.priceObservations,
+      selectedStoreIds: pricingStoreIds,
+      recipeSource: "internal-library",
+    }),
+  );
   const searchedZipCode = location.zipCode;
   const locationLabel =
     location.source === "browser"
@@ -636,6 +652,7 @@ function buildMarketSummary(
     lookupProviderConfigured,
     dataSource,
     saleIngredientChoices,
+    cuisineFacetCounts,
     shopperRankedChainIds: [...(mapDiscovery?.shopperRankedChainIds ?? [])],
     ...(mapDiscovery?.mapDiscoveryNotice
       ? { mapDiscoveryNotice: mapDiscovery.mapDiscoveryNotice }

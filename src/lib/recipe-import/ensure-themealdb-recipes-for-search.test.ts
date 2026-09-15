@@ -36,6 +36,7 @@ const themealdbRecipe: CatalogRecipeRecord = {
   difficulty: "medium",
   tags: ["chicken"],
   dietaryTags: [],
+  cuisineTags: ["japanese"],
   ingredients: [
     { ingredientId: "chicken-breast", displayName: "Chicken", quantityNote: "1 lb" },
     { ingredientId: "soy-sauce", displayName: "Soy sauce", quantityNote: "2 tbsp" },

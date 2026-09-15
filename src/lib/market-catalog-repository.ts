@@ -1,5 +1,6 @@
 import { getDbPool } from "@/lib/db";
 import { boundingBoxForRadiusMiles, getDistanceMiles } from "@/lib/geo-distance";
+import { normalizeCuisineTags } from "@/lib/cuisine-chips";
 import type {
   CatalogIngredient,
   CatalogRecipeRecord,
@@ -29,6 +30,7 @@ const RECIPES_SQL = `
     difficulty,
     tags,
     dietary_tags,
+    cuisine_tags,
     steps,
     source_name,
     source_recipe_id,
@@ -156,6 +158,7 @@ function buildRecipeCatalogFromRows(
     difficulty: row.difficulty,
     tags: row.tags ?? [],
     dietaryTags: normalizeDietaryTags(row.dietary_tags ?? []),
+    cuisineTags: normalizeCuisineTags(row.cuisine_tags ?? []),
     ingredients: recipeIngredientsByRecipe.get(row.id) ?? [],
     steps: row.steps ?? [],
     sourceName: row.source_name ?? undefined,
@@ -191,6 +194,7 @@ type RecipeRow = {
   difficulty: CatalogRecipeRecord["difficulty"];
   tags: string[] | null;
   dietary_tags: string[] | null;
+  cuisine_tags: string[] | null;
   steps: string[] | null;
   source_name: string | null;
   source_recipe_id: string | null;

@@ -193,11 +193,14 @@ export function MealPlanner({ feedbackEnabled = false }: MealPlannerProps) {
                   shoppingStyle={demo.form.shoppingStyle}
                   ingredientPickMode={demo.ingredientPickMode}
                   selectedIngredientIds={demo.selectedIngredientIds}
+                  selectedCuisineIds={demo.selectedCuisineIds}
                   onClearIngredientSelection={demo.handleClearIngredientSelection}
                   onContinueToPantry={demo.handleContinueToPantry}
                   onPickManually={demo.handlePickIngredientsManually}
                   onSelectAllIngredients={demo.handleSelectAllIngredients}
                   onToggleIngredient={demo.handleToggleIngredient}
+                  onToggleCuisine={demo.handleToggleCuisine}
+                  onClearCuisines={demo.handleClearCuisines}
                   onUseAllIngredients={demo.handleUseAllIngredients}
                 />
               ) : null}

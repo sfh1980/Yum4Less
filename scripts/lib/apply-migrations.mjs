@@ -250,6 +250,8 @@ export function migrationEffectPresent(version, db) {
           ),
         ) === 1
       );
+    case "033":
+      return db.columnExists("recipes", "cuisine_tags");
     default:
       return false;
   }

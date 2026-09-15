@@ -17,6 +17,8 @@ import type { StoreIdentityEnv } from "@/lib/store-identity-flags";
 import type { StoreIdentityLookup } from "@/lib/store-identity-resolvers";
 import { resolvePricingScopeStoreIds } from "@/lib/store-scope";
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
+import { countCuisineFacets } from "@/lib/cuisine-chips";
+import { buildCuisineFacetRecipePool } from "@/lib/ranking-recipe-pool";
 
 export type MarketPassThroughIdentityOptions = {
   identityLookup?: StoreIdentityLookup;
@@ -180,6 +182,14 @@ export async function recomputePassedMarketTrustFields(input: {
     }),
     coverageTrackedIngredients,
   );
+  const cuisineFacetCounts = countCuisineFacets(
+    buildCuisineFacetRecipePool({
+      recipes: snapshot.recipes,
+      priceObservations: snapshot.priceObservations,
+      selectedStoreIds: [...recommendationReadyStoreIds],
+      recipeSource: "internal-library",
+    }),
+  );
 
   return {
     ...market,
@@ -189,6 +199,7 @@ export async function recomputePassedMarketTrustFields(input: {
     providerStoreSearches,
     providerPricingPreviews,
     providerCoverageRollup,
+    cuisineFacetCounts,
     recommendationReadyStoreCount: market.nearbyStores.filter(
       (store) => store.recommendationEnabled,
     ).length,

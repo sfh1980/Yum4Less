@@ -158,10 +158,10 @@ Postgres MCP on `yum4less_dev` this session: `price_observations` **308** total,
 | ID | What / where | Why A | Proposed copy status |
 |----|--------------|-------|----------------------|
 | A1 | **Saved persistence** — `SavedPlaceholderPanel` | Continuity: Saved persistence deferred; shell placeholder by design | **Already present** — see Example 1 (tone confirm / optional refine) |
-| A2 | **Cuisine chips (R11)** | Continuity deferred; **no UI control rendered today** | No stub to label unless Sean wants a Welcome/Settings *mention* (Example 2) |
+| A2 | **Cuisine chips (R11)** | **Superseded 2026-09-15** — curated chips + `cuisine_tags` shipped | Was deferred; no longer a coming-soon stub |
 | A3 | **Walmart / Lidl / BJ's / warehouse meal pricing** | Explicit context-only / coming-later in rollout policy | Map copy already exists; Settings does not list them for selection |
 | A4 | **User accounts** | Anti-goal / deferred | No UI affordance |
-| A5 | **Slice D matcher / Q1 Publix map-align / identity expand flags** | Locked deferred / not started | Not shopper-facing — **no UI coming-soon** |
+| A5 | **Slice D matcher / identity expand flags** | Locked deferred / not started. Publix Q1 map-align **closed 2026-09-15** | Not shopper-facing — **no UI coming-soon** |
 | A6 | **OSRM driving distance on discovery list** | Continuity deferred; straight-line labeled today | Honest; optional future “driving distance coming later” only if Sean wants more visibility |
 
 ### Bucket B — Should work but broken (report only — **do not** label “coming soon”)
@@ -198,13 +198,10 @@ Match Tier C voice: clear, honest, not cutesy.
 
 > Saved meals and shopping lists are not available in this beta. Nothing you rank is stored after this session. Use the Cook tab to revisit dinners you ranked during this visit.
 
-#### Example 2 — Cuisine filters (only if Sean wants a visible mention; control does not exist today)
+#### Example 2 — Cuisine filters (**superseded 2026-09-15**)
 
-**Where:** optional line under Welcome dietary focus (`welcome-panel.tsx`)  
-**Bucket:** A (R11 deferred) — **confirm before adding UI**  
-**Proposed:**
-
-> Cuisine filters (Italian, Mexican, and similar) are coming in a later release. For now, use dietary focus only.
+**Where:** Ingredients step cuisine chip toolbar (shipped).  
+**Bucket:** A2 closed — curated chips + hide-empty; do not add Welcome “coming later” copy.
 
 #### Example 3 — Context-only chain on map (confirm existing tone)
 

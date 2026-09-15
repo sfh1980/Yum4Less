@@ -45,6 +45,7 @@ import {
   shoppingStyleSchema,
   validateSelectedStoreIdsForShoppingStyle,
 } from "@/contracts/shared/meal-preferences";
+import { parseSelectedCuisineIds } from "@/lib/cuisine-chips";
 
 export type MealPlanningMode = z.infer<typeof mealPlanningModeSchema>;
 
@@ -60,6 +61,8 @@ export type MealPreferenceForm = {
   selectedStoreIds: string[];
   selectedIngredientIds?: string[];
   pantryIngredientIds?: string[];
+  /** Empty / omitted = any cuisine. Non-empty = recipe must match at least one curated chip. */
+  selectedCuisineIds?: import("@/lib/cuisine-chips").CuisineChipId[];
 };
 
 export type RecipeDifficulty = "easy" | "medium";
@@ -119,6 +122,11 @@ export type MarketSummary = {
   dataSource: MarketDataSource;
   /** Sale/API/scrape ingredient rows near the search point for optional shopper selection. */
   saleIngredientChoices: SaleIngredientChoice[];
+  /**
+   * Server-computed counts of rankable dinners per curated cuisine chip.
+   * Client must not trust a pass-through spoof — recompute on rank.
+   */
+  cuisineFacetCounts?: import("@/lib/cuisine-chips").CuisineFacetCounts;
   /**
    * Chain ids from `chain_registry.shopper_ranked` for this search. Client
    * picker sort and honesty copy use this — not a hardcoded TypeScript list.
@@ -302,6 +310,10 @@ export function parseRecommendationRequest(
   const selectedIngredientIds = parseSelectedIngredientIds(
     record.selectedIngredientIds,
   );
+  const selectedCuisineIds = parseSelectedCuisineIds(record.selectedCuisineIds);
+  if (selectedCuisineIds === undefined) {
+    return undefined;
+  }
   let pantryIngredientIds: string[] | undefined;
   if (record.pantryIngredientIds !== undefined && record.pantryIngredientIds !== null) {
     const parsedPantryIngredientIds = parsePantryIngredientIds(record.pantryIngredientIds);
@@ -346,6 +358,7 @@ export function parseRecommendationRequest(
     ...(pantryIngredientIds && pantryIngredientIds.length > 0
       ? { pantryIngredientIds }
       : {}),
+    ...(selectedCuisineIds.length > 0 ? { selectedCuisineIds } : {}),
   };
 
   return {

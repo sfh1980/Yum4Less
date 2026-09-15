@@ -25,6 +25,7 @@ export function buildRecipe(
     difficulty: "easy",
     tags: [],
     dietaryTags: ["vegetarian"],
+    cuisineTags: [],
     ingredients: [
       { ingredientId: "black-beans", displayName: "Black beans", quantityNote: "1 can" },
       { ingredientId: "lime", displayName: "Lime", quantityNote: "1" },

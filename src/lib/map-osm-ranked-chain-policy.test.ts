@@ -61,6 +61,38 @@ describe("map osm ranked chain policy", () => {
     expect(result.kept.map((store) => store.id)).toEqual(["osm-node-900001"]);
   });
 
+  it("treats Publix store-locator as ingested ranked peer that suppresses nearby OSM Publix (Q1=1B)", () => {
+    const publixLocator: CatalogStore = {
+      id: "publix-1626",
+      name: "Publix",
+      kind: "grocery",
+      city: "Mechanicsville",
+      state: "VA",
+      latitude: 37.6109,
+      longitude: -77.3358,
+      sourceName: "publix-store-locator",
+    };
+    const osmPublix: CatalogStore = {
+      id: "osm-node-9001626",
+      name: "Publix",
+      kind: "grocery",
+      city: "Mechanicsville",
+      state: "VA",
+      latitude: 37.6095,
+      longitude: -77.334,
+      sourceName: "openstreetmap-overpass",
+    };
+
+    const result = filterOsmCatalogStoresConflictingWithIngestedRankedChains(
+      [publixLocator],
+      [osmPublix, osmCostco],
+      MAP_RANKED_CHAIN_DEDUPE_PROXIMITY_MILES,
+    );
+
+    expect(result.suppressedCount).toBe(1);
+    expect(result.kept.map((store) => store.id)).toEqual(["osm-node-900001"]);
+  });
+
   it("triggers gap-fill when a ranked chain has fewer than two Postgres pins", () => {
     const reasons = listOsmGapFillTriggerReasons(
       [ingestedKroger],

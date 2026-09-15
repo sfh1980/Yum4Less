@@ -2,10 +2,12 @@
 
 import { IngredientGatePanel } from "@/components/meal-planner/ingredient-gate-panel";
 import { SaleIngredientPicker } from "@/components/meal-planner/sale-ingredient-picker";
+import { CuisineChipToolbar } from "@/components/meal-planner/cuisine-chip-toolbar";
 import type { IngredientPickMode } from "@/components/meal-planner/ingredient-pick-mode";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 import type { RecommendationExperience } from "@/lib/recommendation-service";
 import { buildMarketShopperBlockedStatus } from "@/lib/market-shopper-status";
+import type { CuisineChipId } from "@/lib/cuisine-chips";
 
 type IngredientsStepPanelProps = {
   market: RecommendationExperience["market"];
@@ -14,9 +16,12 @@ type IngredientsStepPanelProps = {
   shoppingStyle: MealPreferenceForm["shoppingStyle"];
   ingredientPickMode: IngredientPickMode;
   selectedIngredientIds: string[];
+  selectedCuisineIds: CuisineChipId[];
   onToggleIngredient: (ingredientId: string, checked: boolean) => void;
   onSelectAllIngredients: () => void;
   onClearIngredientSelection: () => void;
+  onToggleCuisine: (cuisineId: CuisineChipId) => void;
+  onClearCuisines: () => void;
   onContinueToPantry: () => void;
   onPickManually: () => void;
   onUseAllIngredients: () => void;
@@ -29,9 +34,12 @@ export function IngredientsStepPanel({
   shoppingStyle,
   ingredientPickMode,
   selectedIngredientIds,
+  selectedCuisineIds,
   onToggleIngredient,
   onSelectAllIngredients,
   onClearIngredientSelection,
+  onToggleCuisine,
+  onClearCuisines,
   onContinueToPantry,
   onPickManually,
   onUseAllIngredients,
@@ -49,6 +57,15 @@ export function IngredientsStepPanel({
   return (
     <div className="panel panel-padding meal-planner-panel meal-planner-panel--inputs flow-panel flow-panel--ingredients">
       <h2>Ingredients</h2>
+
+      {ingredientCount > 0 ? (
+        <CuisineChipToolbar
+          cuisineFacetCounts={market.cuisineFacetCounts ?? {}}
+          selectedCuisineIds={selectedCuisineIds}
+          onToggleCuisine={onToggleCuisine}
+          onClearCuisines={onClearCuisines}
+        />
+      ) : null}
 
       {showGate ? (
         <IngredientGatePanel

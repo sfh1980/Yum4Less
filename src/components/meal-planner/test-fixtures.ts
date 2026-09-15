@@ -47,6 +47,11 @@ export function buildTestMarket(
     lookupProviderConfigured: false,
     dataSource: "database",
     saleIngredientChoices: buildSaleIngredientChoices(),
+    cuisineFacetCounts: {
+      american: 3,
+      italian: 2,
+      mexican: 2,
+    },
     shopperRankedChainIds: [
       "kroger",
       "aldi",

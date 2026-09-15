@@ -18,6 +18,7 @@ const internalRecipe: CatalogRecipeRecord = {
   difficulty: "easy",
   tags: [],
   dietaryTags: [],
+  cuisineTags: [],
   ingredients: [
     { ingredientId: "chicken-thighs", displayName: "Chicken thighs", quantityNote: "1 lb" },
     { ingredientId: "lemon", displayName: "Lemon", quantityNote: "1" },
@@ -36,6 +37,7 @@ const themealdbRecipe: CatalogRecipeRecord = {
   difficulty: "easy",
   tags: ["imported"],
   dietaryTags: [],
+  cuisineTags: ["japanese"],
   ingredients: [
     { ingredientId: "chicken-breast", displayName: "Chicken", quantityNote: "2 lb" },
     { ingredientId: "soy-sauce", displayName: "Soy sauce", quantityNote: "1 cup" },

@@ -90,6 +90,7 @@ export const fixtureRecipes: CatalogRecipeRecord[] = [
     difficulty: "easy",
     tags: ["quick", "family", "single-store friendly"],
     dietaryTags: [],
+    cuisineTags: ["american"],
     ingredients: [
       { ingredientId: "chicken-thighs", displayName: "Chicken thighs", quantityNote: "1.5 lb" },
       { ingredientId: "baby-potatoes", displayName: "Baby potatoes", quantityNote: "1 bag" },
@@ -112,6 +113,7 @@ export const fixtureRecipes: CatalogRecipeRecord[] = [
     difficulty: "easy",
     tags: ["vegetarian", "budget", "multi-store savings"],
     dietaryTags: ["vegetarian", "quick"],
+    cuisineTags: ["mexican"],
     ingredients: [
       { ingredientId: "black-beans", displayName: "Black beans", quantityNote: "2 cans" },
       { ingredientId: "corn-tortillas", displayName: "Corn tortillas", quantityNote: "1 pack" },
@@ -136,6 +138,7 @@ export const fixtureRecipes: CatalogRecipeRecord[] = [
     difficulty: "easy",
     tags: ["quick", "vegetarian", "pantry-heavy"],
     dietaryTags: ["vegetarian", "quick"],
+    cuisineTags: ["italian"],
     ingredients: [
       { ingredientId: "spaghetti", displayName: "Spaghetti", quantityNote: "1 box" },
       { ingredientId: "spinach", displayName: "Spinach", quantityNote: "1 bag" },
@@ -159,6 +162,7 @@ export const fixtureRecipes: CatalogRecipeRecord[] = [
     difficulty: "medium",
     tags: ["vegan", "meal-prep", "produce-heavy"],
     dietaryTags: ["vegan", "quick"],
+    cuisineTags: ["chinese"],
     ingredients: [
       { ingredientId: "tofu", displayName: "Extra-firm tofu", quantityNote: "2 blocks" },
       { ingredientId: "jasmine-rice", displayName: "Jasmine rice", quantityNote: "1 bag" },
@@ -182,6 +186,7 @@ export const fixtureRecipes: CatalogRecipeRecord[] = [
     difficulty: "easy",
     tags: ["quick", "family", "budget", "single-store friendly"],
     dietaryTags: [],
+    cuisineTags: ["american", "mexican"],
     ingredients: [
       { ingredientId: "ground-beef", displayName: "Ground beef", quantityNote: "1 lb" },
       { ingredientId: "pinto-beans", displayName: "Pinto beans", quantityNote: "2 cans" },
@@ -207,6 +212,7 @@ export const fixtureRecipes: CatalogRecipeRecord[] = [
     difficulty: "easy",
     tags: ["quick", "family", "single-store friendly"],
     dietaryTags: [],
+    cuisineTags: ["italian"],
     ingredients: [
       { ingredientId: "italian-sausage", displayName: "Italian sausage", quantityNote: "1 lb" },
       { ingredientId: "penne-pasta", displayName: "Penne pasta", quantityNote: "1 box" },

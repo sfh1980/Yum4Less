@@ -35,6 +35,8 @@ export type CatalogRecipeRecord = {
   difficulty: "easy" | "medium";
   tags: string[];
   dietaryTags: Array<"vegetarian" | "vegan" | "quick">;
+  /** Curated R11 cuisine chip ids; empty when unmapped. */
+  cuisineTags: import("@/lib/cuisine-chips").CuisineChipId[];
   ingredients: CatalogRecipeIngredient[];
   steps: string[];
   sourceName?: string;

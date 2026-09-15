@@ -13,6 +13,7 @@ const sampleRecipe: CatalogRecipeRecord = {
   difficulty: "easy",
   tags: [],
   dietaryTags: [],
+  cuisineTags: ["american"],
   ingredients: [
     { ingredientId: "chicken-thighs", displayName: "Chicken thighs", quantityNote: "1.5 lb" },
     { ingredientId: "baby-potatoes", displayName: "Baby potatoes", quantityNote: "1 bag" },

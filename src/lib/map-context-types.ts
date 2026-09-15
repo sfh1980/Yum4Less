@@ -34,8 +34,7 @@ export function isMapContextCatalogStore(store: CatalogStore): boolean {
     isFixtureOsmCatalogSource(store.sourceName) ||
     store.sourceName === OSM_MAP_FIXTURE_SOURCE ||
     store.id.startsWith("snap-") ||
-    store.sourceName === USDA_SNAP_CONTEXT_SOURCE ||
-    (store.id.startsWith("publix-") && store.sourceName === "publix-store-locator")
+    store.sourceName === USDA_SNAP_CONTEXT_SOURCE
   );
 }
 

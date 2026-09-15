@@ -19,6 +19,7 @@ import {
   type ThemealdbImportReport,
   type ThemealdbImportSkipReason,
 } from "@/lib/recipe-import/themealdb-types";
+import { mapThemealdbAreaToCuisineChip } from "@/lib/cuisine-chips";
 
 export type SaleDrivenThemealdbImportOptions = {
   maxPerRun?: number;
@@ -200,6 +201,7 @@ export async function runSaleDrivenThemealdbImport(
     const steps = parseThemealdbInstructions(meal);
     const tags = parseThemealdbTags(meal);
     const summary = buildThemealdbSummary(meal.strCategory, meal.strArea, candidate.saleOverlapCount);
+    const cuisineChip = mapThemealdbAreaToCuisineChip(meal.strArea);
 
     await persistThemealdbRecipe({
       recipeId,
@@ -209,6 +211,7 @@ export async function runSaleDrivenThemealdbImport(
       difficulty,
       tags,
       dietaryTags: inferDietaryTags(tags, mappedLines.map((line) => line.ingredientId)),
+      cuisineTags: cuisineChip ? [cuisineChip] : [],
       steps: steps.length > 0 ? steps : [`Prepare ${meal.strMeal} following TheMealDB instructions.`],
       sourceRecipeId: candidate.idMeal,
       ingredients: mappedLines,
@@ -253,6 +256,7 @@ async function persistThemealdbRecipe(input: {
   difficulty: "easy" | "medium";
   tags: string[];
   dietaryTags: string[];
+  cuisineTags: string[];
   steps: string[];
   sourceRecipeId: string;
   ingredients: Array<{
@@ -278,13 +282,16 @@ async function persistThemealdbRecipe(input: {
           difficulty,
           tags,
           dietary_tags,
+          cuisine_tags,
           steps,
           source_name,
           source_recipe_id,
           eligible_for_ranking
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false)
-        on conflict (id) do nothing
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false)
+        on conflict (id) do update
+        set
+          cuisine_tags = excluded.cuisine_tags
       `,
       [
         input.recipeId,
@@ -294,6 +301,7 @@ async function persistThemealdbRecipe(input: {
         input.difficulty,
         input.tags,
         input.dietaryTags,
+        input.cuisineTags,
         input.steps,
         THEMEALDB_SOURCE_NAME,
         input.sourceRecipeId,
