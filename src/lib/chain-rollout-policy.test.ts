@@ -48,6 +48,12 @@ describe("chain rollout policy", () => {
     expect(inferStoreChainFromName("Harris Teeter")).toBe("kroger");
     expect(inferStoreChainFromName("Food Lion")).toBe("food-lion");
     expect(inferStoreChainFromName("Trader Joe's")).toBe("trader-joes");
+    expect(inferStoreChainFromName("Target Mechanicsville")).toBe("target");
+    expect(inferStoreChainFromCatalog({
+      id: "target-1968",
+      name: "Brandy Creek Target",
+      sourceName: "target-store-locator",
+    })).toBe("target");
   });
 
   it("shows Kroger-family storefronts as their banner, not the family", () => {

@@ -17,6 +17,7 @@ export type StoreChain =
   | "lidl"
   | "trader-joes"
   | "dollar-general"
+  | "target"
   | "unknown";
 
 export type ProviderRolloutStatus =
@@ -43,7 +44,7 @@ export type WeeklyAdRolloutContext = {
 };
 
 /** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
-const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>(["lidl"]);
+const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>(["lidl", "target"]);
 
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
@@ -121,6 +122,15 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     priority: 99,
     note:
       "Dollar General dinner estimates use a packaged/pantry weekly ad when this is the main grocery stop nearby and coverage floors pass. Totals are directional estimates from an area circular — verify in store.",
+  },
+  target: {
+    chain: "target",
+    label: "Target",
+    status: "coming-soon",
+    recommendationEnabled: false,
+    priority: 5,
+    note:
+      "Shown on the map for nearby planning — Target weekly-ad sales can be ingested as directional prices, but dinner totals are not enabled from Target yet.",
   },
   unknown: {
     chain: "unknown",

@@ -140,11 +140,11 @@ describe("market admission helpers", () => {
     expect(isGroceryPinForDensity({ name: "Target", kind: "big-box" })).toBe(true);
   });
 
-  it("groups ranked banners, food-only variety/clubs, and Target as needs-you", () => {
+  it("groups ranked banners and Target weekly-ad as will-ingest; clubs food-only; Giant needs-you", () => {
     expect(classifyOwnerAdmissionGroup("Harris Teeter")).toBe("will-ingest");
     expect(classifyOwnerAdmissionGroup("Dollar General")).toBe("will-ingest");
     expect(classifyOwnerAdmissionGroup("Costco")).toBe("food-only");
-    expect(classifyOwnerAdmissionGroup("Target")).toBe("needs-you");
+    expect(classifyOwnerAdmissionGroup("Target")).toBe("will-ingest");
     expect(classifyOwnerAdmissionGroup("Giant")).toBe("needs-you");
   });
 

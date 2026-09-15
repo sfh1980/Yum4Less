@@ -111,6 +111,7 @@ const CANONICAL_SHOPPER_CHAIN_DISPLAY_NAMES: Partial<Record<StoreChain, string>>
   lidl: "Lidl",
   "trader-joes": "Trader Joe's",
   "dollar-general": "Dollar General",
+  target: "Target",
 };
 
 export function getCanonicalShopperChainDisplayName(
@@ -175,6 +176,9 @@ export function inferStoreChainFromName(storeName: string): StoreChain {
   if (normalized.includes("dollar general")) {
     return "dollar-general";
   }
+  if (normalized.includes("target")) {
+    return "target";
+  }
 
   return "unknown";
 }
@@ -195,6 +199,7 @@ function readCatalogSourceName(
 
 const CATALOG_SOURCE_CHAIN_BY_NAME: Record<string, StoreChain> = {
   "publix-store-locator": "publix",
+  "target-store-locator": "target",
   "kroger-official-api": "kroger",
   "yum4less-market-catalog": "aldi",
 };
@@ -208,12 +213,15 @@ const CATALOG_ID_PREFIX_CHAINS: ReadonlyArray<readonly [RegExp, StoreChain]> = [
   [/^lidl-/, "lidl"],
   [/^trader-joes-/, "trader-joes"],
   [/^dollar-general-/, "dollar-general"],
+  [/^target-/, "target"],
   [/^bjs-/, "bjs"],
 ];
 
 const KNOWN_WEEKLY_AD_SOURCE_CHAINS = new Set<string>([
   ...WEEKLY_AD_RANKED_PRICING_CHAINS,
   "dollar-general",
+  "lidl",
+  "target",
 ]);
 
 function isKnownStoreChain(value: string): value is StoreChain {
@@ -301,6 +309,11 @@ export function getCoordinateSanityPromotionRequirement(
       return {
         required: false,
         note: "Dollar General uses the same weekly-ad coverage floors; dinners also require no other ranked grocer nearby. Coordinate sanity is a catalog audit.",
+      };
+    case "target":
+      return {
+        required: false,
+        note: "Target weekly-ad ingest is store-bound but dinners stay off; coordinate sanity is a catalog audit, not a dinner-promotion gate.",
       };
     default:
       return {

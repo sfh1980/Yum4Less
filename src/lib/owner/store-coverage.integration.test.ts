@@ -50,7 +50,13 @@ describe("chain_registry and store_coverage (integration)", () => {
     expect(registry.find((row) => row.chainId === "dollar-general")?.rolloutStage).toBe(
       "ranked",
     );
-    expect(registry.find((row) => row.chainId === "target")?.rolloutStage).toBe("upcoming");
+    expect(registry.find((row) => row.chainId === "target")?.rolloutStage).toBe(
+      "ingest_only",
+    );
+    expect(registry.find((row) => row.chainId === "target")?.weeklyAdEligible).toBe(
+      true,
+    );
+    expect(registry.find((row) => row.chainId === "target")?.shopperRanked).toBe(false);
     const rankedIds = registry
       .filter((row) => row.shopperRanked)
       .map((row) => row.chainId);

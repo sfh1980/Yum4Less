@@ -62,6 +62,12 @@ const CHAIN_MARKER_STYLES: Record<StoreChain, StoreMarkerStyle> = {
     textColor: "#000000",
     borderColor: "#993556",
   },
+  target: {
+    abbreviation: "T",
+    backgroundColor: "#cc0000",
+    textColor: "#ffffff",
+    borderColor: "#993556",
+  },
   unknown: {
     abbreviation: "?",
     backgroundColor: "#4a5568",

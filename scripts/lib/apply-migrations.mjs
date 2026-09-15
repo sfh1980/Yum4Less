@@ -236,6 +236,20 @@ export function migrationEffectPresent(version, db) {
           ),
         ) === 1
       );
+    case "032":
+      return (
+        db.tableExists("chain_registry") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from chain_registry
+             where chain_id = 'target'
+               and weekly_ad_eligible = true
+               and shopper_ranked = false
+               and rollout_stage = 'ingest_only'
+               and weekly_ad_adapter = 'target-weekly-ad'`,
+          ),
+        ) === 1
+      );
     default:
       return false;
   }

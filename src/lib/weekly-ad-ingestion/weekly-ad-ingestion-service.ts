@@ -10,6 +10,7 @@ import { createPublixWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/p
 import { createKrogerWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/kroger-weekly-ad-ingestion";
 import { createLidlWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/lidl-weekly-ad-ingestion";
 import { createDollarGeneralWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/dollar-general-weekly-ad-ingestion";
+import { createTargetWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/target-weekly-ad-ingestion";
 import { createWalmartWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/walmart-weekly-ad-ingestion";
 import {
   groupWeeklyAdIngestStoresByChain,
@@ -60,6 +61,7 @@ export function getWeeklyAdIngestionClients(): WeeklyAdIngestionClient[] {
     createWalmartWeeklyAdIngestionClient(),
     createLidlWeeklyAdIngestionClient(),
     createDollarGeneralWeeklyAdIngestionClient(),
+    createTargetWeeklyAdIngestionClient(),
   ];
 }
 

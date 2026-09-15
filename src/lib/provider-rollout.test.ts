@@ -52,6 +52,15 @@ describe("provider rollout", () => {
     expect(rollout.note).not.toContain("saved sale prices");
   });
 
+  it("labels Target as map context with dinners off", () => {
+    const rollout = getProviderRolloutForStore("Target Mechanicsville");
+
+    expect(rollout.chain).toBe("target");
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toMatch(/dinner totals are not enabled|not available/i);
+  });
+
   it("lists catalog rollout entries for shopper-facing chains", () => {
     expect(listProviderRollout().map((provider) => provider.chain)).toEqual([
       "kroger",

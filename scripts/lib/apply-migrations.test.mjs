@@ -216,6 +216,18 @@ describe("migrationEffectPresent", () => {
             : "0",
       }),
     ).toBe(true);
+    expect(
+      migrationEffectPresent("032", {
+        ...db,
+        tableExists: (name) => name === "chain_registry",
+        queryScalar: (sql) =>
+          sql.includes("chain_id = 'target'") &&
+          sql.includes("weekly_ad_eligible = true") &&
+          sql.includes("ingest_only")
+            ? "1"
+            : "0",
+      }),
+    ).toBe(true);
   });
 
   it("has an effect probe for every db/init migration file", () => {

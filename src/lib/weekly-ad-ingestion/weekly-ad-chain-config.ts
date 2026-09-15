@@ -96,6 +96,15 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
     termsNote:
       "Dollar General weekly-ad offers use the Flipp syndicated feed first (ZIP circular, not this building's shelf). Direct pages wrap a Flipp embed. Prices are directional packaged/pantry sales — verify in store before checkout.",
   },
+  {
+    chain: "target",
+    label: "Target weekly ad ingestion",
+    implementation: "live-scraper",
+    fetchStrategy: "http",
+    researchTargets: ["https://www.target.com/weekly-ad"],
+    termsNote:
+      "Target weekly-ad offers use the public store locator + promotions JSON (not Flipp; not visible HTML). Prices are directional store circulars — dinners stay off until membership floors pass. The guest API key can rotate or block datacenter IPs. Verify in store before checkout.",
+  },
 ];
 
 export function getWeeklyAdChainConfig(

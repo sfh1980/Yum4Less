@@ -84,7 +84,6 @@ const PHARMACY_NAME_FRAGMENTS = ["cvs", "walgreens", "rite aid", "riteaid"] as c
 const CLUB_NAME_FRAGMENTS = ["costco", "sam's club", "sams club", "bj's", "bjs"] as const;
 
 const NEEDS_YOU_NAME_FRAGMENTS = [
-  "target",
   "giant",
   "wegmans",
   "safeway",
@@ -96,6 +95,7 @@ const NEEDS_YOU_NAME_FRAGMENTS = [
 
 const CONTEXT_GROCER_NAME_FRAGMENTS = [
   "whole foods",
+  "target",
   ...NEEDS_YOU_NAME_FRAGMENTS,
   ...CLUB_NAME_FRAGMENTS,
 ] as const;

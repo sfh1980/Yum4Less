@@ -23,7 +23,7 @@ describe("weekly ad ingestion service", () => {
     }
   });
 
-  it("registers live scrapers for seven configured chains including Dollar General", () => {
+  it("registers live scrapers for eight configured chains including Target", () => {
     const clients = getWeeklyAdIngestionClients();
 
     expect(clients.map((client) => client.chain)).toEqual([
@@ -34,6 +34,7 @@ describe("weekly ad ingestion service", () => {
       "walmart",
       "lidl",
       "dollar-general",
+      "target",
     ]);
     expect(clients.find((client) => client.chain === "aldi")?.configured).toBe(true);
     expect(clients.find((client) => client.chain === "food-lion")?.configured).toBe(true);
@@ -44,6 +45,7 @@ describe("weekly ad ingestion service", () => {
     expect(clients.find((client) => client.chain === "dollar-general")?.configured).toBe(
       true,
     );
+    expect(clients.find((client) => client.chain === "target")?.configured).toBe(true);
   });
 
   it("parses and matches Aldi fixture offers for tracked ingredients", async () => {

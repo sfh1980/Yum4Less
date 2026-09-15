@@ -49,16 +49,16 @@ This is the **active coverage bucket**. Thin sale data keeps pins tracked; dinne
 | **Shipped 2026-09-15** | Pause walmart.com HTML scrape when Flipp has offers (Food Lion shape; Walmart keeps its own fetcher/parser). Do not add stealth browsers or paid residential proxies |
 | Do not | Claim more Walmart dinners; bypass WAF; hardcode store numbers |
 
-### 2.2 Target (no adapter)
+### 2.2 Target (adapter shipped; dinners off)
 
 | State | Detail |
 |---|---|
-| Registry | `upcoming`, `map_catalog_only`. Shoppers can pick a Target pin when OSM/catalog shows one. No weekly-ad adapter. Not `shopper_ranked` |
-| Flipp | No real Target circular in `23111` (`q=Target` hits “Targeted Relief” noise) |
-| Research (2026-09-07) | Playwright opens `target.com/weekly-ad` without a robot wall. Visible HTML has no SKUs. Network JSON `api.target.com/weekly_ads/v1/store_promotions?store_id=` + `promotions/{id}` has food sale lines. ZIP locator: **23111 → store `1968`**, 7235 Bell Creek Rd. Other ZIPs must call the locator — **never hardcode `1968`** |
-| Smallest slice | ZIP/coords → locator → persist `source_store_id` on the catalog pin → parse promotions JSON → shared matcher/junk path → directional `price_observations`. Dinners stay off until floors + membership |
-| Guest API | Unofficial frontend key; can rotate or block datacenter IPs. Same class of risk as other scrapes |
-| Do not | Flip `shopper_ranked` in the same slice; copy a Walmart stealth stack |
+| Registry | `ingest_only` via `032` — `weekly_ad_eligible=true`, **`shopper_ranked=false`**. Shoppers can pick a Target pin when OSM/catalog shows one. Not dinner totals |
+| Flipp | No real Target circular in `23111` (`q=Target` hits “Targeted Relief” noise) — not used |
+| **Shipped 2026-09-15** | ZIP-generic locator (`nearby_stores_v1`) → persist `source_store_id` → `store_promotions` + `promotions/{id}` JSON → shared junk/matcher → directional `price_observations` (`target-weekly-ad-scrape`). Fail-soft. Fixture path for CI |
+| Hard rule | Never hardcode store `1968` (23111 example only). Probe override: `TARGET_STORE_NUMBER` |
+| Guest API | Unofficial frontend key (`TARGET_API_KEY` optional; public web key fallback). Can rotate or block datacenter IPs |
+| Do not | Flip `shopper_ranked` without floors + membership; copy a Walmart stealth stack |
 
 ### 2.3 BJ’s (no ranked adapter)
 
@@ -84,7 +84,7 @@ Ordered as product next, then identity, then API honesty, then new-chain queue.
 
 | Slice | What is left | Status | Suggested owner |
 |---|---|---|---|
-| **Target ingest adapter** | ZIP-generic locator + promotions JSON parser + catalog `source_store_id`; shared junk/matcher; fail-soft; tests. No hardcoded store id | Research done; **not implemented** | `@ingest-standards` |
+| **Target ingest adapter** | ZIP-generic locator + promotions JSON parser + catalog `source_store_id`; shared junk/matcher; fail-soft; tests. No hardcoded store id | **Closed** 2026-09-15 (dinners still off) | `@ingest-standards` |
 | **Walmart Flipp-only scrape skip** | If Flipp returns offers, skip retailer HTML (match Food Lion shape; Walmart keeps own fetcher/parser) | **Closed** 2026-09-15 | `@ingest-standards` |
 | **BJ’s yield / adapter** | Confirm Flipp circular; decide map-context vs ingest-only vs later ranked | Not started | `@ingest-standards` |
 | **Option A Slice D** | Batch proximity/name matcher at ingest. Unblocks safer identity expand beyond the Aldi allowlist | **Open.** Slices 1–6 closed 2026-07-11. Flags `YUM4LESS_STORE_IDENTITY_EXPAND` and `AUTO_CONFIRM` stay **OFF** | `@database-codegen-standards` |
@@ -184,7 +184,7 @@ Upcoming / map-context banners in `chain_registry` (no adapter work implied): Wh
 Keep these next to the coverage bucket so they are not lost in chat:
 
 1. **Database-owned data rule** — **shipped** (`.cursor/rules/yum4less-db-owned-data.mdc` + session hook). Promotion floors and name-fragment lists were **not** migrated.
-2. **Target store bind is ZIP-generic** — locator + `store_promotions?store_id=`; Mechanicsville example is `1968`.
+2. **Target store bind is ZIP-generic** — **shipped 2026-09-15:** locator + `store_promotions?store_id=`; Mechanicsville example is `1968` (never hardcoded).
 3. **Walmart HTML scrape is not beating Flipp** — **shipped 2026-09-15:** pause scrape when Flipp has offers (Food Lion shape).
 4. **Do not** add Camoufox / Patchright / curl_cffi / SeleniumBase / Botasaurus / paid residential proxy as the default ingest layer.
 5. **Camoufox / Patchright / curl_cffi were not live-tested** in that session (not installed).
@@ -205,13 +205,13 @@ Keep these next to the coverage bucket so they are not lost in chat:
 
 Use this only as a negative checklist. Detail stays in Resume.
 
-Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), Scale risk B empty-vs-unavailable API+UI (**2026-09-15**), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
+Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), Scale risk B empty-vs-unavailable API+UI (**2026-09-15**), Target weekly-ad ingest adapter dinners-off (**2026-09-15**, `032`), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
 
 ---
 
 ## 10. Suggested pick-up order
 
-1. Product: **Target ZIP-generic ingest adapter** (dinners off), or BJ’s Flipp confirm.
+1. Product: **BJ’s Flipp confirm** (or next yield work). Target adapter is shipped (dinners off).
 2. Ops: TheMealDB **production key** when you have one (not a merge gate).
 3. Then Slice D / Publix Q1 if coverage is paused.
 4. Leave accounts, cuisine, go/no-go, and M128 automation until you reprioritize.
