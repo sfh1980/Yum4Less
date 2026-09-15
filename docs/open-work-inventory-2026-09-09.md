@@ -6,7 +6,7 @@ Point-in-time list of **open tasks, slices, and ops**. Compiled from [`PROJECT_C
 
 GitHub issues on `sfh1980/Yum4Less`: **0 open** (checked 2026-09-09). Tracking lives in Resume / Home / this inventory.
 
-Last live TrueNAS paste-back in Resume: **2026-09-15** (Clear obvious ops **closed**; app+ingest `:homelab` created **2026-09-14 21:43Z** after `d3e9396`). Prior SQL snapshot **2026-09-14** (`chain_registry` 18 banners; Walmart in-stock **19/19** in 24h; DG/Lidl **0**; ledger **000–013, 015–031**).
+Last live TrueNAS paste-back in Resume: **2026-09-15** (Clear obvious ops **closed**; app+ingest `:homelab` created **2026-09-14 21:43Z** after `d3e9396`). Prior SQL snapshot **2026-09-14** (`chain_registry` 18 banners; Walmart in-stock **19/19** in 24h; DG/Lidl **0**; ledger **000–013, 015–031**). Docs refresh **2026-09-15:** BJ’s Flipp confirm (map/context); Bright Data MCP **paused**.
 
 ---
 
@@ -65,8 +65,10 @@ This is the **active coverage bucket**. Thin sale data keeps pins tracked; dinne
 | State | Detail |
 |---|---|
 | Role | Map/context or upcoming. Display-only in provider catalog. Same yield bucket as Target |
-| Work | No BJ’s weekly-ad adapter started. Flipp may list BJ’s as a merchant in `23111` (seen in Target-research Flipp merchant lists) — confirm before building |
-| Do not | Treat club pins as ranked dinners without floors + membership |
+| Flipp (`23111`, 2026-09-15) | Merchant **BJ's Wholesale Club** present; ~150 Smart Saver items; mostly **$X off** / Instant Savings; only a handful of food lines with absolute `current_price`. Usable for map/context research; **not** dinner-ready |
+| Bright Data | Local MCP may be configured; **usage paused 2026-09-15** (free tier not useful for coverage; BJ’s shelf prices not obtained). Do not plan adapters on Bright Data |
+| Work | No BJ’s weekly-ad adapter. Stay map/context unless absolute-price coverage improves on free stack (Flipp) |
+| Do not | Treat club pins as ranked dinners without floors + membership; spend Bright Data credits on BJ’s collection |
 
 ### 2.4 Adjacent coverage (not the next dinner chase)
 
@@ -86,7 +88,7 @@ Ordered as product next, then identity, then API honesty, then new-chain queue.
 |---|---|---|---|
 | **Target ingest adapter** | ZIP-generic locator + promotions JSON parser + catalog `source_store_id`; shared junk/matcher; fail-soft; tests. No hardcoded store id | **Closed** 2026-09-15 (dinners still off) | `@ingest-standards` |
 | **Walmart Flipp-only scrape skip** | If Flipp returns offers, skip retailer HTML (match Food Lion shape; Walmart keeps own fetcher/parser) | **Closed** 2026-09-15 | `@ingest-standards` |
-| **BJ’s yield / adapter** | Confirm Flipp circular; decide map-context vs ingest-only vs later ranked | Not started | `@ingest-standards` |
+| **BJ’s yield / adapter** | Flipp confirm done (thin absolute prices). Stay map/context; no adapter. Bright Data paused | **Flipp confirm done** 2026-09-15; adapter deferred | `@ingest-standards` |
 | **Option A Slice D** | Batch proximity/name matcher at ingest. Unblocks safer identity expand beyond the Aldi allowlist | **Open.** Slices 1–6 closed 2026-07-11. Flags `YUM4LESS_STORE_IDENTITY_EXPAND` and `AUTO_CONFIRM` stay **OFF** | `@database-codegen-standards` |
 | **Wave 2 Q1 (Publix)** | Policy locked **Q1=1B**: Publix locator pins are Settings-selectable catalog. Code: remove Publix from `isMapContextCatalogStore`; merge/suppress tests; Settings+map smoke | **Not started** (policy 2026-07-16) | `@web-frontend-standards` |
 | **Scale risk B** | Shared `assertMarketDataAvailable()` + honest 503 / UI outage surfaces so DB outage is never “no stores” | **Closed** 2026-09-15 | `@web-backend-standards` |
@@ -205,13 +207,13 @@ Keep these next to the coverage bucket so they are not lost in chat:
 
 Use this only as a negative checklist. Detail stays in Resume.
 
-Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), Scale risk B empty-vs-unavailable API+UI (**2026-09-15**), Target weekly-ad ingest adapter dinners-off (**2026-09-15**, `032`), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
+Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), Scale risk B empty-vs-unavailable API+UI (**2026-09-15**), Target weekly-ad ingest adapter dinners-off (**2026-09-15**, `032`), BJ’s Flipp confirm + **Bright Data MCP usage paused** (**2026-09-15**, docs only), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
 
 ---
 
 ## 10. Suggested pick-up order
 
-1. Product: **BJ’s Flipp confirm** (or next yield work). Target adapter is shipped (dinners off).
+1. Product: Next Flipp/scrape yield work (Walmart thin coverage). BJ’s Flipp confirm **done** (map/context; thin prices). Target adapter shipped (dinners off). Bright Data **paused**.
 2. Ops: TheMealDB **production key** when you have one (not a merge gate).
 3. Then Slice D / Publix Q1 if coverage is paused.
 4. Leave accounts, cuisine, go/no-go, and M128 automation until you reprioritize.

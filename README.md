@@ -282,7 +282,7 @@ Integration tests use port **5433** and run `db:up` when needed. Force a fresh v
 
 ### Cursor agents and MCP
 
-Agent checklists, Playwright MCP flow, and MCP setup → [`AGENTS.md`](AGENTS.md). Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tokens.
+Agent checklists, Playwright MCP flow, and MCP setup → [`AGENTS.md`](AGENTS.md). Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` locally; never commit tokens. **Bright Data** may appear in local MCP config; **usage is paused** (2026-09-15) — see `AGENTS.md` / Decision log. Free Flipp + existing scrapers/APIs remain the coverage path.
 
 ---
 

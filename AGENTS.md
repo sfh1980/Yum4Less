@@ -69,6 +69,7 @@ Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) → `.cursor/mcp.jso
 | **github** | PR checks, workflow failures, release-status claims | Docker + [`.cursor/hooks/github-mcp.ps1`](.cursor/hooks/github-mcp.ps1): uses `GITHUB_PERSONAL_ACCESS_TOKEN` if set, else `gh auth token`; prefer `gh` for writes |
 | **semgrep** | Security/dependency/secrets review; agent-written code scan | Local `semgrep` CLI; hooks advisory if missing |
 | **context7** | Current library/framework docs when API uncertainty | Optional `CONTEXT7_API_KEY` |
+| **brightdata** | **Paused (2026-09-15).** Local MCP may still be configured; **do not** use for ingest, chain adapters, or routine probes until the owner unpauses. Free tier (~5k req/mo) is research-only and not useful for Yum4Less coverage; paid tier not planned. | Hosted `url` in gitignored `.cursor/mcp.json` (`https://mcp.brightdata.com/mcp?token=…`) or local `npx @brightdata/mcp` with `API_TOKEN`; **never commit the token**; not a CI merge gate or nightly ingest path |
 
 Read each tool schema under `mcps/<server>/tools/` before calling MCP tools.
 

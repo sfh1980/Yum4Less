@@ -43,6 +43,9 @@
         "-y",
         "@upstash/context7-mcp"
       ]
+    },
+    "brightdata": {
+      "url": "https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN"
     }
   }
 }
