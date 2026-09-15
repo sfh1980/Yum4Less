@@ -79,6 +79,8 @@ describe("walmart weekly ad ingestion", () => {
         html: `<script id="weekly-ad-offers-data">[{"productName":"Great Value Bread","price":1.28}]</script>`,
         method: "browser" as const,
         networkJsonBodies: [],
+        waitSelectorMatched: true,
+        attempts: 1,
       });
 
     const client = createWalmartWeeklyAdIngestionClient();
