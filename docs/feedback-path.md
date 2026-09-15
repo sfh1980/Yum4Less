@@ -8,7 +8,7 @@ Yum4Less keeps **first-party analytics** separate from customer feedback. Analyt
 | --- | --- | --- |
 | In-app feedback form (`/feedback`) | Bug reports, wrong-price reports, general product feedback | Implemented (disabled by default; enable with `YUM4LESS_FEEDBACK_ENABLED=1`) |
 | Admin list API (`GET /api/feedback`) | Owner reads recent rows with `YUM4LESS_FEEDBACK_ADMIN_KEY` | Implemented |
-| Owner console (`/owner`) | Key-gated UI with tabs for weekly-ad ingredient Yes/No (map or create food ids), ingest markets, store coverage, user feedback, and Postgres analytics events | Implemented (same admin key; not linked from shopper nav; `noindex`) |
+| Owner console (`/owner`) | Key-gated UI with tabs for weekly-ad ingredient Yes/No (map or create food ids), ingest markets, store coverage, user feedback, and Postgres analytics events | Implemented (same admin key; not linked from shopper nav; page `noindex`; site `robots.ts` also disallows `/owner`) |
 | Public recent-feedback feed on `/feedback` | — | **Removed** from shopper UI (2026-08-04) |
 | Analytics transparency panel on `/feedback` | — | **Removed** from shopper UI (2026-08-04); ops detail stays in this doc / env |
 | Email or support inbox | Complaints and account-free MVP contact | Planned (owner choice) |
