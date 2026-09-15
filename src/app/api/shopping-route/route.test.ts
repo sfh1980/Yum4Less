@@ -125,6 +125,32 @@ describe("POST /api/shopping-route", () => {
     expect(buildMultiStoreShoppingRoute).not.toHaveBeenCalled();
   });
 
+  it("returns 503 when route planning throws", async () => {
+    buildMultiStoreShoppingRoute.mockRejectedValue(new Error("OSRM down"));
+
+    const response = await POST(
+      new Request("http://localhost/api/shopping-route", {
+        method: "POST",
+        body: JSON.stringify({
+          home: { latitude: 37.6085, longitude: -77.3321 },
+          stores: [
+            {
+              storeName: "Kroger",
+              latitude: 37.6652,
+              longitude: -77.3651,
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: "Shopping route planning is temporarily unavailable.",
+    });
+  });
+
   it("returns 429 with Retry-After when the shopping-route rate limit is exceeded", async () => {
     const request = new Request("http://localhost/api/shopping-route", {
       method: "POST",

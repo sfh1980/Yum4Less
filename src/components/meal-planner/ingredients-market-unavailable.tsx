@@ -1,11 +1,25 @@
 "use client";
 
+import { ServiceUnavailablePanel } from "@/components/service-unavailable-panel";
 import type { MarketSearchState } from "@/components/meal-planner/types";
 
 type IngredientsMarketUnavailableProps = {
   marketSearchLoading: boolean;
   marketSearchState: MarketSearchState;
 };
+
+function looksLikeInfrastructureOutage(error: string | undefined): boolean {
+  if (!error) {
+    return false;
+  }
+  const normalized = error.toLowerCase();
+  return (
+    normalized.includes("not loading") ||
+    normalized.includes("temporarily unavailable") ||
+    normalized.includes("database") ||
+    normalized.includes("postgres")
+  );
+}
 
 /**
  * Home Ingredients gate when no scoped market is available.
@@ -27,6 +41,22 @@ export function IngredientsMarketUnavailable({
   }
 
   if (marketSearchState.status === "error") {
+    if (looksLikeInfrastructureOutage(marketSearchState.error)) {
+      return (
+        <ServiceUnavailablePanel
+          title="Ingredients aren't loading"
+          body={
+            marketSearchState.error ??
+            "Sale ingredients need saved store prices. This is usually a temporary outage — not an empty ZIP."
+          }
+          hint={
+            marketSearchState.errorHint ??
+            "Wait a moment and try again from Settings or Deals."
+          }
+        />
+      );
+    }
+
     return (
       <div className="panel panel-padding meal-planner-panel flow-panel">
         <h2>Ingredients</h2>

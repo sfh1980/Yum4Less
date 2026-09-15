@@ -60,6 +60,17 @@ describe("recommendation error copy", () => {
     expect(mapped.hint).toMatch(/GEOCODIO|geolocation|continental US ZIP/i);
   });
 
+  it("maps recommendation 503 to database-outage copy, not empty-area guidance", () => {
+    const mapped = mapRecommendationApiError({
+      httpStatus: 503,
+      error: "Store and meal prices are not loading right now. Try again shortly.",
+    });
+
+    expect(mapped.title).toMatch(/aren't loading|not loading/i);
+    expect(mapped.body).toMatch(/outage|not.*no stores/i);
+    expect(mapped.hint).toMatch(/Postgres|try again/i);
+  });
+
   it("maps recommendation 500 to temporary outage copy", () => {
     const mapped = mapRecommendationApiError({
       httpStatus: 500,
@@ -67,6 +78,16 @@ describe("recommendation error copy", () => {
     });
 
     expect(mapped.title).toMatch(/temporarily unavailable/i);
+  });
+
+  it("maps market-search 503 to infrastructure copy", () => {
+    const mapped = mapMarketSearchApiError({
+      httpStatus: 503,
+      error: "Store and meal prices are not loading right now. Try again shortly.",
+    });
+
+    expect(mapped.title).toMatch(/temporarily unavailable/i);
+    expect(mapped.body).toMatch(/database|not the same as finding zero stores/i);
   });
 
   it("maps market-search 404 location failures near results guidance", () => {

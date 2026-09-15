@@ -268,7 +268,7 @@ describe("MealPlanner", () => {
 
     expect(
       screen.getByRole("alert").textContent,
-    ).toMatch(/Store and meal prices are not loading right now/i);
+    ).toMatch(/not the same as finding zero stores|temporary outage|aren't loading|database/i);
     expect(screen.queryByText(/Adjust the location search first/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Try a larger radius/i)).not.toBeInTheDocument();
   }, 15_000);

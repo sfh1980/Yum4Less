@@ -40,6 +40,23 @@ describe("IngredientsMarketUnavailable", () => {
     );
   });
 
+  it("shows infrastructure outage copy when prices are not loading", () => {
+    render(
+      createElement(IngredientsMarketUnavailable, {
+        marketSearchLoading: false,
+        marketSearchState: buildErrorMarketSearchState(
+          "Store and meal prices are not loading right now. Try again shortly.",
+        ),
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Ingredients aren't loading" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/not loading right now/i);
+    expect(screen.getByRole("alert").textContent).not.toMatch(/Complete Settings/i);
+  });
+
   it("shows fallback alert text when error message is missing", () => {
     render(
       createElement(IngredientsMarketUnavailable, {

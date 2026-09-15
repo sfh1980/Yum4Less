@@ -96,7 +96,7 @@ describe("GET /api/geocode/zip", () => {
     });
   });
 
-  it("returns 500 and logs when geocoding throws", async () => {
+  it("returns 503 and logs when geocoding throws", async () => {
     const logSpy = vi.spyOn(serverLog, "logServerError").mockImplementation(() => {});
     resolveZipLocation.mockRejectedValue(new Error("upstream unavailable"));
 
@@ -104,7 +104,7 @@ describe("GET /api/geocode/zip", () => {
       new Request("http://localhost/api/geocode/zip?zip=23111"),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({
       ok: false,
       error: "ZIP lookup is temporarily unavailable.",

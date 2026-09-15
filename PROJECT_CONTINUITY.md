@@ -34,6 +34,7 @@
 
 ### Working today (honest)
 
+- **Scale risk B empty-vs-unavailable (2026-09-15, closed):** Shared `assertMarketDataAvailable` + 503 JSON on market-backed shopper reads; honest `ServiceUnavailablePanel` / `error.tsx` / `global-error.tsx`; client 503 copy distinguishes outage from empty radius. Live after app Watchtower pull. Mid-request TheMealDB can still 500. Does **not** claim more dinners.
 - **Walmart Flipp-first scrape skip (2026-09-15):** Same operating shape as Food Lion — Flipp first; walmart.com scrape only if Flipp is empty. Walmart keeps its own page fetcher/parser. Does **not** claim more dinners.
 - **Website `robots.ts` (2026-09-15, closed):** `src/app/robots.ts` disallows `/owner` and `/api/` for crawlers. Not a lock on `/owner` (admin key still required). Optional live check after Watchtower: body should include `Disallow: /owner`. Do **not** claim people who know the URL cannot open it.
 - **Leftover grocery / Clear obvious on live (2026-09-15, ops closed):** App + ingest `:homelab` created **2026-09-14 21:43Z** after `d3e9396` publish. Planner + **Clear obvious** confirmed on the box. Dry-run **yes=3 no=0 skip=34**. Owner monitors Ingredient review as needed; skip titles stay human. Do **not** SQL-reject. Do **not** claim more dinners.
@@ -271,6 +272,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-09-15 — Scale risk B: empty-vs-unavailable API + UI (closed)
+
+**Theme:** Postgres / dependency outages must read as temporarily unavailable — never as “no stores in your area.”
+
+**Shipped:** Shared `assertMarketDataAvailable` + `dependencyUnavailableResponse` (`src/lib/market-data-availability.ts`) on market-search, recommendations, pantry-coverage, and debug pipeline. Shopper-facing 503 copy on geocode / shopping-route / analytics failures. `ServiceUnavailablePanel` + rewritten `error.tsx` / new `global-error.tsx`. Client 503 mappers keep empty-vs-unavailable wording even when the API body is short. Ingredients Home uses the same panel on infrastructure 503. Inventory Scale risk B **closed**.
+
+**Limits:** Mid-request TheMealDB failures can still 500. Shopping-route never read Postgres (inventory example was stale) — it now returns 503 on planner throws. Scale risk A (client-trust audit) stays deferred. Live after app Watchtower pull.
+
+**Evidence:** this session `npm test` **1259/1259** (221 files). Did not run `test:e2e:ci` (no Playwright flow wiring change beyond error boundaries).
 
 ### 2026-09-15 — Walmart Flipp-first scrape skip (Food Lion shape)
 
@@ -3198,6 +3209,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | TrueNAS live SQL (`chain_registry` / Walmart·DG·Lidl / ledger) | 2026-09-14 | Ranked: kroger, aldi, publix, food-lion, walmart, dollar-general. Lidl `map_context`. Walmart **19/19** in 24h. DG/Lidl **0**. Migrations **000–013, 015–031**. |
 | TrueNAS `yum4less-app` store-list omit (`fas mart`) | 2026-09-14 | `:homelab` created **2026-09-14T19:43:47Z**. Grep hits `page.js` + two chunks. |
 | TrueNAS `ingest_jobs` 3am + worker (15 nights) | 2026-09-14 | **2026-08-31 through 2026-09-14**: each night **6 jobs / 6 succeeded / 0 failed**; `first_queued` ~**07:00:03Z**. |
+| `npm test` (Scale risk B empty-vs-unavailable) | 2026-09-15 | **1259/1259** pass (221 files) |
 | `npm test` (Walmart Flipp-first scrape skip) | 2026-09-15 | **1251/1251** pass (220 files) |
 | `npm test` (obvious grocery ingest + Clear obvious) | 2026-09-14 | **1246/1246** pass (218 files) |
 | `npm run build` (owner review POST `clear-obvious`) | 2026-09-14 | **Pass** (Next.js 15.5.25) |
@@ -3478,11 +3490,11 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | Spoonacular / Edamam rankings | Research-only; license + alignment gates — not shopper UI |
 | **Live near-miss confidence analysis** | Before changing the 0.55 weekly-ad match threshold or expanding the ingredient catalog, run a targeted live-data diagnostic per chain on offers in the 0.35-0.55 confidence band. This confirms whether filtered-out weekly-ad items are legitimate near-misses before threshold or catalog changes lock in extra noise. |
 | **Ingredient catalog expansion (pending near-miss analysis)** | **SUPERSEDED (2026-08-22)** — Catalog now grows from weekly-ad ingest + owner Yes/No, not from a one-shot near-miss list. Rotisserie/salad-kit candidates remain out of scope (junk/assembly meals). Live near-miss analysis still applies before changing the **0.55** persist threshold. |
-| **assertMarketDataAvailable() shared helper** | The DB-availability check is still repeated per-route. Extract it into a tiny shared helper alongside the next route addition so empty-vs-unavailable behavior cannot drift again across read APIs. |
+| **assertMarketDataAvailable() shared helper** | **CLOSED (2026-09-15)** — `src/lib/market-data-availability.ts`; wired on market-search / recommendations / pantry-coverage / debug pipeline. |
 | **Store geographic breakdown audit** | Run a read-only Postgres query against `stores` to see whether the current 288 discovered rows are concentrated in Virginia or already spread across multiple states/regions. This should inform how much existing map/discovery head start Yum4Less has before expanding `YUM4LESS_INGEST_ZIPS`. |
 | **Bootstrap seed data provenance audit** | Confirm whether bootstrap rows in `yum4less_dev` carry a distinct `source_name` that separates hand-planted/CI bootstrap stores from real discovered stores. If not, add one in the bootstrap SQL so the app and future audits can distinguish seed rows from real discovery coverage. |
 | **Scale risk A — Client-trust audit across all public API routes** | From trust pass-through hardening (2026-07-01): only the rank pass-through path was hardened; other routes or client-supplied fields may still influence trust display without server-side recomputation. Systematic audit of all public API responses for client-controllable trust-sensitive fields deferred — should precede any significant traffic increase or public launch. Suggested owner: `@verifier` + `@web-backend-standards` |
-| **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | From DB outage 503 fix (2026-07-01): `/api/market-search` now consistent with `/api/recommendations`; other read routes (e.g. `/api/shopping-route`) may still return HTTP 200 + empty on DB outage, indistinguishable from genuine empty results. Audit and align remaining routes before homelab goes live. Suggested owner: `@web-backend-standards` |
+| **Scale risk B — Empty-vs-unavailable semantics on remaining API routes** | **CLOSED (2026-09-15)** — Shared helper + 503 on market-backed reads; geocode/shopping-route/analytics return 503 on throws; honest UI error panels. Shopping-route never used Postgres (stale inventory example). Mid-request TheMealDB can still 500. |
 | **General locator-vs-OSM dedupe across all v1 chains (Option A)** | **IN PROGRESS** — Slice 1–6 **CLOSED** (2026-07-11; 5a/5b/5c + onboarding); Slice D open | Alias-graph. **5c:** ingest self-alias + allowlisted Aldi→OSM pointer; flags + `AUTO_CONFIRM` **OFF**. **Safety boundary until Slice D:** no proximity/name matcher at ingest; allowlist is temporary, not permanent per-chain policy. **6:** [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md). **Not yet:** Slice D batch matcher. |
 | **e2e `single-store-map-overlay` mobile viewport flake** | **CLOSED (2026-07-16 Wave 1b)** | Historical CI: accordion not found at `:76` after false heading sync (Option A Slices 1–4 / Tier 1 Passes 1–4). **Pass 5 portal did not fix this** (pre-overlay). Post–Pass 5 remote flaky reports shifted to **mvp-flow / Cook-tab rank-wait** (closed in Wave 1a). Wave 1b: shared rank waiter + loud empty-meals assert. |
 | **e2e Cook tab / `navigation-theme` local flake** | **CLOSED (2026-07-16 Wave 1a)** | Same family as mvp-flow rank-wait — shared `waitForRecommendationsAfterSuggest` (no status-in-predicate; loud non-200; Promise.all; 60s rank timeout). |

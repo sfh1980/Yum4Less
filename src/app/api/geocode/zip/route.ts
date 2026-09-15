@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       "api.geocode.zip",
       error,
       "ZIP lookup is temporarily unavailable.",
+      503,
     );
   }
 }

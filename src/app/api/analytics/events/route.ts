@@ -51,6 +51,7 @@ export async function GET(request: Request) {
       "api.analytics.events.GET",
       error,
       "Recent analytics events could not be loaded.",
+      503,
     );
   }
 }

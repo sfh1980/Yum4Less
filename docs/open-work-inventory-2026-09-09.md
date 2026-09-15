@@ -89,7 +89,7 @@ Ordered as product next, then identity, then API honesty, then new-chain queue.
 | **BJ’s yield / adapter** | Confirm Flipp circular; decide map-context vs ingest-only vs later ranked | Not started | `@ingest-standards` |
 | **Option A Slice D** | Batch proximity/name matcher at ingest. Unblocks safer identity expand beyond the Aldi allowlist | **Open.** Slices 1–6 closed 2026-07-11. Flags `YUM4LESS_STORE_IDENTITY_EXPAND` and `AUTO_CONFIRM` stay **OFF** | `@database-codegen-standards` |
 | **Wave 2 Q1 (Publix)** | Policy locked **Q1=1B**: Publix locator pins are Settings-selectable catalog. Code: remove Publix from `isMapContextCatalogStore`; merge/suppress tests; Settings+map smoke | **Not started** (policy 2026-07-16) | `@web-frontend-standards` |
-| **Scale risk B** | Shared `assertMarketDataAvailable()` so remaining read routes (e.g. `/api/shopping-route`) do not return HTTP 200 + empty on DB outage. Mid-request TheMealDB fail can still 500 | Open; homelab honesty floor otherwise OK | `@web-backend-standards` |
+| **Scale risk B** | Shared `assertMarketDataAvailable()` + honest 503 / UI outage surfaces so DB outage is never “no stores” | **Closed** 2026-09-15 | `@web-backend-standards` |
 | **Scale risk A** | Client-trust audit across all public API routes (not only rank pass-through) | Deferred until traffic increase / public-launch bar | `@verifier` + `@web-backend-standards` |
 | **Dollar Tree** | Locator source, chain id pattern, ingest feasibility, catalog fit vs private-label SKUs | **Queued.** Dollar General is live; Tree is not | `@ingest-standards` |
 | **Banner-per-row** | One `chain_registry` row per shopper banner (Harris Teeter ≠ Kroger) with **shared** adapter keys. Display already banner-grain | Roster grain **not split** | `@database-codegen-standards` |
@@ -205,7 +205,7 @@ Keep these next to the coverage bucket so they are not lost in chat:
 
 Use this only as a negative checklist. Detail stays in Resume.
 
-Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
+Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `master`, Settings grocery-pin picker, junk-skip SSOT, store-list omit, leftover grocery ingest + `/owner` **Clear obvious** (live **2026-09-15**), website `robots.ts` disallow `/owner` + `/api/` (**2026-09-15**), Walmart Flipp-first scrape-only-if-empty (**2026-09-15**), Scale risk B empty-vs-unavailable API+UI (**2026-09-15**), nationwide A/B1/B2/C, membership DB-wins, market admission + whole-ZIP ingest fence, unattended 3am + worker drain (**15-night `ingest_jobs` proof 2026-09-14**), 3am covers pending SQL (Watchtower does not; hand migrate optional), local≠live as **process** (paste-back, not a sync feature), Cloudflare Tunnel, Watchtower, backup drill, Option A Slices **1–6** (not D), Lidl **map-context** (`030`), Dollar General Flipp + food-desert (`031`), Walmart same floors (`028`), Publix weekly-ad ingest exclusion fix, geolocation denial P1-3, identity SSOT CI gate, FAQ/Terms, device-local Saved.
 
 ---
 
@@ -220,8 +220,8 @@ Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `m
 
 ## Sources
 
-- [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Resume (as of 2026-09-15 Clear obvious close; 2026-09-14 live SQL paste), changelog, Decision log
-- Home note Open loops / Next actions (as of 2026-09-15 status)
+- [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Resume (as of 2026-09-15 Scale risk B + Clear obvious close; 2026-09-14 live SQL paste), changelog, Decision log
+- Home note Open loops / Next actions (as of 2026-09-15 Scale risk B close)
 - [`docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md)
 - [`docs/audits/homelab-readiness-verdict.md`](audits/homelab-readiness-verdict.md)
 - 2026-09-07 Target weekly-ad / store-locator probes (not in production ingest)

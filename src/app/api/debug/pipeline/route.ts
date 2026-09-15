@@ -6,7 +6,11 @@ import { isDebugRoutesEnabled } from "@/lib/debug/debug-routes-policy";
 import { getPipelineDebugView } from "@/lib/debug/pipeline-debug-service";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
-import { RecommendationDependencyUnavailableError } from "@/lib/recommendation-service";
+import {
+  assertMarketDataAvailable,
+  dependencyUnavailableResponse,
+  isDependencyUnavailableError,
+} from "@/lib/market-data-availability";
 
 const DEFAULT_RADIUS_MILES = 10;
 
@@ -123,28 +127,19 @@ export async function GET(request: Request) {
       radiusMiles,
     });
 
-    if (view.dataSource === "unavailable") {
-      throw new RecommendationDependencyUnavailableError(
-        "Pipeline debug requires database access.",
-      );
-    }
+    assertMarketDataAvailable(view, "Pipeline debug requires database access.");
 
     return NextResponse.json(view);
   } catch (error) {
-    if (error instanceof RecommendationDependencyUnavailableError) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-        },
-        { status: 503 },
-      );
+    if (isDependencyUnavailableError(error)) {
+      return dependencyUnavailableResponse(error);
     }
 
     return publicApiErrorResponse(
       "api.debug.pipeline",
       error,
       "Pipeline debug view is temporarily unavailable.",
+      503,
     );
   }
 }

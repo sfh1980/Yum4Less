@@ -13,7 +13,10 @@ import {
   resolveLocationInput,
 } from "@/lib/location-resolution";
 import { getPantryCoverageExperience } from "@/lib/pantry-coverage-service";
-import { RecommendationDependencyUnavailableError } from "@/lib/recommendation-service";
+import {
+  dependencyUnavailableResponse,
+  isDependencyUnavailableError,
+} from "@/lib/market-data-availability";
 
 export async function POST(request: Request) {
   const rateLimit = enforceApiRateLimit(request, "apiPantryCoverage");
@@ -111,14 +114,8 @@ export async function POST(request: Request) {
       ...experience,
     });
   } catch (error) {
-    if (error instanceof RecommendationDependencyUnavailableError) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-        },
-        { status: 503 },
-      );
+    if (isDependencyUnavailableError(error)) {
+      return dependencyUnavailableResponse(error);
     }
 
     return publicApiErrorResponse(

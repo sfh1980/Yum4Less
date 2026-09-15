@@ -89,6 +89,15 @@ export function mapRecommendationApiError(input: {
     };
   }
 
+  if (input.httpStatus === 503) {
+    return {
+      title: "Store and meal prices aren't loading",
+      body:
+        "Yum4Less could not reach saved store and meal prices. This is usually a temporary outage — not 'no stores in your area.'",
+      hint: "Wait a moment and try again. If you run the app yourself, confirm Postgres is running.",
+    };
+  }
+
   if (input.httpStatus >= 500) {
     return {
       title: "Recommendations are temporarily unavailable",
@@ -145,6 +154,15 @@ export function mapMarketSearchApiError(input: {
       title: "Could not find stores for that location",
       body: apiError || "We could not resolve that ZIP or browser location.",
       hint: "Try another ZIP, widen the radius, or check location permissions.",
+    };
+  }
+
+  if (input.httpStatus === 503) {
+    return {
+      title: "Store lookup is temporarily unavailable",
+      body:
+        "Nearby store search could not load saved prices from the database. This is not the same as finding zero stores in your radius.",
+      hint: "Wait a moment and try again. If you run the app yourself, confirm Postgres is running.",
     };
   }
 

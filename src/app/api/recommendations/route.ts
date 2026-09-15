@@ -14,8 +14,11 @@ import {
   resolveLocationInput,
 } from "@/lib/location-resolution";
 import {
+  dependencyUnavailableResponse,
+  isDependencyUnavailableError,
+} from "@/lib/market-data-availability";
+import {
   getRecommendationExperience,
-  RecommendationDependencyUnavailableError,
 } from "@/lib/recommendation-service";
 
 export async function POST(request: Request) {
@@ -114,14 +117,8 @@ export async function POST(request: Request) {
         },
       });
   } catch (error) {
-    if (error instanceof RecommendationDependencyUnavailableError) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-        },
-        { status: 503 },
-      );
+    if (isDependencyUnavailableError(error)) {
+      return dependencyUnavailableResponse(error);
     }
 
     return publicApiErrorResponse(

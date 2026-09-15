@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       "api.shopping-route",
       error,
       "Shopping route planning is temporarily unavailable.",
+      503,
     );
   }
 }
