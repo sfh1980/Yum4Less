@@ -4,9 +4,9 @@
 
 ---
 
-## Resume (as of 2026-09-15)
+## Resume (as of 2026-09-16)
 
-**Owner lock:** Membership cutover **shipped in code** — `chain_registry` drives who we *attempt* for dinners / fail-loud ingest; **floors stay in code**. **Adapters do not hardcode stores/ZIPs/rosters** — Postgres holds those facts (`.cursor/rules/yum4less-db-owned-data.mdc`). Thin sale coverage ⇒ pin stays tracked, dinners stay off. **Lidl lock (2026-09-03):** map/context only until a store-bound sale feed exists — no ranked dinners, no store-finder scrape work. **Dollar General (2026-09-03):** Flipp-first ZIP circular ingest; directional sales can show without dinners; dinner totals only when **no other shopper-ranked grocer is nearby** and the **same** floors pass (area circular, not that building’s shelf). Banner grain later via **shared adapter keys**. Owner Check brand lists stay research. **Ingest fence:** nightly ingest admits grocery pins in the **Census ZIP outline** with a **26 mi** safety cap — same set Owner Check lists. Shopper map stays pin + radius. Neighbor-ZIP pins on that map need those ZIPs Activated too. **Next product work:** Coverage leftovers in `23111` — Target adapter shipped dinners-off; BJ's Flipp confirm done (map/context, thin absolute prices); **Walmart yield plan closed** (Flipp primary + junk SSOT + `/owner` Ingredient review; scrape only if Flipp empty); **Scale risk A closed** (client-trust API audit); **Cuisine chips R11 closed** (`033`); **Bright Data MCP usage paused**. Full open-task list → [`docs/open-work-inventory-2026-09-09.md`](docs/open-work-inventory-2026-09-09.md) (point-in-time; Resume stays live status). **Live yum4less.com app + ingest Watchtower-recreated 2026-09-14 21:43Z** (`ghcr.io/sfh1980/yum4less-app:homelab` + `yum4less-ingest:homelab` after `d3e9396` Clear obvious). Leftover-grocery ops **closed** 2026-09-15 (planner + button live; owner monitors `/owner` as needed). Older same-day app recreate **19:43Z** was the store-list omit check. Older pair **2026-09-04** was app `55ad51dac9b6` / ingest `6b541e14fc3f`. Nightly worker **6/6 `succeeded`** every `run_date` **2026-08-31 through 2026-09-14** (**15** nights; enqueue ~**07:00:03Z** = 3am Eastern; owner paste-back 2026-09-14). Live `chain_registry` **2026-09-14:** shopper-ranked **kroger / aldi / publix / food-lion / walmart / dollar-general**; Lidl **map_context** (`shopper_ranked` false). Walmart weekly-ad in-stock **19** rows, **19** in 24h (newest **07:09:43Z**). Dollar General and Lidl **0** in-stock rows. Ledger **000–013, 015–031** (no `014` in repo); **`029`** applied **2026-08-30 07:00:03Z**; **`030`/`031`** **2026-09-03 23:59:42Z**. Prior full freshness **`[OK] 428/428`** was **2026-09-05** (not re-run this paste). Junk heal **2026-09-14: scanned=393 rejected=0 remaining=393**, then owner Yes/No **165** accepted / **231** pending; `owner:resolve-pending-reviews --apply` **yes=190 no=14 skip=27 applied_ok=204 applied_fail=0**. Dry-run **2026-09-15: yes=3 no=0 skip=34**. Extra ZIP **`23220`** stays active. TheMealDB **dev test key** is a known ops gap.
+**Owner lock:** Membership cutover **shipped in code** — `chain_registry` drives who we *attempt* for dinners / fail-loud ingest; **floors stay in code**. **Adapters do not hardcode stores/ZIPs/rosters** — Postgres holds those facts (`.cursor/rules/yum4less-db-owned-data.mdc`). Thin sale coverage ⇒ pin stays tracked, dinners stay off. **Lidl lock (2026-09-03):** map/context only until a store-bound sale feed exists — no ranked dinners, no store-finder scrape work. **Dollar General (2026-09-03):** Flipp-first ZIP circular ingest; directional sales can show without dinners; dinner totals only when **no other shopper-ranked grocer is nearby** and the **same** floors pass (area circular, not that building’s shelf). Banner grain later via **shared adapter keys**. Owner Check brand lists stay research. **Ingest fence:** nightly ingest admits grocery pins in the **Census ZIP outline** with a **26 mi** safety cap — same set Owner Check lists. Shopper map stays pin + radius. Neighbor-ZIP pins on that map need those ZIPs Activated too. **Next product work:** Coverage leftovers in `23111` — Target adapter shipped dinners-off; BJ's Flipp confirm done (map/context, thin absolute prices); **Walmart yield plan closed** (Flipp primary + junk SSOT + `/owner` Ingredient review; scrape only if Flipp empty); **Scale risk A closed** (client-trust API audit); **Cuisine chips R11 closed** (`033`); **Bright Data MCP usage paused**. Full open-task list → [`docs/open-work-inventory-2026-09-09.md`](docs/open-work-inventory-2026-09-09.md) (point-in-time; Resume stays live status). **Live yum4less.com app + ingest Watchtower-recreated 2026-09-14 21:43Z** (`ghcr.io/sfh1980/yum4less-app:homelab` + `yum4less-ingest:homelab` after `d3e9396` Clear obvious). Leftover-grocery ops **closed** 2026-09-15 (planner + button live; owner monitors `/owner` as needed). **Local 2026-09-16:** merch-class + simple-food classifier (mower/nightstand junk; apples/chicken breast/spam/papaya/sirloin food) is **not** on yum4less.com until CI ingest publish + Watchtower, then **Clear obvious**. Do **not** SQL-reject. Older same-day app recreate **19:43Z** was the store-list omit check. Older pair **2026-09-04** was app `55ad51dac9b6` / ingest `6b541e14fc3f`. Nightly worker **6/6 `succeeded`** every `run_date` **2026-08-31 through 2026-09-14** (**15** nights; enqueue ~**07:00:03Z** = 3am Eastern; owner paste-back 2026-09-14). Live `chain_registry` **2026-09-14:** shopper-ranked **kroger / aldi / publix / food-lion / walmart / dollar-general**; Lidl **map_context** (`shopper_ranked` false). Walmart weekly-ad in-stock **19** rows, **19** in 24h (newest **07:09:43Z**). Dollar General and Lidl **0** in-stock rows. Ledger **000–013, 015–031** (no `014` in repo); **`029`** applied **2026-08-30 07:00:03Z**; **`030`/`031`** **2026-09-03 23:59:42Z**. Prior full freshness **`[OK] 428/428`** was **2026-09-05** (not re-run this paste). Junk heal **2026-09-14: scanned=393 rejected=0 remaining=393**, then owner Yes/No **165** accepted / **231** pending; `owner:resolve-pending-reviews --apply` **yes=190 no=14 skip=27 applied_ok=204 applied_fail=0**. Dry-run **2026-09-15: yes=3 no=0 skip=34**. Extra ZIP **`23220`** stays active. TheMealDB **dev test key** is a known ops gap.
 
 > **Single source of truth:** This **Resume** section (especially **Verified** and **Production-ranked focus**) is the canonical place for current chain status, test counts, and what is shipped. **Working today**, **Deferred backlog**, and **Changelog** are historical or narrower context — do **not** restate status claims or numbers that could drift; link here instead (e.g. “see Resume for current status” or [Verification snapshot](#verification-snapshot) for gate tables).
 
@@ -34,6 +34,7 @@
 
 ### Working today (honest)
 
+- **Title food-vs-junk classifier (2026-09-16, local):** Clear obvious Nos merch classes (mower, recliner, tent, …) and Yes’s short dinner names ingest already keeps (apples, chicken breast). SKU-like tokens do not steal steak/chicken titles. Live waits Watchtower. Does **not** claim more dinners.
 - **Cuisine chips R11 (2026-09-15, closed):** Curated chips American / Italian / Mexican / Chinese / Thai / Japanese / Greek / Indian / Korean / Vietnamese. Postgres `cuisine_tags` (`033`) + TheMealDB area map (British/Canadian → American). Chips hide until ≥2 rankable dinners match; server recomputes `cuisineFacetCounts`. Live after migrate `033` + app/ingest Watchtower. Does **not** claim more dinners.
 - **Scale risk A client-trust API audit (2026-09-15, closed):** Cross-route audit: rank + pantry rehydrate/recompute; market-search server-built + sanitize; shopping-route / geocode / feedback / debug pass for meal-card forgery. Residuals: pantry spoof regression tests; analytics client-stamped dims documented non-authoritative (`CLIENT_STAMPED_ANALYTICS_TRUST_DIMS` + owner Analytics copy). Does **not** claim more dinners.
 - **Walmart yield plan closed (2026-09-15):** Owner lock — Flipp is the main circular feed; walmart.com scrape only if Flipp empty (already shipped). Noise sorting is junk SSOT + `/owner` Ingredient review, not a new scrape or proxy chase. Does **not** claim more dinners from thin matches.
@@ -278,6 +279,36 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-09-16 — Title classifier: keep dinner food, skip merch junk
+
+**Theme:** Clear obvious should decide from the name: merch class → No; short dinner food → Yes.
+
+**Shipped:** Wider merch classes (recliner, tent, stroller, microwave, …). SKU/shape clues do **not** junk a title that already looks like chicken/steak/spinach. Clear obvious now Yes’s the same simple foods ingest already auto-creates (apples, oranges, chicken breast). Unsure titles still stay for a human.
+
+**Limits:** Live queue waits CI ingest publish + Watchtower. Snack/drink/pharmacy still use the phrase list. Does not invent more dinners.
+
+**Evidence:** this session `npm test` **1284/1284** (226 files). Did not run integration/e2e.
+
+### 2026-09-16 — Non-food merchandise class detector for Clear obvious
+
+**Theme:** Stop growing SKU regexes. Clear obvious only has the flyer title; detect *classes* of merch so the next mower/nightstand files as No.
+
+**Shipped:** `looksLikeNonFoodMerchandise` — product-class nouns (mower, nightstand, soundbar, crib, …), a small GM house-brand set, and title shape (engine `cc`, Greenguard, N-drawer, channel+watt, 6+ alphanumeric SKU). `isWeeklyAdJunkProduct` / Clear obvious use it. Adding a class noun is the intended way to teach the button; do not paste another model number.
+
+**Limits:** Snack/drink/pharmacy leftovers still use the existing junk phrase list (food that is not a dinner ingredient). Flipp `_L1` is not on review rows and Walmart lines are often untagged — title class is the review lever. Live queue waits CI ingest publish + Watchtower. Does not invent more dinners.
+
+**Evidence:** this session `npm test` **1283/1283** (226 files). Did not run integration/e2e.
+
+### 2026-09-16 — Owner-queue leftover junk + Clear obvious grocery
+
+**Theme:** File the `/owner` paste of Walmart GM and leftover grocery the same way ingest will — junk SSOT for non-food, planner Yes/No for dinner foods.
+
+**Shipped:** `isWeeklyAdJunkProduct` skips mowers, griddles, furniture, stand mixers, fire pits, camping gear, soundbars, cribs, kettles, bags, pitchers, baby clothes, drinks, hair color, and prepared skillet/home-style meals. `planPendingReviewResolution` Nos junk SSOT matches so **Clear obvious** files already-queued rows. Yes: `spam`, `papaya`, `tamarind`, sirloin fillet → `sirloin-steak`, whole top sirloin → `beef-roast`. No: vague frozen seafood, prepared side dishes.
+
+**Limits:** Live queue does not drop until CI publish + Watchtower, then Clear obvious or junk heal. Skip/unsure titles stay human. Does not invent more dinners. Do not SQL-reject.
+
+**Evidence:** this session `npm test` **1281/1281** (226 files). Did not run integration/e2e (no DB or shopper-flow change). Semgrep not run.
 
 ### 2026-09-15 — Cuisine chips R11 (closed)
 
@@ -3124,6 +3155,8 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-09-16 | **Non-food merch = product class, not SKU regex.** `looksLikeNonFoodMerchandise` is the Clear obvious / ingest title detector for GM. Add a class noun (nightstand, soundbar) when a new merch family appears. Do not grow brand+model lists. Snack/drink/pharmacy stay on the existing junk phrase SSOT. Flipp department is not on `/owner` rows. | **Active** (narrows 2026-08-25 junk skip) |
+| 2026-09-16 | **Clear obvious Nos junk SSOT matches.** `planPendingReviewResolution` consults `isWeeklyAdJunkProduct` so `/owner` Clear obvious files leftover GM the same way ingest skips it. Still one junk list — no parallel SQL rejects. Dinner leftovers stay generic kebab ids (spam, papaya, tamarind, sirloin). | **Active** (narrows 2026-09-14 one-planner-two-doors; 2026-08-25 junk skip) |
 | 2026-09-15 | **Cuisine chips R11 closed.** Curated 10 chips; `recipes.cuisine_tags`; hide until ≥2 rankable dinners; TheMealDB area map; British/Canadian fold into American. | **Active** (implements 2026-06-25 hide-until-DB lock) |
 | 2026-09-15 | **Scale risk A client-trust API audit closed.** Public routes audited: meal-card trust not client-forgeable; rank+pantry recompute; pantry spoof tests; analytics client-stamped dims non-authoritative for trust claims. | **Active** (closes deferred Scale risk A) |
 | 2026-09-15 | **Walmart yield plan closed.** Flipp is the primary circular feed; walmart.com scrape only if Flipp empty. Usable-food improvement is junk SSOT + `/owner` Ingredient review — not a new adapter, WAF bypass, or paid proxy. Does not claim more dinners. | **Active** (closes open-work Walmart thin-yield product task; complements Flipp-first scrape skip) |
@@ -3277,6 +3310,9 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (title food-vs-junk classifier) | 2026-09-16 | **1284/1284** pass (226 files) |
+| `npm test` (non-food merch class detector) | 2026-09-16 | **1283/1283** pass (226 files) |
+| `npm test` (owner-queue leftover junk + Clear obvious) | 2026-09-16 | **1281/1281** pass (226 files) |
 | `npm test` (Cuisine chips R11) | 2026-09-15 | **1279/1279** pass (226 files) |
 | `npm run test:integration` (Cuisine chips R11 / `033`) | 2026-09-15 | **54/54** pass (17 files) |
 | `npm run test:e2e:ci` (Cuisine chips R11) | 2026-09-15 | **32 passed** / **2 skipped** |
@@ -3641,6 +3677,7 @@ Full chat prose lives in agent transcripts; use these links for deep context.
 
 | When | Topic | Transcript |
 |------|-------|------------|
+| 2026-09-16 | Owner-queue leftover junk + Clear obvious grocery | [Clear obvious leftovers](966c9e45-89b0-45d1-bf53-0db9fc83ab64) |
 | 2026-09-14 | TrueNAS live SQL: registry, Walmart/DG/Lidl, ledger | [Leftover grocery planner](dce3d31e-1197-4eec-b7b3-161426496717) |
 | 2026-09-14 | TrueNAS 15-night 3am `ingest_jobs` proof | [Leftover grocery planner](dce3d31e-1197-4eec-b7b3-161426496717) |
 | 2026-09-14 | Obvious leftover grocery ingest + `/owner` Clear obvious | [Leftover grocery planner](dce3d31e-1197-4eec-b7b3-161426496717) |

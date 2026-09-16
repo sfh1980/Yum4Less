@@ -181,7 +181,7 @@ Full list and ingest flags → `.env.example`.
 | `npm run ingest:weekly-ads:scheduled` | **Daily cron wrapper** — map catalog → weekly-ad ingest (live matching vs Postgres `ingredients`; unmatched lines skip / auto-create / `/owner` review) → provider sync → TheMealDB import |
 | `npm run ingest:weekly-ads:scheduled:fixture` | Rehearsal cron path (CI/tests — fixture weekly ads only) |
 | `npm run owner:reject-pending-junk-reviews` | One-shot: reject pending `/owner` flyer lines that match current junk heuristics (`yum4less_dev`; not a public API) |
-| `npm run owner:resolve-pending-reviews` | Dry-run leftover `/owner` grocery Yes/No plans against the live catalog. Pass `-- --apply` to write (same path as `/owner` **Clear obvious**). Live ingest also files obvious lines so they do not re-queue. Does not claim more dinners. |
+| `npm run owner:resolve-pending-reviews` | Dry-run leftover `/owner` grocery Yes/No plans against the live catalog. Pass `-- --apply` to write (same path as `/owner` **Clear obvious**). Obvious merch (mower, dresser, soundbar) → No; short dinner names (apples, chicken breast) → Yes. Live ingest files the same way. Does not claim more dinners. |
 | `npm run probe:kroger-api` | Kroger OAuth + store pricing probe (owner-only, not CI) |
 | `npm run probe:publix-api` | Publix store-locator probe (owner-only, not CI) |
 | `npm run probe:kroger-live-scrape` | Kroger weekly-ad live scrape probe |

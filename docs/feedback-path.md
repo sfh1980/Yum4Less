@@ -48,7 +48,7 @@ Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FE
 
 On Yes, fill **Canonical food id** (lowercase kebab-case, 2–56 characters; spaces/capitals are formatted on save), **Shopper-facing name**, and **category**. If the id already exists, name and category are ignored and the flyer title becomes a nickname. If it does not exist, Yes inserts `ingredients` (`weekly-ad-catalog`) then the nickname. Example: `imitation-crab` / Imitation crab / protein. Do not encode brands, sizes, or pack counts in the id.
 
-**Clear obvious** (and live persist ingest) run the same leftover grocery planner: high-confidence food → Yes, high-confidence junk → No, unsure stays pending. `npm run owner:resolve-pending-reviews` is the CLI dry-run; `-- --apply` writes. That does not add shopper dinners by itself.
+**Clear obvious** (and live persist ingest) run the same leftover grocery planner: high-confidence dinner food → Yes (including short simple foods such as apples or chicken breast), high-confidence junk → No. Junk includes merch *classes* (`looksLikeNonFoodMerchandise`: mower, nightstand, soundbar — not a pasted model number) plus the existing snack/drink/pharmacy phrase list (`isWeeklyAdJunkProduct`). Unsure stays pending. `npm run owner:resolve-pending-reviews` is the CLI dry-run; `-- --apply` writes. That does not add shopper dinners by itself. Teach new GM families with a class noun, not another SKU.
 
 Analytics are shown **grouped by session** (all loaded events for each `session_id`). Responses include `hasMore` so the console can offer the next page without dumping the full table at once.
 

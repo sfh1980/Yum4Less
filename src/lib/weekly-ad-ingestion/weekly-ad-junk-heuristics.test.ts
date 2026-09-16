@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   flyerLineLooksLikeJunk,
   isWeeklyAdJunkProduct,
+  looksLikeNonFoodMerchandise,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
 
 describe("isWeeklyAdJunkProduct", () => {
@@ -691,6 +692,64 @@ describe("isWeeklyAdJunkProduct", () => {
     );
     expect(isWeeklyAdJunkProduct("Pretzilla Soft Pretzel Bites")).toBe(false);
     expect(isWeeklyAdJunkProduct("GreenWise Puff Pastry Sheets")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Spam")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Large Papaya")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Sweet Tamarind")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Top Sirloin Fillet")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Whole Top Sirloin")).toBe(false);
+    expect(isWeeklyAdJunkProduct("Mrs. Paul's Frozen Seafood")).toBe(false);
+  });
+
+  it("skips 2026-09-16 owner-queue GM, drink, and personal-care leftovers", () => {
+    const leftoverOwnerQueue20260916 = [
+      'Troy-Bilt 547cc Bronco 46" Gas Riding Lawn Mower, 13A878BTA66',
+      "Blackstone Original Outdoor Griddle, 36 Inch 4-Burner Flat Top Grill with Hood, Black",
+      "Momcozy Portable Water Warmer & Bottle Warmer MW05, Light Pink",
+      "Ozark Trail Stainless Steel Wood-Burning Camp Fire Pit",
+      "Delta Children Epic 3 Drawer Dresser with Interlocking Drawers, Chestnut",
+      "Beautiful 6 Qt Tilt-Head Stand Mixer with Dough Hook, Flat Beater, Balloon Whisk, Pastry Beater & Slicer/Shredder Set, White Icing by Drew Barrymore",
+      "Beautiful 5.3 Qt Stand Mixer, White Icing with Flat Beater, Dough Hook, Balloon Whisk",
+      "Delta Children Essex 3 Drawer Dresser with Interlocking Drawers - Greenguard Gold Certified, Bianca White/Natural",
+      'Ozark Trail 15" Stainless Steel Collapsible Smokeless Wood-Burning Camp Fire Pit with Carry Bag',
+      'Muskoka 19.5" Stainless Steel Smokeless Wood Burning Fire Pit with Protective Cover',
+      "Christopher Knight Home Vintage Nightstand with Pattern Carved Drawer, Skirted Bedside Table, Dark Brown",
+      "Hatteras Nightstand with 1 Drawer and Open Shelf Storage, Natural – Teamson Home: Deep Drawer and Coastal Modern Style",
+      "Ozark Trail 12' x 12' Gray Instant Straight Leg Camping Canopy",
+      "Hisense R632 3.1 Channel 380W Soundbar with Wireless Subwoofer with Dolby Atmos, DTS:X, Easy Connect",
+      "Delta Children Essex 4-in-1 Convertible Baby Crib - Greenguard Gold Certified, Ebony/Natural",
+      "Beautiful 1-Liter Electric Gooseneck Kettle 1200 W, White Icing by Drew Barrymore",
+      "Chefman 1L Electric Glass Kettle w/ LED Indicator Light, Automatic Shutoff - Black",
+      "Ozark Trail 35°F Rectangular Sleeping Bag with 47% Recycled Polyester and ZIP SHIELD",
+      "No Boundaries Women's Faux Leather Moto Shoulder Bag, Doe",
+      "PUR 8-Cup Slim Water Filter Pitcher for Fridge, Sandstone, PPT600F",
+      "Beautiful 3-Compartment Bamboo Melamine Sardine Serve Tray by Drew Barrymore",
+      "Carter's Child of Mine Baby Girl Jumpsuit, One-Piece",
+      "Wonder So Soft Modal by Wonder Nation Baby Boys Bodysuit and Pants Set, 2-Piece",
+      "Dole Fruit Bowls",
+      "C4 Energy",
+      "SuperPretzel Snacks",
+      "Tastiez Frozen Snacks",
+      "Bai WonderWater",
+      "Stauffer's Snaps",
+      "Guayaki Organic Yerba Mate",
+      "Dawn Dishwashing Liquid",
+      "Tresemmé Root Touch Up or Styling Products",
+      "styling products",
+      "tresemm root touch up",
+      "Dove Bath Bars",
+      "Clairol Nice'N Easy Hair Color",
+      "Clairol Frost & Tip Blonde Highlights",
+      "Clairol Natural Instincts Hair Color",
+      "12-Pack Guaraná Antarctica Soft Drinks",
+      "Publix Malta Malt Beverage",
+      "Boston Market Home Style Meals",
+      "Bertolli Skillet Meals",
+      "12-Pack Bitburger Premium Pilsner",
+      "Mighty Spark Mini Stick",
+    ];
+    for (const title of leftoverOwnerQueue20260916) {
+      expect(isWeeklyAdJunkProduct(title), title).toBe(true);
+    }
   });
 
   it("treats either the raw title or the normalized label as junk", () => {
@@ -702,6 +761,47 @@ describe("isWeeklyAdJunkProduct", () => {
     ).toBe(true);
     expect(
       flyerLineLooksLikeJunk("Eastern Peaches", "eastern peaches"),
+    ).toBe(false);
+  });
+});
+
+describe("looksLikeNonFoodMerchandise", () => {
+  it("catches unseen SKUs by product class, not the pasted model number", () => {
+    expect(
+      looksLikeNonFoodMerchandise("Harbor 4 Drawer Nightstand, Oak"),
+    ).toBe(true);
+    expect(
+      looksLikeNonFoodMerchandise("YardMax 420cc Riding Mower, Model ZX9912AB"),
+    ).toBe(true);
+    expect(
+      looksLikeNonFoodMerchandise("Acme 5.1 Channel 600W Home Theater Soundbar"),
+    ).toBe(true);
+    expect(looksLikeNonFoodMerchandise("Greenguard Gold Kids Crib, White")).toBe(
+      true,
+    );
+    expect(looksLikeNonFoodMerchandise("Harbor Recliner, Gray")).toBe(true);
+    expect(looksLikeNonFoodMerchandise("Trailhead 4-Person Camping Tent")).toBe(
+      true,
+    );
+  });
+
+  it("does not treat dinner foods as merchandise", () => {
+    expect(looksLikeNonFoodMerchandise("McCormick Grill Mates Seasoning")).toBe(
+      false,
+    );
+    expect(looksLikeNonFoodMerchandise("GreenWise Organic Baby Spinach")).toBe(
+      false,
+    );
+    expect(looksLikeNonFoodMerchandise("Kraft Salad Dressing")).toBe(false);
+    expect(looksLikeNonFoodMerchandise("Lipton Iced Tea Family Size")).toBe(
+      false,
+    );
+    expect(looksLikeNonFoodMerchandise("Ball Park Hot Dogs")).toBe(false);
+    expect(looksLikeNonFoodMerchandise("Spam")).toBe(false);
+    expect(looksLikeNonFoodMerchandise("Large Papaya")).toBe(false);
+    expect(looksLikeNonFoodMerchandise("Top Sirloin Fillet")).toBe(false);
+    expect(
+      looksLikeNonFoodMerchandise("Farmland Chicken Breast Pack ABC99Z"),
     ).toBe(false);
   });
 });

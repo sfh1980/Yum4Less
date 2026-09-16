@@ -6,7 +6,7 @@ Point-in-time list of **open tasks, slices, and ops**. Compiled from [`PROJECT_C
 
 GitHub issues on `sfh1980/Yum4Less`: **0 open** (checked 2026-09-09). Tracking lives in Resume / Home / this inventory.
 
-Last live TrueNAS paste-back in Resume: **2026-09-15** (Clear obvious ops **closed**; app+ingest `:homelab` created **2026-09-14 21:43Z** after `d3e9396`). Prior SQL snapshot **2026-09-14** (`chain_registry` 18 banners; Walmart in-stock **19/19** in 24h; DG/Lidl **0**; ledger **000–013, 015–031**). Docs refresh **2026-09-15:** BJ’s Flipp confirm (map/context); Bright Data MCP **paused**; **Walmart yield plan closed**; **Scale risk A closed**; **Cuisine chips R11 closed** (`033`).
+Last live TrueNAS paste-back in Resume: **2026-09-15** (Clear obvious ops **closed**; app+ingest `:homelab` created **2026-09-14 21:43Z** after `d3e9396`). Prior SQL snapshot **2026-09-14** (`chain_registry` 18 banners; Walmart in-stock **19/19** in 24h; DG/Lidl **0**; ledger **000–013, 015–031**). Docs refresh **2026-09-15:** BJ’s Flipp confirm (map/context); Bright Data MCP **paused**; **Walmart yield plan closed**; **Scale risk A closed**; **Cuisine chips R11 closed** (`033`). **Local 2026-09-16:** leftover `/owner` food-vs-junk classifier (merch classes + simple dinner foods; spam/papaya/tamarind/sirloin); live queue waits Watchtower.
 
 ---
 
@@ -32,6 +32,8 @@ Adapters must not hardcode store numbers, ingest ZIPs, or banner rosters. Facts 
 | 1 | TheMealDB **dev test key** on live ingest | Known ops gap | Not a merge-gate; replace with a production key when ready |
 
 **Closed 2026-09-15 — leftover grocery / Clear obvious:** app + ingest Watchtower-recreated **2026-09-14 21:43Z** (`d3e9396`). Live ingest has `planPendingReviewResolution`; app has **Clear obvious**. Dry-run **yes=3 no=0 skip=34**. Owner monitors `/owner` Ingredient review as needed. Skip titles stay human. Do **not** SQL-reject.
+
+**Local 2026-09-16 — leftover queue classifier (not live yet):** merch *classes* (mower, dresser, tent) → No; short dinner names ingest already keeps (apples, chicken breast) plus spam/papaya/tamarind/sirloin → Yes. After CI ingest publish + Watchtower, click **Clear obvious**. Do **not** SQL-reject. Do **not** paste another SKU into the junk list — add a class noun.
 
 ---
 
@@ -119,7 +121,7 @@ Homelab deploy precursors that were blocking go-live are **closed** (Custom App,
 | Local `yum4less_dev` ≠ yum4less.com (open task) | **Closed** 2026-09-14 | Two databases by design. No MCP-to-TrueNAS, no daily dump, no DB rename. Live numbers still come from NAS paste-back ([`docs/homelab-deploy.md`](homelab-deploy.md) §4.5). |
 | Watchtower migrate reminder (open task) | **Closed** 2026-09-14 | Watchtower still does not run SQL. 3am ingest prep applies pending `db/init`. Hand `sudo docker exec yum4less-ingest npm run db:migrate` only if you need it before morning. |
 | Store-list omit on yum4less.com (hard-refresh) | **Closed** 2026-09-14 | Earlier same-day recreate **19:43Z** proved omit; Clear obvious image is **21:43Z** (see leftover grocery row). Map may still show those pins. Eyeball Settings is optional, not an open task. |
-| Leftover grocery / Clear obvious on live | **Closed** 2026-09-15 | App+ingest `:homelab` **2026-09-14 21:43Z**. Planner + button live. Owner monitors pending/skip as needed. |
+| Leftover grocery / Clear obvious on live | **Closed** 2026-09-15 | App+ingest `:homelab` **2026-09-14 21:43Z**. Planner + button live. **2026-09-16 local:** merch-class + simple-food classifier; live queue waits next Watchtower, then Clear obvious. |
 | Optional live SQL snapshot | **Closed** 2026-09-14 | `chain_registry` 18 rows as expected (`030`/`031` flags). Walmart **19/19** fresh in-stock. DG and Lidl **0**. Ledger **000–013, 015–031** (`version` is text; no `014` in repo). |
 | Backup/restore drill | **Closed** 2026-08-31 | Host dump → `yum4less_backup_drill` counts matched; drill DB dropped. Nightly backup cron still optional |
 | TheMealDB production key | **Open** | Live ingest still logs **dev test key** |
@@ -214,17 +216,18 @@ Redesign slices **1–5**, shell **D1–D7**, Section H, onboarding wizard on `m
 
 ## 10. Suggested pick-up order
 
-1. Product (optional): Target live `032` / Watchtower if you want ingest proving Target circulars; BJ’s stays map/context. **Walmart yield plan closed** (Flipp + `/owner`). Scale risk A **closed**. Cuisine chips R11 **closed**.
-2. Ops: TheMealDB **production key** when you have one (not a merge gate). Ongoing: `/owner` Ingredient review as needed. Live: migrate `033` + Watchtower for cuisine chips.
-3. Then Slice D if you want identity expand next. Publix Q1 **closed** 2026-09-15.
-4. Leave accounts, go/no-go, and M128 automation until you reprioritize.
+1. After CI ingest publish + Watchtower, click **Clear obvious** on `/owner` (or persist ingest / junk heal). Do **not** SQL-reject.
+2. Product (optional): Target live `032` / Watchtower if you want ingest proving Target circulars; BJ’s stays map/context. **Walmart yield plan closed** (Flipp + `/owner`). Scale risk A **closed**. Cuisine chips R11 **closed**.
+3. Ops: TheMealDB **production key** when you have one (not a merge gate). Ongoing: `/owner` Ingredient review as needed. Live: migrate `033` + Watchtower for cuisine chips.
+4. Then Slice D if you want identity expand next. Publix Q1 **closed** 2026-09-15.
+5. Leave accounts, go/no-go, and M128 automation until you reprioritize.
 
 ---
 
 ## Sources
 
-- [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Resume (as of 2026-09-15 Scale risk B + Clear obvious close; 2026-09-14 live SQL paste), changelog, Decision log
-- Home note Open loops / Next actions (as of 2026-09-15 Scale risk B close)
+- [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Resume (as of 2026-09-16 merch-class classifier local; 2026-09-15 Clear obvious close; 2026-09-14 live SQL paste), changelog, Decision log
+- Home note Open loops / Next actions (as of 2026-09-16 Clear obvious food-vs-junk)
 - [`docs/audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md`](audits/de-hardcoding-nationwide-db-driven-plan-2026-08-12.md)
 - [`docs/audits/homelab-readiness-verdict.md`](audits/homelab-readiness-verdict.md)
 - 2026-09-07 Target weekly-ad / store-locator probes (not in production ingest)

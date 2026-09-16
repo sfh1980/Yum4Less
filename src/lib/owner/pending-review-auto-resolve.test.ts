@@ -81,10 +81,17 @@ describe("pending review auto-resolve", () => {
     expect(plan).toMatchObject({ action: "yes", ingredientId: "peach" });
   });
 
-  it("skips prepared sides and unknown sauces", () => {
+  it("rejects prepared sides, vague seafood, and leftover GM junk", () => {
     expect(planPendingReviewResolution("BOB EVANS FAMILY SIZE SIDE DISH").action).toBe(
-      "skip",
+      "no",
     );
+    expect(planPendingReviewResolution("Hormel Side Dishes").action).toBe("no");
+    expect(planPendingReviewResolution("Mrs. Paul's Frozen Seafood").action).toBe("no");
+    expect(
+      planPendingReviewResolution(
+        'Troy-Bilt 547cc Bronco 46" Gas Riding Lawn Mower, 13A878BTA66',
+      ).action,
+    ).toBe("no");
     expect(planPendingReviewResolution("Mae Ploy Sauce").action).toBe("skip");
     expect(planPendingReviewResolution("Giovanni Rana Meat Lasagna").action).toBe("skip");
   });
@@ -109,5 +116,43 @@ describe("pending review auto-resolve", () => {
         "McCormick Grill Mates 30 Minute Montreal Steak Marinade",
       ),
     ).toMatchObject({ action: "yes", ingredientId: "grill-seasoning" });
+  });
+
+  it("maps leftover spam, papaya, tamarind, and sirloin cuts", () => {
+    expect(planPendingReviewResolution("Spam")).toMatchObject({
+      action: "yes",
+      ingredientId: "spam",
+    });
+    expect(planPendingReviewResolution("Large Papaya")).toMatchObject({
+      action: "yes",
+      ingredientId: "papaya",
+    });
+    expect(planPendingReviewResolution("Sweet Tamarind")).toMatchObject({
+      action: "yes",
+      ingredientId: "tamarind",
+    });
+    expect(planPendingReviewResolution("Top Sirloin Fillet")).toMatchObject({
+      action: "yes",
+      ingredientId: "sirloin-steak",
+    });
+    expect(planPendingReviewResolution("Whole Top Sirloin")).toMatchObject({
+      action: "yes",
+      ingredientId: "beef-roast",
+    });
+  });
+
+  it("keeps short dinner titles that ingest already treats as simple foods", () => {
+    expect(planPendingReviewResolution("Gala Apples")).toMatchObject({
+      action: "yes",
+      ingredientId: "apples",
+    });
+    expect(planPendingReviewResolution("Chicken Breast")).toMatchObject({
+      action: "yes",
+      ingredientId: "chicken-breast",
+    });
+    expect(planPendingReviewResolution("Navel Oranges")).toMatchObject({
+      action: "yes",
+      ingredientId: "oranges",
+    });
   });
 });

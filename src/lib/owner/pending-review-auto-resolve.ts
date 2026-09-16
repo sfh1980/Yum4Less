@@ -1,5 +1,8 @@
 import type { IngredientCategory } from "@/lib/ingredient-category";
 import { titleCaseIngredientName } from "@/lib/ingredient-id";
+import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
+import { normalizeWeeklyAdFlyerLabel } from "@/lib/weekly-ad-ingestion/weekly-ad-label-normalize";
+import { resolveCanonicalSimpleFood } from "@/lib/weekly-ad-ingestion/weekly-ad-simple-food";
 
 export type PendingReviewPlan =
   | {
@@ -70,13 +73,14 @@ const NO_RULES: { test: RegExp; reason: string }[] = [
   { test: /\bramen\b/, reason: "ramen cups/soup are skip-list leftovers" },
   { test: /\bbeano'?s condiments\b/, reason: "too vague" },
   { test: /\bgourmet garden stir-in paste\b/, reason: "too vague" },
+  { test: /\bfrozen seafood\b/, reason: "too vague" },
+  { test: /\bside dishes?\b|\bamerican classics sides\b|\bside dish\b/, reason: "prepared side, flavor unknown" },
 ];
 
 const SKIP_RULES: { test: RegExp; reason: string }[] = [
   { test: /\bplant-based\b|\bplantspired\b/, reason: "plant-based analogue, not the animal food" },
   { test: /\bmushroom burger\b/, reason: "plant burger, not ground beef" },
   { test: /\bpeach watermelon mix\b/, reason: "mixed fruit pack" },
-  { test: /\bside dishes?\b|\bamerican classics sides\b|\bside dish\b/, reason: "prepared side, flavor unknown" },
   { test: /\bmeat lasagna\b/, reason: "prepared meal" },
   { test: /\brib meal deal\b/, reason: "combo meal" },
   { test: /\borganic spices\b/, reason: "spice line, not one food" },
@@ -120,8 +124,8 @@ const YES_RULES: YesRule[] = [
   { test: /\bground round\b|\bground sirloin\b|\bsmash(?:ed)? burgers\b|\bsmashburgers?\b|\bbeefsteak burger\b|\bmeatloaf burgers\b|\bsteak burgers\b|\bgourmet blend burgers\b/, ingredientId: "ground-beef", ingredientName: "Ground beef", category: "protein", reason: "ground beef / burgers" },
   { test: /\bgrill mates\b/, ingredientId: "grill-seasoning", ingredientName: "Grill seasoning", category: "seasoning", reason: "grill mates" },
   { test: /\bweber seasoning\b/, ingredientId: "grill-seasoning", ingredientName: "Grill seasoning", category: "seasoning", reason: "grill seasoning" },
-  { test: /\bsirloin tip steaks?\b|\bsirloin tri-tip steaks\b/, ingredientId: "sirloin-steak", ingredientName: "Sirloin steak", category: "protein", reason: "sirloin steak" },
-  { test: /\broast\b|\bwhole new york strip\b|\bwhole sirloin tip\b/, ingredientId: "beef-roast", ingredientName: "Beef roast", category: "protein", reason: "beef roast" },
+  { test: /\bsirloin tip steaks?\b|\bsirloin tri-tip steaks\b|\btop sirloin fillets?\b|\bsirloin fillets?\b/, ingredientId: "sirloin-steak", ingredientName: "Sirloin steak", category: "protein", reason: "sirloin steak" },
+  { test: /\broast\b|\bwhole new york strip\b|\bwhole sirloin tip\b|\bwhole top sirloin\b/, ingredientId: "beef-roast", ingredientName: "Beef roast", category: "protein", reason: "beef roast" },
   { test: /\bfilet mignon\b/, ingredientId: "beef-steak", ingredientName: "Beef steak", category: "protein", reason: "filet mignon" },
   { test: /\bsteaks?\b/, ingredientId: "beef-steak", ingredientName: "Beef steak", category: "protein", reason: "beef steak" },
   { test: /\bpetite tender\b/, ingredientId: "beef-steak", ingredientName: "Beef steak", category: "protein", reason: "beef steak" },
@@ -172,6 +176,9 @@ const YES_RULES: YesRule[] = [
   { test: /\biced tea\b/, ingredientId: "iced-tea", ingredientName: "Iced tea", category: "pantry", reason: "iced tea" },
   { test: /\bflaxseed meal\b/, ingredientId: "flaxseed-meal", ingredientName: "Flaxseed meal", category: "baking", reason: "flaxseed" },
   { test: /\bpistachios\b/, ingredientId: "pistachios", ingredientName: "Pistachios", category: "pantry", reason: "pistachios" },
+  { test: /\bspam\b/, ingredientId: "spam", ingredientName: "Spam", category: "protein", reason: "spam" },
+  { test: /\bpapayas?\b/, ingredientId: "papaya", ingredientName: "Papaya", category: "produce", reason: "papaya" },
+  { test: /\btamarind\b/, ingredientId: "tamarind", ingredientName: "Tamarind", category: "produce", reason: "tamarind" },
 ];
 
 function resolveTargetId(preferred: string, existingIds?: Set<string>): string {
@@ -202,6 +209,10 @@ export function planPendingReviewResolution(
     return { action: "skip", reason: "empty title" };
   }
 
+  if (flyerLineLooksLikeJunk(rawProductName, options?.normalizedLabel)) {
+    return { action: "no", reason: "junk" };
+  }
+
   for (const rule of NO_RULES) {
     if (rule.test.test(text)) {
       return { action: "no", reason: rule.reason };
@@ -224,6 +235,21 @@ export function planPendingReviewResolution(
         rule.reason,
       );
     }
+  }
+
+  const created = resolveCanonicalSimpleFood(
+    options?.normalizedLabel ?? normalizeWeeklyAdFlyerLabel(rawProductName),
+  );
+  if (created) {
+    const ingredientId = resolveTargetId(created.id, options?.existingIds);
+    return yes(
+      ingredientId,
+      ingredientId === created.id
+        ? created.name
+        : titleCaseIngredientName(ingredientId.replace(/-/g, " ")),
+      created.category,
+      "simple dinner food",
+    );
   }
 
   return { action: "skip", reason: "no conservative mapping" };

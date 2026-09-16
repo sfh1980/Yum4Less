@@ -277,6 +277,28 @@ describe("classifyWeeklyAdFlyerLine", () => {
 
     expect(
       classifyWeeklyAdFlyerLine({
+        productName:
+          'Troy-Bilt 547cc Bronco 46" Gas Riding Lawn Mower, 13A878BTA66',
+        chain: "walmart",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([expect.objectContaining({ action: "skip", reason: "junk" })]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
+        productName: "Spam",
+        chain: "food-lion",
+        catalog: catalogSnapshot(),
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        action: "auto-create",
+        ingredient: expect.objectContaining({ id: "spam" }),
+      }),
+    ]);
+
+    expect(
+      classifyWeeklyAdFlyerLine({
         productName: "Ghirardelli Sauce",
         chain: "publix",
         catalog: catalogSnapshot(),

@@ -1,4 +1,6 @@
 /** Non-food flyer lines. Avoid bare tokens that hit dinners: garden, grill, paper. */
+import { inferStrictWeeklyAdFoodCategory } from "@/lib/weekly-ad-ingestion/weekly-ad-simple-food";
+
 const JUNK_PATTERNS: RegExp[] = [
   /\bchips?\b/i,
   /\bcrisps?\b/i,
@@ -356,7 +358,7 @@ const JUNK_PATTERNS: RegExp[] = [
   /\bant & roach\b/i,
   /\broach killing\b/i,
   /\bhaircolou?r\b/i,
-  /\broot touch-up\b/i,
+  /\broot touch[- ]ups?\b/i,
   /\binfant formula\b/i,
   /\bbaby wipes\b/i,
   /\bdietary supplements?\b/i,
@@ -850,7 +852,164 @@ const JUNK_PATTERNS: RegExp[] = [
   /\bsweetener\b/i,
   /\borganic tea\b/i,
   /summ!/i,
+  // Owner-queue leftovers (2026-09-16): grocery that is not a dinner ingredient.
+  // GM product *classes* live in looksLikeNonFoodMerchandise — do not copy SKUs here.
+  /\bdishwashing\b/i,
+  /\bbath bars?\b/i,
+  /\bstyling products\b/i,
+  /\bclairol\b/i,
+  /\bfrost(?: & | and | )?tip\b/i,
+  /\bsoft drinks?\b/i,
+  /\bpilsners?\b/i,
+  /\bmalt beverages?\b/i,
+  /\bhome style meals?\b/i,
+  /\bskillet meals?\b/i,
+  /\bfruit bowls?\b/i,
+  /\bc4 energy\b/i,
+  /\bwonderwater\b/i,
+  /\byerba mate\b/i,
+  /\bsuperpretzel\b/i,
+  /\bfrozen snacks?\b/i,
+  /\bstauffer'?s\b/i,
+  /\bmini sticks?\b/i,
 ];
+
+/**
+ * Durable merch *classes* — one noun catches the next SKU. Prefer adding here
+ * over another brand+model regex. Do not use bare grill, baby, mixer, kettle,
+ * dress, bag, water, or tea (dinners + iced tea + buns + dressing).
+ */
+const NON_FOOD_PRODUCT_CLASS_FRAGMENTS = [
+  "lawn mowers?",
+  "riding mowers?",
+  "snow blowers?",
+  "leaf blowers?",
+  "string trimmers?",
+  "hedge trimmers?",
+  "chainsaws?",
+  "pressure washers?",
+  "generators?",
+  "griddles?",
+  "flat top grills?",
+  "bottle warmers?",
+  "water warmers?",
+  "fire pits?",
+  "dressers?",
+  "stand mixers?",
+  "nightstands?",
+  "bedside tables?",
+  "recliners?",
+  "headboards?",
+  "bunk beds?",
+  "tv stands?",
+  "filing cabinets?",
+  "wardrobes?",
+  "armoires?",
+  "changing tables?",
+  "camping canop(?:y|ies)",
+  "soundbars?",
+  "cribs?",
+  "strollers?",
+  "high chairs?",
+  "bassinets?",
+  "onesies?",
+  "electric (?:gooseneck )?kettles?",
+  "gooseneck kettles?",
+  "glass kettles?",
+  "refrigerators?",
+  "microwaves?",
+  "air conditioners?",
+  "space heaters?",
+  "humidifiers?",
+  "dehumidifiers?",
+  "sleeping bags?",
+  "shoulder bags?",
+  "water filter pitchers?",
+  "filter pitchers?",
+  "serve trays?",
+  "comforters?",
+  "duvets?",
+  "duvet covers?",
+  "sheet sets?",
+  "jumpsuits?",
+  "bodysuits?",
+  "hoodies?",
+  "melamine",
+  "trampolines?",
+  "tents?",
+  "kayaks?",
+  "bicycles?",
+  "exercise bikes?",
+  "power drills?",
+  "tool chests?",
+  "tool boxes?",
+  "socket sets?",
+  "smartphones?",
+  "webcams?",
+  "projectors?",
+];
+
+/** Closed GM house lines that are never dinner food. Not a banner roster. */
+const NON_FOOD_HOUSE_BRAND_FRAGMENTS = [
+  "drew barrymore",
+  "delta children",
+  "ozark trail",
+  "troy-?bilt",
+  "momcozy",
+  "child of mine",
+  "christopher knight",
+];
+
+const NON_FOOD_PRODUCT_CLASS_RE = new RegExp(
+  `\\b(?:${NON_FOOD_PRODUCT_CLASS_FRAGMENTS.join("|")})\\b`,
+  "i",
+);
+const NON_FOOD_HOUSE_BRAND_RE = new RegExp(
+  `\\b(?:${NON_FOOD_HOUSE_BRAND_FRAGMENTS.join("|")})\\b`,
+  "i",
+);
+
+/** Retail model tokens like 13A878BTA66 or PPT600F — letters and digits, 6+. */
+const RETAIL_SKU_TOKEN_RE =
+  /(?<![A-Za-z0-9])(?=[A-Za-z0-9]*[A-Za-z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{6,}(?![A-Za-z0-9])/;
+
+/**
+ * Title-only “clearly not food” for `/owner` Clear obvious and ingest skip.
+ * Review rows have no Flipp department, so class + shape have to do the work.
+ */
+export function looksLikeNonFoodMerchandise(productName: string): boolean {
+  const trimmed = productName.trim();
+  if (trimmed.length < 2) {
+    return false;
+  }
+  if (NON_FOOD_PRODUCT_CLASS_RE.test(trimmed)) {
+    return true;
+  }
+  if (NON_FOOD_HOUSE_BRAND_RE.test(trimmed)) {
+    return true;
+  }
+  // Shape/SKU clues are merch-only. Do not junk chicken/steak/spinach titles
+  // that happen to include a model-like token.
+  if (inferStrictWeeklyAdFoodCategory(trimmed)) {
+    return false;
+  }
+  if (/\b\d{2,4}\s*cc\b/i.test(trimmed)) {
+    return true;
+  }
+  if (/\bgreenguard\b/i.test(trimmed)) {
+    return true;
+  }
+  if (/\b\d+\s*-?\s*drawers?\b/i.test(trimmed)) {
+    return true;
+  }
+  if (/\b\d+(?:\.\d+)?\s*channel\b/i.test(trimmed) && /\b\d+\s*w\b/i.test(trimmed)) {
+    return true;
+  }
+  if (RETAIL_SKU_TOKEN_RE.test(trimmed)) {
+    return true;
+  }
+  return false;
+}
 
 export function isWeeklyAdJunkProduct(productName: string): boolean {
   const trimmed = productName.trim();
@@ -864,6 +1023,9 @@ export function isWeeklyAdJunkProduct(productName: string): boolean {
     return true;
   }
   if (/^dial$/i.test(trimmed)) {
+    return true;
+  }
+  if (looksLikeNonFoodMerchandise(trimmed)) {
     return true;
   }
   return JUNK_PATTERNS.some((pattern) => pattern.test(trimmed));
