@@ -1,5 +1,7 @@
 # Yum4Less — Application overview
 
+Shopper control-flow trees → [`shopper-workflows.md`](shopper-workflows.md).
+
 ## What it is
 
 Yum4Less is a beta v1 web app that helps people plan affordable dinners using nearby grocery stores, weekly-sale data, and filters for budget, dietary needs, and single-store vs multi-store shopping. Users set location (browser geolocation or ZIP), choose stores and sale ingredients, then get ranked dinner ideas with estimated totals and trust labels—not live checkout prices. Ranked meal estimates target Kroger-family, Aldi, Publix, and Food Lion when ingest and promotion gates pass; other chains (e.g. Walmart, BJ’s) appear as map context only.
@@ -100,4 +102,4 @@ Ingest runs via scheduled scripts (`npm run ingest:weekly-ads:scheduled`, `inges
 
 Env var reference → [`.env.example`](../.env.example) · integration pattern → [`provider-integration-pattern.md`](provider-integration-pattern.md)
 
-**See also:** [`README.md`](../README.md) (setup and commands) · [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (current status)
+**See also:** [`shopper-workflows.md`](shopper-workflows.md) (shopper path) · [`README.md`](../README.md) (setup and commands) · [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (current status)

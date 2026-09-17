@@ -198,9 +198,33 @@ Each chain has its own `*-weekly-ad-ingestion.ts` (+ fetcher, parser, store reso
 | Doc | Role |
 |-----|------|
 | [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) | Product scope, ranked-chain focus, ingest order |
+| [`docs/shopper-workflows.md`](shopper-workflows.md) | Shopper UI control-flow catalog |
 | [`docs/audits/kroger-data-path-audit-2026-06-26.md`](audits/kroger-data-path-audit-2026-06-26.md) | Worked example audit |
 | [`.cursor/agents/ingest-standards.md`](../.cursor/agents/ingest-standards.md) | Ingest pipeline operator checklist |
 | [`.cursor/rules/yum4less-product-and-trust.mdc`](../.cursor/rules/yum4less-product-and-trust.mdc) | Trust labeling constraints |
+
+---
+
+## Unmatched flyer-line classification
+
+Live weekly-ad ingest (not a shopper UI path). Shopper trees → [`shopper-workflows.md`](shopper-workflows.md).
+
+```mermaid
+flowchart TD
+  flyerLine[Flyer line with no tracked ingredient id] --> skipList{On skip list?}
+  skipList -->|Yes| dropSkip[Drop — no price row]
+  skipList -->|No| nickname{Nickname alias?}
+  nickname -->|Yes| matchExisting[Match existing ingredient]
+  nickname -->|No| fuzzy{Score ge 0.55 vs catalog?}
+  fuzzy -->|Yes| matchExisting
+  fuzzy -->|No| junk{Junk heuristic?}
+  junk -->|Yes| writeSkip[Write skip + drop]
+  junk -->|No| autoCreate{Simple food auto-create?}
+  autoCreate -->|Yes| insertFood[Insert ingredient + weekly-ad alias + price]
+  autoCreate -->|No| ownerQueue[Queue /owner pending review — no shopper price]
+```
+
+Fixture ingest stops before this tree. `/owner` Yes writes a nickname alias (and may add a food); No writes a skip. Public `/api/recommendations` cannot write reviews.
 
 ---
 

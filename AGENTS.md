@@ -4,7 +4,7 @@ Index for Cursor **project agents**, **MCP servers**, and the **verification flo
 
 **Mandatory on every slice:** [`.cursor/rules/yum4less-agent-orchestration.mdc`](.cursor/rules/yum4less-agent-orchestration.mdc) (routing, trigger table, before-done checklist). **Every fix response** also includes the Scale check block from [`.cursor/rules/yum4less-scale-awareness.mdc`](.cursor/rules/yum4less-scale-awareness.mdc). **Operational facts** (stores, ZIPs, membership, catalog, prices) live in Postgres — [`.cursor/rules/yum4less-db-owned-data.mdc`](.cursor/rules/yum4less-db-owned-data.mdc).
 
-> **Also:** [`README.md`](README.md) · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) (decisions + redesign plan)
+> **Also:** [`README.md`](README.md) · [`docs/shopper-workflows.md`](docs/shopper-workflows.md) (shopper path) · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) (decisions + redesign plan)
 
 ---
 
@@ -15,7 +15,7 @@ Invoke with **@agent-name** or apply that agent’s checklist when the orchestra
 | Agent | One-line role |
 |---|---|
 | `@verifier` | Readonly trust/freshness/coverage verification before “verified” or merge-ready language |
-| `@web-frontend-standards` | UI, map, forms, results accordion, trust modals, accessibility, coordinate-first flows, 5-tab shell |
+| `@web-frontend-standards` | UI, map, forms, results accordion, trust labels, accessibility, coordinate-first flows, 6-tab shell |
 | `@web-backend-standards` | API routes, validation, providers, recommendation services, cache-first read paths |
 | `@database-codegen-standards` | PostgreSQL schema, seed, migrations, SQL, ingest persistence |
 | `@ingest-standards` | Scheduled ingest pipeline, weekly-ad/scrape, map-catalog, fixture vs live policy, `probe:*` |

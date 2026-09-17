@@ -2,6 +2,8 @@
 
 Committed browser tests (`@playwright/test`) gate merge via `npm run test:e2e:ci` (CI workflow `e2e` job). **Playwright MCP** in Cursor is for exploratory checks beyond this suite — not a substitute for these specs.
 
+Shopper control-flow catalog (trees, not this spec map): [`docs/shopper-workflows.md`](../docs/shopper-workflows.md).
+
 ## Layout
 
 | File | Responsibility |
@@ -23,6 +25,7 @@ Committed browser tests (`@playwright/test`) gate merge via `npm run test:e2e:ci
 | `pantry-step.spec.ts` | Pantry check — near-miss checklist, sticky “dinners we can show next”, continue to rank |
 | `error-surfaces.spec.ts` | H11 `error.tsx` (H12 skipped — bundled Leaflet) |
 | `mobile-smoke.spec.ts` | Narrow viewport smoke (`mobile-chrome` project only) |
+| `shopper-workflow-branches.spec.ts` | Wizard Back, Reset Preferences, manual sale-item pick, cuisine chips |
 
 ## Commands
 

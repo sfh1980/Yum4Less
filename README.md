@@ -4,7 +4,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 **Beta v1** accepts continental US ZIP codes and browser geolocation. The map and store context work broadly; **ranked meal estimates** use **Kroger-family banners, Aldi, Publix, Food Lion, and Walmart** when daily ingest and promotion gates pass. **Dollar General** can show directional weekly-ad sales, and dinner totals only when it is the main grocery stop nearby and those same floors pass (area circular, not that building’s shelf). Tier C — map/context only — is normal when floors do not pass, and for Lidl, BJ's, and other unsupported chains.
 
-> **Other docs:** [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) — project history, [**redesign plan**](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25), decisions, verification snapshot · [`docs/redesign/redesign-analysis-handoff.md`](docs/redesign/redesign-analysis-handoff.md) — redesign slice handoff summary · [`AGENTS.md`](AGENTS.md) — Cursor agents, MCP, test gates · [Customer feedback](docs/feedback-path.md)
+> **Other docs:** [`docs/shopper-workflows.md`](docs/shopper-workflows.md) — shopper path catalog · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) — project history, [**redesign plan**](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25), decisions, verification snapshot · [`docs/redesign/redesign-analysis-handoff.md`](docs/redesign/redesign-analysis-handoff.md) — redesign slice handoff summary · [`AGENTS.md`](AGENTS.md) — Cursor agents, MCP, test gates · [Customer feedback](docs/feedback-path.md)
 
 ---
 
@@ -12,7 +12,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 **Slices 1–5** and shell **D1–D6** are **shipped**. Full locks and history → [`PROJECT_CONTINUITY.md` → Redesign plan](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25).
 
-**What shipped:** Splash → GPS or ZIP+pin onboarding; **6-tab** bottom nav (Home, Deals, Cook, Saved, Feedback, Settings); **budget + dietary** → ingredients → pantry → rank → **stacked accordion** results; **TheMealDB** dinners with a full recipe page (short internal writeups are not ranked); store scope from setup/Settings (grocery pins in radius; **dinner estimates** still Kroger-family, Aldi, Publix, Food Lion, and Walmart, plus Dollar General only as a food-desert/circular fallback); ingredient gate + category chips; map **link + overlay**; session pantry prompt; device-local Saved meals; light/dark theme with **mockup Theme C/D tokens** (D7, 2026-06-26).
+**What shipped:** onboarding wizard + 6-tab shell, stacked accordion results, TheMealDB dinners with a full recipe page, grocery-pin store scope, ingredient gate, map overlay, session pantry, device-local Saved, Theme C/D tokens (D7). Step-by-step shopper path → [`docs/shopper-workflows.md`](docs/shopper-workflows.md).
 
 **Still deferred:** Cross-device saved meals (needs accounts; paused). Cuisine chips (R11) shipped 2026-09-15 — curated chips hide until enough dinners match.
 
@@ -60,7 +60,7 @@ npm run setup:local   # .env.local, db:up, live scheduled ingest when keys are s
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). **First visit:** complete **Settings** (location, radius, stores, theme) → **Home** welcome (budget, dietary) → ingredients → rank dinners. Returning visits with saved Settings open on **Home** when setup is complete.
+Open [http://localhost:3000](http://localhost:3000). First-run vs returning-visit shopper path → [`docs/shopper-workflows.md`](docs/shopper-workflows.md).
 
 If port **3000** is already in use, start the app on another port and point Playwright or your browser at it:
 
@@ -87,13 +87,9 @@ Without Postgres + ingest, ranked pricing stays empty and map pins remain bootst
 
 ## What the app does today
 
-*Redesign slices 1–5 + D1–D7 shipped — see [Active redesign](#active-redesign-2026-06-25) for deferred items.*
+*Redesign slices 1–5 + D1–D7 shipped — see [Active redesign](#active-redesign-2026-06-25) for deferred items. Shopper steps and branches → [`docs/shopper-workflows.md`](docs/shopper-workflows.md).*
 
-1. **Setup wizard** (first visit or factory reset): splash → GPS or ZIP (ZIP places a map pin) → radius → shopping style → store checkboxes. Theme toggle is in the chrome. **Feedback** is a sixth bottom-nav tab and stays available during setup.
-2. **Home:** budget → dietary → sale ingredients at selected stores (all-sale default or manual narrow) → pantry → rank. After setup, Settings reopens the same wizard screens.
-3. Yum4Less discovers nearby stores (map overlay link on ingredients step) and scopes UI to **selected stores only**.
-4. The recommendation engine ranks **TheMealDB** recipes that have a full recipe page against ingested prices where gates allow.
-5. Results show **Est.** totals, trust labels, and shopping plans in a **stacked accordion** (one card expanded at a time). **Cook** tab opens results when a rank session exists.
+Yum4Less discovers nearby stores, ranks **TheMealDB** recipes that have a full recipe page against ingested prices where gates allow, and shows **Est.** totals with trust labels. Unselected stores are out of scope.
 
 **v1 production-ranked chains:** Kroger-family banners (official API + weekly-ad fallback; Harris Teeter stays Harris Teeter), Aldi, Publix, Food Lion, and Walmart (weekly-ad) when promotion gates pass. Same floors for every ranked banner. Dollar General uses the same floors for **sale collection**; dinner totals from Dollar General only when no other ranked grocer is nearby. Lidl, BJ's, and other unsupported chains remain map context only.
 

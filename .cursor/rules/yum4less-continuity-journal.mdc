@@ -13,6 +13,7 @@ alwaysApply: false
 | Topic | Owner file |
 |---|---|
 | How to run, env setup, public scope | `README.md` |
+| Shopper UI control-flow catalog | `docs/shopper-workflows.md` |
 | Agents, MCP, hooks, verification gates | `AGENTS.md` + `.cursor/rules/yum4less-agent-orchestration.mdc` + `.cursor/rules/yum4less-testing-and-release-gates.mdc` |
 | Linear history, decisions, verification snapshot | `PROJECT_CONTINUITY.md` |
 | Distilled locked decisions | `.private/owner-decisions.md` (gitignored) |

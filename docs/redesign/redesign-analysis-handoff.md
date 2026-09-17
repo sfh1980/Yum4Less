@@ -42,18 +42,7 @@
 
 ---
 
-## Shipped shopper workflow
-
-```
-Settings tab (if first visit / factory reset / incomplete prefs)
-    → Home: Welcome (budget + dietary)
-    → Ingredients (all sale items at selected stores; optional manual narrow)
-    → Tap rank → Full-screen loading → Stacked results (accordion)
-```
-
-- **Bottom nav:** Home · Deals (browse) · Cook (when results exist) · Saved (placeholder) · Settings
-- **Map:** optional link above nav on ingredients step → overlay
-- **Store discovery:** from saved Settings (auto market search when setup complete)
+Shopper workflow catalog: [`docs/shopper-workflows.md`](../shopper-workflows.md).
 
 ---
 

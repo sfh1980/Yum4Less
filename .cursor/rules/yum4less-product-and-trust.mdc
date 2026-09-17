@@ -12,6 +12,7 @@ Source of truth for locked decisions: **`PROJECT_CONTINUITY.md` → [Decision lo
 | File | Owns |
 |---|---|
 | `README.md` | Public vision, beta scope, setup, commands, troubleshooting |
+| `docs/shopper-workflows.md` | Living shopper control-flow catalog (trees, branches, symptoms) |
 | `PROJECT_CONTINUITY.md` | Newest-first **changelog**, **Resume**, **Decision log**, **redesign plan**, verification snapshot |
 | `AGENTS.md` | Agent/MCP/hook index and verification gates |
 | `.env.example` | Environment variable truth |
@@ -30,7 +31,7 @@ Source of truth for locked decisions: **`PROJECT_CONTINUITY.md` → [Decision lo
 
 ## Core loop
 
-Determine location (geolocation primary, ZIP fallback) → choose radius → discover stores → apply meal preferences → rank dinners with trust labels and shopping plans.
+Determine location (geolocation primary, ZIP fallback) → choose radius → discover stores → apply meal preferences → rank dinners with trust labels and shopping plans. Branch catalog → [`docs/shopper-workflows.md`](docs/shopper-workflows.md).
 
 ## Data and recipes
 
