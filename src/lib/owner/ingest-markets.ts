@@ -35,6 +35,7 @@ import {
   isGroceryPinForDensity,
   isOwnerCheckListedPin,
 } from "@/lib/owner/owner-market-admission";
+import { listOwnerChainTools } from "@/lib/owner/owner-chain-tools";
 import {
   NO_RANKED_V1_CHAIN_PREVIEW_NOTICE,
   type OwnerMarketAdmission,
@@ -61,6 +62,7 @@ export {
 
 export const OWNER_MARKET_PREVIEW_RADIUS_MILES = INGEST_ZCTA_SAFETY_CAP_MILES;
 export const OWNER_MARKET_PREVIEW_STORE_LIMIT = 40;
+export const OWNER_MARKET_NEIGHBOR_STORE_LIMIT = 20;
 export const OWNER_MARKET_PREVIEW_TIMEOUT_MS = 12_000;
 
 export type OwnerMarketInspectResult = {
@@ -174,63 +176,87 @@ async function previewNearbyStores(input: {
   }
 
   const omitted = merged.filter((store) => !isOwnerCheckListedPin(store));
-  const listedPins = merged.filter((store) => {
-    if (!isOwnerCheckListedPin(store)) {
-      return false;
-    }
-    if (zcta.ok) {
-      return storePassesIngestFence({
-        latitude: store.latitude,
-        longitude: store.longitude,
-        center: { latitude: input.latitude, longitude: input.longitude },
-        fence: { ingestMiles, geometry: zcta.geometry },
-      });
-    }
-    return (
-      getDistanceMiles(
-        input.latitude,
-        input.longitude,
-        store.latitude,
-        store.longitude,
-      ) <= ingestMiles
-    );
-  });
+  const checkListed = merged.filter((store) => isOwnerCheckListedPin(store));
+  const fenceInput = {
+    center: { latitude: input.latitude, longitude: input.longitude },
+    fence: {
+      ingestMiles,
+      geometry: zcta.ok ? zcta.geometry : null,
+    },
+  };
 
-  const preview = buildOwnerMarketPreviewList({
-    catalogStores: listedPins,
+  const ingestPins = checkListed.filter((store) =>
+    storePassesIngestFence({
+      latitude: store.latitude,
+      longitude: store.longitude,
+      ...fenceInput,
+    }),
+  );
+  const neighborPins = zcta.ok
+    ? checkListed.filter((store) => {
+        const miles = getDistanceMiles(
+          input.latitude,
+          input.longitude,
+          store.latitude,
+          store.longitude,
+        );
+        if (miles > DENSITY_CLASSIFY_RADIUS_MILES) {
+          return false;
+        }
+        return !storePassesIngestFence({
+          latitude: store.latitude,
+          longitude: store.longitude,
+          ...fenceInput,
+        });
+      })
+    : [];
+
+  const ingestPreview = buildOwnerMarketPreviewList({
+    catalogStores: ingestPins,
     osmStores: [],
     marketCity: input.city,
     marketState: input.state,
     limit: OWNER_MARKET_PREVIEW_STORE_LIMIT,
   });
-
-  const stores = preview.stores.map((store) => {
-    const pin = listedPins.find((candidate) => candidate.name === store.name);
-    const inIngestFence = pin
-      ? storePassesIngestFence({
-          latitude: pin.latitude,
-          longitude: pin.longitude,
-          center: { latitude: input.latitude, longitude: input.longitude },
-          fence: {
-            ingestMiles,
-            geometry: zcta.ok ? zcta.geometry : null,
-          },
-        })
-      : false;
-    const group = classifyOwnerAdmissionGroup(store.name);
-    return {
-      ...store,
-      group,
-      inIngestFence,
-    };
+  const neighborPreview = buildOwnerMarketPreviewList({
+    catalogStores: neighborPins,
+    osmStores: [],
+    marketCity: input.city,
+    marketState: input.state,
+    limit: OWNER_MARKET_NEIGHBOR_STORE_LIMIT,
   });
+
+  const annotate = (
+    previewStores: OwnerMarketStorePreview[],
+    pins: CatalogStore[],
+    inIngestFence: boolean,
+  ): OwnerMarketStorePreview[] =>
+    previewStores.map((store) => {
+      const pin = pins.find((candidate) => candidate.name === store.name);
+      return {
+        ...store,
+        group: classifyOwnerAdmissionGroup(store.name),
+        inIngestFence: pin
+          ? storePassesIngestFence({
+              latitude: pin.latitude,
+              longitude: pin.longitude,
+              ...fenceInput,
+            })
+          : inIngestFence,
+      };
+    });
+
+  const stores = [
+    ...annotate(ingestPreview.stores, ingestPins, true),
+    ...annotate(neighborPreview.stores, neighborPins, false),
+  ];
 
   const omittedNotice = formatOmittedPinsNotice(omitted.length);
   if (omittedNotice) {
     warnings.unshift(omittedNotice);
   }
 
-  if (preview.stores.length === 0) {
+  if (stores.length === 0) {
     warnings.push(
       osmLookupFailed
         ? "Store lookup timed out or failed. The ZIP can still be activated; coverage comes from the next ingest run."
@@ -242,12 +268,17 @@ async function previewNearbyStores(input: {
         "Live map lookup timed out or failed. Showing ingested catalog pins for this ZIP.",
       );
     }
-    if (preview.total > OWNER_MARKET_PREVIEW_STORE_LIMIT) {
+    if (ingestPreview.total > OWNER_MARKET_PREVIEW_STORE_LIMIT) {
       warnings.push(
-        `Showing ${OWNER_MARKET_PREVIEW_STORE_LIMIT} of ${preview.total} pins (ranked banners first). This first look is not a full ingest catalog.`,
+        `Showing ${OWNER_MARKET_PREVIEW_STORE_LIMIT} of ${ingestPreview.total} pins inside this ZIP (ranked banners first). This first look is not a full ingest catalog.`,
       );
     }
-    if (preview.stores.some((store) => store.localityIsApproximate)) {
+    if (neighborPreview.stores.length > 0) {
+      warnings.push(
+        `${neighborPreview.total} grocery pin(s) sit in the 8-mile shopper circle but outside this ZIP shape. They stay on the map; Activate their ZIP to collect those flyers.`,
+      );
+    }
+    if (stores.some((store) => store.localityIsApproximate)) {
       warnings.push(
         `OSM pins without address tags are listed near ${input.city}, ${input.state} — not a street address.`,
       );
@@ -268,6 +299,7 @@ async function previewNearbyStores(input: {
       ingestMiles,
     }),
     zctaWarning: zcta.ok ? undefined : zcta.error,
+    chainTools: listOwnerChainTools(),
   };
 
   return { stores, warnings, admission };
@@ -278,6 +310,9 @@ function previewHasShopperRankedV1Chain(
   membership: ChainMembershipSnapshot,
 ): boolean {
   return stores.some((store) => {
+    if (store.inIngestFence === false) {
+      return false;
+    }
     const chain = inferStoreChainFromName(store.name);
     return (
       chain !== "dollar-general" && isShopperRankedChain(membership, chain)

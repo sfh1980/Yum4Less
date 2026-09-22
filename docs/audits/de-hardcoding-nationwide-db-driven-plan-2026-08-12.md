@@ -255,7 +255,7 @@ Resolution order: market override → chain+profile → profile → **hard fail 
 
 **Bootstrap seeds for the CI/demo market** may remain as historical SQL for Mechanicsville twin links — labeled **fixture identity**, not an onboarding playbook step.
 
-**Open dependency:** until Slice D ships, new markets will accumulate **unlinked twins**. That is an accepted gap (audit Slice D), not solved by more seeds.
+**Status 2026-09-22:** Slice D catalog matcher is **in repo** and writes **provisional** OSM↔official aliases after map-catalog. AUTO_CONFIRM and shopper expand stay **OFF**. Confirmed allowlists are not deleted. Unreviewed provisionals and remaining unlinked twins are an accepted gap until owner review — not solved by more seeds.
 
 ### 2.7 Geocode quota / durable cache ops
 

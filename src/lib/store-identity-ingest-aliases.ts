@@ -2,8 +2,8 @@
  * Option A Slice 5c — ingest-time store identity alias writes.
  *
  * Self-alias on catalog upsert/refresh + allowlisted Aldi→OSM explicit-pointer
- * cross-links only. No proximity/name matcher (Slice D). AUTO_CONFIRM stays OFF;
- * pointer confirm is a deterministic allowlisted path, not scored promotion.
+ * cross-links. Slice D proximity writes live in store-identity-proximity-ingest
+ * (provisional only; AUTO_CONFIRM stays OFF).
  */
 
 import type { Pool } from "pg";

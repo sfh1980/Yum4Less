@@ -70,7 +70,7 @@ No item from the consolidated sources meets the bar (data exposure, data corrupt
 | **Deep Playwright edge matrix gaps** | Coverage debt | Does not block real users |
 | **CSP / HSTS / timingSafeEqual / in-memory RL / npm moderate postcss** | Known P2 / accepted | LAN-appropriate deferrals |
 | **Q1 Publix map-merge align** | Decision locked; code not started | Map display drift — not STOP-SHIP |
-| **Identity expand flags OFF / Slice D** | Intentional beta boundary | Cross-source expand opt-in |
+| **Identity expand flags OFF / Slice D** | Matcher in repo (2026-09-22); expand still **OFF** | Provisional links only until review |
 
 ### 1.4 DEFERRED / INTENTIONAL (still intentional — not silently rotten)
 
@@ -80,7 +80,7 @@ No item from the consolidated sources meets the bar (data exposure, data corrupt
 | Walmart / BJ's / Lidl meal pricing | Context-only / coming later |
 | User accounts | Out of v1 |
 | Saved persistence (cross-device) | Deferred; device-local Saved already honest. Cuisine R11 **shipped 2026-09-15** |
-| Slice D batch matcher | Not started; flags OFF |
+| Slice D batch matcher | **In repo 2026-09-22** (provisional OSM↔official aliases). AUTO_CONFIRM and shopper expand still **OFF** |
 | M128/M151 scrape automation | Manual pause only; Decision log Active |
 | OSRM driving distance on discovery | Straight-line labeled |
 | “Two API routes forever” | **Superseded** by External API Integration Standard (2026-07-17) |

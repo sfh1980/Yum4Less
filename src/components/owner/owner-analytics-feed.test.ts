@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupAnalyticsEventsBySession } from "@/components/owner/owner-analytics-feed";
+import { groupAnalyticsEventsBySession, summarizeAnalyticsEvents } from "@/components/owner/owner-analytics-feed";
 import type { PublicAnalyticsEventRow } from "@/lib/analytics/analytics-repository";
 
 function event(
@@ -51,5 +51,30 @@ describe("groupAnalyticsEventsBySession", () => {
       "location_search_started",
       "rank_meals_completed",
     ]);
+  });
+
+  it("summarizes loaded-page counts including zero-dinner ranks", () => {
+    const summary = summarizeAnalyticsEvents([
+      event({
+        id: 1,
+        sessionId: "sess-a",
+        eventName: "rank_meals_completed",
+        receivedAt: "2026-08-06T12:02:00.000Z",
+        properties: { result_count_bucket: "0" },
+      }),
+      event({
+        id: 2,
+        sessionId: "sess-a",
+        eventName: "location_search_started",
+        receivedAt: "2026-08-06T12:00:00.000Z",
+      }),
+    ]);
+    expect(summary).toMatchObject({
+      loadedEventCount: 2,
+      loadedSessionCount: 1,
+      locationSearchStarted: 1,
+      rankCompleted: 1,
+      rankZeroDinners: 1,
+    });
   });
 });

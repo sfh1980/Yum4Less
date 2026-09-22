@@ -337,9 +337,33 @@ select {
 
 .bottom-nav-button-icon {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+}
+
+.bottom-nav-button[data-tab="home"] .bottom-nav-button-icon {
+  color: var(--nav-icon-home);
+}
+
+.bottom-nav-button[data-tab="deals"] .bottom-nav-button-icon {
+  color: var(--nav-icon-deals);
+}
+
+.bottom-nav-button[data-tab="cook"] .bottom-nav-button-icon {
+  color: var(--nav-icon-cook);
+}
+
+.bottom-nav-button[data-tab="saved"] .bottom-nav-button-icon {
+  color: var(--nav-icon-saved);
+}
+
+.bottom-nav-button[data-tab="feedback"] .bottom-nav-button-icon {
+  color: var(--nav-icon-feedback);
+}
+
+.bottom-nav-button[data-tab="settings"] .bottom-nav-button-icon {
+  color: var(--nav-icon-settings);
 }
 
 .bottom-nav-button-label {
@@ -2374,9 +2398,47 @@ body.modal-open {
   font-size: 0.85rem;
 }
 
-.owner-analytics-sessions {
+.owner-analytics-scoreboard {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.35rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  list-style: none;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--surface) 88%, var(--muted) 12%);
+}
+
+.owner-analytics-session-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.owner-analytics-session-summary {
+  margin: 0.35rem 0 0;
+}
+
+.owner-review-clear-obvious {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.owner-review-clear-obvious-reason {
+  font-weight: 400;
+  color: var(--muted);
 }
 
 .owner-analytics-session {

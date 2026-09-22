@@ -7,6 +7,13 @@ export const MISSING_ACTIVE_MARKETS_MESSAGE =
 export const NO_RANKED_V1_CHAIN_PREVIEW_NOTICE =
   "No Kroger, Aldi, Publix, Food Lion, or Walmart in this first look. Activating still books the ZIP for map/catalog. Dollar General can collect directional weekly-ad sales; dinner estimates from Dollar General only apply when none of those supermarket banners are nearby and coverage floors pass.";
 
+export type OwnerChainToolLine = {
+  chainId: string;
+  label: string;
+  officialList: boolean;
+  flyer: boolean;
+};
+
 export type OwnerMarketStorePreview = {
   name: string;
   city: string;
@@ -24,4 +31,5 @@ export type OwnerMarketAdmission = {
   omittedCount: number;
   headline: string;
   zctaWarning?: string;
+  chainTools: OwnerChainToolLine[];
 };

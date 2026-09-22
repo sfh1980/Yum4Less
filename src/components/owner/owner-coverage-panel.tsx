@@ -92,8 +92,9 @@ export function OwnerCoveragePanel({
         Read-only checklist over existing storefronts. Usable in the app means a
         ranked dinner chain that is not promotion-blocked and has fresh sale
         prices in the last {freshnessHours} hours. Walmart ads never count.
-        Convenience pins such as 7-Eleven stay Other / untracked. Location
-        search is city or state — store rows have no ZIP column.
+        Convenience pins such as 7-Eleven stay Other / untracked. Search by ZIP
+        to list storefronts inside that ZIP’s map shape (city or state still
+        works if you type letters).
       </p>
       {notice ? (
         <p className="panel-copy" role="status">
@@ -113,12 +114,12 @@ export function OwnerCoveragePanel({
           />
         </label>
         <label className="field" htmlFor="owner-coverage-location">
-          <span className="field-label">Location</span>
+          <span className="field-label">ZIP</span>
           <input
             id="owner-coverage-location"
             name="owner-coverage-location"
             onChange={(event) => setLocationQuery(event.target.value)}
-            placeholder="City or state"
+            placeholder="23111 or Richmond"
             value={locationQuery}
           />
         </label>
@@ -193,6 +194,7 @@ export function OwnerCoveragePanel({
               <p className="owner-coverage-title">{row.name}</p>
               <p className="panel-copy">
                 {row.chainLabel}
+                {row.zipCode ? ` · ${row.zipCode}` : ""}
                 {row.city || row.state
                   ? ` · ${[row.city, row.state].filter(Boolean).join(", ")}`
                   : ""}

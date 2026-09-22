@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { ActiveMarketRow } from "@/lib/active-markets";
 import {
   INGEST_OVERLAY_NOTICE,
+  type OwnerChainToolLine,
   type OwnerMarketStorePreview,
 } from "@/lib/owner/ingest-markets-copy";
+import { formatOwnerChainToolLine } from "@/lib/owner/owner-chain-tools";
 import { formatOwnerMarketPreviewLine } from "@/lib/owner/owner-market-preview-format";
 
 type OwnerMarketsPanelProps = {
@@ -20,6 +22,7 @@ type PreviewState = {
   stores: OwnerMarketStorePreview[];
   warnings: string[];
   headline?: string;
+  chainTools?: OwnerChainToolLine[];
 };
 
 function authHeaders(key: string): HeadersInit {
@@ -39,6 +42,11 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
   const [loadingList, setLoadingList] = useState(false);
   const [checking, setChecking] = useState(false);
   const [activating, setActivating] = useState(false);
+  const [linkingTwins, setLinkingTwins] = useState(false);
+  const [twinNotice, setTwinNotice] = useState<string | undefined>();
+  const [twinReview, setTwinReview] = useState<
+    Array<{ osmName: string; officialName: string; chainId: string; miles: number }>
+  >([]);
   const [preview, setPreview] = useState<PreviewState | undefined>();
 
   const loadMarkets = useCallback(async () => {
@@ -80,6 +88,8 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
     event.preventDefault();
     setError(undefined);
     setStatus(undefined);
+    setTwinNotice(undefined);
+    setTwinReview([]);
     setPreview(undefined);
     setChecking(true);
     try {
@@ -96,7 +106,7 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
         stores?: OwnerMarketStorePreview[];
         warnings?: string[];
         location?: { city?: string; state?: string };
-        admission?: { headline?: string };
+        admission?: { headline?: string; chainTools?: OwnerChainToolLine[] };
       };
       if (!response.ok || !json.ok) {
         setError(json.error ?? "That ZIP could not be checked.");
@@ -110,6 +120,7 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
         stores: json.stores ?? [],
         warnings: json.warnings ?? [],
         headline: json.admission?.headline,
+        chainTools: json.admission?.chainTools,
       });
     } catch {
       setError("That ZIP could not be checked.");
@@ -156,6 +167,46 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
     }
   }
 
+  async function handleLinkTwins() {
+    if (!preview) {
+      return;
+    }
+    setError(undefined);
+    setTwinNotice(undefined);
+    setLinkingTwins(true);
+    try {
+      const response = await fetch("/api/owner/store-identity/match", {
+        method: "POST",
+        headers: authHeaders(adminKey),
+        body: JSON.stringify({ zipCode: preview.zipCode, apply: true }),
+      });
+      const json = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        aliasesEnsured?: number;
+        writeCandidates?: number;
+        review?: Array<{
+          osmName: string;
+          officialName: string;
+          chainId: string;
+          miles: number;
+        }>;
+      };
+      if (!response.ok || !json.ok) {
+        setError(json.error ?? "Same-building pins could not be linked.");
+        return;
+      }
+      setTwinNotice(
+        `Linked ${json.aliasesEnsured ?? 0} high-confidence same-building pair(s) as provisional (auto-confirm off). ${json.review?.length ?? 0} leftover pair(s) still need you.`,
+      );
+      setTwinReview(json.review ?? []);
+    } catch {
+      setError("Same-building pins could not be linked.");
+    } finally {
+      setLinkingTwins(false);
+    }
+  }
+
   return (
     <section
       aria-labelledby="owner-tab-markets"
@@ -166,13 +217,15 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
       <h2>Markets</h2>
       <p className="panel-copy">
         Check first. Invalid ZIPs, failed geocode, and locations outside the
-        lower 48 are refused.         The list is recognized grocery banners, clubs, and Target/Whole Foods
-        inside the ZIP outline (convenience, bakeries, specialty, and
-        independent leftovers omitted). Ranked
-        banners are listed first. OSM pins without address tags show as near
-        the ZIP city — not a street address. Activating books the ZIP for the
-        next ingest run. ZIP 23111 is allowed if you type it — it is not a
-        hidden default.
+        lower 48 are refused. Check ZIP shows stores inside this ZIP’s shape
+        versus grocery pins in the 8-mile shopper circle that sit in other
+        ZIPs. Convenience, bakeries, specialty, and independent leftovers are
+        omitted (same hide list as shopper Settings). Ranked banners are listed
+        first. OSM pins without address tags show as near the ZIP city — not a
+        street address. Activating books the ZIP for the next ingest run. ZIP
+        23111 is allowed if you type it — it is not a hidden default. Operator
+        checklist: <code>docs/owner-zip-intake.md</code> (repo file; shoppers
+        never see it).
       </p>
       <p className="panel-copy">{overlayNotice}</p>
       {listNotice ? (
@@ -223,21 +276,55 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
               {warning}
             </p>
           ))}
-          {preview.stores.length > 0 ? (
-            <ul className="owner-market-store-list">
-              {preview.stores.map((store, index) => (
-                <li key={`${store.name}-${store.kind}-${index}`}>
-                  {formatOwnerMarketPreviewLine(store)}
-                  {store.group === "food-only"
-                    ? " · food-only"
-                    : store.group === "needs-you"
-                      ? " · needs you"
-                      : store.inIngestFence === false
-                        ? " · outside ingest cap"
-                        : ""}
-                </li>
-              ))}
-            </ul>
+          {preview.chainTools && preview.chainTools.length > 0 ? (
+            <>
+              <h3 className="owner-coverage-caption">Chain tools we already have</h3>
+              <ul className="owner-market-store-list">
+                {preview.chainTools.map((tool) => (
+                  <li key={tool.chainId}>{formatOwnerChainToolLine(tool)}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {preview.stores.some((store) => store.inIngestFence !== false) ? (
+            <>
+              <h3 className="owner-coverage-caption">Tonight’s ZIP job</h3>
+              <ul className="owner-market-store-list">
+                {preview.stores
+                  .filter((store) => store.inIngestFence !== false)
+                  .map((store, index) => (
+                    <li key={`ingest-${store.name}-${store.kind}-${index}`}>
+                      {formatOwnerMarketPreviewLine(store)}
+                      {store.group === "food-only"
+                        ? " · food-only"
+                        : store.group === "needs-you"
+                          ? " · needs you"
+                          : ""}
+                    </li>
+                  ))}
+              </ul>
+            </>
+          ) : null}
+          {preview.stores.some((store) => store.inIngestFence === false) ? (
+            <>
+              <h3 className="owner-coverage-caption">
+                Shopper circle, other ZIPs
+              </h3>
+              <ul className="owner-market-store-list">
+                {preview.stores
+                  .filter((store) => store.inIngestFence === false)
+                  .map((store, index) => (
+                    <li key={`neighbor-${store.name}-${store.kind}-${index}`}>
+                      {formatOwnerMarketPreviewLine(store)}
+                      {store.group === "food-only"
+                        ? " · food-only"
+                        : store.group === "needs-you"
+                          ? " · needs you"
+                          : " · other ZIP"}
+                    </li>
+                  ))}
+              </ul>
+            </>
           ) : null}
           {preview.alreadyActive ? (
             <p className="panel-copy">This ZIP is already on the ingest list.</p>
@@ -253,6 +340,31 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
               </button>
             </div>
           )}
+          <div className="action-row">
+            <button
+              className="secondary-button"
+              disabled={linkingTwins}
+              onClick={() => void handleLinkTwins()}
+              type="button"
+            >
+              {linkingTwins ? "Linking…" : "Link obvious twins"}
+            </button>
+          </div>
+          {twinNotice ? (
+            <p className="panel-copy" role="status">
+              {twinNotice}
+            </p>
+          ) : null}
+          {twinReview.length > 0 ? (
+            <ul className="owner-market-store-list">
+              {twinReview.map((row) => (
+                <li key={`${row.osmName}-${row.officialName}`}>
+                  Unsure: {row.osmName} ↔ {row.officialName} ({row.chainId},{" "}
+                  {row.miles.toFixed(2)} mi)
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 

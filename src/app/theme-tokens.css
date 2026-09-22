@@ -40,6 +40,14 @@
   --tag-purple-bg: #241a2c;
   --tag-purple-text: #c9aedd;
 
+  /* V3 Mock1 shopping-list tab icons — filled, always colored (not currentColor). */
+  --nav-icon-home: #e07040;
+  --nav-icon-deals: #e8b03a;
+  --nav-icon-cook: #c4c4c4;
+  --nav-icon-saved: #f07070;
+  --nav-icon-feedback: #d4c4ec;
+  --nav-icon-settings: #b794d4;
+
   --panel: var(--surface);
   --panel-border: var(--border);
   --text: var(--text-primary);
@@ -91,6 +99,14 @@
   --tag-coral-text: #633806;
   --tag-purple-bg: #eeedfe;
   --tag-purple-text: #3c3489;
+
+  /* V3 Mock1 shopping-list tab icons — filled, always colored (not currentColor). */
+  --nav-icon-home: #d45a32;
+  --nav-icon-deals: #d4a017;
+  --nav-icon-cook: #8e8e8e;
+  --nav-icon-saved: #e23b3b;
+  --nav-icon-feedback: #c4b0dc;
+  --nav-icon-settings: #8b6bb5;
 
   --panel: var(--surface);
   --panel-border: var(--border);
@@ -144,6 +160,14 @@ html:not([data-theme]) {
   --tag-coral-text: #633806;
   --tag-purple-bg: #eeedfe;
   --tag-purple-text: #3c3489;
+
+  /* V3 Mock1 shopping-list tab icons — filled, always colored (not currentColor). */
+  --nav-icon-home: #d45a32;
+  --nav-icon-deals: #d4a017;
+  --nav-icon-cook: #8e8e8e;
+  --nav-icon-saved: #e23b3b;
+  --nav-icon-feedback: #c4b0dc;
+  --nav-icon-settings: #8b6bb5;
 
   --panel: var(--surface);
   --panel-border: var(--border);

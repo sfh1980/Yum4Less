@@ -174,6 +174,42 @@ describe("filterStoreCoverageRows", () => {
       filterStoreCoverageRows(rows, { locationQuery: "richmond" }).map((row) => row.storeId),
     ).toEqual(["osm-node-7eleven"]);
   });
+
+  it("filters a 5-digit ZIP by map shape so Richmond is not Mechanicsville", () => {
+    const squareAroundMechanicsville = {
+      type: "Polygon" as const,
+      coordinates: [
+        [
+          [-77.4, 37.58],
+          [-77.2, 37.58],
+          [-77.2, 37.65],
+          [-77.4, 37.65],
+          [-77.4, 37.58],
+        ],
+      ],
+    };
+    const richmond = buildStoreCoverageRow(
+      store({
+        storeId: "kroger-lombardy",
+        name: "Kroger",
+        city: "Richmond",
+        latitude: 37.569,
+        longitude: -77.466,
+      }),
+      registry,
+    );
+    const mechanicsville = rows[0]!;
+    const matched = filterStoreCoverageRows([richmond, mechanicsville], {
+      zipFence: {
+        zipCode: "23111",
+        center: { latitude: 37.6085, longitude: -77.3739 },
+        geometry: squareAroundMechanicsville,
+        radiusMiles: 26,
+      },
+    });
+    expect(matched.map((row) => row.storeId)).toEqual(["kroger-mechanicsville"]);
+    expect(matched[0]?.zipCode).toBe("23111");
+  });
 });
 
 describe("summarizeStoreCoverage", () => {

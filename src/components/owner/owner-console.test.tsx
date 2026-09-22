@@ -251,7 +251,7 @@ describe("OwnerConsole", () => {
     });
     await user.click(screen.getByRole("tab", { name: "Analytics" }));
     await waitFor(() => {
-      expect(screen.getByText("rank_meals_completed")).toBeInTheDocument();
+      expect(screen.getByText(/rank_meals_completed/)).toBeInTheDocument();
     });
 
     await user.click(
@@ -259,7 +259,7 @@ describe("OwnerConsole", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("location_search_started")).toBeInTheDocument();
+      expect(screen.getByText(/location_search_started/)).toBeInTheDocument();
     });
     expect(
       screen.queryByRole("button", { name: /Show next 50 events/i }),
@@ -322,6 +322,7 @@ describe("OwnerConsole", () => {
               suggestedIngredientId: "pears",
               suggestedName: "Pears",
               suggestedCategory: "produce",
+              clearObvious: { kind: "food", reason: "simple dinner food" },
             },
           ],
           hasMore: false,
@@ -339,6 +340,7 @@ describe("OwnerConsole", () => {
     await waitFor(() => {
       expect(screen.getByText("Bartlett Pears")).toBeInTheDocument();
     });
+    expect(screen.getByText(/Clear obvious: Food/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^yes$/i }));
 

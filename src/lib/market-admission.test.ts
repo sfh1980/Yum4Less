@@ -129,6 +129,13 @@ describe("market admission helpers", () => {
     expect(isGroceryPinForDensity({ name: "Fas Mart", kind: "grocery" })).toBe(
       false,
     );
+    expect(isGroceryPinForDensity({ name: "Fas-Mart", kind: "grocery" })).toBe(
+      false,
+    );
+    expect(isConvenienceOrBakeryPin({ name: "Dash-In" })).toBe(true);
+    expect(isGroceryPinForDensity({ name: "Dash In", kind: "grocery" })).toBe(
+      false,
+    );
     expect(
       isGroceryPinForDensity({ name: "Capt Gregs Seafood", kind: "grocery" }),
     ).toBe(false);

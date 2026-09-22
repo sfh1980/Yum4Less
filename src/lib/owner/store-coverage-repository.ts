@@ -1,11 +1,18 @@
 import { getDbPool } from "@/lib/db";
 import { RANKED_PRICE_CACHE_TTL_HOURS } from "@/lib/ranked-price-cache-policy";
+import { resolveZctaGeometry } from "@/lib/geo/zcta-boundary";
+import { resolveZipLocation } from "@/lib/geocoding";
+import { INGEST_ZCTA_SAFETY_CAP_MILES } from "@/lib/market-density";
+import { readZipGeocodeCache } from "@/lib/zip-geocode-cache";
 import {
   buildStoreCoverageRow,
+  COVERAGE_ZIP_FALLBACK_MILES,
   filterStoreCoverageRows,
+  isCoverageZipQuery,
   summarizeStoreCoverage,
   type ChainRegistryRow,
   type ChainRolloutStage,
+  type CoverageZipFence,
   type StoreCoverageRow,
   type StoreCoverageSourceRow,
   type StoreCoverageSummary,
@@ -177,10 +184,12 @@ export async function listStoreCoverage(input: {
   const allRows = coverageResult.rows
     .map(mapSourceRow)
     .map((store) => buildStoreCoverageRow(store, registry));
+  const zipFence = await resolveCoverageZipFence(input.locationQuery);
   const filtered = filterStoreCoverageRows(allRows, {
     nameQuery: input.nameQuery,
-    locationQuery: input.locationQuery,
+    locationQuery: zipFence ? undefined : input.locationQuery,
     usable: input.usable,
+    zipFence,
   });
   const stores = filtered.slice(input.offset, input.offset + input.limit);
 
@@ -190,5 +199,39 @@ export async function listStoreCoverage(input: {
     freshnessHours: RANKED_PRICE_CACHE_TTL_HOURS,
     hasMore: input.offset + stores.length < filtered.length,
     total: filtered.length,
+  };
+}
+
+async function resolveCoverageZipFence(
+  locationQuery: string | undefined,
+): Promise<CoverageZipFence | undefined> {
+  const zipCode = locationQuery?.trim() ?? "";
+  if (!isCoverageZipQuery(zipCode)) {
+    return undefined;
+  }
+
+  const cached = await readZipGeocodeCache(zipCode);
+  let center = cached
+    ? { latitude: cached.latitude, longitude: cached.longitude }
+    : null;
+  if (!center) {
+    const geocoded = await resolveZipLocation(zipCode).catch(() => null);
+    if (geocoded && geocoded.ok) {
+      center = {
+        latitude: geocoded.location.latitude,
+        longitude: geocoded.location.longitude,
+      };
+    }
+  }
+  if (!center) {
+    return undefined;
+  }
+
+  const zcta = await resolveZctaGeometry({ zipCode });
+  return {
+    zipCode,
+    center,
+    geometry: zcta.ok ? zcta.geometry : null,
+    radiusMiles: zcta.ok ? INGEST_ZCTA_SAFETY_CAP_MILES : COVERAGE_ZIP_FALLBACK_MILES,
   };
 }

@@ -1401,6 +1401,39 @@ export async function syncUniversalMapCatalogForZip(input: {
     publixMessage = publixResult.message;
   }
 
+  if (!useFixtureIdentity) {
+    try {
+      const { runStoreIdentityProximityMatcherNearLocation } = await import(
+        "@/lib/store-identity-proximity-ingest"
+      );
+      const identityMatch = await runStoreIdentityProximityMatcherNearLocation({
+        latitude: locationResult.location.latitude,
+        longitude: locationResult.location.longitude,
+        apply: true,
+        radiusMiles,
+      });
+      if (
+        identityMatch.writeCandidates > 0 ||
+        identityMatch.reviewCandidates > 0 ||
+        identityMatch.aliasesEnsured > 0
+      ) {
+        console.log(
+          JSON.stringify({
+            level: "info",
+            scope: "store-identity.proximity-matcher",
+            zipCode: input.zipCode,
+            ...identityMatch,
+            at: new Date().toISOString(),
+          }),
+        );
+      }
+    } catch (error) {
+      logServerError("store-identity.proximity-matcher", error, {
+        zipCode: input.zipCode,
+      });
+    }
+  }
+
   return {
     osmUpserted,
     rankedUpserted,

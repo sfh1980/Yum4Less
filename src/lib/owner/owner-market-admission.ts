@@ -21,7 +21,6 @@ export type GroceryPinInput = {
 };
 
 const CONVENIENCE_NAME_FRAGMENTS = [
-  "7-eleven",
   "7 eleven",
   "7eleven",
   "wawa",
@@ -32,7 +31,7 @@ const CONVENIENCE_NAME_FRAGMENTS = [
   "racetrac",
   "race track",
   "racetrack",
-  "qt ",
+  "qt",
   "quicktrip",
   "kwik trip",
   "mini mart",
@@ -41,6 +40,15 @@ const CONVENIENCE_NAME_FRAGMENTS = [
   "fas mart",
   "fasmart",
   "dash in",
+  "dashin",
+  "royal farms",
+  "speedway",
+  "ampm",
+  "am pm",
+  "cumberland farms",
+  "turkey hill",
+  "rutter",
+  "weigel",
   "snack shop",
   "pit stop",
   "one stop",
@@ -48,6 +56,27 @@ const CONVENIENCE_NAME_FRAGMENTS = [
   "express mart",
   "corner store",
 ] as const;
+
+/** Hyphen/underscore names ("Dash-In") must match the same fragments as spaced names. */
+export function normalizeGroceryPinName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[-_/]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function pinNameHaystack(name: string): string {
+  return ` ${normalizeGroceryPinName(name)} `;
+}
+
+function pinNameIncludesFragment(name: string, fragment: string): boolean {
+  const needle = fragment.trim().toLowerCase();
+  if (!needle) {
+    return false;
+  }
+  return pinNameHaystack(name).includes(` ${needle} `);
+}
 
 const BAKERY_NAME_FRAGMENTS = [
   "bakery",
@@ -105,19 +134,17 @@ export function isConvenienceOrBakeryPin(input: GroceryPinInput): boolean {
   if (shop === "convenience" || shop === "bakery") {
     return true;
   }
-  const name = input.name.trim().toLowerCase();
-  if (CONVENIENCE_NAME_FRAGMENTS.some((fragment) => name.includes(fragment))) {
+  if (CONVENIENCE_NAME_FRAGMENTS.some((fragment) => pinNameIncludesFragment(input.name, fragment))) {
     return true;
   }
-  if (BAKERY_NAME_FRAGMENTS.some((fragment) => name.includes(fragment))) {
+  if (BAKERY_NAME_FRAGMENTS.some((fragment) => pinNameIncludesFragment(input.name, fragment))) {
     return true;
   }
   return false;
 }
 
 export function isPharmacyPin(name: string): boolean {
-  const normalized = name.trim().toLowerCase();
-  return PHARMACY_NAME_FRAGMENTS.some((fragment) => normalized.includes(fragment));
+  return PHARMACY_NAME_FRAGMENTS.some((fragment) => pinNameIncludesFragment(name, fragment));
 }
 
 /**
@@ -140,8 +167,9 @@ export function isMapOnlyFoodRetailPin(input: GroceryPinInput): boolean {
   if (kind === "specialty") {
     return true;
   }
-  const name = ` ${input.name.trim().toLowerCase()} `;
-  return SPECIALTY_NAME_FRAGMENTS.some((fragment) => name.includes(fragment));
+  return SPECIALTY_NAME_FRAGMENTS.some((fragment) =>
+    pinNameIncludesFragment(input.name, fragment),
+  );
 }
 
 /**
@@ -163,8 +191,9 @@ export function isRecognizedGroceryBannerPin(input: GroceryPinInput): boolean {
   if (kind === "dollar-market" || kind === "big-box") {
     return true;
   }
-  const name = input.name.trim().toLowerCase();
-  return CONTEXT_GROCER_NAME_FRAGMENTS.some((fragment) => name.includes(fragment));
+  return CONTEXT_GROCER_NAME_FRAGMENTS.some((fragment) =>
+    pinNameIncludesFragment(input.name, fragment),
+  );
 }
 
 export function isGroceryPinForDensity(input: GroceryPinInput): boolean {
@@ -189,14 +218,13 @@ export function classifyOwnerAdmissionGroup(name: string): OwnerAdmissionGroup {
   if (chain === "bjs") {
     return "food-only";
   }
-  const normalized = name.trim().toLowerCase();
-  if (CLUB_NAME_FRAGMENTS.some((fragment) => normalized.includes(fragment))) {
+  if (CLUB_NAME_FRAGMENTS.some((fragment) => pinNameIncludesFragment(name, fragment))) {
     return "food-only";
   }
   if (isPharmacyPin(name)) {
     return "needs-you";
   }
-  if (NEEDS_YOU_NAME_FRAGMENTS.some((fragment) => normalized.includes(fragment))) {
+  if (NEEDS_YOU_NAME_FRAGMENTS.some((fragment) => pinNameIncludesFragment(name, fragment))) {
     return "needs-you";
   }
   if (chain === "unknown") {

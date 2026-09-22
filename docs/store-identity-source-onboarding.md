@@ -7,8 +7,8 @@
 >
 > Master expand (`YUM4LESS_STORE_IDENTITY_EXPAND` / `NEXT_PUBLIC_…`) and
 > `YUM4LESS_STORE_IDENTITY_AUTO_CONFIRM` remain **OFF** by default, including
-> local/dev, until an explicit rollout decision. Slice D (batch
-> proximity/name matcher) is still open.
+> local/dev, until an explicit rollout decision. Slice D (catalog OSM↔official
+> proximity matcher) writes **provisional** aliases only.
 
 **Success bar:** A second engineer can onboard the next locator/banner by
 following this checklist **without** inventing permanent per-chain identity
@@ -29,15 +29,15 @@ This doc is **identity resolution only**.
 |-------|--------|
 | Schema `store_identities` / `store_identity_aliases` | Shipped (`021`) |
 | Resolvers (expand / canonicalize / virtual singleton) | Shipped |
-| Match policy scorer + pair override hooks | Shipped; **not** run as ingest matcher yet |
+| Match policy scorer + pair override hooks | Shipped; Slice D catalog matcher runs after map-catalog (provisional only) |
 | Rank/pantry expand | Behind master flag (Slice 2); **Postgres lookup when expand ON** (Pass 3 — shared with market-search) |
 | Settings canonicalize | Behind flag; **client known-pair = Kroger Mechanicsville only** (Slice 3) |
 | Kroger slug↔API seed | `022` (`match_method=seeded`) |
 | Aldi catalog↔OSM seed | `023` (`match_method=seeded`) |
 | Postgres lookup + market-search coverage/collapse | Behind flag (Slice 5a); **rank/pantry use same resolver** (Pass 3) |
 | Map pin scope / highlight | Server `equivalentStoreIds` only (Slice 5b) |
-| Ingest alias writes | Self-alias + **allowlisted Aldi→OSM pointer** only (Slice 5c) |
-| Slice D batch proximity/name matcher | **Not shipped** |
+| Ingest alias writes | Self-alias + **allowlisted Aldi→OSM pointer** (Slice 5c) + Slice D **provisional** OSM↔official proximity matches |
+| Slice D batch proximity/name matcher | **Shipped** as catalog-only OSM↔official matcher (provisional writes; AUTO_CONFIRM still OFF; expand still OFF) |
 
 ### Flags (all default OFF)
 
@@ -45,7 +45,7 @@ This doc is **identity resolution only**.
 |------|------|
 | `YUM4LESS_STORE_IDENTITY_EXPAND` | Master expand/canonicalize on server read paths |
 | `NEXT_PUBLIC_YUM4LESS_STORE_IDENTITY_EXPAND` | Same for client Settings remapping |
-| `YUM4LESS_STORE_IDENTITY_AUTO_CONFIRM` | Auto-promote scored matches to confirmed — **must stay OFF** until Slice D + review |
+| `YUM4LESS_STORE_IDENTITY_AUTO_CONFIRM` | Auto-promote scored matches to confirmed — **must stay OFF** until owner review of Slice D output |
 | `YUM4LESS_STORE_IDENTITY_SNAP_MATCHING` | SNAP as match candidates |
 | `YUM4LESS_STORE_IDENTITY_SEARCH_PROVISIONAL` | Search-time provisional links |
 
@@ -157,7 +157,7 @@ Known choke points today:
   exactly `confirmThreshold` (weight design, not a Kroger quirk). Classification
   uses `>=`. Prefer **reviewed seed / manual confirm** for first links of that
   class; do not flip `AUTO_CONFIRM` to paper over it.
-- [ ] Until Slice D ships, **do not** expect ingest to score-link pairs.
+- [ ] Slice D may write **provisional** OSM↔official aliases after map-catalog. Do **not** expect AUTO_CONFIRM or shopper expand to be on.
 
 ### 5. Canonical member choice (ladder honesty)
 
@@ -222,8 +222,8 @@ Minimum high-value set:
 ### 10. CI / bootstrap
 
 - [ ] If a seed slug will coexist with the new source, add an explicit identity
-  seed migration **or** wait for Slice D / allowlisted pointer — document the
-  expected canonical id for e2e.
+  seed migration **or** rely on Slice D provisional / allowlisted pointer —
+  document the expected canonical id for e2e.
 - [ ] Seed pattern: link when **both** members already exist; **do not insert
   or delete** `stores` rows in the identity seed.
 - [ ] Register ledger / effect probes for new `db/init/0xx_*.sql` files.
@@ -234,16 +234,17 @@ Minimum high-value set:
   `store-identity.ingest-alias-conflict` (do not silently overwrite).
 - [ ] Prefer summary counters (`aliasesEnsured` / `aliasesSkipped` /
   `aliasConflicts`) on sync job output.
-- [ ] Scored provisional match reporting is **Slice D** territory — do not
-  claim it exists for proximity matches yet.
+- [ ] Slice D reports scored provisional OSM↔official matches after
+  map-catalog. Do not claim those links are confirmed.
 
 ### 12. Done when
 
 A second engineer can add the next banner by copying this checklist **without**
 new **permanent** code paths named for that banner’s identity rules.
 
-Temporary, documented allowlist entries for **exact pointer** cross-links
-(until Slice D) are allowed — see next section. Permanent Aldi-only (or
+Temporary, documented allowlist entries for **exact pointer** confirmed
+cross-links remain allowed — see next section. Slice D covers scored
+proximity/name links as **provisional** only. Permanent Aldi-only (or
 Dollar-Tree-only) resolvers, tombstones-as-dedupe, or Settings pair tables
 copied per banner are not.
 
@@ -268,39 +269,41 @@ Ingest may:
    - The target OSM catalog row already exists
    - No conflicting alias binding
 
-It must **not**:
+Slice 5c itself must **not**:
 
-- Run proximity + name scoring at ingest
 - Auto-confirm scored matches (`AUTO_CONFIRM` stays OFF)
-- Attach provisional links on the live ingest path
 - Auto-link Kroger slug↔API (no pointer; structural 0.85 — seed handles that)
+
+Slice D (after map-catalog) may score OSM↔official pairs and write
+**provisional** aliases only. It does not confirm them.
 
 ### How to read the Aldi allowlist
 
 | Reading | Correct? |
 |---------|----------|
 | “Aldi has permanent special identity rules” | **No** |
-| “Temporary safety boundary until Slice D’s batch matcher exists” | **Yes** |
+| “Temporary safety boundary for **confirmed** cross-links until Slice D output is reviewed” | **Yes** |
 | “Pattern: deterministic exact pointer + allowlisted writers → confirmed cross-link” | **Yes** |
 | “Copy this by adding forever-Aldi-shaped branches in random call sites” | **No** |
 
-The allowlist exists because **Slice D is not shipped**. Without a batch
-matcher, the only safe live cross-link is an **exact id pointer** from a
-writer we have reviewed. Aldi is the first (and currently only) reviewed
-writer with that pointer in production data.
+The allowlist remains the only path for **confirmed** live cross-links from
+an exact id pointer. Aldi is the first (and currently only) reviewed writer
+with that pointer in production data. Slice D’s batch matcher is **shipped**
+and writes **provisional** OSM↔official links; it does not replace the
+allowlist until AUTO_CONFIRM (or owner confirm) is trusted.
 
-When Slice D lands, scored proximity/name linking (behind flags, with
-provisional band discipline) should make **per-source allowlists for
-pointer-only cross-links unnecessary for the general case**. Any remaining
-allowlist should be re-justified or removed in that slice — not quietly grown
-into a permanent per-banner identity framework.
+Scored proximity/name linking with provisional band discipline should make
+**per-source allowlists for pointer-only cross-links unnecessary for the
+general case** once those provisionals are reviewed. Any remaining allowlist
+should be re-justified or removed then — not quietly grown into a permanent
+per-banner identity framework.
 
-### Adding another allowlist entry (rare, pre–Slice D)
+### Adding another allowlist entry (rare)
 
 Only if the new source’s feed carries an **exact** OSM (or equivalent)
 `source_store_id` pointer — the same deterministic class as Aldi. Document in
-the PR: “temporary until Slice D; not permanent chain policy.” Prefer waiting
-for Slice D when the link would require distance/name judgment.
+the PR: “exact pointer; not permanent chain policy.” Prefer the Slice D
+matcher when the link would require distance/name judgment.
 
 ---
 
@@ -340,7 +343,7 @@ for Slice D when the link would require distance/name judgment.
    Settings-selectable when catalog Aldi is present — second seed did not
    justify broadening the client lookup (Slice 4).
 5. **Self-alias ≠ cross-link.** Every durable catalog row can own a singleton
-   identity; cross-source links need pointer allowlist (now) or Slice D (later).
+   identity; confirmed cross-source links need a pointer allowlist; scored OSM↔official twins are Slice D **provisional**.
 6. **Flags stay OFF including dev** until an explicit rollout decision —
    onboarding a source does not flip expand.
 7. **Seeds link; they do not invent store rows.** `022` / `023` no-op when a
@@ -361,7 +364,7 @@ map/context location source (not ranked meal pricing).
 | **1. `source_system`** | `dollar-tree-store-locator`; trust tier **locator**; document in types comments. |
 | **2. External id** | `stores.id` = `dollar-tree-{storeNumber}`; self-alias `external_id` same; `source_store_id` = locator native id and/or OSM pointer when the feed provides one. |
 | **3. Write paths** | Locator feed → `upsertCatalogStores` + self-alias. Re-check any refresh-only path. OSM twins continue via `ingest:map-catalog` (`openstreetmap-overpass`) — do not mint a second DT identity from OSM alone. |
-| **4. Match policy** | Add pair stub `dollar-tree-store-locator::openstreetmap-overpass`. Name token `"dollar tree"` already exists in match-policy brand tokens. No scored ingest link until Slice D. |
+| **4. Match policy** | Add pair stub `dollar-tree-store-locator::openstreetmap-overpass`. Name token `"dollar tree"` already exists in match-policy brand tokens. Scored OSM↔official links are Slice D **provisional** only. |
 | **5. Canonical** | No official API assumed → **locator row canonical**, OSM alias (Aldi-shaped, not Kroger API↔slug). |
 | **6. Rollout / Settings** | **Outside pure identity:** today only **Dollar General** is a modeled `StoreChain` (`coming-soon`); Dollar Tree name inference falls through to generic/unknown map context. Identity alone does not add Settings checkboxes. No Settings known-pair. Keep DT map-context / coming-soon until a separate product/rollout decision. |
 | **7. Map** | Use `kind: dollar-market` where appropriate; provenance from locator `source_name`. Adjacent gap: OSM kind helper currently special-cases “dollar general” more than “dollar tree” — labeling fix is not identity-core. |
@@ -369,7 +372,7 @@ map/context location source (not ranked meal pricing).
 | **9. Tests** | Locator↔OSM fixture + near-miss negative; skip Settings canonicalize until Settings-selectable. |
 | **10. Bootstrap** | Optional seed only if both members already exist in fixtures; link, don’t insert stores. |
 | **11. Observability** | Existing conflict/summary logs. |
-| **Allowlist** | **Prefer stay Aldi-only until Slice D.** Add a DT allowlist entry only if the locator feed carries an **exact** OSM `source_store_id` pointer — same temporary framing as Aldi, never proximity invented as pointer. |
+| **Allowlist** | **Prefer stay Aldi-only for confirmed pointer links.** Add a DT allowlist entry only if the locator feed carries an **exact** OSM `source_store_id` pointer. Distance/name twins belong to Slice D (provisional). |
 
 **Dry-run findings (checklist sharpness):**
 
@@ -385,7 +388,7 @@ map/context location source (not ranked meal pricing).
 - **Backlog #18** — Dollar Tree / Dollar General **ingredient-catalog fit** vs
   private-label assortments and the 97 tracked ingredients: separate queued
   investigation; **not** part of identity onboarding.
-- Slice D batch proximity/name matcher and default flag flips.
+- Default flag flips (`AUTO_CONFIRM`, shopper expand). Slice D matcher is in repo (provisional writes only).
 - Shopping-plan `storeId` emit (deferred follow-up; name-join fragility).
 - General `display_*` ladder resolver job.
 - Registering or implementing any Dollar Tree `source_system` in this slice.

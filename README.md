@@ -4,7 +4,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 
 **Beta v1** accepts continental US ZIP codes and browser geolocation. The map and store context work broadly; **ranked meal estimates** use **Kroger-family banners, Aldi, Publix, Food Lion, and Walmart** when daily ingest and promotion gates pass. **Dollar General** can show directional weekly-ad sales, and dinner totals only when it is the main grocery stop nearby and those same floors pass (area circular, not that building’s shelf). Tier C — map/context only — is normal when floors do not pass, and for Lidl, BJ's, and other unsupported chains.
 
-> **Other docs:** [`docs/shopper-workflows.md`](docs/shopper-workflows.md) — shopper path catalog · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) — project history, [**redesign plan**](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25), decisions, verification snapshot · [`docs/redesign/redesign-analysis-handoff.md`](docs/redesign/redesign-analysis-handoff.md) — redesign slice handoff summary · [`AGENTS.md`](AGENTS.md) — Cursor agents, MCP, test gates · [Customer feedback](docs/feedback-path.md)
+> **Other docs:** [`docs/shopper-workflows.md`](docs/shopper-workflows.md) — shopper path catalog · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) — project history, [**redesign plan**](PROJECT_CONTINUITY.md#redesign--locked-plan-2026-06-25), decisions, verification snapshot · [`docs/redesign/redesign-analysis-handoff.md`](docs/redesign/redesign-analysis-handoff.md) — redesign slice handoff summary · [`AGENTS.md`](AGENTS.md) — Cursor agents, MCP, test gates · [Customer feedback](docs/feedback-path.md) · [Owner ZIP intake](docs/owner-zip-intake.md)
 
 ---
 
@@ -26,6 +26,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 | **B1** — `active_markets` + `zip_geocode_cache` | Shipped (`025`) |
 | **B2** — `chain_registry` + `/owner` Coverage | Shipped (`026`) |
 | **C** — `/owner` Markets ZIP check + activate | Shipped (no new migrate; reuses `025`) |
+| **Slice D** — OSM↔official proximity matcher | In repo (provisional aliases only; AUTO_CONFIRM and shopper expand **OFF**) |
 | **Membership** — dinner attempts + fail-loud ingest from `chain_registry.shopper_ranked` | Shipped (live `030`/`031` applied) |
 
 TrueNAS ingest reads `active_markets` (`23111` + `23220` active; overlay unset). Dinner attempts follow `chain_registry.shopper_ranked`; match/confidence/freshness floors stay in code. C does **not** auto-queue shopper ZIPs. Live ledger is **000–013, 015–031**. Current product status → [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) Resume.
@@ -122,7 +123,7 @@ Expired sale rows stay in `price_observations` as history; unchanged sales with 
 
 **Kroger:** set `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`; verify with `npm run probe:kroger-api`. Certification API omits store-specific prices.
 
-**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; ingredient Yes/No, Coverage, feedback, analytics).
+**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; Ingredient review, Markets Check/Activate, Coverage ZIP search, Analytics scoreboard, feedback). Operator ZIP steps → [`docs/owner-zip-intake.md`](docs/owner-zip-intake.md).
 
 **Semgrep:** CI runs `semgrep ci` when the GitHub repository secret `SEMGREP_APP_TOKEN` is set (Settings → Secrets → Actions). Local Cursor hooks use the optional `semgrep` CLI — not the same token. Lint, unit tests, build, integration, and E2E remain merge gates.
 
@@ -191,7 +192,7 @@ Live ingest chain-by-chain baseline → [`PROJECT_CONTINUITY.md` → Live weekly
 
 Public `/api/market-search` and `/api/recommendations` reads are **cache-only for ranked prices**: meal totals come from Postgres rows observed within the last **24 hours**. User searches do **not** call live Kroger pricing APIs or write new price rows. **Map pins** merge ingested Postgres stores, cached provider discovery, and (when pins within radius are sparse) ephemeral OpenStreetMap context via Overpass — merged in memory only unless you run ingest scripts.
 
-Schedule one daily ingest on your host (homelab cron, Task Scheduler, etc.). Cron visits **`active_markets`** (status `active`). You can still set `YUM4LESS_INGEST_ZIPS` as a **debug overlay** for one run; if overlay and table are both empty, ingest fails closed. ZIP `23111` is a CI/E2E test geography only, not an app or cron default. TrueNAS already has `025`; activate a market from `/owner` **Markets** (or `npm run markets:activate -- 23220`) before dropping the overlay.
+Schedule one daily ingest on your host (homelab cron, Task Scheduler, etc.). Cron visits **`active_markets`** (status `active`). You can still set `YUM4LESS_INGEST_ZIPS` as a **debug overlay** for one run; if overlay and table are both empty, ingest fails closed. ZIP `23111` is a CI/E2E test geography only, not an app or cron default. TrueNAS already has `025`; activate a market from `/owner` **Markets** (or `npm run markets:activate -- 23220`) before dropping the overlay. Repeatable operator steps → [`docs/owner-zip-intake.md`](docs/owner-zip-intake.md).
 
 **Homelab/Linux step-by-step:** [`docs/homelab-deploy.md`](docs/homelab-deploy.md) — TrueNAS ingest container (§10), Watchtower (§11), host cron fallback (§3), freshness SQL (§4).
 

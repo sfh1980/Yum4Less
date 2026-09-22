@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planPendingReviewResolution } from "@/lib/owner/pending-review-auto-resolve";
+import { describeClearObviousPlan, planPendingReviewResolution } from "@/lib/owner/pending-review-auto-resolve";
 
 describe("pending review auto-resolve", () => {
   it("does not map steak-house dressing or plant steak onto beef", () => {
@@ -154,5 +154,19 @@ describe("pending review auto-resolve", () => {
       action: "yes",
       ingredientId: "oranges",
     });
+  });
+
+  it("labels Clear obvious as food, junk, or unsure", () => {
+    expect(describeClearObviousPlan(planPendingReviewResolution("Gala Apples"))).toEqual({
+      kind: "food",
+      reason: "simple dinner food",
+    });
+    expect(describeClearObviousPlan(planPendingReviewResolution("Thomas' Products"))).toEqual({
+      kind: "junk",
+      reason: "brand line, not a food",
+    });
+    expect(
+      describeClearObviousPlan(planPendingReviewResolution("Nasoya Plant-Based Steak")),
+    ).toMatchObject({ kind: "unsure" });
   });
 });

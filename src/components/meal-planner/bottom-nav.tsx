@@ -26,6 +26,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             <button
               type="button"
               className={`bottom-nav-button${activeTab === tab.id ? " bottom-nav-button--active" : ""}`}
+              data-tab={tab.id}
               aria-label={tab.label}
               aria-current={activeTab === tab.id ? "page" : undefined}
               onClick={() => onTabChange(tab.id)}

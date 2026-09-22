@@ -117,7 +117,7 @@ None in the three suites this session. Pre-existing / out-of-suite issues are re
 | Adherence | **Partial / in progress** |
 |-----------|---------------------------|
 | Matches | Schema `021_store_identities` / aliases; recommendation path accepts `identityLookup` (`recommendation-service.ts`); shopping-plan builder supports `equivalentStoreIdsByStoreId`; Option A Slices 1–6 closed; flags + `AUTO_CONFIRM` still **OFF** by default. |
-| Gaps | **Slice D** batch matcher **not started**; Q1 Publix locator map-merge align **not started** (Wave 2 Phase 0 locked). Identity expand is opt-in, so invisible correctness is **not** fully on by default. Name-based map overlay join still TODO (`shopping-plan-builder.ts` / `meal-presentation.ts`). |
+| Gaps | **Slice D** matcher **in repo 2026-09-22** (provisional only; AUTO_CONFIRM off). Q1 Publix locator map-merge align **closed 2026-09-15**. Identity expand is still opt-in, so invisible correctness is **not** fully on by default. Name-based map overlay join still TODO (`shopping-plan-builder.ts` / `meal-presentation.ts`). |
 | Ask Sean | Until Slice D + expand flags ON, is “invisibly correct wherever prices are compared” an **aspirational** lock or a **must-be-true today** claim? |
 
 ### Part 2 — Open questions for Sean (summary)
@@ -161,7 +161,7 @@ Postgres MCP on `yum4less_dev` this session: `price_observations` **308** total,
 | A2 | **Cuisine chips (R11)** | **Superseded 2026-09-15** — curated chips + `cuisine_tags` shipped | Was deferred; no longer a coming-soon stub |
 | A3 | **Walmart / Lidl / BJ's / warehouse meal pricing** | Explicit context-only / coming-later in rollout policy | Map copy already exists; Settings does not list them for selection |
 | A4 | **User accounts** | Anti-goal / deferred | No UI affordance |
-| A5 | **Slice D matcher / identity expand flags** | Locked deferred / not started. Publix Q1 map-align **closed 2026-09-15** | Not shopper-facing — **no UI coming-soon** |
+| A5 | **Slice D matcher / identity expand flags** | **Superseded 2026-09-22** — matcher in repo (provisional). Expand + AUTO_CONFIRM still OFF. Publix Q1 map-align **closed 2026-09-15** | Not shopper-facing — **no UI coming-soon** |
 | A6 | **OSRM driving distance on discovery list** | Continuity deferred; straight-line labeled today | Honest; optional future “driving distance coming later” only if Sean wants more visibility |
 
 ### Bucket B — Should work but broken (report only — **do not** label “coming soon”)

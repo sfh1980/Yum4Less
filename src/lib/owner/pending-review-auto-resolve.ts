@@ -254,3 +254,18 @@ export function planPendingReviewResolution(
 
   return { action: "skip", reason: "no conservative mapping" };
 }
+
+export type ClearObviousPreview = {
+  kind: "food" | "junk" | "unsure";
+  reason: string;
+};
+
+export function describeClearObviousPlan(plan: PendingReviewPlan): ClearObviousPreview {
+  if (plan.action === "yes") {
+    return { kind: "food", reason: plan.reason };
+  }
+  if (plan.action === "no") {
+    return { kind: "junk", reason: plan.reason };
+  }
+  return { kind: "unsure", reason: plan.reason };
+}

@@ -21,9 +21,10 @@ describe("BottomNav", () => {
     expect(screen.getByRole("button", { name: "Settings" })).toHaveClass(
       "bottom-nav-button--active",
     );
-    expect(
-      screen.getByRole("button", { name: "Settings" }).querySelector("svg"),
-    ).not.toBeNull();
+    const settingsButton = screen.getByRole("button", { name: "Settings" });
+    expect(settingsButton.querySelector("svg")).not.toBeNull();
+    expect(settingsButton).toHaveAttribute("data-tab", "settings");
+    expect(settingsButton.querySelector("[data-tab-icon='settings']")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
     expect(onTabChange).toHaveBeenCalledWith("home");
@@ -40,5 +41,29 @@ describe("BottomNav", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Feedback" }));
     expect(onTabChange).toHaveBeenCalledWith("feedback");
+  });
+
+  it("uses filled Mock1 tab icons with a per-tab color hook", () => {
+    render(
+      createElement(BottomNav, {
+        activeTab: "home",
+        onTabChange: vi.fn(),
+      }),
+    );
+
+    const labels: Record<string, string> = {
+      home: "Home",
+      deals: "Deals",
+      cook: "Cook",
+      saved: "Saved",
+      feedback: "Feedback",
+      settings: "Settings",
+    };
+    for (const tab of Object.keys(labels)) {
+      const icon = screen.getByRole("button", { name: labels[tab] }).querySelector("svg");
+      expect(icon).toHaveAttribute("data-tab-icon", tab);
+      expect(icon).toHaveAttribute("fill", "currentColor");
+      expect(icon).toHaveClass(`bottom-nav-button-icon--${tab}`);
+    }
   });
 });

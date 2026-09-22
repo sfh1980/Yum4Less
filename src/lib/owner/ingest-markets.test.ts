@@ -8,6 +8,7 @@ const resolveZipLocation = vi.fn();
 const discoverMapContextStores = vi.fn();
 const rememberIngestZipGeocode = vi.fn();
 const listCatalogStoresNearLocation = vi.fn();
+const resolveZctaGeometry = vi.fn();
 
 vi.mock("@/lib/active-markets", () => ({
   isMissingActiveMarketsSchema: (error: unknown) =>
@@ -29,6 +30,14 @@ vi.mock("@/lib/market-catalog-repository", () => ({
   listCatalogStoresNearLocation: (...args: unknown[]) =>
     listCatalogStoresNearLocation(...args),
 }));
+
+vi.mock("@/lib/geo/zcta-boundary", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/geo/zcta-boundary")>();
+  return {
+    ...actual,
+    resolveZctaGeometry: (...args: unknown[]) => resolveZctaGeometry(...args),
+  };
+});
 
 vi.mock("@/lib/zip-geocode-cache", () => ({
   rememberIngestZipGeocode: (...args: unknown[]) => rememberIngestZipGeocode(...args),
@@ -65,10 +74,15 @@ describe("owner ingest markets", () => {
     rememberIngestZipGeocode.mockReset();
     saveMarketDensity.mockReset();
     listCatalogStoresNearLocation.mockReset();
+    resolveZctaGeometry.mockReset();
   });
 
   beforeEach(() => {
     listCatalogStoresNearLocation.mockResolvedValue([]);
+    resolveZctaGeometry.mockResolvedValue({
+      ok: false,
+      error: "test cache miss",
+    });
   });
 
   it("rejects a body without a 5-digit ZIP", () => {
@@ -159,8 +173,70 @@ describe("owner ingest markets", () => {
     }
     expect(upsertActiveMarket).not.toHaveBeenCalled();
     if (inspected.ok) {
+      expect(inspected.result.admission.chainTools.some((row) => row.chainId === "kroger")).toBe(
+        true,
+      );
       expect(inspected.result.warnings).not.toContain(NO_RANKED_V1_CHAIN_PREVIEW_NOTICE);
     }
+  });
+
+  it("lists 8-mile grocery pins outside the ZIP shape as other-ZIP neighbors", async () => {
+    resolveZipLocation.mockResolvedValue(geocodeOk());
+    readIngestMarket.mockResolvedValue(null);
+    resolveZctaGeometry.mockResolvedValue({
+      ok: true,
+      source: "cache",
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [-77.45, 37.53],
+            [-77.42, 37.53],
+            [-77.42, 37.56],
+            [-77.45, 37.56],
+            [-77.45, 37.53],
+          ],
+        ],
+      },
+    });
+    discoverMapContextStores.mockResolvedValue({
+      stores: [
+        {
+          id: "osm-kroger-lombardy",
+          name: "Kroger",
+          city: "Richmond",
+          state: "VA",
+          kind: "grocery",
+          latitude: 37.5467,
+          longitude: -77.4366,
+          sourceName: "openstreetmap-overpass",
+          sourceStoreId: "osm-kroger-lombardy",
+        },
+        {
+          id: "osm-publix-carytown",
+          name: "Publix",
+          city: "Richmond",
+          state: "VA",
+          kind: "grocery",
+          latitude: 37.57,
+          longitude: -77.48,
+          sourceName: "openstreetmap-overpass",
+          sourceStoreId: "osm-publix-carytown",
+        },
+      ],
+      sources: [],
+    });
+
+    const inspected = await inspectOwnerIngestMarket("23220");
+    expect(inspected.ok).toBe(true);
+    if (!inspected.ok) {
+      return;
+    }
+    const kroger = inspected.result.stores.find((store) => store.name === "Kroger");
+    const publix = inspected.result.stores.find((store) => store.name === "Publix");
+    expect(kroger?.inIngestFence).toBe(true);
+    expect(publix?.inIngestFence).toBe(false);
+    expect(inspected.result.warnings.join(" ")).toMatch(/outside this ZIP shape/i);
   });
 
   it("overlays catalog pins and lists OSM pins without address tags near the ZIP city", async () => {

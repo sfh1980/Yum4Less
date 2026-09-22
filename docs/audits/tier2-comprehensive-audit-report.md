@@ -122,7 +122,7 @@ Tier 1 closed most foundation P1s (admin key on debug/feedback, Settings gate, b
 | ID | Sev | Title | Proof | Mechanism | Status |
 |----|-----|-------|-------|-----------|--------|
 | D2 | P3 | No scheduled global identity consistency job | Live sweep this session was manual MCP SQL; only seed-pair probes + FKs exist | Constraints catch FK orphans under normal writes; won’t catch display-cache drift or policy violations after manual SQL | **New** (ops hygiene) |
-| D3 | Note | Official-wins is pair/seed policy, not a generic reconciler | Settings hardcodes Kroger official canonical (`store-identity-settings-lookup.ts`); 022 SQL chooses API fields | Known Kroger-only known-pair + Slice D not started | Deferred — **note only** |
+| D3 | Note | Official-wins is pair/seed policy, not a generic reconciler | Settings hardcodes Kroger official canonical (`store-identity-settings-lookup.ts`); 022 SQL chooses API fields | Known Kroger-only known-pair. Slice D matcher **in repo 2026-09-22** (provisional) | Deferred expand — **note only** |
 
 ### Freshness heartbeat
 
@@ -250,7 +250,7 @@ Tier 1 closed most foundation P1s (admin key on debug/feedback, Settings gate, b
 | SNAP merge exclusion / SNAP matching flag OFF | Note |
 | Kroger-only Settings known-pair | Note (E2) |
 | Walmart / BJ's / Lidl ranked / Spoonacular / accounts | Out of v1 |
-| Slice D batch matcher | Not started |
+| Slice D batch matcher | Audit-time: not started. **Superseded 2026-09-22** — matcher in repo (provisional; AUTO_CONFIRM OFF) |
 | `enableHighAccuracy` explicit PositionOptions | Open backlog — current call sites omit options (default false) |
 | HTTPS / reverse-proxy TLS | Open — exposure documented under S6 + SS-1 |
 | Heartbeat thin-fresh pass | Accepted (D4) |

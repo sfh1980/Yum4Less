@@ -39,6 +39,7 @@ type PublicIngredientReviewRow = {
   suggestedIngredientId: string | null;
   suggestedName: string | null;
   suggestedCategory: string | null;
+  clearObvious?: { kind: "food" | "junk" | "unsure"; reason: string };
 };
 
 type ReviewDraft = {
@@ -877,6 +878,19 @@ export function OwnerConsole() {
                   return (
                   <li className="owner-review-row" key={row.id}>
                     <p className="owner-review-title">{row.rawProductName}</p>
+                    <p className="panel-copy owner-review-clear-obvious">
+                      <span className="badge">
+                        Clear obvious:{" "}
+                        {row.clearObvious?.kind === "food"
+                          ? "Food"
+                          : row.clearObvious?.kind === "junk"
+                            ? "Junk"
+                            : "Unsure"}
+                      </span>
+                      <span className="owner-review-clear-obvious-reason">
+                        {row.clearObvious?.reason ?? "no conservative mapping"}
+                      </span>
+                    </p>
                     <p className="panel-copy">
                       {row.chain ?? "unknown chain"} · {row.normalizedLabel}
                       {row.suggestedIngredientId

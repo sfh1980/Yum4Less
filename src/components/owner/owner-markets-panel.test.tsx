@@ -32,7 +32,19 @@ describe("OwnerMarketsPanel", () => {
           zipCode: "23220",
           alreadyActive: false,
           location: { city: "Richmond", state: "VA" },
-          stores: [{ name: "Kroger", city: "Richmond", state: "VA", kind: "grocery" }],
+          stores: [
+            {
+              name: "Kroger",
+              city: "Richmond",
+              state: "VA",
+              kind: "grocery",
+              inIngestFence: true,
+            },
+          ],
+          admission: {
+            headline: "23220 · Richmond, VA",
+            chainTools: [{ chainId: "kroger", label: "Kroger family", officialList: true, flyer: true }],
+          },
           warnings: [],
         });
       }
@@ -62,8 +74,10 @@ describe("OwnerMarketsPanel", () => {
     await user.click(screen.getByRole("button", { name: /Check ZIP/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Kroger/)).toBeInTheDocument();
+      expect(screen.getByText("Kroger · Richmond, VA")).toBeInTheDocument();
     });
+    expect(screen.getByText(/Tonight’s ZIP job/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kroger family: official list \+ flyer/i)).toBeInTheDocument();
     expect(screen.getByText(/23220 · Richmond, VA/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Activate 23220/i }));

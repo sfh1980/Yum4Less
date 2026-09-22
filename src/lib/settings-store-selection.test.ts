@@ -122,6 +122,7 @@ describe("filterSettingsSelectableStores", () => {
     const filtered = filterSettingsSelectableStores([
       store({ id: "snack-1", name: "Snack Shop", chain: "unknown", kind: "grocery" }),
       store({ id: "dash-1", name: "Dash In", chain: "unknown", kind: "specialty" }),
+      store({ id: "dash-hyphen", name: "Dash-In", chain: "unknown", kind: "grocery" }),
       store({ id: "fas-1", name: "Fas Mart", chain: "unknown", kind: "grocery" }),
       store({
         id: "bake-1",

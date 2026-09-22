@@ -197,7 +197,7 @@ Closest playbook pair today: **Option A identity doc** + **provider-integration-
 | Ingest cost ~linear in ZIP count | ZIP | **Large** | Map-catalog + weekly-ad + Kroger sync per market |
 | Kroger Locations ~1.6k/day/endpoint; Products ~10k/day | ZIP (sync) | **Medium** | Multi-ZIP preferred-location sync stays under Products longer than Locations |
 | Metro-tuned dedupe (0.05 / 0.15 / 1.5 / 0.25 mi) + Food Lion exceptions | Both | **Medium** | Dense metros: over-suppress; rural: less merge risk, Nominatim FPs remain |
-| Slice D open; allowlist/seeds for twins | Store (primary) | **Large** | Continuity: safety boundary until Slice D |
+| Slice D open; allowlist/seeds for twins | Store (primary) | **Large** | Audit-time gap. **2026-09-22:** matcher in repo writes provisionals; AUTO_CONFIRM still OFF |
 | M128 scrape auto-pause / kill-switch not shipped | Store (+ ZIP multiplies blast radius) | **Large** | Manual pause only today |
 | E2E/fixtures single-ZIP | ZIP (+ store for new chains) | **Medium** | Honesty gap for second market |
 | Market-search payload at dense/far ZIPs | ZIP | **Medium** | Continuity historically ~883 KB / 1310 stores |
@@ -230,7 +230,7 @@ Closest playbook pair today: **Option A identity doc** + **provider-integration-
 | Per-ZIP freshness / coverage heartbeat | Medium | ZIP-scaling |
 | Second-ZIP fixtures + parameterized e2e smoke | Medium | ZIP-scaling |
 | Market-search size guard / pagination | Medium | ZIP-scaling |
-| Slice D batch proximity/name matcher | Large | Store-scaling (also worsens with ZIP density) |
+| Slice D batch proximity/name matcher | **In repo 2026-09-22** (provisional) | Store-scaling — review leftover pairs before expand |
 | Unified chain-capability registry (rollout / Flipp / markers / prefixes) | Medium | Store-scaling |
 | Declarative Flipp-first weekly-ad executor | Medium | Store-scaling (speed) |
 | Official price sync abstraction beyond Kroger | Large | Store-scaling (official path only) |

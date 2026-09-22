@@ -6,7 +6,11 @@ import {
 } from "@/lib/ingredient-id";
 import { resolveCanonicalSimpleFood } from "@/lib/weekly-ad-ingestion/weekly-ad-simple-food";
 import { isFixtureIngestMode } from "@/lib/fixture-ingest-policy";
-import { planPendingReviewResolution } from "@/lib/owner/pending-review-auto-resolve";
+import {
+  describeClearObviousPlan,
+  planPendingReviewResolution,
+  type ClearObviousPreview,
+} from "@/lib/owner/pending-review-auto-resolve";
 import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk-heuristics";
 import {
   insertIngredientIfMissing,
@@ -29,6 +33,7 @@ export type PublicIngredientReviewRow = {
   suggestedIngredientId: string | null;
   suggestedName: string | null;
   suggestedCategory: IngredientCategory | null;
+  clearObvious: ClearObviousPreview;
 };
 
 export type IngredientReviewDecision = "yes" | "no";
@@ -61,6 +66,11 @@ export async function listPendingIngredientReviews(
   return {
     reviews: rows.map((row) => {
       const suggested = resolveCanonicalSimpleFood(row.normalized_label);
+      const clearObvious = describeClearObviousPlan(
+        planPendingReviewResolution(row.raw_product_name, {
+          normalizedLabel: row.normalized_label,
+        }),
+      );
       return {
         id: Number(row.id),
         normalizedLabel: row.normalized_label,
@@ -70,6 +80,7 @@ export async function listPendingIngredientReviews(
         suggestedIngredientId: suggested?.id ?? null,
         suggestedName: suggested?.name ?? null,
         suggestedCategory: suggested?.category ?? null,
+        clearObvious,
       };
     }),
     hasMore,

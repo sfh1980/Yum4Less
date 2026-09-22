@@ -1,4 +1,5 @@
 import { inferStoreChainFromCatalog } from "@/lib/chain-rollout-policy";
+import { storePassesIngestFence } from "@/lib/market-ingest-fence";
 
 export type ChainRolloutStage =
   | "ranked"
@@ -48,6 +49,20 @@ export type StoreCoverageRow = StoreCoverageSourceRow & {
   sales: boolean;
   recipeReady: boolean;
   usableInApp: boolean;
+  zipCode?: string;
+};
+
+export const COVERAGE_ZIP_FALLBACK_MILES = 3;
+
+export function isCoverageZipQuery(query: string): boolean {
+  return /^\d{5}$/.test(query.trim());
+}
+
+export type CoverageZipFence = {
+  zipCode: string;
+  center: { latitude: number; longitude: number };
+  geometry: import("@/lib/geo/point-in-polygon").GeoJsonGeometry | null;
+  radiusMiles: number;
 };
 
 export type StoreCoverageSummary = {
@@ -114,11 +129,13 @@ export function filterStoreCoverageRows(
     nameQuery?: string;
     locationQuery?: string;
     usable?: StoreCoverageUsableFilter;
+    zipFence?: CoverageZipFence;
   },
 ): StoreCoverageRow[] {
   const nameQuery = input.nameQuery?.trim().toLowerCase() ?? "";
   const locationQuery = input.locationQuery?.trim().toLowerCase() ?? "";
   const usable = input.usable ?? "all";
+  const zipFence = input.zipFence;
 
   return rows.filter((row) => {
     if (usable === "yes" && !row.usableInApp) {
@@ -133,6 +150,12 @@ export function filterStoreCoverageRows(
         return false;
       }
     }
+    if (zipFence) {
+      if (row.latitude === null || row.longitude === null) {
+        return false;
+      }
+      return storeRowPassesZipFence(row, zipFence);
+    }
     if (locationQuery) {
       const haystack = `${row.city} ${row.state}`.toLowerCase();
       if (!haystack.includes(locationQuery)) {
@@ -140,6 +163,28 @@ export function filterStoreCoverageRows(
       }
     }
     return true;
+  }).map((row) =>
+    zipFence
+      ? { ...row, zipCode: zipFence.zipCode }
+      : row,
+  );
+}
+
+function storeRowPassesZipFence(
+  row: Pick<StoreCoverageRow, "latitude" | "longitude">,
+  fence: CoverageZipFence,
+): boolean {
+  if (row.latitude === null || row.longitude === null) {
+    return false;
+  }
+  return storePassesIngestFence({
+    latitude: row.latitude,
+    longitude: row.longitude,
+    center: fence.center,
+    fence: {
+      ingestMiles: fence.radiusMiles,
+      geometry: fence.geometry,
+    },
   });
 }
 
