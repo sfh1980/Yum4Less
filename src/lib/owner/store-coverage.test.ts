@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { GeoJsonPolygon } from "@/lib/geo/point-in-polygon";
 import {
   buildStoreCoverageRow,
   filterStoreCoverageRows,
@@ -176,8 +177,8 @@ describe("filterStoreCoverageRows", () => {
   });
 
   it("filters a 5-digit ZIP by map shape so Richmond is not Mechanicsville", () => {
-    const squareAroundMechanicsville = {
-      type: "Polygon" as const,
+    const squareAroundMechanicsville: GeoJsonPolygon = {
+      type: "Polygon",
       coordinates: [
         [
           [-77.4, 37.58],

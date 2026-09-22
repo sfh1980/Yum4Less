@@ -269,6 +269,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 ## Changelog (newest first)
 
+### 2026-09-22 — Coverage ZIP fixture typecheck
+
+**Theme:** CI verify on `4c7768f` failed `tsc` on the Coverage ZIP polygon fixture.
+
+**Shipped:** Annotate the fixture as `GeoJsonPolygon` (same as market-admission tests). Product Coverage ZIP behavior unchanged.
+
+**Limits:** Does not invent dinners. Live still waits Watchtower after this push.
+
+**Evidence:** this session `npm run typecheck` **pass**. Coverage ZIP unit test **8/8**. CI verify on `4c7768f` was the catch; Vitest alone did not.
+
 ### 2026-09-22 — ZIP market intake + Slice D close-out
 
 **Theme:** Repeatable owner ZIP checklist plus /owner Coverage, Analytics, Ingredient review, and lasting OSM↔official links.
@@ -3331,6 +3341,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm run typecheck` (Coverage ZIP fixture) | 2026-09-22 | **Pass** (`tsc --noEmit`) |
 | `npm test` (ZIP market intake + Slice D) | 2026-09-22 | **1295/1295** pass (229 files) |
 | `npm run build` (ZIP market intake + Slice D) | 2026-09-22 | **Pass** (Next.js 15.5.25) |
 | Semgrep CLI OSS (identity/coverage files) | 2026-09-22 | **0 findings** (1.165.0; Pro-engine rule warnings only) |
