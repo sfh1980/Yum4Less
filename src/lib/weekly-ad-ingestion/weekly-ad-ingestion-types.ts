@@ -11,6 +11,7 @@ export type WeeklyAdChain = Extract<
   | "lidl"
   | "dollar-general"
   | "target"
+  | "whole-foods"
 >;
 
 export type WeeklyAdIngestionStatus =

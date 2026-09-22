@@ -5,7 +5,7 @@ import type { OwnerChainToolLine } from "@/lib/owner/ingest-markets-copy";
  * Adapter capability for Owner Check — which locators and flyer paths we
  * already wrote. Not a roster of which banners are ranked in a ZIP.
  */
-const OFFICIAL_LIST_CHAIN_IDS = new Set(["kroger", "publix", "target"]);
+const OFFICIAL_LIST_CHAIN_IDS = new Set(["kroger", "publix", "target", "whole-foods"]);
 
 const CHAIN_LABELS: Record<string, string> = {
   kroger: "Kroger family",
@@ -16,6 +16,7 @@ const CHAIN_LABELS: Record<string, string> = {
   lidl: "Lidl",
   "dollar-general": "Dollar General",
   target: "Target",
+  "whole-foods": "Whole Foods",
 };
 
 export function listOwnerChainTools(): OwnerChainToolLine[] {

@@ -105,6 +105,15 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
     termsNote:
       "Target weekly-ad offers use the public store locator + promotions JSON (not Flipp; not visible HTML). Prices are directional store circulars — dinners stay off until membership floors pass. The guest API key can rotate or block datacenter IPs. Verify in store before checkout.",
   },
+  {
+    chain: "whole-foods",
+    label: "Whole Foods weekly ad ingestion",
+    implementation: "live-scraper",
+    fetchStrategy: "http",
+    researchTargets: ["https://www.wholefoodsmarket.com/sales-flyer"],
+    termsNote:
+      "Whole Foods weekly-ad offers use the public ZIP/coordinate locator (closest grocery store) then that store's sales-flyer HTML. Not Flipp. Prices are directional store circulars — dinners stay off until membership floors pass. Verify in store before checkout.",
+  },
 ];
 
 export function getWeeklyAdChainConfig(

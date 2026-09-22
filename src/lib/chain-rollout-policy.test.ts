@@ -49,11 +49,17 @@ describe("chain rollout policy", () => {
     expect(inferStoreChainFromName("Food Lion")).toBe("food-lion");
     expect(inferStoreChainFromName("Trader Joe's")).toBe("trader-joes");
     expect(inferStoreChainFromName("Target Mechanicsville")).toBe("target");
+    expect(inferStoreChainFromName("Whole Foods Market")).toBe("whole-foods");
     expect(inferStoreChainFromCatalog({
       id: "target-1968",
       name: "Brandy Creek Target",
       sourceName: "target-store-locator",
     })).toBe("target");
+    expect(inferStoreChainFromCatalog({
+      id: "whole-foods-10598",
+      name: "West Broad Street",
+      sourceName: "whole-foods-store-locator",
+    })).toBe("whole-foods");
   });
 
   it("shows Kroger-family storefronts as their banner, not the family", () => {

@@ -172,6 +172,8 @@ Each chain has its own `*-weekly-ad-ingestion.ts` (+ fetcher, parser, store reso
 
 - **Flipp-first + chain scrape:** Aldi, Food Lion, Kroger (`resolveFlippWeeklyAdOffersForChain` → chain-specific scrape). Kroger adds a third tier: official Products API partial fill when Flipp and scrape both return zero.
 - **Locator-cookie + scrape:** Publix (no Flipp in live path today)
+- **ZIP locator + retailer JSON:** Target
+- **ZIP/coords locator + sales-flyer HTML:** Whole Foods (not Flipp)
 
 **Flag (future, not now):** Three chains now share the Flipp-first + scrape fallback shape (Aldi + Food Lion + Kroger). A small declarative list per chain in `weekly-ad-chain-config.ts` could reduce drift — **propose before building**; Kroger’s API partial-fill tier and Publix cookie logic stay outside any shared executor until explicitly approved.
 

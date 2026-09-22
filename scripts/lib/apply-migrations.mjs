@@ -252,6 +252,20 @@ export function migrationEffectPresent(version, db) {
       );
     case "033":
       return db.columnExists("recipes", "cuisine_tags");
+    case "034":
+      return (
+        db.tableExists("chain_registry") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from chain_registry
+             where chain_id = 'whole-foods'
+               and weekly_ad_eligible = true
+               and shopper_ranked = false
+               and rollout_stage = 'ingest_only'
+               and weekly_ad_adapter = 'whole-foods-weekly-ad'`,
+          ),
+        ) === 1
+      );
     default:
       return false;
   }

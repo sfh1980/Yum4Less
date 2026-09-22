@@ -61,6 +61,15 @@ describe("provider rollout", () => {
     expect(rollout.note).toMatch(/dinner totals are not enabled|not available/i);
   });
 
+  it("labels Whole Foods as map context with dinners off", () => {
+    const rollout = getProviderRolloutForStore("Whole Foods Market");
+
+    expect(rollout.chain).toBe("whole-foods");
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toMatch(/dinner totals are not enabled|not available/i);
+  });
+
   it("lists catalog rollout entries for shopper-facing chains", () => {
     expect(listProviderRollout().map((provider) => provider.chain)).toEqual([
       "kroger",
@@ -203,6 +212,18 @@ describe("resolveProviderRolloutForStore", () => {
 
   it("keeps Lidl coming soon even when weekly-ad coverage would pass floors", () => {
     const rollout = resolveProviderRolloutForStore("Lidl", {
+      matchedIngredientCount: 5,
+      usesWeeklyAdSource: true,
+      weeklyAdPromotionPassed: true,
+    });
+
+    expect(rollout.status).toBe("coming-soon");
+    expect(rollout.recommendationEnabled).toBe(false);
+    expect(rollout.note).toContain("not used for dinner totals");
+  });
+
+  it("keeps Whole Foods coming soon even when weekly-ad coverage would pass floors", () => {
+    const rollout = resolveProviderRolloutForStore("Whole Foods Market", {
       matchedIngredientCount: 5,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: true,

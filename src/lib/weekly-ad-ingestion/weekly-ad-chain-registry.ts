@@ -9,6 +9,7 @@ export const WEEKLY_AD_CHAINS = [
   "lidl",
   "dollar-general",
   "target",
+  "whole-foods",
 ] as const satisfies readonly WeeklyAdChain[];
 
 export function isWeeklyAdChain(chain: string): chain is WeeklyAdChain {

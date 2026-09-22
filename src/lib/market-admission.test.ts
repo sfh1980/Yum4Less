@@ -152,6 +152,7 @@ describe("market admission helpers", () => {
     expect(classifyOwnerAdmissionGroup("Dollar General")).toBe("will-ingest");
     expect(classifyOwnerAdmissionGroup("Costco")).toBe("food-only");
     expect(classifyOwnerAdmissionGroup("Target")).toBe("will-ingest");
+    expect(classifyOwnerAdmissionGroup("Whole Foods")).toBe("will-ingest");
     expect(classifyOwnerAdmissionGroup("Giant")).toBe("needs-you");
   });
 

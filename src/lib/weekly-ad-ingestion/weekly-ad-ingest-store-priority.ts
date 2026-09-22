@@ -14,7 +14,7 @@ export function scoreWeeklyAdIngestStorePriority(store: Pick<WeeklyAdIngestStore
     return 1;
   }
 
-  if (/^(aldi|food-lion|publix|walmart|lidl|kroger|dollar-general|target)-/.test(store.id)) {
+  if (/^(aldi|food-lion|publix|walmart|lidl|kroger|dollar-general|target|whole-foods)-/.test(store.id)) {
     return 5;
   }
 

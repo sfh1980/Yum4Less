@@ -57,6 +57,15 @@ describe("chain_registry and store_coverage (integration)", () => {
       true,
     );
     expect(registry.find((row) => row.chainId === "target")?.shopperRanked).toBe(false);
+    expect(registry.find((row) => row.chainId === "whole-foods")?.rolloutStage).toBe(
+      "ingest_only",
+    );
+    expect(registry.find((row) => row.chainId === "whole-foods")?.weeklyAdEligible).toBe(
+      true,
+    );
+    expect(registry.find((row) => row.chainId === "whole-foods")?.shopperRanked).toBe(
+      false,
+    );
     const rankedIds = registry
       .filter((row) => row.shopperRanked)
       .map((row) => row.chainId);

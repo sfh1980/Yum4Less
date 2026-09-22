@@ -79,8 +79,9 @@ Live weekly-ad ingest matches flyer lines against Postgres `ingredients` (97-id 
 
 | Service | Role | Chains |
 |---------|------|--------|
-| **Flipp syndicated feed** | Weekly-ad offer discovery when direct scrape is weak | Kroger-family, Food Lion, others |
-| **Chain weekly-ad page scrape** | Browser/HTTP parsers for ad HTML | Kroger-family, Aldi, Publix, Food Lion |
+| **Flipp syndicated feed** | Weekly-ad offer discovery when direct scrape is weak | Kroger-family, Food Lion, Walmart, Dollar General, others |
+| **Chain weekly-ad page scrape** | Browser/HTTP parsers for ad HTML | Kroger-family, Aldi, Publix, Food Lion; Whole Foods sales-flyer `__NEXT_DATA__` (dinners off) |
+| **ZIP locator + retailer JSON** | Store bind then promotions JSON | Target (dinners off) |
 | **Kroger product API** (fallback) | Partial last-resort fill when scrape + Flipp return nothing | Kroger only; not full ad coverage |
 
 Ingest runs via scheduled scripts (`npm run ingest:weekly-ads:scheduled`, `ingest:map-catalog`, `sync:provider-prices`) — not on every user search. Watchtower does not migrate. TrueNAS applied `024` on **2026-08-24**, and **`025` + `026`** on **2026-08-27 00:04Z** (owner paste-back). Future `db/init` files still need an operator migrate. `active_markets` stays empty until `/owner` Markets (or `npm run markets:activate -- <ZIP>`). Keep the ingest ZIP overlay until `23111` is an active table row, then drop it.

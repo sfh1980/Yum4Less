@@ -5,7 +5,7 @@ import {
 } from "@/lib/owner/owner-chain-tools";
 
 describe("owner chain tools", () => {
-  it("lists flyer adapters we already wrote, plus official lists for Kroger/Publix/Target", () => {
+  it("lists flyer adapters we already wrote, plus official lists for Kroger/Publix/Target/Whole Foods", () => {
     const tools = listOwnerChainTools();
     expect(tools.find((row) => row.chainId === "kroger")).toMatchObject({
       officialList: true,
@@ -16,6 +16,10 @@ describe("owner chain tools", () => {
       flyer: true,
     });
     expect(tools.find((row) => row.chainId === "publix")).toMatchObject({
+      officialList: true,
+      flyer: true,
+    });
+    expect(tools.find((row) => row.chainId === "whole-foods")).toMatchObject({
       officialList: true,
       flyer: true,
     });

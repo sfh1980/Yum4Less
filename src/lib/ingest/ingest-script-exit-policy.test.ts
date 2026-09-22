@@ -19,6 +19,7 @@ describe("isWeeklyAdFailLoudChain", () => {
     expect(isWeeklyAdFailLoudChain("dollar-general")).toBe(true);
     expect(isWeeklyAdFailLoudChain("lidl")).toBe(false);
     expect(isWeeklyAdFailLoudChain("target")).toBe(false);
+    expect(isWeeklyAdFailLoudChain("whole-foods")).toBe(false);
   });
 
   it("follows the roster snapshot instead of a hardcoded ranked list", () => {

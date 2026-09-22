@@ -22,6 +22,7 @@ const OFFICIAL_IDENTITY_SOURCES = new Set([
   "kroger-official-api",
   "publix-store-locator",
   "target-store-locator",
+  "whole-foods-store-locator",
   "yum4less-market-catalog",
 ]);
 

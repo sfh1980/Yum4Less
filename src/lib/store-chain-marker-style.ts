@@ -68,6 +68,12 @@ const CHAIN_MARKER_STYLES: Record<StoreChain, StoreMarkerStyle> = {
     textColor: "#ffffff",
     borderColor: "#993556",
   },
+  "whole-foods": {
+    abbreviation: "WF",
+    backgroundColor: "#00674b",
+    textColor: "#ffffff",
+    borderColor: "#993556",
+  },
   unknown: {
     abbreviation: "?",
     backgroundColor: "#4a5568",

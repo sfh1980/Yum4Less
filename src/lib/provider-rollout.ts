@@ -18,6 +18,7 @@ export type StoreChain =
   | "trader-joes"
   | "dollar-general"
   | "target"
+  | "whole-foods"
   | "unknown";
 
 export type ProviderRolloutStatus =
@@ -44,7 +45,11 @@ export type WeeklyAdRolloutContext = {
 };
 
 /** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
-const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>(["lidl", "target"]);
+const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>([
+  "lidl",
+  "target",
+  "whole-foods",
+]);
 
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
@@ -131,6 +136,15 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     priority: 5,
     note:
       "Shown on the map for nearby planning — Target weekly-ad sales can be ingested as directional prices, but dinner totals are not enabled from Target yet.",
+  },
+  "whole-foods": {
+    chain: "whole-foods",
+    label: "Whole Foods",
+    status: "coming-soon",
+    recommendationEnabled: false,
+    priority: 5,
+    note:
+      "Shown on the map for nearby planning — Whole Foods weekly-ad sales can be ingested as directional prices, but dinner totals are not enabled from Whole Foods yet.",
   },
   unknown: {
     chain: "unknown",

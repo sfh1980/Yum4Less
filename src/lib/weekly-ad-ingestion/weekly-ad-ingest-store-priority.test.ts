@@ -7,7 +7,7 @@ import {
 
 describe("weekly-ad ingest store priority", () => {
   it("prefers catalog rows over OSM pins for the same chain", () => {
-    expect(scoreWeeklyAdIngestStorePriority({ id: "aldi-mechanicsville" })).toBe(5);
+    expect(scoreWeeklyAdIngestStorePriority({ id: "whole-foods-10598" })).toBe(5);
     expect(scoreWeeklyAdIngestStorePriority({ id: "osm-node-6531578976" })).toBe(1);
 
     const primary = pickPrimaryWeeklyAdIngestStoreForChain([
