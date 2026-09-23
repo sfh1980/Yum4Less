@@ -273,6 +273,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 ## Changelog (newest first)
 
+### 2026-09-23 — Aldi Flipp unit-test mocks (CI)
+
+**Theme:** CI verify on `de2c732` timed out two Aldi live-ingest tests.
+
+**Shipped:** Stub merchant + flyer + ingredient Flipp lookups in Aldi unit tests so GitHub Actions never waits on live Flipp. Same Flipp path Food Lion/Walmart already mock at the resolver.
+
+**Limits:** Does not change Aldi ingest or dinners. Live waits Watchtower from the Markets map commit.
+
+**Evidence:** this session `npx vitest run src/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion.test.ts` **8/8**. Full `npm test` counts in Verification snapshot.
+
 ### 2026-09-23 — Owner Markets map clip
 
 **Theme:** Keep the owner Markets ZIP picture inside the card on a laptop.
@@ -3377,6 +3387,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (Aldi Flipp CI mocks) | 2026-09-23 | **1307/1307** pass (233 files); Aldi ingest file **8/8** |
 | Owner Markets map clip (Playwright measure, `:3001`) | 2026-09-23 | SVG `overflow: hidden`; card height **240px** (CONUS cap); mid-Atlantic **220px**; Virginia **180–208px**. Coverage tab has **no** map. |
 | `npm test` (Owner Markets ZCTA coverage map) | 2026-09-22 | **1307/1307** pass (233 files); after zoom/label polish, related owner tests **32/32** (6 files) |
 | `npm run typecheck` (Owner Markets ZCTA coverage map) | 2026-09-22 | **Pass** (`tsc --noEmit`) |

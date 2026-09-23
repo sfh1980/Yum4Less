@@ -7,6 +7,24 @@ import {
 } from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
 import * as flippFeed from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import * as pageFetcher from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
+import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
+
+/** Live Aldi ingest walks merchant + flyer + ingredient Flipp lookups. Stub all three so CI never hits Flipp. */
+function stubAldiFlippFeed(input: {
+  merchantOffers?: WeeklyAdRawOffer[];
+  flyerOffers?: WeeklyAdRawOffer[];
+  searchOffers?: WeeklyAdRawOffer[];
+}) {
+  vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue(
+    input.merchantOffers ?? [],
+  );
+  vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForMerchantFlyers").mockResolvedValue(
+    input.flyerOffers ?? [],
+  );
+  vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForSearchTerms").mockResolvedValue(
+    input.searchOffers ?? [],
+  );
+}
 
 const originalFixtureFlag = process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
 const fullCatalogIngredientIds = INTERNAL_CATALOG_INGREDIENTS.map(
@@ -91,17 +109,19 @@ describe("aldi weekly ad ingestion", () => {
   });
 
   it("loads live offers from Flipp syndicated feed without direct scrape", async () => {
-    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([
-      {
-        productName: "Fresh Family Pack Chicken Thighs",
-        price: 2.49,
-        saleLabel: "Directional — weekly ad syndicated feed",
-      },
-      {
-        productName: "Black Beans",
-        price: 0.79,
-      },
-    ]);
+    stubAldiFlippFeed({
+      merchantOffers: [
+        {
+          productName: "Fresh Family Pack Chicken Thighs",
+          price: 2.49,
+          saleLabel: "Directional — weekly ad syndicated feed",
+        },
+        {
+          productName: "Black Beans",
+          price: 0.79,
+        },
+      ],
+    });
     const pageSpy = vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent");
 
     const client = createAldiWeeklyAdIngestionClient();
@@ -122,7 +142,7 @@ describe("aldi weekly ad ingestion", () => {
   });
 
   it("returns live weekly-ad fallback offers when the first merchant search returns no offers", async () => {
-    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([]);
+    stubAldiFlippFeed({ merchantOffers: [] });
     vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent").mockResolvedValue({
       html: `<script id="weekly-ad-offers-data">[{"productName":"Black Beans","price":0.79}]</script>`,
       method: "browser",
@@ -146,22 +166,18 @@ describe("aldi weekly ad ingestion", () => {
   });
 
   it("merges direct scrape offers when full-catalog Flipp coverage is thin", async () => {
-    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([
-      {
-        productName: "Fresh Family Pack Chicken Thighs",
-        price: 2.49,
-      },
-      {
-        productName: "Black Beans",
-        price: 0.79,
-      },
-    ]);
-    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForMerchantFlyers").mockResolvedValue(
-      [],
-    );
-    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForSearchTerms").mockResolvedValue(
-      [],
-    );
+    stubAldiFlippFeed({
+      merchantOffers: [
+        {
+          productName: "Fresh Family Pack Chicken Thighs",
+          price: 2.49,
+        },
+        {
+          productName: "Black Beans",
+          price: 0.79,
+        },
+      ],
+    });
     const pageSpy = vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent").mockResolvedValue({
       html: `<script id="weekly-ad-offers-data">[{"productName":"Fresh Baby Spinach","price":1.99}]</script>`,
       method: "browser",
