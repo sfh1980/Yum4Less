@@ -45,6 +45,7 @@ import {
   buildOwnerMarketPreviewList,
   type OwnerMarketPreviewOsmCandidate,
 } from "@/lib/owner/owner-market-preview-stores";
+import type { GeoJsonGeometry } from "@/lib/geo/point-in-polygon";
 import { isWithinContinentalUsBounds } from "@/lib/us-service-area";
 import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
 
@@ -77,6 +78,7 @@ export type OwnerMarketInspectResult = {
   stores: OwnerMarketStorePreview[];
   warnings: string[];
   admission: OwnerMarketAdmission;
+  zctaGeometry: GeoJsonGeometry | null;
 };
 
 export function parseOwnerMarketZipInput(
@@ -105,6 +107,7 @@ async function previewNearbyStores(input: {
   stores: OwnerMarketStorePreview[];
   warnings: string[];
   admission: OwnerMarketAdmission;
+  zctaGeometry: GeoJsonGeometry | null;
 }> {
   const warnings: string[] = [];
   const catalogStores = await listCatalogStoresNearLocation({
@@ -302,7 +305,12 @@ async function previewNearbyStores(input: {
     chainTools: listOwnerChainTools(),
   };
 
-  return { stores, warnings, admission };
+  return {
+    stores,
+    warnings,
+    admission,
+    zctaGeometry: zcta.ok ? zcta.geometry : null,
+  };
 }
 
 function previewHasShopperRankedV1Chain(
@@ -411,6 +419,7 @@ export async function inspectOwnerIngestMarket(
       stores: nearby.stores,
       warnings,
       admission,
+      zctaGeometry: nearby.zctaGeometry,
     },
   };
 }

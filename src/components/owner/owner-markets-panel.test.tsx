@@ -46,6 +46,18 @@ describe("OwnerMarketsPanel", () => {
             chainTools: [{ chainId: "kroger", label: "Kroger family", officialList: true, flyer: true }],
           },
           warnings: [],
+          zctaGeometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [-77.47, 37.54],
+                [-77.44, 37.54],
+                [-77.44, 37.56],
+                [-77.47, 37.56],
+                [-77.47, 37.54],
+              ],
+            ],
+          },
         });
       }
       if (url.includes("/api/owner/markets/activate")) {
@@ -67,6 +79,12 @@ describe("OwnerMarketsPanel", () => {
       expect(screen.getByText("No ingest markets yet.")).toBeInTheDocument();
     });
     expect(
+      screen.getByRole("img", { name: /Virginia outline/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Census ZIP outlines only/i),
+    ).toBeInTheDocument();
+    expect(
       screen.getByText(/Cron uses this table only when ingest YUM4LESS_INGEST_ZIPS is unset/i),
     ).toBeInTheDocument();
 
@@ -79,6 +97,9 @@ describe("OwnerMarketsPanel", () => {
     expect(screen.getByText(/Tonight’s ZIP job/i)).toBeInTheDocument();
     expect(screen.getByText(/Kroger family: official list \+ flyer/i)).toBeInTheDocument();
     expect(screen.getByText(/23220 · Richmond, VA/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /1 ZIP shape shaded/i }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Activate 23220/i }));
 

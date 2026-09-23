@@ -51,7 +51,7 @@ Public read-only routes (cache-first; ingest scripts are the write path):
 | `GET /api/analytics/events` | Recent Postgres analytics events |
 | `GET/POST /api/owner/ingredient-reviews` | Weekly-ad unmatched-line Yes (nickname or new food id) / No (skip) |
 | `GET /api/owner/store-coverage` | Read-only storefront coverage (seen / mapped / sales / usable-in-app). TrueNAS has `026` (2026-08-27 00:04Z); other volumes run `db:migrate`. |
-| `GET /api/owner/markets` | List `active_markets` rows (same admin key). |
+| `GET /api/owner/markets` | List `active_markets` rows (same admin key), including Census ZIP (ZCTA) outlines for the owner Markets map. |
 | `POST /api/owner/markets/preview` | Check a ZIP (geocode + nearby pins, no insert). |
 | `POST /api/owner/markets/activate` | Activate a ZIP into `active_markets`. |
 

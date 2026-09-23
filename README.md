@@ -123,7 +123,7 @@ Expired sale rows stay in `price_observations` as history; unchanged sales with 
 
 **Kroger:** set `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`; verify with `npm run probe:kroger-api`. Certification API omits store-specific prices.
 
-**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; Ingredient review, Markets Check/Activate, Coverage ZIP search, Analytics scoreboard, feedback). Operator ZIP steps → [`docs/owner-zip-intake.md`](docs/owner-zip-intake.md).
+**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; Ingredient review, Markets Check/Activate plus a clipped Census ZIP shade map, Coverage ZIP search, Analytics scoreboard, feedback). Operator ZIP steps → [`docs/owner-zip-intake.md`](docs/owner-zip-intake.md).
 
 **Semgrep:** CI runs `semgrep ci` when the GitHub repository secret `SEMGREP_APP_TOKEN` is set (Settings → Secrets → Actions). Local Cursor hooks use the optional `semgrep` CLI — not the same token. Lint, unit tests, build, integration, and E2E remain merge gates.
 

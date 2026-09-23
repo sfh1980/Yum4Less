@@ -236,6 +236,18 @@ describe("owner ingest markets", () => {
     const publix = inspected.result.stores.find((store) => store.name === "Publix");
     expect(kroger?.inIngestFence).toBe(true);
     expect(publix?.inIngestFence).toBe(false);
+    expect(inspected.result.zctaGeometry).toEqual({
+      type: "Polygon",
+      coordinates: [
+        [
+          [-77.45, 37.53],
+          [-77.42, 37.53],
+          [-77.42, 37.56],
+          [-77.45, 37.56],
+          [-77.45, 37.53],
+        ],
+      ],
+    });
     expect(inspected.result.warnings.join(" ")).toMatch(/outside this ZIP shape/i);
   });
 

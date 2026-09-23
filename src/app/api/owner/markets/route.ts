@@ -7,6 +7,7 @@ import {
   isMissingActiveMarketsSchema,
 } from "@/lib/owner/ingest-markets";
 import { listIngestMarkets } from "@/lib/active-markets";
+import { listOwnerMarketCoverageShades } from "@/lib/owner/owner-market-coverage-shades";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
 
 export async function GET(request: Request) {
@@ -28,9 +29,11 @@ export async function GET(request: Request) {
 
   try {
     const markets = await listIngestMarkets();
+    const coverageShades = await listOwnerMarketCoverageShades(markets);
     return NextResponse.json({
       ok: true,
       markets,
+      coverageShades,
       overlayNotice: INGEST_OVERLAY_NOTICE,
     });
   } catch (error) {

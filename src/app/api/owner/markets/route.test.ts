@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/owner/markets/route";
 import { POST as previewPost } from "@/app/api/owner/markets/preview/route";
 import { POST as activatePost } from "@/app/api/owner/markets/activate/route";
@@ -8,6 +8,7 @@ const originalFeedbackAdminKey = process.env.YUM4LESS_FEEDBACK_ADMIN_KEY;
 const originalDatabaseUrl = process.env.DATABASE_URL;
 
 const listIngestMarkets = vi.fn();
+const listOwnerMarketCoverageShades = vi.fn();
 const inspectOwnerIngestMarket = vi.fn();
 const activateOwnerIngestMarket = vi.fn();
 
@@ -20,6 +21,11 @@ vi.mock("@/lib/active-markets", async () => {
     listIngestMarkets: (...args: unknown[]) => listIngestMarkets(...args),
   };
 });
+
+vi.mock("@/lib/owner/owner-market-coverage-shades", () => ({
+  listOwnerMarketCoverageShades: (...args: unknown[]) =>
+    listOwnerMarketCoverageShades(...args),
+}));
 
 vi.mock("@/lib/owner/ingest-markets", async () => {
   const actual = await vi.importActual<typeof import("@/lib/owner/ingest-markets")>(
@@ -55,10 +61,15 @@ describe("/api/owner/markets", () => {
   afterEach(() => {
     resetRateLimitsForTests();
     listIngestMarkets.mockReset();
+    listOwnerMarketCoverageShades.mockReset();
     inspectOwnerIngestMarket.mockReset();
     activateOwnerIngestMarket.mockReset();
     restoreEnv("YUM4LESS_FEEDBACK_ADMIN_KEY", originalFeedbackAdminKey);
     restoreEnv("DATABASE_URL", originalDatabaseUrl);
+  });
+
+  beforeEach(() => {
+    listOwnerMarketCoverageShades.mockResolvedValue([]);
   });
 
   it("returns 401 for GET without an admin key", async () => {
@@ -93,6 +104,24 @@ describe("/api/owner/markets", () => {
         source: "ops",
       },
     ]);
+    listOwnerMarketCoverageShades.mockResolvedValue([
+      {
+        zipCode: "23220",
+        status: "active",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-77.47, 37.54],
+              [-77.44, 37.54],
+              [-77.44, 37.56],
+              [-77.47, 37.56],
+              [-77.47, 37.54],
+            ],
+          ],
+        },
+      },
+    ]);
 
     const response = await GET(authRequest("http://localhost/api/owner/markets"));
 
@@ -100,6 +129,7 @@ describe("/api/owner/markets", () => {
     await expect(response.json()).resolves.toMatchObject({
       ok: true,
       markets: [{ zipCode: "23220", status: "active" }],
+      coverageShades: [{ zipCode: "23220", status: "active" }],
     });
   });
 

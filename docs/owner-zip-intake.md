@@ -33,6 +33,8 @@ If there is **no** Kroger-family / Aldi / Publix / Food Lion / Walmart pin in th
 
 Saves the ZIP for tonight’s job. Does **not** turn the Check list into the official catalog. CLI backup: `npm run markets:activate -- 23220`.
 
+The Markets map under **Active and paused markets** (Markets tab, not Coverage) shades Census ZIP outlines only (active, paused, and Check ZIP preview). The picture is clipped and height-capped (`overflow: hidden`; `max-height: min(32vh, 240px)`) so a statewide outline cannot paint past the card. It does **not** shade the 8-mile shopper circle. Neighbor-ZIP buildings can still appear for shoppers until those ZIPs are Activated.
+
 ## 4. After the night job
 
 Order: find buildings → weekly ads → SNAP → official prices → recipes from sale overlap → freshness check.

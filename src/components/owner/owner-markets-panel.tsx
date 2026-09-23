@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { ActiveMarketRow } from "@/lib/active-markets";
+import { OwnerMarketCoverageMap } from "@/components/owner/owner-market-coverage-map";
+import type { GeoJsonGeometry } from "@/lib/geo/point-in-polygon";
 import {
   INGEST_OVERLAY_NOTICE,
   type OwnerChainToolLine,
   type OwnerMarketStorePreview,
 } from "@/lib/owner/ingest-markets-copy";
+import type { OwnerMarketCoverageShade } from "@/lib/owner/owner-market-coverage-map-model";
 import { formatOwnerChainToolLine } from "@/lib/owner/owner-chain-tools";
 import { formatOwnerMarketPreviewLine } from "@/lib/owner/owner-market-preview-format";
 
@@ -23,6 +26,7 @@ type PreviewState = {
   warnings: string[];
   headline?: string;
   chainTools?: OwnerChainToolLine[];
+  zctaGeometry: GeoJsonGeometry | null;
 };
 
 function authHeaders(key: string): HeadersInit {
@@ -48,6 +52,29 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
     Array<{ osmName: string; officialName: string; chainId: string; miles: number }>
   >([]);
   const [preview, setPreview] = useState<PreviewState | undefined>();
+  const [coverageShades, setCoverageShades] = useState<OwnerMarketCoverageShade[]>(
+    [],
+  );
+
+  const mapShades = useMemo(() => {
+    const listed = coverageShades.filter(
+      (shade) => shade.status === "active" || shade.status === "paused",
+    );
+    if (
+      !preview?.zctaGeometry ||
+      listed.some((shade) => shade.zipCode === preview.zipCode)
+    ) {
+      return listed;
+    }
+    return [
+      ...listed,
+      {
+        zipCode: preview.zipCode,
+        status: "preview" as const,
+        geometry: preview.zctaGeometry,
+      },
+    ];
+  }, [coverageShades, preview]);
 
   const loadMarkets = useCallback(async () => {
     if (!adminKey.trim()) {
@@ -63,17 +90,21 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
       const json = (await response.json()) as {
         ok?: boolean;
         markets?: ActiveMarketRow[];
+        coverageShades?: OwnerMarketCoverageShade[];
         error?: string;
       };
       if (!response.ok || !json.ok) {
         setMarkets([]);
+        setCoverageShades([]);
         setListNotice(json.error ?? "Ingest markets could not be loaded.");
         return;
       }
       setMarkets(json.markets ?? []);
+      setCoverageShades(json.coverageShades ?? []);
       setListNotice(undefined);
     } catch {
       setMarkets([]);
+      setCoverageShades([]);
       setListNotice("Ingest markets could not be loaded.");
     } finally {
       setLoadingList(false);
@@ -107,6 +138,7 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
         warnings?: string[];
         location?: { city?: string; state?: string };
         admission?: { headline?: string; chainTools?: OwnerChainToolLine[] };
+        zctaGeometry?: GeoJsonGeometry | null;
       };
       if (!response.ok || !json.ok) {
         setError(json.error ?? "That ZIP could not be checked.");
@@ -121,6 +153,7 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
         warnings: json.warnings ?? [],
         headline: json.admission?.headline,
         chainTools: json.admission?.chainTools,
+        zctaGeometry: json.zctaGeometry ?? null,
       });
     } catch {
       setError("That ZIP could not be checked.");
@@ -369,6 +402,7 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
       ) : null}
 
       <h3 className="owner-coverage-caption">Active and paused markets</h3>
+      <OwnerMarketCoverageMap shades={mapShades} />
       {loadingList ? (
         <p className="panel-copy">Loading markets…</p>
       ) : markets.length === 0 ? (

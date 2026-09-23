@@ -2605,6 +2605,67 @@ body.modal-open {
   font-weight: 600;
 }
 
+.owner-market-coverage-map {
+  margin: 0 0 1rem;
+}
+
+.owner-market-coverage-map-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(32vh, 240px);
+  pointer-events: none;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 92%, var(--muted) 8%);
+  border: 1px solid color-mix(in srgb, var(--muted) 28%, transparent);
+  border-radius: 0.5rem;
+}
+
+.owner-market-coverage-land {
+  fill: color-mix(in srgb, var(--surface) 70%, var(--muted) 30%);
+  stroke: var(--text);
+  stroke-width: 1.25;
+  fill-rule: evenodd;
+  vector-effect: non-scaling-stroke;
+}
+
+.owner-market-coverage-shade {
+  fill-rule: evenodd;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.owner-market-coverage-shade--preview {
+  fill: color-mix(in srgb, var(--accent) 22%, transparent);
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
+}
+
+.owner-market-coverage-shade--active {
+  fill: color-mix(in srgb, var(--accent) 72%, transparent);
+  stroke: var(--accent);
+}
+
+.owner-market-coverage-label {
+  fill: var(--text);
+  font-weight: 700;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: color-mix(in srgb, var(--surface) 88%, white);
+  stroke-width: 0.03;
+}
+
+.owner-market-coverage-shade--paused {
+  fill: color-mix(in srgb, var(--muted) 45%, transparent);
+  stroke: var(--muted);
+}
+
+.owner-market-coverage-caption {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .owner-market-preview {
   display: grid;
   gap: 0.55rem;
