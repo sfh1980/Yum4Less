@@ -33,7 +33,9 @@ If there is **no** Kroger-family / Aldi / Publix / Food Lion / Walmart pin in th
 
 Saves the ZIP for tonight’s job. Does **not** turn the Check list into the official catalog. CLI backup: `npm run markets:activate -- 23220`.
 
-The Markets map under **Active and paused markets** (Markets tab, not Coverage) shades Census ZIP outlines only (active, paused, and Check ZIP preview). The picture is clipped and height-capped (`overflow: hidden`; `max-height: min(32vh, 240px)`) so a statewide outline cannot paint past the card. It does **not** shade the 8-mile shopper circle. Neighbor-ZIP buildings can still appear for shoppers until those ZIPs are Activated.
+The Markets map under **Active and paused markets** (Markets tab, not Coverage) shades the coverage area only (active, paused, and Check ZIP preview). There is no state or US outline and no ZIP numbers on the shapes. Scroll, drag, or use Zoom in / Zoom out / Reset. It does **not** shade the 8-mile shopper circle. Neighbor-ZIP buildings can still appear for shoppers until those ZIPs are Activated.
+
+Coverage stays empty until Search. Search lists tracked banners that match the name, ZIP, and usable filters. Other / untracked stays off that list. Click a banner to see its matching stores.
 
 ## 4. After the night job
 

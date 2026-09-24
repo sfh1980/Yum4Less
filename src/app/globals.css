@@ -2536,6 +2536,23 @@ body.modal-open {
   overflow-x: auto;
 }
 
+.owner-coverage-banner-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.owner-coverage-banner-button[aria-pressed="true"] {
+  color: var(--accent, var(--text));
+}
+
 .owner-coverage-caption {
   caption-side: top;
   text-align: left;
@@ -2609,12 +2626,30 @@ body.modal-open {
   margin: 0 0 1rem;
 }
 
+.owner-market-coverage-zoom {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 0 0.45rem;
+}
+
+.owner-market-coverage-zoom button {
+  border: 1px solid color-mix(in srgb, var(--muted) 40%, transparent);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .owner-market-coverage-map-svg {
   display: block;
   width: 100%;
   max-width: 100%;
-  max-height: min(32vh, 240px);
-  pointer-events: none;
+  max-height: min(42vh, 320px);
+  touch-action: none;
+  cursor: grab;
   overflow: hidden;
   background: color-mix(in srgb, var(--surface) 92%, var(--muted) 8%);
   border: 1px solid color-mix(in srgb, var(--muted) 28%, transparent);

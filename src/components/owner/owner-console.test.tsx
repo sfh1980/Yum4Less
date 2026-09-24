@@ -150,7 +150,8 @@ describe("OwnerConsole", () => {
       screen.getByRole("tab", { name: "Coverage" }),
     ).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("heading", { name: "Coverage" })).toBeInTheDocument();
-    expect(screen.getByText("Usable in app")).toBeInTheDocument();
+    expect(screen.getByText("Search to see tracked banners.")).toBeInTheDocument();
+    expect(screen.queryByText("Usable in app")).not.toBeInTheDocument();
 
     await user.keyboard("{ArrowRight}");
     expect(
@@ -563,8 +564,9 @@ describe("OwnerConsole", () => {
     });
 
     await user.click(screen.getByRole("tab", { name: "Coverage" }));
+    await user.click(screen.getByRole("button", { name: "Search" }));
     expect(
-      screen.getByText(/Apply db\/init\/026 if chain_registry is missing/i),
+      await screen.findByText(/Apply db\/init\/026 if chain_registry is missing/i),
     ).toBeInTheDocument();
   });
 });

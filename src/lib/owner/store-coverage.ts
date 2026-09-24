@@ -130,6 +130,7 @@ export function filterStoreCoverageRows(
     locationQuery?: string;
     usable?: StoreCoverageUsableFilter;
     zipFence?: CoverageZipFence;
+    chainId?: string;
   },
 ): StoreCoverageRow[] {
   const nameQuery = input.nameQuery?.trim().toLowerCase() ?? "";
@@ -142,6 +143,9 @@ export function filterStoreCoverageRows(
       return false;
     }
     if (usable === "no" && row.usableInApp) {
+      return false;
+    }
+    if (input.chainId && row.chainId !== input.chainId) {
       return false;
     }
     if (nameQuery) {
@@ -235,4 +239,13 @@ export function summarizeStoreCoverage(
   }
 
   return [...counts.values()];
+}
+
+/** Banners with at least one storefront in the current search. Skips Other / untracked. */
+export function visibleTrackedBannerSummaries(
+  summaries: readonly StoreCoverageSummary[],
+): StoreCoverageSummary[] {
+  return summaries.filter(
+    (row) => row.chainId !== "unknown" && row.storeCount > 0,
+  );
 }

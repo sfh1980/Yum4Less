@@ -79,11 +79,9 @@ describe("OwnerMarketsPanel", () => {
       expect(screen.getByText("No ingest markets yet.")).toBeInTheDocument();
     });
     expect(
-      screen.getByRole("img", { name: /Virginia outline/i }),
+      screen.getByRole("img", { name: /No coverage area shaded yet/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Census ZIP outlines only/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Shaded coverage only/i)).toBeInTheDocument();
     expect(
       screen.getByText(/Cron uses this table only when ingest YUM4LESS_INGEST_ZIPS is unset/i),
     ).toBeInTheDocument();
@@ -98,8 +96,9 @@ describe("OwnerMarketsPanel", () => {
     expect(screen.getByText(/Kroger family: official list \+ flyer/i)).toBeInTheDocument();
     expect(screen.getByText(/23220 · Richmond, VA/)).toBeInTheDocument();
     expect(
-      screen.getByRole("img", { name: /1 ZIP shape shaded/i }),
+      screen.getByRole("img", { name: /1 shaded shape/i }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Zoom in" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Activate 23220/i }));
 

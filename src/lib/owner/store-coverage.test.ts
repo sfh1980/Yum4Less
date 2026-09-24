@@ -5,6 +5,7 @@ import {
   filterStoreCoverageRows,
   matchRegistryChainId,
   summarizeStoreCoverage,
+  visibleTrackedBannerSummaries,
   type ChainRegistryRow,
   type StoreCoverageSourceRow,
 } from "@/lib/owner/store-coverage";
@@ -168,6 +169,11 @@ describe("filterStoreCoverageRows", () => {
         (row) => row.storeId,
       ),
     ).toEqual(["kroger-mechanicsville"]);
+    expect(
+      filterStoreCoverageRows(rows, { usable: "all", chainId: "kroger" }).map(
+        (row) => row.storeId,
+      ),
+    ).toEqual(["kroger-mechanicsville"]);
   });
 
   it("filters by city or state", () => {
@@ -235,5 +241,40 @@ describe("summarizeStoreCoverage", () => {
     const other = summaries.find((row) => row.chainId === "unknown");
     expect(kroger).toMatchObject({ storeCount: 1, salesCount: 1, usableCount: 1 });
     expect(other).toMatchObject({ storeCount: 1, usableCount: 0 });
+  });
+});
+
+describe("visibleTrackedBannerSummaries", () => {
+  it("keeps tracked banners that have stores in the current search", () => {
+    const visible = visibleTrackedBannerSummaries([
+      {
+        chainId: "kroger",
+        chainLabel: "Kroger",
+        rolloutStage: "ranked",
+        storeCount: 2,
+        mappedCount: 2,
+        salesCount: 1,
+        usableCount: 1,
+      },
+      {
+        chainId: "aldi",
+        chainLabel: "Aldi",
+        rolloutStage: "ranked",
+        storeCount: 0,
+        mappedCount: 0,
+        salesCount: 0,
+        usableCount: 0,
+      },
+      {
+        chainId: "unknown",
+        chainLabel: "Other / untracked",
+        rolloutStage: "upcoming",
+        storeCount: 4,
+        mappedCount: 0,
+        salesCount: 0,
+        usableCount: 0,
+      },
+    ]);
+    expect(visible.map((row) => row.chainId)).toEqual(["kroger"]);
   });
 });

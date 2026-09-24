@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
-import type {
-  StoreCoverageRow,
-  StoreCoverageSummary,
-  StoreCoverageUsableFilter,
+import {
+  visibleTrackedBannerSummaries,
+  type StoreCoverageRow,
+  type StoreCoverageSummary,
+  type StoreCoverageUsableFilter,
 } from "@/lib/owner/store-coverage";
 
 type OwnerCoveragePanelProps = {
@@ -15,11 +16,14 @@ type OwnerCoveragePanelProps = {
   loadingMore: boolean;
   loadingSearch: boolean;
   pageSize: number;
+  hasSearched: boolean;
+  selectedChainId?: string;
   onSearch: (input: {
     nameQuery: string;
     locationQuery: string;
     usable: StoreCoverageUsableFilter;
   }) => void;
+  onSelectBanner: (chainId: string) => void;
   onLoadMore: () => void;
 };
 
@@ -64,12 +68,17 @@ export function OwnerCoveragePanel({
   loadingMore,
   loadingSearch,
   pageSize,
+  hasSearched,
+  selectedChainId,
   onSearch,
+  onSelectBanner,
   onLoadMore,
 }: OwnerCoveragePanelProps) {
   const [nameQuery, setNameQuery] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [usable, setUsable] = useState<StoreCoverageUsableFilter>("all");
+  const banners = visibleTrackedBannerSummaries(summaries);
+  const selectedBanner = banners.find((row) => row.chainId === selectedChainId);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -92,9 +101,8 @@ export function OwnerCoveragePanel({
         Read-only checklist over existing storefronts. Usable in the app means a
         ranked dinner chain that is not promotion-blocked and has fresh sale
         prices in the last {freshnessHours} hours. Walmart ads never count.
-        Convenience pins such as 7-Eleven stay Other / untracked. Search by ZIP
-        to list storefronts inside that ZIP’s map shape (city or state still
-        works if you type letters).
+        Search lists tracked banners only. Choose a banner to see the stores
+        that match. Convenience pins such as 7-Eleven stay off this list.
       </p>
       {notice ? (
         <p className="panel-copy" role="status">
@@ -149,7 +157,13 @@ export function OwnerCoveragePanel({
         </div>
       </form>
 
-      {summaries.length > 0 ? (
+      {!hasSearched ? (
+        <p className="panel-copy">Search to see tracked banners.</p>
+      ) : banners.length === 0 ? (
+        notice ? null : (
+          <p className="panel-copy">No tracked banners match that search.</p>
+        )
+      ) : (
         <div className="owner-coverage-summary-wrap">
           <table className="owner-coverage-table">
             <caption className="owner-coverage-caption">Tracked banners</caption>
@@ -164,9 +178,18 @@ export function OwnerCoveragePanel({
               </tr>
             </thead>
             <tbody>
-              {summaries.map((row) => (
+              {banners.map((row) => (
                 <tr key={row.chainId}>
-                  <th scope="row">{row.chainLabel}</th>
+                  <th scope="row">
+                    <button
+                      aria-pressed={selectedChainId === row.chainId}
+                      className="owner-coverage-banner-button"
+                      onClick={() => onSelectBanner(row.chainId)}
+                      type="button"
+                    >
+                      {row.chainLabel}
+                    </button>
+                  </th>
                   <td>{formatStage(row.rolloutStage)}</td>
                   <td>{row.storeCount}</td>
                   <td>{row.mappedCount}</td>
@@ -177,43 +200,45 @@ export function OwnerCoveragePanel({
             </tbody>
           </table>
         </div>
-      ) : null}
-
-      <p className="panel-copy">
-        Showing {stores.length}
-        {hasMore ? "+" : ""} of {total} matching storefronts.
-      </p>
-      {stores.length === 0 ? (
-        notice ? null : (
-          <p className="panel-copy">No storefronts match those filters.</p>
-        )
-      ) : (
-        <ul className="owner-coverage-list">
-          {stores.map((row) => (
-            <li className="owner-coverage-row" key={row.storeId}>
-              <p className="owner-coverage-title">{row.name}</p>
-              <p className="panel-copy">
-                {row.chainLabel}
-                {row.zipCode ? ` · ${row.zipCode}` : ""}
-                {row.city || row.state
-                  ? ` · ${[row.city, row.state].filter(Boolean).join(", ")}`
-                  : ""}
-                {row.sourceName ? ` · ${row.sourceName}` : ""}
-              </p>
-              <div className="owner-coverage-badges">
-                <CoverageBadge active={row.seen} label="Seen" />
-                <CoverageBadge active={row.mapped} label="Mapped" />
-                <CoverageBadge active={row.sales} label="Sales" />
-                <CoverageBadge
-                  active={row.usableInApp}
-                  label={row.usableInApp ? "Usable in app" : "Not usable"}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
       )}
-      {hasMore ? (
+
+      {hasSearched && selectedBanner ? (
+        <>
+          <p className="panel-copy">
+            {selectedBanner.chainLabel}: {stores.length}
+            {hasMore ? "+" : ""} of {total} matching storefronts.
+          </p>
+          {stores.length === 0 ? (
+            <p className="panel-copy">No storefronts match those filters.</p>
+          ) : (
+            <ul className="owner-coverage-list">
+              {stores.map((row) => (
+                <li className="owner-coverage-row" key={row.storeId}>
+                  <p className="owner-coverage-title">{row.name}</p>
+                  <p className="panel-copy">
+                    {row.chainLabel}
+                    {row.zipCode ? ` · ${row.zipCode}` : ""}
+                    {row.city || row.state
+                      ? ` · ${[row.city, row.state].filter(Boolean).join(", ")}`
+                      : ""}
+                    {row.sourceName ? ` · ${row.sourceName}` : ""}
+                  </p>
+                  <div className="owner-coverage-badges">
+                    <CoverageBadge active={row.seen} label="Seen" />
+                    <CoverageBadge active={row.mapped} label="Mapped" />
+                    <CoverageBadge active={row.sales} label="Sales" />
+                    <CoverageBadge
+                      active={row.usableInApp}
+                      label={row.usableInApp ? "Usable in app" : "Not usable"}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : null}
+      {hasSearched && selectedBanner && hasMore ? (
         <div className="action-row owner-load-more-row">
           <button
             className="secondary-button"

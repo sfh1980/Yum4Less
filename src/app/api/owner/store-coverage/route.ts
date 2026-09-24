@@ -39,6 +39,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
+  const chainId = url.searchParams.get("chain")?.trim() || undefined;
   const limit = clampListLimit(
     url.searchParams.get("limit"),
     STORE_COVERAGE_LIMITS.default,
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
       nameQuery: url.searchParams.get("name") ?? url.searchParams.get("q") ?? undefined,
       locationQuery: url.searchParams.get("location") ?? undefined,
       usable: parseUsable(url.searchParams.get("usable")),
+      ...(chainId ? { chainId } : {}),
       limit,
       offset,
     });

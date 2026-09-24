@@ -34,7 +34,7 @@
 
 ### Working today (honest)
 
-- **Owner Markets ZCTA map (2026-09-22; clip 2026-09-23, local):** `/owner` **Markets** (not Coverage) shades Census ZIP outlines on a blank Virginia outline (then Mid-Atlantic / continental US as coverage grows). Active, paused, and Check ZIP preview. Picture only. SVG is clipped (`overflow: hidden`) and height-capped (`min(32vh, 240px)`) so a statewide outline cannot paint past the card. **Not** the 8-mile shopper circle. Live waits app Watchtower. Neighbor-ZIP intake process is still open.
+- **Owner Markets coverage map (2026-09-24, local):** `/owner` **Markets** (not Coverage) shades the coverage area only. No state/US outline and no ZIP numbers on the shapes. Scroll, drag, or Zoom in / Zoom out / Reset. Active, paused, and Check ZIP preview. Picture only. **Not** the 8-mile shopper circle. Coverage search lists tracked banners, then a banner click lists matching stores. Live waits app Watchtower. Neighbor-ZIP intake process is still open.
 
 - **Whole Foods weekly-ad ingest (2026-09-22, dinners off):** ZIP/coords → retailer closest-store `store-id` → sales-flyer HTML. `034` marks Whole Foods weekly-ad eligible / ingest_only. Fail-soft. Live after ingest image + migrate. Does **not** claim Whole Foods dinners. Never hardcode store `10598`.
 
@@ -272,6 +272,26 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-09-24 — Owner Markets map zooms on coverage
+
+**Theme:** The Markets map was a fixed state outline with ZIP numbers on the shapes.
+
+**Shipped:** The map frames the shaded coverage only. ZIP labels and the state/US outline are gone. Scroll, drag, and Zoom in / Zoom out / Reset move the picture.
+
+**Limits:** Still a picture of Census ZIP shapes, not the shopper pin map. Live waits app Watchtower.
+
+**Evidence:** this session `npx vitest run` on the map model and Markets panel tests.
+
+### 2026-09-24 — Owner Coverage starts at tracked banners
+
+**Theme:** Coverage was a full storefront dump before anyone searched.
+
+**Shipped:** Coverage stays empty until Search. Search lists tracked banners that match the name, ZIP, and usable filters (Other / untracked stays off). A banner click loads that banner’s matching stores. Banner counts follow the search, not the whole catalog.
+
+**Limits:** The coverage query still reads `store_coverage` in memory, then filters. Live waits app Watchtower.
+
+**Evidence:** this session `npx vitest run` on coverage panel/console/filter tests.
 
 ### 2026-09-23 — Aldi Flipp unit-test mocks (CI)
 
@@ -3228,7 +3248,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
-| 2026-09-22 | **Owner Markets map shades Census ZIP outlines only.** Active + paused + Check ZIP preview on a blank state/US outline. Zoom-out and box grow as coverage expands. Shopper 8-mile circle is not shaded here. Neighbor-ZIP ingest process is a later plan, not this map. **Clip (2026-09-23):** SVG `overflow: hidden` and `max-height: min(32vh, 240px)` so statewide outlines stay inside the Markets card (not on Coverage). | **Active** |
+| 2026-09-24 | **Owner Markets map shows coverage shapes only, and zooms.** No state/US outline and no ZIP labels. Scroll, drag, or Zoom in / Zoom out / Reset. Shopper 8-mile circle is not shaded. Neighbor-ZIP ingest process is a later plan. **Coverage (same day):** Search lists tracked banners that match; a banner click lists that banner’s stores. Other / untracked stays off the banner list. | **Active** |
 | 2026-09-22 | **Whole Foods weekly-ad ingest, dinners off.** ZIP/coords locator → persist `source_store_id` → sales-flyer HTML. Same adapter for every activated ZIP. Never hardcode store numbers. `shopper_ranked` stays false until floors + membership. Fail-soft. Not Flipp. | **Active** |
 | 2026-09-22 | **ZIP intake + Slice D matcher.** Owner Markets Check lists Census ZIP-shape stores vs 8-mile other-ZIP neighbors plus chain tools. Coverage ZIP search uses the shape/center, not `stores.zip_code`. Analytics scoreboard + collapsed sessions. Ingredient review shows Clear obvious Food/Junk/Unsure. Slice D writes **provisional** OSM↔official aliases after map-catalog (and optional owner Link obvious twins). AUTO_CONFIRM and shopper expand stay **OFF**. Activate still only books the ZIP. No Run intake now. Do not SQL-delete junk. Do not claim more dinners. | **Active** |
 | 2026-09-21 | **Tab icons follow V3 Mock1 shopping-list chrome.** Filled, per-tab colors: terracotta house, amber price tag, silver utensils, red bookmark, lavender bubble, purple gear. Same six labels. Rest of grocery-ledger restyle is still discussion-only. | **Active** |

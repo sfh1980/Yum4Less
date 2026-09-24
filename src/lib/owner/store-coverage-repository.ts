@@ -148,6 +148,7 @@ export async function listStoreCoverage(input: {
   nameQuery?: string;
   locationQuery?: string;
   usable?: StoreCoverageUsableFilter;
+  chainId?: string;
   limit: number;
   offset: number;
 }): Promise<{
@@ -191,14 +192,17 @@ export async function listStoreCoverage(input: {
     usable: input.usable,
     zipFence,
   });
-  const stores = filtered.slice(input.offset, input.offset + input.limit);
+  const forPage = input.chainId
+    ? filtered.filter((row) => row.chainId === input.chainId)
+    : filtered;
+  const stores = forPage.slice(input.offset, input.offset + input.limit);
 
   return {
     stores,
-    summaries: summarizeStoreCoverage(allRows, registry),
+    summaries: summarizeStoreCoverage(filtered, registry),
     freshnessHours: RANKED_PRICE_CACHE_TTL_HOURS,
-    hasMore: input.offset + stores.length < filtered.length,
-    total: filtered.length,
+    hasMore: input.offset + stores.length < forPage.length,
+    total: forPage.length,
   };
 }
 
