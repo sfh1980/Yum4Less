@@ -112,7 +112,7 @@ export const WEEKLY_AD_CHAIN_CONFIGS: WeeklyAdChainConfig[] = [
     fetchStrategy: "http",
     researchTargets: ["https://www.wholefoodsmarket.com/sales-flyer"],
     termsNote:
-      "Whole Foods weekly-ad offers use the public ZIP/coordinate locator (closest grocery store) then that store's sales-flyer HTML. Not Flipp. Prices are directional store circulars — dinners stay off until membership floors pass. Verify in store before checkout.",
+      "Whole Foods weekly-ad offers use the public ZIP/coordinate locator (closest grocery store) then that store's sales-flyer HTML. Not Flipp. Prices are directional store circulars. Dinner totals use the same weekly-ad floors as other ranked banners. Verify in store before checkout.",
   },
 ];
 

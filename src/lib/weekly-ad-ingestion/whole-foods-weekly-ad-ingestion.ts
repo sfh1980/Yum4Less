@@ -141,7 +141,7 @@ async function ingestWholeFoodsWeeklyAd(
       configured: true,
       fallbackUsed: false,
       offers,
-      message: `Parsed Whole Foods weekly-ad for store ${locatorStore.storeId} (${locatorStore.locationName}) for ZIP ${input.zipCode} via sales-flyer: ${rawOffers.length} unit-priced offer(s) for ${input.storeName}; ${matchedCount} matched tracked dinner ingredients. Dinners stay off until membership floors pass.`,
+      message: `Parsed Whole Foods weekly-ad for store ${locatorStore.storeId} (${locatorStore.locationName}) for ZIP ${input.zipCode} via sales-flyer: ${rawOffers.length} unit-priced offer(s) for ${input.storeName}; ${matchedCount} matched tracked dinner ingredients. Dinner totals follow the same weekly-ad floors as other ranked banners.`,
       fetchedAt,
       termsNote,
     };

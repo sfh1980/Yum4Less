@@ -39,7 +39,7 @@ Adapters must not hardcode store numbers, ingest ZIPs, or banner rosters. Facts 
 
 ## 2. Next product work — Flipp + scrape yield (`23111`)
 
-Remaining coverage for **BJ’s** (map/context). Target and Whole Foods adapters are shipped with dinners off. Thin sale data keeps pins tracked; dinners stay off until floors pass. Not a coupon or checkout path. Lidl is **not** in this dinner chase.
+Remaining coverage for **BJ’s** (map/context). Target, Whole Foods, and Lidl are shopper-ranked in repo (`035`/`036`) when sale floors pass. Lidl and Dollar General notes say the ad is for the ZIP, not that store. Thin sale data keeps pins tracked; dinners stay off until floors pass. Not a coupon or checkout path.
 
 ### 2.1 Walmart — **closed** 2026-09-15 (plan locked)
 
@@ -50,22 +50,22 @@ Remaining coverage for **BJ’s** (map/context). Target and Whole Foods adapters
 | Yield note | Flyer can still be junk-heavy (older probe: 144 → ~113 junk / ~6 grocery). Live **2026-09-14:** **19** in-stock / **19** in 24h. Improving usable food is ongoing **ops** via `/owner`, not an open coding slice |
 | Do not | Claim more Walmart dinners from thin matches; bypass WAF; hardcode store numbers; reopen stealth/proxy work |
 
-### 2.2 Target (adapter shipped; dinners off)
+### 2.2 Target (adapter shipped; ranked in repo via `036`)
 
 | State | Detail |
 |---|---|
-| Registry | `ingest_only` via `032` — `weekly_ad_eligible=true`, **`shopper_ranked=false`**. Shoppers can pick a Target pin when OSM/catalog shows one. Not dinner totals |
+| Registry | `032` made it ingest-only. `036` sets **`shopper_ranked=true`** in repo. Live waits migrate. Dinner totals when the same sale floors pass |
 | Flipp | No real Target circular in `23111` (`q=Target` hits “Targeted Relief” noise) — not used |
 | **Shipped 2026-09-15** | ZIP-generic locator (`nearby_stores_v1`) → persist `source_store_id` → `store_promotions` + `promotions/{id}` JSON → shared junk/matcher → directional `price_observations` (`target-weekly-ad-scrape`). Fail-soft. Fixture path for CI |
 | Hard rule | Never hardcode store `1968` (23111 example only). Probe override: `TARGET_STORE_NUMBER` |
 | Guest API | Unofficial frontend key (`TARGET_API_KEY` optional; public web key fallback). Can rotate or block datacenter IPs |
 | Do not | Flip `shopper_ranked` without floors + membership; copy a Walmart stealth stack |
 
-### 2.3 Whole Foods (adapter shipped; dinners off)
+### 2.3 Whole Foods (adapter shipped; ranked in repo via `035`)
 
 | State | Detail |
 |---|---|
-| Registry | `ingest_only` via `034` — `weekly_ad_eligible=true`, **`shopper_ranked=false`**. Shoppers can pick a Whole Foods pin when OSM/catalog shows one. Not dinner totals |
+| Registry | `034` made it ingest-only. `035` sets **`shopper_ranked=true`** in repo. Live waits migrate. Dinner totals when the same sale floors pass |
 | Flipp | No Whole Foods merchant in 23220 flyer list — not used |
 | **Shipped 2026-09-22** | ZIP/coords → retailer closest-store (`store-id`) → `sales-flyer?store-id=` HTML (`__NEXT_DATA__` promotions) → shared junk/matcher → directional `price_observations` (`whole-foods-weekly-ad-scrape`). Fail-soft. Fixture path for CI |
 | Hard rule | Never hardcode store `10598` (23220 example only). Probe override: `WHOLE_FOODS_STORE_NUMBER` |

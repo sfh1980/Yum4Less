@@ -223,6 +223,9 @@ export function OwnerCoveragePanel({
                       : ""}
                     {row.sourceName ? ` · ${row.sourceName}` : ""}
                   </p>
+                  {row.samePlaceNote ? (
+                    <p className="panel-copy">{row.samePlaceNote}</p>
+                  ) : null}
                   <div className="owner-coverage-badges">
                     <CoverageBadge active={row.seen} label="Seen" />
                     <CoverageBadge active={row.mapped} label="Mapped" />

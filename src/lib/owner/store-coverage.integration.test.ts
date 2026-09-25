@@ -34,8 +34,8 @@ describe("chain_registry and store_coverage (integration)", () => {
       ]),
     );
     expect(registry.find((row) => row.chainId === "kroger")?.shopperRanked).toBe(true);
-    expect(registry.find((row) => row.chainId === "lidl")?.shopperRanked).toBe(false);
-    expect(registry.find((row) => row.chainId === "lidl")?.rolloutStage).toBe("map_context");
+    expect(registry.find((row) => row.chainId === "lidl")?.shopperRanked).toBe(true);
+    expect(registry.find((row) => row.chainId === "lidl")?.rolloutStage).toBe("ranked");
     expect(registry.find((row) => row.chainId === "lidl")?.weeklyAdEligible).toBe(true);
     expect(registry.find((row) => row.chainId === "walmart")?.shopperRanked).toBe(true);
     expect(registry.find((row) => row.chainId === "walmart")?.settingsSelectable).toBe(true);
@@ -51,20 +51,20 @@ describe("chain_registry and store_coverage (integration)", () => {
       "ranked",
     );
     expect(registry.find((row) => row.chainId === "target")?.rolloutStage).toBe(
-      "ingest_only",
+      "ranked",
     );
     expect(registry.find((row) => row.chainId === "target")?.weeklyAdEligible).toBe(
       true,
     );
-    expect(registry.find((row) => row.chainId === "target")?.shopperRanked).toBe(false);
+    expect(registry.find((row) => row.chainId === "target")?.shopperRanked).toBe(true);
     expect(registry.find((row) => row.chainId === "whole-foods")?.rolloutStage).toBe(
-      "ingest_only",
+      "ranked",
     );
     expect(registry.find((row) => row.chainId === "whole-foods")?.weeklyAdEligible).toBe(
       true,
     );
     expect(registry.find((row) => row.chainId === "whole-foods")?.shopperRanked).toBe(
-      false,
+      true,
     );
     const rankedIds = registry
       .filter((row) => row.shopperRanked)

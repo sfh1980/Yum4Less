@@ -17,9 +17,9 @@ describe("isWeeklyAdFailLoudChain", () => {
     expect(isWeeklyAdFailLoudChain("food-lion")).toBe(true);
     expect(isWeeklyAdFailLoudChain("walmart")).toBe(true);
     expect(isWeeklyAdFailLoudChain("dollar-general")).toBe(true);
-    expect(isWeeklyAdFailLoudChain("lidl")).toBe(false);
-    expect(isWeeklyAdFailLoudChain("target")).toBe(false);
-    expect(isWeeklyAdFailLoudChain("whole-foods")).toBe(false);
+    expect(isWeeklyAdFailLoudChain("lidl")).toBe(true);
+    expect(isWeeklyAdFailLoudChain("target")).toBe(true);
+    expect(isWeeklyAdFailLoudChain("whole-foods")).toBe(true);
   });
 
   it("follows the roster snapshot instead of a hardcoded ranked list", () => {
@@ -83,7 +83,7 @@ describe("shouldFailWeeklyAdIngestExit", () => {
     expect(
       shouldFailWeeklyAdIngestExit({
         results: [{ status: "live", chain: "kroger" }],
-        syncSummaries: [{ failedCount: 2, chain: "lidl" }],
+        syncSummaries: [{ failedCount: 2, chain: "bjs" }],
       }),
     ).toBe(false);
   });
@@ -124,12 +124,12 @@ describe("shouldFailWeeklyAdIngestExit", () => {
     ).toBe(true);
   });
 
-  it("does not fail the job when only Lidl errors", () => {
+  it("does not fail the job when only an unranked chain errors", () => {
     expect(
       shouldFailWeeklyAdIngestExit({
         results: [
           { status: "live", chain: "kroger" },
-          { status: "error", chain: "lidl" },
+          { status: "error", chain: "bjs" },
         ],
         syncSummaries: [{ failedCount: 0, chain: "kroger" }],
       }),

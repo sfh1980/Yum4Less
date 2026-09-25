@@ -537,7 +537,7 @@ Set `TRUST_PROXY_HEADERS=1` only when a trusted proxy strips client `X-Forwarded
 
 ## 7. Production-ranked scope reminder
 
-As of this doc, **shopper-facing ranked meal totals** use **Kroger-family banners, Aldi, Publix, Food Lion, and Walmart** when weekly-ad (or Kroger official API) promotion gates pass. Same floors for every ranked banner. Lidl stays map context until a store-bound sale feed exists. Missing estimates stay map context with an honest reason. See [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Decision log.
+As of this doc, **shopper-facing ranked meal totals** use **Kroger-family banners, Aldi, Publix, Food Lion, Walmart, Target, and Whole Foods** when weekly-ad (or Kroger official API) promotion gates pass. Same floors for every ranked banner. Lidl and Dollar General totals use a ZIP weekly ad, not that store; Dollar General also requires no other ranked grocer nearby. Missing estimates stay map context with an honest reason. Repo migrations **`035`** (Whole Foods ranked) and **`036`** (Target and Lidl ranked) are not on live until ingest migrate. See [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Decision log.
 
 ---
 

@@ -156,7 +156,7 @@ Client `marketBlocked` = scoped market exists **and** `recommendationReadyStoreC
 
 ## Tree 5 — Store picker
 
-Picker is recognized grocery / club / dollar banners in radius (plus Target / Whole Foods when present) — not a four-chain TypeScript allowlist. Convenience, bakeries, pharmacies, and map fixtures are omitted. Per banner, keep catalog pins; keep live OSM unless a catalog pin is within ~1.5 mi. Dinner estimates still need `recommendationEnabled`. Target and Whole Foods weekly-ad ingest exists; selecting those pins does **not** produce dinner totals until floors and membership.
+Picker is recognized grocery / club / dollar banners in radius (plus Target / Whole Foods when present) — not a four-chain TypeScript allowlist. Convenience, bakeries, pharmacies, and map fixtures are omitted. Per banner, keep catalog pins; keep live OSM unless a catalog pin is within ~1.5 mi. Dinner estimates still need `recommendationEnabled`. Target and Whole Foods can produce dinner totals when the same sale floors pass. Lidl and Dollar General notes say the ad is for the ZIP, not that store.
 
 ```mermaid
 flowchart TD

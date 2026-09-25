@@ -217,9 +217,10 @@ export function migrationEffectPresent(version, db) {
           db.queryScalar(
             `select count(*) from chain_registry
              where chain_id = 'lidl'
-               and shopper_ranked = false
-               and settings_selectable = false
-               and rollout_stage = 'map_context'`,
+               and (
+                 (shopper_ranked = false and settings_selectable = false and rollout_stage = 'map_context')
+                 or (shopper_ranked = true and settings_selectable = true and rollout_stage = 'ranked')
+               )`,
           ),
         ) === 1
       );
@@ -244,9 +245,11 @@ export function migrationEffectPresent(version, db) {
             `select count(*) from chain_registry
              where chain_id = 'target'
                and weekly_ad_eligible = true
-               and shopper_ranked = false
-               and rollout_stage = 'ingest_only'
-               and weekly_ad_adapter = 'target-weekly-ad'`,
+               and weekly_ad_adapter = 'target-weekly-ad'
+               and (
+                 (shopper_ranked = false and rollout_stage = 'ingest_only')
+                 or (shopper_ranked = true and rollout_stage = 'ranked')
+               )`,
           ),
         ) === 1
       );
@@ -260,11 +263,39 @@ export function migrationEffectPresent(version, db) {
             `select count(*) from chain_registry
              where chain_id = 'whole-foods'
                and weekly_ad_eligible = true
-               and shopper_ranked = false
-               and rollout_stage = 'ingest_only'
-               and weekly_ad_adapter = 'whole-foods-weekly-ad'`,
+               and weekly_ad_adapter = 'whole-foods-weekly-ad'
+               and (
+                 (shopper_ranked = false and rollout_stage = 'ingest_only')
+                 or (shopper_ranked = true and rollout_stage = 'ranked')
+               )`,
           ),
         ) === 1
+      );
+    case "035":
+      return (
+        db.tableExists("chain_registry") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from chain_registry
+             where chain_id = 'whole-foods'
+               and shopper_ranked = true
+               and settings_selectable = true
+               and rollout_stage = 'ranked'`,
+          ),
+        ) === 1
+      );
+    case "036":
+      return (
+        db.tableExists("chain_registry") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from chain_registry
+             where chain_id in ('target', 'lidl')
+               and shopper_ranked = true
+               and settings_selectable = true
+               and rollout_stage = 'ranked'`,
+          ),
+        ) === 2
       );
     default:
       return false;

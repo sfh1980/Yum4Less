@@ -44,13 +44,6 @@ export type WeeklyAdRolloutContext = {
   freshOfficialApiMatchedCount?: number;
 };
 
-/** Chains with ingest paths but no honest ranked-meal pricing rollout in beta. */
-const MEAL_PRICING_COMING_LATER_CHAINS = new Set<StoreChain>([
-  "lidl",
-  "target",
-  "whole-foods",
-]);
-
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
   kroger: {
     chain: "kroger",
@@ -108,7 +101,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 5,
     note:
-      "Shown on the map for nearby planning — Lidl circulars we can fetch are not bound to this store, so dinner price estimates are not available from Lidl yet.",
+      "Lidl prices are from a weekly ad for this ZIP, not this store. Check the price in the store.",
   },
   "trader-joes": {
     chain: "trader-joes",
@@ -126,7 +119,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     recommendationEnabled: false,
     priority: 99,
     note:
-      "Dollar General dinner estimates use a packaged/pantry weekly ad when this is the main grocery stop nearby and coverage floors pass. Totals are directional estimates from an area circular — verify in store.",
+      "Dollar General prices are from a weekly ad for this ZIP, not this store. Dinner totals show only when this is the main grocery store nearby. Check the price in the store.",
   },
   target: {
     chain: "target",
@@ -134,8 +127,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     status: "coming-soon",
     recommendationEnabled: false,
     priority: 5,
-    note:
-      "Shown on the map for nearby planning — Target weekly-ad sales can be ingested as directional prices, but dinner totals are not enabled from Target yet.",
+    note: buildDirectionalRolloutNote("Target"),
   },
   "whole-foods": {
     chain: "whole-foods",
@@ -143,8 +135,7 @@ const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
     status: "coming-soon",
     recommendationEnabled: false,
     priority: 5,
-    note:
-      "Shown on the map for nearby planning — Whole Foods weekly-ad sales can be ingested as directional prices, but dinner totals are not enabled from Whole Foods yet.",
+    note: buildDirectionalRolloutNote("Whole Foods"),
   },
   unknown: {
     chain: "unknown",
@@ -191,15 +182,14 @@ function resolveProviderRolloutForBase(
   base: ProviderRolloutEntry,
   weeklyAdContext?: WeeklyAdRolloutContext,
 ): ProviderRolloutEntry {
-  if (MEAL_PRICING_COMING_LATER_CHAINS.has(base.chain)) {
-    return resolveComingLaterMealPricingRollout(base, weeklyAdContext);
-  }
-
   if (weeklyAdContext?.weeklyAdPromotionPassed) {
+    const matched = weeklyAdContext.matchedIngredientCount;
     const note =
       base.chain === "dollar-general"
-        ? `Dollar General meal prices use a packaged/pantry weekly ad (${weeklyAdContext.matchedIngredientCount} matched ingredients), not a full supermarket. Totals are directional estimates from an area circular — verify price, package size, and tags in store.`
-        : `${base.label} meal prices use saved sale prices (${weeklyAdContext.matchedIngredientCount} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`;
+        ? `These Dollar General prices are from a weekly ad for this ZIP, not this store (${matched} matching items). Check the price, package size, and tags in the store.`
+        : base.chain === "lidl"
+          ? `These Lidl prices are from a weekly ad for this ZIP, not this store (${matched} matching items). Check the price in the store.`
+          : `${base.label} meal prices use saved sale prices (${matched} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`;
     return {
       ...base,
       status: "weekly-ad-preview",
@@ -237,10 +227,6 @@ export function listResolvedProviderRollout(input?: {
   weeklyAdPromotionByChain?: Partial<Record<StoreChain, WeeklyAdRolloutContext>>;
 }): ProviderRolloutEntry[] {
   return listProviderRollout().map((entry) => {
-    if (MEAL_PRICING_COMING_LATER_CHAINS.has(entry.chain)) {
-      return entry;
-    }
-
     const weeklyAdContext = input?.weeklyAdPromotionByChain?.[entry.chain];
     if (!weeklyAdContext?.weeklyAdPromotionPassed) {
       return entry;
@@ -257,22 +243,5 @@ export function listResolvedProviderRollout(input?: {
 
 export function listProviderRollout(): ProviderRolloutEntry[] {
   return listProviderCatalogRolloutChains().map((chain) => PROVIDER_ROLLOUT[chain]);
-}
-
-function resolveComingLaterMealPricingRollout(
-  base: ProviderRolloutEntry,
-  weeklyAdContext?: WeeklyAdRolloutContext,
-): ProviderRolloutEntry {
-  const rehearsalNote =
-    weeklyAdContext?.usesWeeklyAdSource
-      ? " Saved test prices may exist in development; they are not used for dinner totals."
-      : "";
-
-  return {
-    ...base,
-    status: "coming-soon",
-    recommendationEnabled: false,
-    note: `${base.note}${rehearsalNote}`,
-  };
 }
 

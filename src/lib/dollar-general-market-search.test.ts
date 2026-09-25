@@ -38,7 +38,7 @@ describe("dollar general market search promotion", () => {
     );
     expect(desertStores[0]?.recommendationEnabled).toBe(true);
     expect(desertStores[0]?.rolloutStatus).toBe("weekly-ad-preview");
-    expect(desertStores[0]?.rolloutNote).toMatch(/area circular/i);
+    expect(desertStores[0]?.rolloutNote).toContain("not this store");
 
     const mixedStores = buildNearbyStoresForSearch(
       [kroger, dollarGeneral],

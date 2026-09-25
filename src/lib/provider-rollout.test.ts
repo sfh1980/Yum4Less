@@ -42,32 +42,34 @@ describe("provider rollout", () => {
     expect(rollout.note).toContain("verify in store");
   });
 
-  it("labels Lidl as map context, not dinner estimates", () => {
+  it("labels Lidl prices as a ZIP ad, not this store", () => {
     const rollout = getProviderRolloutForStore("Lidl");
 
     expect(rollout.chain).toBe("lidl");
     expect(rollout.status).toBe("coming-soon");
     expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toContain("map");
-    expect(rollout.note).not.toContain("saved sale prices");
+    expect(rollout.note).toContain("this ZIP");
+    expect(rollout.note).toContain("not this store");
   });
 
-  it("labels Target as map context with dinners off", () => {
+  it("labels Target with shopper-facing estimates copy before promotion passes", () => {
     const rollout = getProviderRolloutForStore("Target Mechanicsville");
 
     expect(rollout.chain).toBe("target");
     expect(rollout.status).toBe("coming-soon");
     expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toMatch(/dinner totals are not enabled|not available/i);
+    expect(rollout.note).toContain("saved sale prices");
+    expect(rollout.note).toContain("verify in store");
   });
 
-  it("labels Whole Foods as map context with dinners off", () => {
+  it("labels Whole Foods with shopper-facing estimates copy before promotion passes", () => {
     const rollout = getProviderRolloutForStore("Whole Foods Market");
 
     expect(rollout.chain).toBe("whole-foods");
     expect(rollout.status).toBe("coming-soon");
     expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toMatch(/dinner totals are not enabled|not available/i);
+    expect(rollout.note).toContain("saved sale prices");
+    expect(rollout.note).toContain("verify in store");
   });
 
   it("lists catalog rollout entries for shopper-facing chains", () => {
@@ -79,6 +81,8 @@ describe("provider rollout", () => {
       "lidl",
       "walmart",
       "dollar-general",
+      "whole-foods",
+      "target",
       "bjs",
     ]);
   });
@@ -206,32 +210,34 @@ describe("resolveProviderRolloutForStore", () => {
 
     expect(rollout.status).toBe("weekly-ad-preview");
     expect(rollout.recommendationEnabled).toBe(true);
-    expect(rollout.note).toMatch(/area circular/i);
-    expect(rollout.note).toMatch(/packaged\/pantry/i);
+    expect(rollout.note).toContain("this ZIP");
+    expect(rollout.note).toContain("not this store");
   });
 
-  it("keeps Lidl coming soon even when weekly-ad coverage would pass floors", () => {
+  it("enables Lidl weekly-ad-preview when the caller reports promotion gates passed", () => {
     const rollout = resolveProviderRolloutForStore("Lidl", {
       matchedIngredientCount: 5,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: true,
     });
 
-    expect(rollout.status).toBe("coming-soon");
-    expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toContain("not used for dinner totals");
+    expect(rollout.status).toBe("weekly-ad-preview");
+    expect(rollout.recommendationEnabled).toBe(true);
+    expect(rollout.note).toContain("this ZIP");
+    expect(rollout.note).toContain("not this store");
   });
 
-  it("keeps Whole Foods coming soon even when weekly-ad coverage would pass floors", () => {
+  it("enables Whole Foods weekly-ad-preview when promotion gates pass", () => {
     const rollout = resolveProviderRolloutForStore("Whole Foods Market", {
       matchedIngredientCount: 5,
       usesWeeklyAdSource: true,
       weeklyAdPromotionPassed: true,
     });
 
-    expect(rollout.status).toBe("coming-soon");
-    expect(rollout.recommendationEnabled).toBe(false);
-    expect(rollout.note).toContain("not used for dinner totals");
+    expect(rollout.status).toBe("weekly-ad-preview");
+    expect(rollout.recommendationEnabled).toBe(true);
+    expect(rollout.note).toContain("saved sale prices");
+    expect(rollout.note).toContain("estimated");
   });
 
   it("keeps Food Lion limited when weekly-ad source exists but promotion has not passed", () => {

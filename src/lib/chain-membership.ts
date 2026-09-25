@@ -21,12 +21,14 @@ export const KNOWN_DINNER_ADAPTER_CHAIN_IDS = [
   "lidl",
   "walmart",
   "dollar-general",
+  "whole-foods",
+  "target",
 ] as const;
 
 export type KnownDinnerAdapterChainId =
   (typeof KNOWN_DINNER_ADAPTER_CHAIN_IDS)[number];
 
-/** Seeded `shopper_ranked` set after Lidl map-context demotion (`030`). */
+/** Seeded `shopper_ranked` set after Target and Lidl promotion (`036`). */
 export const FIXTURE_SHOPPER_RANKED_CHAIN_IDS = [
   "kroger",
   "aldi",
@@ -34,6 +36,9 @@ export const FIXTURE_SHOPPER_RANKED_CHAIN_IDS = [
   "food-lion",
   "walmart",
   "dollar-general",
+  "whole-foods",
+  "lidl",
+  "target",
 ] as const;
 
 /** Empty roster — no chain is attempted for dinners (fail closed). */

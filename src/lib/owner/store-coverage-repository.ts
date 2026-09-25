@@ -6,6 +6,7 @@ import { INGEST_ZCTA_SAFETY_CAP_MILES } from "@/lib/market-density";
 import { readZipGeocodeCache } from "@/lib/zip-geocode-cache";
 import {
   buildStoreCoverageRow,
+  collapseSamePlaceCoverageRows,
   COVERAGE_ZIP_FALLBACK_MILES,
   filterStoreCoverageRows,
   isCoverageZipQuery,
@@ -182,9 +183,11 @@ export async function listStoreCoverage(input: {
     ),
   ]);
 
-  const allRows = coverageResult.rows
-    .map(mapSourceRow)
-    .map((store) => buildStoreCoverageRow(store, registry));
+  const allRows = collapseSamePlaceCoverageRows(
+    coverageResult.rows
+      .map(mapSourceRow)
+      .map((store) => buildStoreCoverageRow(store, registry)),
+  );
   const zipFence = await resolveCoverageZipFence(input.locationQuery);
   const filtered = filterStoreCoverageRows(allRows, {
     nameQuery: input.nameQuery,

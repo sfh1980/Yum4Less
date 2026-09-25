@@ -23,6 +23,8 @@ describe("chain rollout policy", () => {
       "lidl",
       "walmart",
       "dollar-general",
+      "whole-foods",
+      "target",
       "bjs",
     ]);
     expect([...WEEKLY_AD_RANKED_PRICING_CHAINS]).toEqual([
@@ -33,6 +35,8 @@ describe("chain rollout policy", () => {
       "lidl",
       "walmart",
       "dollar-general",
+      "whole-foods",
+      "target",
     ]);
   });
 

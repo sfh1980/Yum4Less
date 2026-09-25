@@ -298,7 +298,7 @@ export function getCoordinateSanityPromotionRequirement(
     case "lidl":
       return {
         required: false,
-        note: "Lidl is map context until a store-bound sale feed exists; coordinate sanity is a catalog audit, not a dinner-promotion gate.",
+        note: "Lidl dinner totals use a ZIP weekly ad, not this store's shelf. Coordinate sanity is a catalog audit.",
       };
     case "kroger":
     case "aldi":
@@ -320,12 +320,12 @@ export function getCoordinateSanityPromotionRequirement(
     case "target":
       return {
         required: false,
-        note: "Target weekly-ad ingest is store-bound but dinners stay off; coordinate sanity is a catalog audit, not a dinner-promotion gate.",
+        note: `${chain} uses the same weekly-ad coverage floors as other ranked banners; coordinate sanity is tracked as a catalog audit.`,
       };
     case "whole-foods":
       return {
         required: false,
-        note: "Whole Foods weekly-ad ingest is store-bound but dinners stay off; coordinate sanity is a catalog audit, not a dinner-promotion gate.",
+        note: `${chain} uses the same weekly-ad coverage floors as other ranked banners; coordinate sanity is tracked as a catalog audit.`,
       };
     default:
       return {

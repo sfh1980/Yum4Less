@@ -238,7 +238,7 @@ describe("weekly ad coverage", () => {
         { ...strongCoverage, storeId: "lidl-laburnum", chain: "lidl" },
         "lidl",
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       weeklyAdPromotionGatesPass(
         { ...strongCoverage, storeId: "walmart-rocketts", chain: "walmart" },

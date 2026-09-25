@@ -52,6 +52,8 @@ export type StoreCoverageRow = StoreCoverageSourceRow & {
   recipeReady: boolean;
   usableInApp: boolean;
   zipCode?: string;
+  /** Other catalog names collapsed into this row because they are the same building. */
+  samePlaceNote?: string;
 };
 
 export type StoreCoverageSummary = {

@@ -9,7 +9,7 @@ describe("dollar general dinner eligibility", () => {
   it("allows Dollar General dinners when no other ranked grocer is nearby", () => {
     expect(
       isDollarGeneralDinnerEligible({
-        nearbyChains: ["dollar-general", "lidl", "target"],
+        nearbyChains: ["dollar-general", "bjs", "trader-joes"],
         membership: FIXTURE_CHAIN_MEMBERSHIP,
       }),
     ).toBe(true);

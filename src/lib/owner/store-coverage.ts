@@ -1,4 +1,5 @@
 import { inferStoreChainFromCatalog } from "@/lib/chain-rollout-policy";
+import { getDistanceMiles } from "@/lib/geo-distance";
 import { storePassesIngestFence } from "@/lib/market-ingest-fence";
 import type {
   ChainRegistryRow,
@@ -193,4 +194,80 @@ export function summarizeStoreCoverage(
   }
 
   return [...counts.values()];
+}
+
+/** Same-building radius used by catalog twin collapse. OSM and retailer pins inside this count as one place. */
+export const SAME_PLACE_COVERAGE_MILES = 0.05;
+
+function isMapPin(row: StoreCoverageRow): boolean {
+  return (
+    row.storeId.startsWith("osm-") || row.sourceName === "openstreetmap-overpass"
+  );
+}
+
+/**
+ * Keep one Coverage row when two same-banner pins are the same building.
+ * The retailer pin wins over the map pin. Sale flags follow whichever row had them.
+ */
+export function collapseSamePlaceCoverageRows(
+  rows: readonly StoreCoverageRow[],
+): StoreCoverageRow[] {
+  const ordered = [...rows].sort((left, right) => {
+    const pinRank = Number(isMapPin(left)) - Number(isMapPin(right));
+    if (pinRank !== 0) {
+      return pinRank;
+    }
+    return left.storeId < right.storeId ? -1 : left.storeId > right.storeId ? 1 : 0;
+  });
+  const used = new Set<string>();
+  const collapsed: StoreCoverageRow[] = [];
+
+  for (const row of ordered) {
+    if (used.has(row.storeId)) {
+      continue;
+    }
+    used.add(row.storeId);
+    if (row.latitude === null || row.longitude === null) {
+      collapsed.push(row);
+      continue;
+    }
+
+    const twins = ordered.filter((other) => {
+      if (used.has(other.storeId) || other.chainId !== row.chainId) {
+        return false;
+      }
+      if (other.latitude === null || other.longitude === null) {
+        return false;
+      }
+      return (
+        getDistanceMiles(
+          row.latitude!,
+          row.longitude!,
+          other.latitude,
+          other.longitude,
+        ) <= SAME_PLACE_COVERAGE_MILES
+      );
+    });
+    for (const twin of twins) {
+      used.add(twin.storeId);
+    }
+    if (twins.length === 0) {
+      collapsed.push(row);
+      continue;
+    }
+
+    const sales = row.sales || twins.some((twin) => twin.sales);
+    collapsed.push({
+      ...row,
+      freshSaleCount: Math.max(
+        row.freshSaleCount,
+        ...twins.map((twin) => twin.freshSaleCount),
+      ),
+      sales,
+      usableInApp: row.usableInApp || twins.some((twin) => twin.usableInApp),
+      samePlaceNote: `Same place as ${twins.map((twin) => twin.name).join(", ")}`,
+    });
+  }
+
+  return collapsed.sort((left, right) => left.name.localeCompare(right.name));
 }

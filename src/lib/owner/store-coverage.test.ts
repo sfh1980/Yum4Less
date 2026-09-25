@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { GeoJsonPolygon } from "@/lib/geo/point-in-polygon";
 import {
   buildStoreCoverageRow,
+  collapseSamePlaceCoverageRows,
   filterStoreCoverageRows,
   matchRegistryChainId,
   summarizeStoreCoverage,
@@ -276,5 +277,42 @@ describe("visibleTrackedBannerSummaries", () => {
       },
     ]);
     expect(visible.map((row) => row.chainId)).toEqual(["kroger"]);
+  });
+});
+
+describe("collapseSamePlaceCoverageRows", () => {
+  it("keeps one row when a map pin and a retailer pin are the same building", () => {
+    const mapPin = buildStoreCoverageRow(
+      store({
+        storeId: "osm-way-252997411",
+        name: "Whole Foods Market",
+        city: "Richmond",
+        sourceName: "openstreetmap-overpass",
+        sourceStoreId: "osm-way-252997411",
+        latitude: 37.557872,
+        longitude: -77.461292,
+      }),
+      registry,
+    );
+    const retailerPin = buildStoreCoverageRow(
+      store({
+        storeId: "whole-foods-10598",
+        name: "Whole Foods West Broad Street",
+        city: "Richmond",
+        sourceName: "whole-foods-weekly-ad-scrape",
+        sourceStoreId: "10598",
+        latitude: 37.55818,
+        longitude: -77.461295,
+        freshSaleCount: 4,
+      }),
+      registry,
+    );
+
+    const collapsed = collapseSamePlaceCoverageRows([mapPin, retailerPin]);
+
+    expect(collapsed).toHaveLength(1);
+    expect(collapsed[0]?.storeId).toBe("whole-foods-10598");
+    expect(collapsed[0]?.sales).toBe(true);
+    expect(collapsed[0]?.samePlaceNote).toBe("Same place as Whole Foods Market");
   });
 });
