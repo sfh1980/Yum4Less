@@ -45,16 +45,18 @@ export function OwnerMarketCoverageMap({ shades }: OwnerMarketCoverageMapProps) 
     if (!svg || shadeCount === 0) {
       return;
     }
+    // Nested handlers do not keep the narrowed type of `svg`.
+    const mapSvg = svg;
     function onWheel(event: WheelEvent) {
       event.preventDefault();
-      const rect = svg.getBoundingClientRect();
+      const rect = mapSvg.getBoundingClientRect();
       const px = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0.5;
       const py = rect.height > 0 ? (event.clientY - rect.top) / rect.height : 0.5;
       const zoomIn = event.deltaY < 0;
       setView((current) => zoomView(current, zoomIn ? 0.85 : 1.18, px, py));
     }
-    svg.addEventListener("wheel", onWheel, { passive: false });
-    return () => svg.removeEventListener("wheel", onWheel);
+    mapSvg.addEventListener("wheel", onWheel, { passive: false });
+    return () => mapSvg.removeEventListener("wheel", onWheel);
   }, [shadeCount]);
 
   function zoomFromCenter(zoomIn: boolean) {
