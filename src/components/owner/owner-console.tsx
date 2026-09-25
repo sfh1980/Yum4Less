@@ -19,7 +19,7 @@ import type {
   StoreCoverageRow,
   StoreCoverageSummary,
   StoreCoverageUsableFilter,
-} from "@/lib/owner/store-coverage";
+} from "@/lib/owner/store-coverage-model";
 import {
   INGREDIENT_CATEGORIES,
   isIngredientCategory,

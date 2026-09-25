@@ -4,7 +4,7 @@ import {
   type StoreCoverageRow,
   type StoreCoverageSummary,
   type StoreCoverageUsableFilter,
-} from "@/lib/owner/store-coverage";
+} from "@/lib/owner/store-coverage-model";
 
 type OwnerCoveragePanelProps = {
   stores: StoreCoverageRow[];
