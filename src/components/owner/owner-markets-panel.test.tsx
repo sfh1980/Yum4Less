@@ -178,4 +178,58 @@ describe("OwnerMarketsPanel", () => {
     expect(screen.getByText(/BJ's Wholesale Club/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Activate 90210/i })).toBeInTheDocument();
   });
+
+  it("shows the 8-mile sentence after a ZIP is picked", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/owner/markets")) {
+        return jsonOk({
+          ok: true,
+          markets: [
+            {
+              zipCode: "23220",
+              status: "active",
+              source: "ops",
+              priority: 1,
+              latitude: 37.55,
+              longitude: -77.45,
+              densityClass: "urban",
+              ingestMiles: 8,
+              notes: null,
+              updatedAt: null,
+            },
+          ],
+          coverageShades: [],
+        });
+      }
+      if (url.includes("/api/owner/markets/reach")) {
+        return jsonOk({
+          ok: true,
+          zipCode: "23220",
+          sentence: "1 of 3 nearby stores can be priced. 2 sit in ZIPs that are still off.",
+          circle: { latitude: 37.55, longitude: -77.45, radiusMiles: 8 },
+          shades: [],
+          labelZipCodes: ["23225"],
+          offZips: [
+            {
+              zipCode: "23225",
+              storeCount: 2,
+              stores: [{ name: "Forest Hill", chainLabel: "Aldi", reason: "Turn this ZIP on." }],
+            },
+          ],
+        });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<OwnerMarketsPanel adminKey="secret-owner-key" />);
+    await user.click(await screen.findByRole("button", { name: "23220" }));
+
+    expect(
+      await screen.findByText(/2 sit in ZIPs that are still off/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("23225 · 2 stores")).toBeInTheDocument();
+  });
 });

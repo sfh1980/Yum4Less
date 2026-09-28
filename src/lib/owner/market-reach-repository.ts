@@ -1,0 +1,164 @@
+import { listIngestMarkets } from "@/lib/active-markets";
+import { isValidZipCode } from "@/lib/api-request";
+import type { GeoJsonGeometry } from "@/lib/geo/point-in-polygon";
+import { resolveZctaGeometry } from "@/lib/geo/zcta-boundary";
+import { lookupZctaFromPoint } from "@/lib/geo/zcta-from-point";
+import { resolveZipLocation } from "@/lib/geocoding";
+import {
+  buildMarketReachSummary,
+  containingZipCode,
+  MARKET_REACH_RADIUS_MILES,
+  storesWithinReach,
+  type MarketReachStore,
+} from "@/lib/owner/market-reach";
+import type { OwnerMarketCoverageShade } from "@/lib/owner/owner-market-coverage-map-model";
+import { listOwnerMarketCoverageShades } from "@/lib/owner/owner-market-coverage-shades";
+import { loadBuiltStoreCoverageRows } from "@/lib/owner/store-coverage-repository";
+
+const MAX_ZCTA_LOOKUPS = 30;
+
+export type OwnerMarketReach = {
+  zipCode: string;
+  sentence: string;
+  circle: { latitude: number; longitude: number; radiusMiles: number } | null;
+  shades: OwnerMarketCoverageShade[];
+  labelZipCodes: string[];
+  offZips: Array<{
+    zipCode: string;
+    storeCount: number;
+    stores: Array<{ name: string; chainLabel: string; reason: string }>;
+  }>;
+  notice?: string;
+};
+
+export async function buildOwnerMarketReach(
+  zipCode: string,
+): Promise<{ ok: true; reach: OwnerMarketReach } | { ok: false; error: string }> {
+  if (!isValidZipCode(zipCode)) {
+    return { ok: false, error: "Enter a 5-digit ZIP code." };
+  }
+  const markets = await listIngestMarkets();
+  const selected = markets.find((market) => market.zipCode === zipCode);
+  if (!selected || (selected.status !== "active" && selected.status !== "paused")) {
+    return { ok: false, error: "That ZIP is not an active or paused market." };
+  }
+
+  const center = await resolveReachCenter(selected);
+  if (!center) {
+    return { ok: false, error: "That ZIP has no map point yet." };
+  }
+
+  const knownShades = await listOwnerMarketCoverageShades(markets);
+  const selectedShade = knownShades.find((shade) => shade.zipCode === zipCode);
+  const loaded = await loadBuiltStoreCoverageRows();
+  const ranked = storesWithinReach({
+    center,
+    stores: loaded.rows.flatMap((row) => {
+      if (!loaded.rankedChainIds.has(row.chainId)) {
+        return [];
+      }
+      if (row.latitude === null || row.longitude === null) {
+        return [];
+      }
+      const store: MarketReachStore = {
+        name: row.name,
+        chainLabel: row.chainLabel,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        usable: row.usableInApp,
+      };
+      return [store];
+    }),
+  });
+
+  const areas = knownShades.map((shade) => ({
+    zipCode: shade.zipCode,
+    geometry: shade.geometry,
+  }));
+  const assigned = ranked.map((store) => ({
+    ...store,
+    zipCode: containingZipCode(store, areas, zipCode),
+  }));
+  const unresolved = assigned.filter((store) => store.zipCode === null).slice(0, MAX_ZCTA_LOOKUPS);
+  const lookedUp = new Map<string, string>();
+  await Promise.all(
+    unresolved.map(async (store) => {
+      const found = await lookupZctaFromPoint({
+        latitude: store.latitude,
+        longitude: store.longitude,
+      });
+      if (found) {
+        lookedUp.set(storeKey(store), found);
+      }
+    }),
+  );
+  const withZips = assigned.map((store) => ({
+    ...store,
+    zipCode: store.zipCode ?? lookedUp.get(storeKey(store)) ?? null,
+  }));
+
+  const activeZipCodes = new Set(
+    markets
+      .filter((market) => market.status === "active" || market.status === "paused")
+      .map((market) => market.zipCode),
+  );
+  const summary = buildMarketReachSummary({ stores: withZips, activeZipCodes });
+  const extraGeometries = new Map<string, GeoJsonGeometry>();
+  for (const group of summary.offZips) {
+    if (group.zipCode === "unknown" || knownShades.some((shade) => shade.zipCode === group.zipCode)) {
+      continue;
+    }
+    const zcta = await resolveZctaGeometry({ zipCode: group.zipCode });
+    if (zcta.ok) {
+      extraGeometries.set(group.zipCode, zcta.geometry);
+    }
+  }
+
+  const shades: OwnerMarketCoverageShade[] = selectedShade ? [selectedShade] : [];
+  const labelZipCodes: string[] = [];
+  for (const [code, geometry] of extraGeometries) {
+    shades.push({ zipCode: code, status: "off", geometry });
+    labelZipCodes.push(code);
+  }
+
+  return {
+    ok: true,
+    reach: {
+      zipCode,
+      sentence: summary.sentence,
+      circle: { ...center, radiusMiles: MARKET_REACH_RADIUS_MILES },
+      shades,
+      labelZipCodes,
+      offZips: summary.offZips.map((group) => ({
+        zipCode: group.zipCode === "unknown" ? "Nearby" : group.zipCode,
+        storeCount: group.storeCount,
+        stores: group.stores,
+      })),
+      notice: selectedShade
+        ? undefined
+        : "The ZIP outline did not load. The circle is still the 8-mile area.",
+    },
+  };
+}
+
+async function resolveReachCenter(market: {
+  zipCode: string;
+  latitude: number | null;
+  longitude: number | null;
+}): Promise<{ latitude: number; longitude: number } | null> {
+  if (market.latitude !== null && market.longitude !== null) {
+    return { latitude: market.latitude, longitude: market.longitude };
+  }
+  const geocoded = await resolveZipLocation(market.zipCode).catch(() => null);
+  if (geocoded && geocoded.ok) {
+    return {
+      latitude: geocoded.location.latitude,
+      longitude: geocoded.location.longitude,
+    };
+  }
+  return null;
+}
+
+function storeKey(store: { latitude: number; longitude: number }): string {
+  return `${store.latitude.toFixed(4)},${store.longitude.toFixed(4)}`;
+}

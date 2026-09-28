@@ -29,6 +29,23 @@ describe("owner market coverage map model", () => {
     expect(model.bounds.maxLongitude).toBeLessThan(-77.3);
   });
 
+  it("frames the 8-mile circle and labels only the ZIPs still off", () => {
+    const model = buildOwnerCoverageMapModel(
+      [
+        { zipCode: "23220", status: "active", geometry: box(-77.47, 37.54, -77.44, 37.56) },
+        { zipCode: "23225", status: "off", geometry: box(-77.55, 37.48, -77.5, 37.52) },
+      ],
+      {
+        circle: { latitude: 37.55, longitude: -77.455, radiusMiles: 8 },
+        labelZipCodes: ["23225"],
+      },
+    );
+    expect(model.circle).not.toBeNull();
+    expect(model.bounds.maxLatitude - model.bounds.minLatitude).toBeGreaterThan(0.2);
+    expect(model.shades.find((shade) => shade.zipCode === "23225")?.showLabel).toBe(true);
+    expect(model.shades.find((shade) => shade.zipCode === "23220")?.showLabel).toBe(false);
+  });
+
   it("frames a distant ZIP on that coverage, not the US outline", () => {
     const california = buildOwnerCoverageMapModel([
       {

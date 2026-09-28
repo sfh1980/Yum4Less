@@ -2687,12 +2687,32 @@ body.modal-open {
   pointer-events: none;
   paint-order: stroke;
   stroke: color-mix(in srgb, var(--surface) 88%, white);
-  stroke-width: 0.03;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
 }
 
 .owner-market-coverage-shade--paused {
   fill: color-mix(in srgb, var(--muted) 45%, transparent);
   stroke: var(--muted);
+}
+
+.owner-market-coverage-shade--off {
+  fill: color-mix(in srgb, var(--muted) 28%, transparent);
+  stroke: var(--muted);
+}
+
+.owner-market-reach-circle {
+  fill: none;
+  stroke: var(--text);
+  stroke-dasharray: 5 4;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.owner-market-reach {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.75rem 0 1rem;
 }
 
 .owner-market-coverage-caption {

@@ -145,19 +145,10 @@ export async function listChainRegistry(): Promise<ChainRegistryRow[]> {
   return result.rows.map(mapRegistryRow);
 }
 
-export async function listStoreCoverage(input: {
-  nameQuery?: string;
-  locationQuery?: string;
-  usable?: StoreCoverageUsableFilter;
-  chainId?: string;
-  limit: number;
-  offset: number;
-}): Promise<{
-  stores: StoreCoverageRow[];
-  summaries: StoreCoverageSummary[];
-  freshnessHours: number;
-  hasMore: boolean;
-  total: number;
+export async function loadBuiltStoreCoverageRows(): Promise<{
+  rows: StoreCoverageRow[];
+  registry: ChainRegistryRow[];
+  rankedChainIds: ReadonlySet<string>;
 }> {
   const [registry, coverageResult] = await Promise.all([
     listChainRegistry(),
@@ -182,12 +173,36 @@ export async function listStoreCoverage(input: {
       `,
     ),
   ]);
+  return {
+    rows: collapseSamePlaceCoverageRows(
+      coverageResult.rows
+        .map(mapSourceRow)
+        .map((store) => buildStoreCoverageRow(store, registry)),
+    ),
+    registry,
+    rankedChainIds: new Set(
+      registry.filter((row) => row.shopperRanked).map((row) => row.chainId),
+    ),
+  };
+}
 
-  const allRows = collapseSamePlaceCoverageRows(
-    coverageResult.rows
-      .map(mapSourceRow)
-      .map((store) => buildStoreCoverageRow(store, registry)),
-  );
+export async function listStoreCoverage(input: {
+  nameQuery?: string;
+  locationQuery?: string;
+  usable?: StoreCoverageUsableFilter;
+  chainId?: string;
+  limit: number;
+  offset: number;
+}): Promise<{
+  stores: StoreCoverageRow[];
+  summaries: StoreCoverageSummary[];
+  freshnessHours: number;
+  hasMore: boolean;
+  total: number;
+}> {
+  const loaded = await loadBuiltStoreCoverageRows();
+  const registry = loaded.registry;
+  const allRows = loaded.rows;
   const zipFence = await resolveCoverageZipFence(input.locationQuery);
   const filtered = filterStoreCoverageRows(allRows, {
     nameQuery: input.nameQuery,

@@ -33,7 +33,9 @@ If there is **no** Kroger-family / Aldi / Publix / Food Lion / Walmart pin in th
 
 Saves the ZIP for tonight’s job. Does **not** turn the Check list into the official catalog. CLI backup: `npm run markets:activate -- 23220`.
 
-The Markets map under **Active and paused markets** (Markets tab, not Coverage) shades the coverage area only (active, paused, and Check ZIP preview). There is no state or US outline and no ZIP numbers on the shapes. Scroll, drag, or use Zoom in / Zoom out / Reset. It does **not** shade the 8-mile shopper circle. Neighbor-ZIP buildings can still appear for shoppers until those ZIPs are Activated.
+The Markets map under **Active and paused markets** (Markets tab, not Coverage) shades the coverage area only (active, paused, and Check ZIP preview). There is no state or US outline and no ZIP numbers on the shapes. Scroll, drag, or use Zoom in / Zoom out / Reset.
+
+Pick a ZIP in that list to see the ~8-mile circle around it. The bright shape is the ZIP you picked. Pale shapes are other ZIPs that still hold a ranked store inside the circle. Numbers appear only on those pale shapes. A sentence under the map says how many nearby stores can be priced, and how many sit in ZIPs that are still off. Tap a line such as `23227 · 4 stores` to see the store names. Turning a ZIP on is still the whole ZIP. Neighbor buildings stay unpriced until that ZIP is Activated.
 
 Coverage stays empty until Search. Search lists tracked banners that match the name, ZIP, and usable filters. Other / untracked stays off that list. Click a banner to see its matching stores.
 

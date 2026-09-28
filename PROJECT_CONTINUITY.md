@@ -4,7 +4,7 @@
 
 ---
 
-## Resume (as of 2026-09-23)
+## Resume (as of 2026-09-28)
 
 **Owner lock:** Membership cutover **shipped in code** — `chain_registry` drives who we *attempt* for dinners / fail-loud ingest; **floors stay in code**. **Adapters do not hardcode stores/ZIPs/rosters** — Postgres holds those facts (`.cursor/rules/yum4less-db-owned-data.mdc`). Thin sale coverage ⇒ pin stays tracked, dinners stay off. **Lidl lock (2026-09-03):** map/context only until a store-bound sale feed exists — no ranked dinners, no store-finder scrape work. **Dollar General (2026-09-03):** Flipp-first ZIP circular ingest; directional sales can show without dinners; dinner totals only when **no other shopper-ranked grocer is nearby** and the **same** floors pass (area circular, not that building’s shelf). Banner grain later via **shared adapter keys**. Owner Check brand lists stay research. **Ingest fence:** nightly ingest admits grocery pins in the **Census ZIP outline** with a **26 mi** safety cap — same set Owner Check lists. Shopper map stays pin + radius. Neighbor-ZIP pins on that map need those ZIPs Activated too. **Next product work:** Coverage leftovers in `23111` — Target and Whole Foods adapters shipped dinners-off; BJ's Flipp confirm done (map/context, thin absolute prices); **Walmart yield plan closed** (Flipp primary + junk SSOT + `/owner` Ingredient review; scrape only if Flipp empty); **Scale risk A closed** (client-trust API audit); **Cuisine chips R11 closed** (`033`); **Bright Data MCP usage paused**. Full open-task list → [`docs/open-work-inventory-2026-09-09.md`](docs/open-work-inventory-2026-09-09.md) (point-in-time; Resume stays live status). **Live yum4less.com app + ingest Watchtower-recreated 2026-09-14 21:43Z** (`ghcr.io/sfh1980/yum4less-app:homelab` + `yum4less-ingest:homelab` after `d3e9396` Clear obvious). Leftover-grocery ops **closed** 2026-09-15 (planner + button live; owner monitors `/owner` as needed). **Local 2026-09-16:** merch-class + simple-food classifier (mower/nightstand junk; apples/chicken breast/spam/papaya/sirloin food) is **not** on yum4less.com until CI ingest publish + Watchtower, then **Clear obvious**. Do **not** SQL-reject. Older same-day app recreate **19:43Z** was the store-list omit check. Older pair **2026-09-04** was app `55ad51dac9b6` / ingest `6b541e14fc3f`. Nightly worker **6/6 `succeeded`** every `run_date` **2026-08-31 through 2026-09-14** (**15** nights; enqueue ~**07:00:03Z** = 3am Eastern; owner paste-back 2026-09-14). Live `chain_registry` **2026-09-14:** shopper-ranked **kroger / aldi / publix / food-lion / walmart / dollar-general**; Lidl **map_context** (`shopper_ranked` false). Walmart weekly-ad in-stock **19** rows, **19** in 24h (newest **07:09:43Z**). Dollar General and Lidl **0** in-stock rows. Ledger **000–013, 015–031** (no `014` in repo); **`029`** applied **2026-08-30 07:00:03Z**; **`030`/`031`** **2026-09-03 23:59:42Z**. Prior full freshness **`[OK] 428/428`** was **2026-09-05** (not re-run this paste). Junk heal **2026-09-14: scanned=393 rejected=0 remaining=393**, then owner Yes/No **165** accepted / **231** pending; `owner:resolve-pending-reviews --apply` **yes=190 no=14 skip=27 applied_ok=204 applied_fail=0**. Dry-run **2026-09-15: yes=3 no=0 skip=34**. Extra ZIP **`23220`** stays active. TheMealDB **dev test key** is a known ops gap.
 
@@ -34,9 +34,11 @@
 
 ### Working today (honest)
 
+- **Owner Markets 8-mile reach (2026-09-28, local):** Pick a saved ZIP on Markets. The map draws that ZIP, a dashed ~8-mile circle, and pale shapes for ZIPs still off that hold a ranked store inside the circle. ZIP numbers are only on those pale shapes. One sentence says how many nearby stores can be priced. Tap a line to see store names. A ZIP is still all or nothing. Live waits app Watchtower. Does not add buildings or prices.
+
 - **Whole Foods ranked + Coverage same-place collapse (2026-09-25, local):** `035` turns Whole Foods shopper-ranked when weekly-ad floors pass. Coverage shows one row per building (retailer pin wins; map pin noted as the same place). Live waits app Watchtower and ingest migrate. Two store rows remain until identity merge.
 
-- **Owner Markets coverage map (2026-09-24, local):** `/owner` **Markets** (not Coverage) shades the coverage area only. No state/US outline and no ZIP numbers on the shapes. Scroll, drag, or Zoom in / Zoom out / Reset. Active, paused, and Check ZIP preview. Picture only. **Not** the 8-mile shopper circle. Coverage search lists tracked banners, then a banner click lists matching stores. Live waits app Watchtower. Neighbor-ZIP intake process is still open.
+- **Owner Markets coverage map (2026-09-24, local):** `/owner` **Markets** (not Coverage) shades the coverage area only. No state/US outline and no ZIP numbers on the shapes. Scroll, drag, or Zoom in / Zoom out / Reset. Active, paused, and Check ZIP preview. Picture only until you pick a ZIP (see 2026-09-28). Coverage search lists tracked banners, then a banner click lists matching stores. Live waits app Watchtower. Neighbor-ZIP intake process is still open.
 
 - **Whole Foods weekly-ad ingest (2026-09-22, dinners off):** ZIP/coords → retailer closest-store `store-id` → sales-flyer HTML. `034` marks Whole Foods weekly-ad eligible / ingest_only. Fail-soft. Live after ingest image + migrate. Does **not** claim Whole Foods dinners. Never hardcode store `10598`.
 
@@ -274,6 +276,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-09-28 — Markets shows the 8-mile reach for one ZIP
+
+**Theme:** Activated ZIPs and the shopper circle were hard to line up. Coverage counts (seen vs usable) did not say which nearby stores sit in ZIPs that are still off.
+
+**Shipped:** On `/owner` Markets, pick a saved ZIP. The map draws that ZIP, a dashed ~8-mile circle, and pale shapes only for other ZIPs that still hold a ranked store inside the circle. ZIP numbers appear only on those pale shapes. A sentence under the map says how many nearby stores can be priced and how many sit in ZIPs that are still off. Each of those ZIPs is one closed line; tap it for store names and “Turn this ZIP on.” `GET /api/owner/markets/reach?zip=` is the same admin key and rate limit as the other Markets routes.
+
+**Limits:** Only stores already saved. A ZIP is still all or nothing. If Census cannot say which ZIP a pin sits in, that pin is grouped as Nearby. Live waits app Watchtower. Does not queue a refill or add a building.
+
+**Evidence:** `npm test` **1316/1316** (235 files) this session. `npm run build` pass (Next.js 15.5.25); route `/api/owner/markets/reach` is in the build. Did not run `test:integration` (no schema change) or `test:e2e:ci` (`/owner` is not a shopper flow).
 
 ### 2026-09-25 — Whole Foods dinners and one Coverage row per building
 
@@ -3260,8 +3272,9 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-09-28 | **Markets reach picture for one picked ZIP.** Bright shape is that ZIP. Dashed circle is about 8 miles. Pale shapes are whole ZIPs still off that hold a ranked store inside the circle; ZIP numbers only on those shapes. Sentence plus a closed list (`23227 · 4 stores`). No land-area percent. Activate is still the whole ZIP. Default map (nothing picked) stays shapes only. | **Active** (narrows 2026-09-24 Markets map) |
 | 2026-09-25 | **Target, Whole Foods, and Lidl can rank dinners.** Same sale floors as the other ranked banners. Target and Whole Foods ads are for one store. Lidl and Dollar General shopper notes say the ad is for the ZIP, not that store. Dollar General still totals dinners only when it is the main grocery store nearby. No hardcoded coming-later chain list. Coverage shows one row when two same-banner pins are the same building. Live waits `035` and `036`. Do not add a Lidl store-finder scrape. | **Active** (supersedes 2026-09-22 Whole Foods dinners-off and the ranking half of 2026-09-03 Lidl map-context) |
-| 2026-09-24 | **Owner Markets map shows coverage shapes only, and zooms.** No state/US outline and no ZIP labels. Scroll, drag, or Zoom in / Zoom out / Reset. Shopper 8-mile circle is not shaded. Neighbor-ZIP ingest process is a later plan. **Coverage (same day):** Search lists tracked banners that match; a banner click lists that banner’s stores. Other / untracked stays off the banner list. | **Active** |
+| 2026-09-24 | **Owner Markets map shows coverage shapes only, and zooms.** No state/US outline and no ZIP labels. Scroll, drag, or Zoom in / Zoom out / Reset. Shopper 8-mile circle is not shaded until a ZIP is picked (see 2026-09-28). **Coverage (same day):** Search lists tracked banners that match; a banner click lists that banner’s stores. Other / untracked stays off the banner list. | **Active** (narrowed 2026-09-28 for the picked-ZIP view) |
 | 2026-09-22 | **Whole Foods weekly-ad ingest, dinners off.** ZIP/coords locator → persist `source_store_id` → sales-flyer HTML. Same adapter for every activated ZIP. Never hardcode store numbers. `shopper_ranked` stays false until floors + membership. Fail-soft. Not Flipp. | **Superseded** (2026-09-25 `035`) |
 | 2026-09-22 | **ZIP intake + Slice D matcher.** Owner Markets Check lists Census ZIP-shape stores vs 8-mile other-ZIP neighbors plus chain tools. Coverage ZIP search uses the shape/center, not `stores.zip_code`. Analytics scoreboard + collapsed sessions. Ingredient review shows Clear obvious Food/Junk/Unsure. Slice D writes **provisional** OSM↔official aliases after map-catalog (and optional owner Link obvious twins). AUTO_CONFIRM and shopper expand stay **OFF**. Activate still only books the ZIP. No Run intake now. Do not SQL-delete junk. Do not claim more dinners. | **Active** |
 | 2026-09-21 | **Tab icons follow V3 Mock1 shopping-list chrome.** Filled, per-tab colors: terracotta house, amber price tag, silver utensils, red bookmark, lavender bubble, purple gear. Same six labels. Rest of grocery-ledger restyle is still discussion-only. | **Active** |
@@ -3420,6 +3433,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (Markets 8-mile reach) | 2026-09-28 | **1316/1316** pass (235 files) |
+| `npm run build` (Markets 8-mile reach) | 2026-09-28 | **Pass** (Next.js 15.5.25); `/api/owner/markets/reach` listed |
 | `npm test` (Aldi Flipp CI mocks) | 2026-09-23 | **1307/1307** pass (233 files); Aldi ingest file **8/8** |
 | Owner Markets map clip (Playwright measure, `:3001`) | 2026-09-23 | SVG `overflow: hidden`; card height **240px** (CONUS cap); mid-Atlantic **220px**; Virginia **180–208px**. Coverage tab has **no** map. |
 | `npm test` (Owner Markets ZCTA coverage map) | 2026-09-22 | **1307/1307** pass (233 files); after zoom/label polish, related owner tests **32/32** (6 files) |
@@ -3804,6 +3819,7 @@ Full chat prose lives in agent transcripts; use these links for deep context.
 
 | When | Topic | Transcript |
 |------|-------|------------|
+| 2026-09-28 | Markets 8-mile reach for one picked ZIP | [Markets reach](03b94214-33a8-47ef-8f4f-a98e90a98963) |
 | 2026-09-22 | Whole Foods ZIP-generic weekly-ad adapter (dinners off) | [Whole Foods adapter](1b7cb74d-d727-46b6-abe8-d0ed7478e031) |
 | 2026-09-22 | ZIP market intake + Slice D close-out | [ZIP market intake](1b7cb74d-d727-46b6-abe8-d0ed7478e031) |
 | 2026-09-21 | Mock1 tab icons and colors on the 6-tab shell | [Shopper workflow SSOT](da871ddb-2a23-4a68-88f4-27b7656d9c7c) |

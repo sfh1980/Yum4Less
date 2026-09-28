@@ -2,10 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { buildOwnerCoverageMapModel } from "@/lib/owner/owner-market-coverage-map-model";
-import type { OwnerMarketCoverageShade } from "@/lib/owner/owner-market-coverage-map-model";
+import type {
+  OwnerMarketCoverageShade,
+  OwnerMarketReachCircle,
+} from "@/lib/owner/owner-market-coverage-map-model";
 
 type OwnerMarketCoverageMapProps = {
   shades: readonly OwnerMarketCoverageShade[];
+  circle?: OwnerMarketReachCircle;
+  labelZipCodes?: readonly string[];
 };
 
 type MapView = {
@@ -24,15 +29,21 @@ function formatViewBox(view: MapView): string {
   return `${view.x} ${view.y} ${view.width} ${view.height}`;
 }
 
-export function OwnerMarketCoverageMap({ shades }: OwnerMarketCoverageMapProps) {
-  const model = buildOwnerCoverageMapModel(shades);
+export function OwnerMarketCoverageMap({
+  shades,
+  circle,
+  labelZipCodes,
+}: OwnerMarketCoverageMapProps) {
+  const model = buildOwnerCoverageMapModel(shades, { circle, labelZipCodes });
   const baseView = useMemo(() => parseViewBox(model.viewBox), [model.viewBox]);
   const [view, setView] = useState<MapView>(baseView);
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ x: number; y: number; view: MapView } | null>(null);
   const shadeCount = model.shades.length;
-  const label =
-    shadeCount === 0
+  const hasPicture = shadeCount > 0 || model.circle !== null;
+  const label = model.circle
+    ? "Eight-mile circle around the ZIP you picked. Bright shape is that ZIP. Pale shapes are ZIPs still off. Numbers are only on the pale shapes."
+    : shadeCount === 0
       ? "No coverage area shaded yet."
       : `Coverage area. ${shadeCount} shaded shape${shadeCount === 1 ? "" : "s"}. Scroll or use the zoom buttons. Drag to move.`;
 
@@ -42,7 +53,7 @@ export function OwnerMarketCoverageMap({ shades }: OwnerMarketCoverageMapProps) 
 
   useEffect(() => {
     const svg = svgRef.current;
-    if (!svg || shadeCount === 0) {
+    if (!svg || !hasPicture) {
       return;
     }
     // Nested handlers do not keep the narrowed type of `svg`.
@@ -57,14 +68,14 @@ export function OwnerMarketCoverageMap({ shades }: OwnerMarketCoverageMapProps) 
     }
     mapSvg.addEventListener("wheel", onWheel, { passive: false });
     return () => mapSvg.removeEventListener("wheel", onWheel);
-  }, [shadeCount]);
+  }, [hasPicture]);
 
   function zoomFromCenter(zoomIn: boolean) {
     setView((current) => zoomView(current, zoomIn ? 0.85 : 1.18, 0.5, 0.5));
   }
 
   function onPointerDown(event: PointerEvent<SVGSVGElement>) {
-    if (shadeCount === 0) {
+    if (!hasPicture) {
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -96,7 +107,7 @@ export function OwnerMarketCoverageMap({ shades }: OwnerMarketCoverageMapProps) 
 
   return (
     <figure className="owner-market-coverage-map">
-      {shadeCount > 0 ? (
+      {hasPicture ? (
         <div className="owner-market-coverage-zoom">
           <button onClick={() => zoomFromCenter(true)} type="button">
             Zoom in
@@ -127,10 +138,34 @@ export function OwnerMarketCoverageMap({ shades }: OwnerMarketCoverageMapProps) 
             key={`${shade.status}-${shade.zipCode}`}
           />
         ))}
+        {model.circle ? (
+          <ellipse
+            className="owner-market-reach-circle"
+            cx={model.circle.cx}
+            cy={model.circle.cy}
+            rx={model.circle.rx}
+            ry={model.circle.ry}
+          />
+        ) : null}
+        {model.shades.map((shade) =>
+          shade.showLabel ? (
+            <text
+              className="owner-market-coverage-label"
+              fontSize={model.labelFontSize}
+              key={`label-${shade.zipCode}`}
+              textAnchor="middle"
+              x={shade.labelX}
+              y={shade.labelY}
+            >
+              {shade.zipCode}
+            </text>
+          ) : null,
+        )}
       </svg>
       <figcaption className="owner-market-coverage-caption">
-        Shaded coverage only. Scroll to zoom, drag to move. Active, paused, and
-        Check ZIP preview use different fills. Picture only.
+        {model.circle
+          ? "The circle is about 8 miles. The bright shape is the ZIP you picked. Pale shapes are ZIPs still off that have stores inside the circle."
+          : "Shaded coverage only. Scroll to zoom, drag to move. Active, paused, and Check ZIP preview use different fills. Picture only."}
       </figcaption>
     </figure>
   );

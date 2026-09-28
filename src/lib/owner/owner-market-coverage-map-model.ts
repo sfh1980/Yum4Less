@@ -7,9 +7,16 @@ import {
   unionBounds,
   type GeoBounds,
 } from "@/lib/geo/geojson-bounds";
+import { milesToDegreeRadii } from "@/lib/geo/miles-radius";
 import { MID_ATLANTIC_BOUNDS, VIRGINIA_BOUNDS } from "@/lib/geo/us-land-outlines";
 
-export type OwnerMarketCoverageStatus = "active" | "paused" | "preview";
+export type OwnerMarketReachCircle = {
+  latitude: number;
+  longitude: number;
+  radiusMiles: number;
+};
+
+export type OwnerMarketCoverageStatus = "active" | "paused" | "preview" | "off";
 
 export type OwnerMarketCoverageShade = {
   zipCode: string;
@@ -32,7 +39,14 @@ export type OwnerCoverageMapModel = {
     d: string;
     labelX: number;
     labelY: number;
+    showLabel: boolean;
   }>;
+  circle: {
+    cx: number;
+    cy: number;
+    rx: number;
+    ry: number;
+  } | null;
 };
 
 const MIN_COVERAGE_SPAN = 0.05;
@@ -94,21 +108,50 @@ export function boundsForOwnerCoverageFrame(
   return padBounds(covered, MIN_COVERAGE_SPAN, MIN_COVERAGE_SPAN);
 }
 
+function boundsFromCircle(circle: OwnerMarketReachCircle): GeoBounds {
+  const radii = milesToDegreeRadii(circle.latitude, circle.radiusMiles);
+  return {
+    minLongitude: circle.longitude - radii.rx,
+    maxLongitude: circle.longitude + radii.rx,
+    minLatitude: circle.latitude - radii.ry,
+    maxLatitude: circle.latitude + radii.ry,
+  };
+}
+
 export function buildOwnerCoverageMapModel(
   shades: readonly OwnerMarketCoverageShade[],
+  options?: { circle?: OwnerMarketReachCircle; labelZipCodes?: readonly string[] },
 ): OwnerCoverageMapModel {
   const frame = chooseOwnerCoverageMapFrame(shades);
-  const bounds = boundsForOwnerCoverageFrame(frame, shades);
+  const covered = options?.circle
+    ? unionBounds(coverageBounds(shades), boundsFromCircle(options.circle))
+    : coverageBounds(shades);
+  const bounds = covered
+    ? padBounds(covered, MIN_COVERAGE_SPAN, MIN_COVERAGE_SPAN)
+    : boundsForOwnerCoverageFrame(frame, shades);
+  const labelZips = new Set(options?.labelZipCodes ?? []);
+  const radii = options?.circle
+    ? milesToDegreeRadii(options.circle.latitude, options.circle.radiusMiles)
+    : null;
 
   return {
     frame,
     bounds,
-    heightPx: shades.length === 0 ? 160 : 240,
+    heightPx: shades.length === 0 && !options?.circle ? 160 : 240,
     viewBox: `${bounds.minLongitude} ${-bounds.maxLatitude} ${
       bounds.maxLongitude - bounds.minLongitude
     } ${bounds.maxLatitude - bounds.minLatitude}`,
-    labelFontSize: lonSpan(bounds) * 0.04,
+    labelFontSize: lonSpan(bounds) * 0.045,
     landPaths: [],
+    circle:
+      options?.circle && radii
+        ? {
+            cx: options.circle.longitude,
+            cy: -options.circle.latitude,
+            rx: radii.rx,
+            ry: radii.ry,
+          }
+        : null,
     shades: shades.flatMap((shade) => {
       const centroid = geometryCentroid(shade.geometry);
       if (!centroid) {
@@ -121,6 +164,7 @@ export function buildOwnerCoverageMapModel(
           d: geometryToSvgPath(shade.geometry),
           labelX: centroid.longitude,
           labelY: -centroid.latitude,
+          showLabel: labelZips.has(shade.zipCode),
         },
       ];
     }),

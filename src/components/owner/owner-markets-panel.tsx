@@ -9,12 +9,29 @@ import {
   type OwnerChainToolLine,
   type OwnerMarketStorePreview,
 } from "@/lib/owner/ingest-markets-copy";
-import type { OwnerMarketCoverageShade } from "@/lib/owner/owner-market-coverage-map-model";
+import type {
+  OwnerMarketCoverageShade,
+  OwnerMarketReachCircle,
+} from "@/lib/owner/owner-market-coverage-map-model";
 import { formatOwnerChainToolLine } from "@/lib/owner/owner-chain-tools";
 import { formatOwnerMarketPreviewLine } from "@/lib/owner/owner-market-preview-format";
 
 type OwnerMarketsPanelProps = {
   adminKey: string;
+};
+
+type MarketReachState = {
+  zipCode: string;
+  sentence: string;
+  circle: OwnerMarketReachCircle | null;
+  shades: OwnerMarketCoverageShade[];
+  labelZipCodes: string[];
+  offZips: Array<{
+    zipCode: string;
+    storeCount: number;
+    stores: Array<{ name: string; chainLabel: string; reason: string }>;
+  }>;
+  notice?: string;
 };
 
 type PreviewState = {
@@ -55,6 +72,9 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
   const [coverageShades, setCoverageShades] = useState<OwnerMarketCoverageShade[]>(
     [],
   );
+  const [reach, setReach] = useState<MarketReachState | undefined>();
+  const [loadingReach, setLoadingReach] = useState(false);
+  const [reachError, setReachError] = useState<string | undefined>();
 
   const mapShades = useMemo(() => {
     const listed = coverageShades.filter(
@@ -114,6 +134,32 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
   useEffect(() => {
     void loadMarkets();
   }, [loadMarkets]);
+
+  async function loadReach(zip: string) {
+    setLoadingReach(true);
+    setReachError(undefined);
+    try {
+      const response = await fetch(`/api/owner/markets/reach?zip=${zip}`, {
+        headers: authHeaders(adminKey),
+        cache: "no-store",
+      });
+      const json = (await response.json()) as MarketReachState & {
+        ok?: boolean;
+        error?: string;
+      };
+      if (!response.ok || !json.ok) {
+        setReach(undefined);
+        setReachError(json.error ?? "Nearby stores could not be loaded.");
+        return;
+      }
+      setReach(json);
+    } catch {
+      setReach(undefined);
+      setReachError("Nearby stores could not be loaded.");
+    } finally {
+      setLoadingReach(false);
+    }
+  }
 
   async function handleCheck(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -402,7 +448,42 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
       ) : null}
 
       <h3 className="owner-coverage-caption">Active and paused markets</h3>
-      <OwnerMarketCoverageMap shades={mapShades} />
+      <p className="panel-copy">
+        Pick a ZIP to see the 8-mile circle and which other ZIPs hold ranked
+        stores inside it.
+      </p>
+      <OwnerMarketCoverageMap
+        circle={reach?.circle ?? undefined}
+        labelZipCodes={reach?.labelZipCodes}
+        shades={reach ? reach.shades : mapShades}
+      />
+      {loadingReach ? <p className="panel-copy">Loading nearby stores…</p> : null}
+      {reachError ? (
+        <p className="panel-copy" role="alert">
+          {reachError}
+        </p>
+      ) : null}
+      {reach ? (
+        <div className="owner-market-reach">
+          <p className="panel-copy">{reach.sentence}</p>
+          {reach.notice ? <p className="panel-copy">{reach.notice}</p> : null}
+          {reach.offZips.map((group) => (
+            <details key={group.zipCode}>
+              <summary>
+                {group.zipCode} · {group.storeCount}{" "}
+                {group.storeCount === 1 ? "store" : "stores"}
+              </summary>
+              <ul className="owner-market-store-list">
+                {group.stores.map((store) => (
+                  <li key={`${group.zipCode}-${store.chainLabel}-${store.name}`}>
+                    {store.chainLabel} · {store.name}. {store.reason}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))}
+        </div>
+      ) : null}
       {loadingList ? (
         <p className="panel-copy">Loading markets…</p>
       ) : markets.length === 0 ? (
@@ -412,7 +493,16 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
           {markets.map((market) => (
             <li className="owner-coverage-row" key={market.zipCode}>
               <p className="owner-coverage-title">
-                {market.zipCode} · {market.status} · {market.source}
+                <button
+                  aria-pressed={reach?.zipCode === market.zipCode}
+                  className="owner-coverage-banner-button"
+                  disabled={loadingReach}
+                  onClick={() => void loadReach(market.zipCode)}
+                  type="button"
+                >
+                  {market.zipCode}
+                </button>{" "}
+                · {market.status} · {market.source}
                 {market.densityClass
                   ? ` · ${market.densityClass} ${market.ingestMiles ?? ""} mi`
                   : ""}
