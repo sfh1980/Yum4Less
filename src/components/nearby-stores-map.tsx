@@ -304,7 +304,9 @@ function buildStorePopupHtml(store: MapStoreMarker, pricingLabel: string) {
   const safeLocationBadge = escapeHtml(store.locationBadge);
   const safeLocationNote = escapeHtml(store.locationNote);
   const safeRolloutNote = escapeHtml(store.rolloutNote);
-  return `<strong>${safeName}</strong><br/>${safeChainLabel} · ${escapeHtml(formatStraightLineDistanceMiles(store.distanceMiles))}<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span><br/><span style="opacity:0.85">${safeRolloutNote}</span>`;
+  const street = store.addressLine?.trim();
+  const streetLine = street ? `<br/>${escapeHtml(street)}` : "";
+  return `<strong>${safeName}</strong>${streetLine}<br/>${safeChainLabel} · ${escapeHtml(formatStraightLineDistanceMiles(store.distanceMiles))}<br/>${safePricingLabel}<br/><span style="opacity:0.85">${safeLocationBadge} — ${safeLocationNote}</span><br/><span style="opacity:0.85">${safeRolloutNote}</span>`;
 }
 
 function formatAnchorSource(source: DiscoveryMapModel["anchor"]["source"]) {

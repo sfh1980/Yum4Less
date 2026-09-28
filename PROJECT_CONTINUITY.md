@@ -34,7 +34,7 @@
 
 ### Working today (honest)
 
-- **Owner Markets 8-mile reach (2026-09-28, local):** Pick a saved ZIP on Markets. The map draws that ZIP, a dashed ~8-mile circle, and pale shapes for ZIPs still off that hold a ranked store inside the circle. ZIP numbers are only on those pale shapes. One sentence says how many nearby stores can be priced. Tap a line to see store names. A ZIP is still all or nothing. Live waits app Watchtower. Does not add buildings or prices.
+- **Owner Markets 8-mile reach (2026-09-28, local):** Pick a saved ZIP on Markets. The map draws that ZIP, a dashed ~8-mile circle, and pale shapes for ZIPs still off that hold a ranked store inside the circle. ZIP numbers are only on those pale shapes. One sentence says how many nearby stores can be priced. Tap a line: one row per building (chain pin wins; no map-pin id). Street and city come from `stores.address_line` when saved; shoppers see that same street. A ZIP is still all or nothing. Live waits app image and ingest migrate for `037`. Watchtower does not migrate. Does not add buildings or prices.
 
 - **Whole Foods ranked + Coverage same-place collapse (2026-09-25, local):** `035` turns Whole Foods shopper-ranked when weekly-ad floors pass. Coverage shows one row per building (retailer pin wins; map pin noted as the same place). Live waits app Watchtower and ingest migrate. Two store rows remain until identity merge.
 
@@ -276,6 +276,26 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-09-28 — Store street on the building row
+
+**Theme:** A street arrived from Kroger, Publix, Target, Whole Foods, or a linked SNAP directory row, then was not kept on the store. Markets could also show a map pin beside the chain pin for the same building.
+
+**Shipped:** `037` adds `stores.address_line` and `stores.postal_code`, copies a linked SNAP street onto the store, and exposes both on `store_coverage`. Nightly catalog upserts keep a street when the chain already sent one, and do not wipe a saved street with a blank. Markets still collapses same-banner pins within 0.05 miles to the chain pin. A map-pin id is not shown. Shoppers see the street on the Settings store line and the map popup when it is saved.
+
+**Limits:** Aldi, Food Lion, Walmart, Lidl, and map-only pins get a street only from a linked SNAP row until a later source sends one. Live waits app image and ingest migrate for `037`. Watchtower does not migrate by itself.
+
+**Evidence:** `npm test` **1319/1319** (235 files) this session. `npm run test:integration:reset` **54/54** (17 files); applied `037_store_street_address.sql` (`DROP VIEW` then `CREATE VIEW`). `npm run build` pass (Next.js 15.5.25). `npm run test:e2e:ci` **37 passed**, 2 skipped.
+
+### 2026-09-28 — Markets reach list names each pin
+
+**Theme:** The still-off list repeated the chain name and one ZIP-unknown sentence, so eight Food Lion pins looked identical.
+
+**Shipped:** Each chain is a heading. A store name is shown when it is not just the chain. Each pin shows city and state, plus the chain store id. A map-pin id is not shown. A street and ZIP are shown when a linked SNAP directory row has them. The reason is once per group.
+
+**Limits:** Superseded the same day by the street-column entry above. This slice still read the street from a linked SNAP row only.
+
+**Evidence:** `npm test` **1317/1317** (235 files) this session. `npm run build` pass (Next.js 15.5.25). Did not run `test:integration` or `test:e2e:ci` (owner list only; no schema change).
 
 ### 2026-09-28 — Markets shows the 8-mile reach for one ZIP
 
@@ -3272,6 +3292,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-09-28 | **One street on the store row, one line per building.** `stores.address_line` and `stores.postal_code` are the street Markets and the shopper store line both read. Kroger, Publix, Target, and Whole Foods keep a street the night job already received. Other banners get one only from a linked SNAP row. A missing street stays blank. Markets shows one row per building (chain pin wins; no map-pin id), plus the chain store id. Shoppers see street and city. | **Active** (narrows 2026-09-25 one row per building) |
 | 2026-09-28 | **Markets reach picture for one picked ZIP.** Bright shape is that ZIP. Dashed circle is about 8 miles. Pale shapes are whole ZIPs still off that hold a ranked store inside the circle; ZIP numbers only on those shapes. Sentence plus a closed list (`23227 · 4 stores`). No land-area percent. Activate is still the whole ZIP. Default map (nothing picked) stays shapes only. | **Active** (narrows 2026-09-24 Markets map) |
 | 2026-09-25 | **Target, Whole Foods, and Lidl can rank dinners.** Same sale floors as the other ranked banners. Target and Whole Foods ads are for one store. Lidl and Dollar General shopper notes say the ad is for the ZIP, not that store. Dollar General still totals dinners only when it is the main grocery store nearby. No hardcoded coming-later chain list. Coverage shows one row when two same-banner pins are the same building. Live waits `035` and `036`. Do not add a Lidl store-finder scrape. | **Active** (supersedes 2026-09-22 Whole Foods dinners-off and the ranking half of 2026-09-03 Lidl map-context) |
 | 2026-09-24 | **Owner Markets map shows coverage shapes only, and zooms.** No state/US outline and no ZIP labels. Scroll, drag, or Zoom in / Zoom out / Reset. Shopper 8-mile circle is not shaded until a ZIP is picked (see 2026-09-28). **Coverage (same day):** Search lists tracked banners that match; a banner click lists that banner’s stores. Other / untracked stays off the banner list. | **Active** (narrowed 2026-09-28 for the picked-ZIP view) |
@@ -3433,6 +3454,11 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm run test:e2e:ci` (store street column `037`) | 2026-09-28 | **37 passed**, 2 skipped |
+| `npm test` (store street column `037`) | 2026-09-28 | **1319/1319** pass (235 files) |
+| `npm run test:integration:reset` (store street `037`) | 2026-09-28 | **54/54** pass (17 files); applied `037_store_street_address.sql` |
+| `npm run build` (store street column `037`) | 2026-09-28 | **Pass** (Next.js 15.5.25) |
+| `npm test` (Markets reach store lines) | 2026-09-28 | **1317/1317** pass (235 files) |
 | `npm test` (Markets 8-mile reach) | 2026-09-28 | **1316/1316** pass (235 files) |
 | `npm run build` (Markets 8-mile reach) | 2026-09-28 | **Pass** (Next.js 15.5.25); `/api/owner/markets/reach` listed |
 | `npm test` (Aldi Flipp CI mocks) | 2026-09-23 | **1307/1307** pass (233 files); Aldi ingest file **8/8** |
@@ -3819,6 +3845,7 @@ Full chat prose lives in agent transcripts; use these links for deep context.
 
 | When | Topic | Transcript |
 |------|-------|------------|
+| 2026-09-28 | Store street on the building row | [Markets reach](03b94214-33a8-47ef-8f4f-a98e90a98963) |
 | 2026-09-28 | Markets 8-mile reach for one picked ZIP | [Markets reach](03b94214-33a8-47ef-8f4f-a98e90a98963) |
 | 2026-09-22 | Whole Foods ZIP-generic weekly-ad adapter (dinners off) | [Whole Foods adapter](1b7cb74d-d727-46b6-abe8-d0ed7478e031) |
 | 2026-09-22 | ZIP market intake + Slice D close-out | [ZIP market intake](1b7cb74d-d727-46b6-abe8-d0ed7478e031) |

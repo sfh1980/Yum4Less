@@ -413,6 +413,8 @@ export function buildNearbyStoresForSearch(
         }),
         city: store.city,
         state: store.state,
+        addressLine: store.addressLine,
+        postalCode: store.postalCode,
         kind: store.kind,
         latitude: store.latitude,
         longitude: store.longitude,

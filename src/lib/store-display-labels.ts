@@ -93,10 +93,16 @@ export function formatStoreHeadlineWithOptionalSubtitle(
 
 /** Primary line: display name plus city/state when known. */
 export function formatStoreNameWithLocation(
-  store: Pick<NearbyStoreSummary, "name"> & { city?: string; state?: string },
+  store: Pick<NearbyStoreSummary, "name"> & {
+    city?: string;
+    state?: string;
+    addressLine?: string;
+  },
 ): string {
   const location = formatStoreCityState(store);
-  return location ? `${store.name} — ${location}` : store.name;
+  const street = store.addressLine?.trim();
+  const place = [street, location].filter(Boolean).join(", ");
+  return place ? `${store.name} — ${place}` : store.name;
 }
 
 /** Nearby-store distance copy — haversine miles, labeled honestly. */

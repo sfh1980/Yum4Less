@@ -10,7 +10,7 @@ import type {
 // Catalog-only reads: stores, ingredients, recipes, and recipe ingredients.
 
 const STORES_SQL = `
-  select id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+  select id, name, kind, city, state, address_line, postal_code, latitude, longitude, source_name, source_store_id, last_verified_at
   from stores
   order by name
 `;
@@ -82,7 +82,7 @@ export async function listCatalogStoresNearLocation(input: {
 }
 
 const STORES_NEAR_SQL = `
-  select id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+  select id, name, kind, city, state, address_line, postal_code, latitude, longitude, source_name, source_store_id, last_verified_at
   from stores
   where latitude between $1 and $2
     and longitude between $3 and $4
@@ -124,6 +124,8 @@ function mapStoreRow(row: StoreRow): CatalogStore {
     kind: row.kind,
     city: row.city,
     state: row.state,
+    addressLine: row.address_line?.trim() || undefined,
+    postalCode: row.postal_code?.trim() || undefined,
     latitude: Number(row.latitude),
     longitude: Number(row.longitude),
     sourceName: row.source_name ?? undefined,
@@ -173,6 +175,8 @@ type StoreRow = {
   kind: CatalogStore["kind"];
   city: string;
   state: string;
+  address_line: string | null;
+  postal_code: string | null;
   latitude: string;
   longitude: string;
   source_name: string | null;

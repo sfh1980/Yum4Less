@@ -66,6 +66,8 @@ export function buildPublixCatalogStoreFromLocator(
     longitude,
     sourceName: PUBLIX_STORE_LOCATOR_SOURCE,
     sourceStoreId: String(storeNumber),
+    ...(record.ADDR?.trim() ? { addressLine: record.ADDR.trim() } : {}),
+    ...(record.ZIP?.trim() ? { postalCode: record.ZIP.trim() } : {}),
   };
 }
 

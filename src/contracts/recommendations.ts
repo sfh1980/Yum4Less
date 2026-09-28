@@ -72,6 +72,8 @@ export type NearbyStoreSummary = {
   name: string;
   city?: string;
   state?: string;
+  addressLine?: string;
+  postalCode?: string;
   kind: CatalogStore["kind"];
   latitude: number;
   longitude: number;

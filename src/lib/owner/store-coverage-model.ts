@@ -35,6 +35,8 @@ export type StoreCoverageSourceRow = {
   kind: string;
   city: string;
   state: string;
+  addressLine: string | null;
+  postalCode: string | null;
   latitude: number | null;
   longitude: number | null;
   sourceName: string | null;

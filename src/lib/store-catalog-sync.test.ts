@@ -61,6 +61,27 @@ describe("store-catalog-sync", () => {
     });
   });
 
+  it("keeps a Kroger street on the catalog row", () => {
+    const discovered: ProviderDiscoveredStore = {
+      provider: "kroger",
+      providerStoreId: "01400376",
+      name: "Kroger Marketplace",
+      addressLine1: "1234 Main St",
+      city: "Atlanta",
+      state: "GA",
+      zipCode: "30303",
+      latitude: 33.75,
+      longitude: -84.39,
+    };
+
+    expect(buildKrogerCatalogStore(discovered)).toEqual(
+      expect.objectContaining({
+        addressLine: "1234 Main St",
+        postalCode: "30303",
+      }),
+    );
+  });
+
   it("builds one Aldi catalog row per ZIP market when live OSM Aldi is present", () => {
     const catalog = buildAldiCatalogStoreForMarket({
       location: {

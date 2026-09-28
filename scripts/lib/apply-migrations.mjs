@@ -297,6 +297,15 @@ export function migrationEffectPresent(version, db) {
           ),
         ) === 2
       );
+    case "037":
+      // Table columns alone are not enough: a failed view rebuild can leave
+      // address_line on stores while store_coverage still omits it.
+      return (
+        db.columnExists("stores", "address_line") &&
+        db.columnExists("stores", "postal_code") &&
+        db.columnExists("store_coverage", "address_line") &&
+        db.columnExists("store_coverage", "postal_code")
+      );
     default:
       return false;
   }

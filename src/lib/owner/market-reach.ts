@@ -8,8 +8,14 @@ export const TURN_ZIP_ON_REASON = "Turn this ZIP on.";
 export const ZIP_UNKNOWN_REASON = "We could not tell which ZIP this pin sits in.";
 
 export type MarketReachStore = {
+  storeId: string;
   name: string;
   chainLabel: string;
+  city: string;
+  state: string;
+  sourceStoreId: string | null;
+  addressLine: string | null;
+  postalCode: string | null;
   latitude: number;
   longitude: number;
   usable: boolean;
@@ -21,14 +27,20 @@ export type MarketReachArea = {
 };
 
 export type MarketReachOffStore = {
+  storeId: string;
   name: string;
   chainLabel: string;
-  reason: string;
+  city: string;
+  state: string;
+  sourceStoreId: string | null;
+  addressLine: string | null;
+  postalCode: string | null;
 };
 
 export type MarketReachOffZip = {
   zipCode: string;
   storeCount: number;
+  reason: string;
   stores: MarketReachOffStore[];
 };
 
@@ -91,9 +103,14 @@ export function buildMarketReachSummary(input: {
     const zipCode = store.zipCode ?? "unknown";
     const list = groups.get(zipCode) ?? [];
     list.push({
+      storeId: store.storeId,
       name: store.name,
       chainLabel: store.chainLabel,
-      reason: store.zipCode ? TURN_ZIP_ON_REASON : ZIP_UNKNOWN_REASON,
+      city: store.city,
+      state: store.state,
+      sourceStoreId: store.sourceStoreId,
+      addressLine: store.addressLine,
+      postalCode: store.postalCode,
     });
     groups.set(zipCode, list);
   }
@@ -101,6 +118,7 @@ export function buildMarketReachSummary(input: {
     .map(([zipCode, stores]) => ({
       zipCode,
       storeCount: stores.length,
+      reason: zipCode === "unknown" ? ZIP_UNKNOWN_REASON : TURN_ZIP_ON_REASON,
       stores: stores.sort((a, b) => a.chainLabel.localeCompare(b.chainLabel) || a.name.localeCompare(b.name)),
     }))
     .sort((a, b) => b.storeCount - a.storeCount || a.zipCode.localeCompare(b.zipCode));

@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { GeoJsonGeometry } from "@/lib/geo/point-in-polygon";
 import { parseCensusCoordinateZcta } from "@/lib/geo/zcta-from-point";
 import {
+  groupReachStoresByChain,
+  reachStoreIdLine,
+  reachStorePlace,
+  reachStoreTitle,
+} from "@/lib/owner/market-reach-format";
+import {
   buildMarketReachSummary,
   containingZipCode,
   TURN_ZIP_ON_REASON,
@@ -28,24 +34,42 @@ describe("market reach", () => {
       activeZipCodes: new Set(["23220"]),
       stores: [
         {
+          storeId: "kroger-lombardy",
           name: "Kroger Lombardy",
           chainLabel: "Kroger",
+          city: "Richmond",
+          state: "VA",
+          sourceStoreId: "00123",
+          addressLine: null,
+          postalCode: null,
           latitude: 37.55,
           longitude: -77.45,
           usable: true,
           zipCode: "23220",
         },
         {
+          storeId: "aldi-forest-hill",
           name: "Forest Hill",
           chainLabel: "Aldi",
+          city: "Richmond",
+          state: "VA",
+          sourceStoreId: "7003",
+          addressLine: "7319 Forest Hill Ave",
+          postalCode: "23225",
           latitude: 37.52,
           longitude: -77.49,
           usable: false,
           zipCode: "23225",
         },
         {
+          storeId: "kroger-stonebridge",
           name: "Stonebridge",
           chainLabel: "Kroger",
+          city: "Richmond",
+          state: "VA",
+          sourceStoreId: null,
+          addressLine: null,
+          postalCode: null,
           latitude: 37.5,
           longitude: -77.52,
           usable: false,
@@ -61,9 +85,28 @@ describe("market reach", () => {
       {
         zipCode: "23225",
         storeCount: 2,
+        reason: TURN_ZIP_ON_REASON,
         stores: [
-          { name: "Forest Hill", chainLabel: "Aldi", reason: TURN_ZIP_ON_REASON },
-          { name: "Stonebridge", chainLabel: "Kroger", reason: TURN_ZIP_ON_REASON },
+          {
+            storeId: "aldi-forest-hill",
+            name: "Forest Hill",
+            chainLabel: "Aldi",
+            city: "Richmond",
+            state: "VA",
+            sourceStoreId: "7003",
+            addressLine: "7319 Forest Hill Ave",
+            postalCode: "23225",
+          },
+          {
+            storeId: "kroger-stonebridge",
+            name: "Stonebridge",
+            chainLabel: "Kroger",
+            city: "Richmond",
+            state: "VA",
+            sourceStoreId: null,
+            addressLine: null,
+            postalCode: null,
+          },
         ],
       },
     ]);
@@ -79,6 +122,36 @@ describe("market reach", () => {
       "23220",
     );
     expect(zip).toBe("23220");
+  });
+
+  it("shows a street and store id without repeating the chain name", () => {
+    const foodLion = {
+      storeId: "osm-node-1",
+      name: "Food Lion",
+      chainLabel: "Food Lion",
+      city: "Richmond",
+      state: "VA",
+      sourceStoreId: "osm-node-1",
+      addressLine: null,
+      postalCode: null,
+    };
+    expect(reachStoreTitle(foodLion)).toBeNull();
+    expect(reachStorePlace(foodLion)).toBe("Richmond, VA. No street address saved.");
+    expect(reachStoreIdLine(foodLion)).toBeNull();
+    expect(
+      reachStorePlace({
+        addressLine: "7319 Forest Hill Ave",
+        city: "Richmond",
+        state: "VA",
+        postalCode: "23225",
+      }),
+    ).toBe("7319 Forest Hill Ave, Richmond, VA 23225");
+    expect(reachStoreIdLine({ storeId: "aldi-7003", sourceStoreId: "7003" })).toBe(
+      "Store id 7003",
+    );
+    expect(groupReachStoresByChain([foodLion, foodLion]).map((group) => group.chainLabel)).toEqual([
+      "Food Lion",
+    ]);
   });
 
   it("reads a Census coordinate ZIP", () => {

@@ -24,7 +24,7 @@ Public read-only routes (cache-first; ingest scripts are the write path):
 
 | Route | Purpose |
 |-------|---------|
-| `POST /api/market-search` | Nearby stores, sale ingredients, map context, provider coverage |
+| `POST /api/market-search` | Nearby stores, sale ingredients, map context, provider coverage. A saved `stores.address_line` (`037`) is included as `addressLine` for the store line and map popup. |
 | `POST /api/recommendations` | Rank dinners from selected stores, budget, and ingredients |
 | `POST /api/geocode/zip` | ZIP → coordinates (continental US) |
 | `POST /api/shopping-route` | Multi-store stop ordering for a shopping plan |

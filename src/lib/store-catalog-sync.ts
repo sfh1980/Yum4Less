@@ -55,6 +55,8 @@ export type CatalogStoreRecord = {
   longitude: number;
   sourceName: string;
   sourceStoreId: string;
+  addressLine?: string | null;
+  postalCode?: string | null;
 };
 
 export type CatalogStoreRole = "map-context" | "ranked-ready";
@@ -247,6 +249,24 @@ export function buildKrogerCatalogStore(
     longitude: discovered.longitude,
     sourceName: KROGER_CATALOG_SOURCE,
     sourceStoreId: discovered.providerStoreId,
+    ...streetFields(discovered.addressLine1, discovered.zipCode),
+  };
+}
+
+function blankToNull(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+  return trimmed ? trimmed : null;
+}
+
+function streetFields(
+  addressLine?: string | null,
+  postalCode?: string | null,
+): Pick<CatalogStoreRecord, "addressLine" | "postalCode"> {
+  const address = blankToNull(addressLine);
+  const postal = blankToNull(postalCode);
+  return {
+    ...(address ? { addressLine: address } : {}),
+    ...(postal ? { postalCode: postal } : {}),
   };
 }
 
@@ -398,9 +418,11 @@ export async function upsertCatalogStores(
                 longitude,
                 source_name,
                 source_store_id,
+                address_line,
+                postal_code,
                 last_verified_at
               )
-              values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+              values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
               on conflict (id) do update set
                 name = excluded.name,
                 city = excluded.city,
@@ -409,9 +431,11 @@ export async function upsertCatalogStores(
                 longitude = excluded.longitude,
                 source_name = excluded.source_name,
                 source_store_id = excluded.source_store_id,
+                address_line = coalesce(excluded.address_line, stores.address_line),
+                postal_code = coalesce(excluded.postal_code, stores.postal_code),
                 last_verified_at = now()
               where stores.source_name is null
-                or stores.source_name = any($10::text[])
+                or stores.source_name = any($12::text[])
                 or stores.source_name = excluded.source_name
                 or strpos(stores.source_name, '-weekly-ad-scrape') > 0
             `
@@ -426,9 +450,11 @@ export async function upsertCatalogStores(
                 longitude,
                 source_name,
                 source_store_id,
+                address_line,
+                postal_code,
                 last_verified_at
               )
-              values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+              values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
               on conflict (id) do update set
                 name = excluded.name,
                 city = excluded.city,
@@ -437,6 +463,8 @@ export async function upsertCatalogStores(
                 longitude = excluded.longitude,
                 source_name = excluded.source_name,
                 source_store_id = excluded.source_store_id,
+                address_line = coalesce(excluded.address_line, stores.address_line),
+                postal_code = coalesce(excluded.postal_code, stores.postal_code),
                 last_verified_at = now()
             `,
         preserveRankedSources
@@ -450,6 +478,8 @@ export async function upsertCatalogStores(
               store.longitude,
               writeSourceName,
               store.sourceStoreId,
+              blankToNull(store.addressLine),
+              blankToNull(store.postalCode),
               rankedSources,
             ]
           : [
@@ -462,6 +492,8 @@ export async function upsertCatalogStores(
               store.longitude,
               writeSourceName,
               store.sourceStoreId,
+              blankToNull(store.addressLine),
+              blankToNull(store.postalCode),
             ],
       );
       upserted += result.rowCount ?? 0;

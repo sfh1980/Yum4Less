@@ -31,6 +31,8 @@ export function buildTargetCatalogStoreFromLocator(
     longitude: store.longitude,
     sourceName: TARGET_STORE_LOCATOR_SOURCE,
     sourceStoreId: store.storeId,
+    ...(store.addressLine1?.trim() ? { addressLine: store.addressLine1.trim() } : {}),
+    ...(store.postalCode?.trim() ? { postalCode: store.postalCode.trim() } : {}),
   };
 }
 

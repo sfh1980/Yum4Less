@@ -13,6 +13,7 @@ export type TargetLocatorStore = {
   longitude?: number;
   distanceMiles?: number;
   addressLine1?: string;
+  postalCode?: string;
 };
 
 export type TargetWeeklyAdStoreDeps = {
@@ -137,6 +138,10 @@ function normalizeLocatorStore(entry: unknown): TargetLocatorStore | undefined {
     longitude,
     distanceMiles: readNumber(record.distance),
     addressLine1: readString(mailing?.address_line1) ?? readString(mailing?.address_line_1),
+    postalCode:
+      readString(mailing?.postal_code) ??
+      readString(mailing?.zip_code) ??
+      readString(record.postal_code),
   };
 }
 

@@ -2727,9 +2727,32 @@ body.modal-open {
   margin: 0.75rem 0 1.25rem;
 }
 
+.owner-market-reach-chain {
+  margin: 0.65rem 0 0.2rem;
+  font-size: 0.95rem;
+}
+
 .owner-market-store-list {
-  margin: 0;
-  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 0.35rem;
+  padding: 0;
+  list-style: none;
+}
+
+.owner-market-store-list li {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.owner-market-reach-name {
+  font-weight: 600;
+}
+
+.owner-market-reach-place,
+.owner-market-reach-id {
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .owner-analytics-properties {

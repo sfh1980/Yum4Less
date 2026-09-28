@@ -248,6 +248,8 @@ export function psqlApplySqlContent(databaseName, sqlContent) {
       "postgres",
       "-d",
       databaseName,
+      "-v",
+      "ON_ERROR_STOP=1",
     ],
     {
       input: sqlContent,

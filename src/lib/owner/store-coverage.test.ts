@@ -75,6 +75,8 @@ function store(
     kind: "grocery",
     city: "Mechanicsville",
     state: "VA",
+    addressLine: null,
+    postalCode: null,
     latitude: 37.6,
     longitude: -77.3,
     sourceName: "openstreetmap-overpass",

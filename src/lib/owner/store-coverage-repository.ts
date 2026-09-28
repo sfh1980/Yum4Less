@@ -50,6 +50,8 @@ type StoreCoverageDbRow = {
   kind: string;
   city: string;
   state: string;
+  address_line: string | null;
+  postal_code: string | null;
   latitude: string | number | null;
   longitude: string | number | null;
   source_name: string | null;
@@ -107,6 +109,8 @@ function mapSourceRow(row: StoreCoverageDbRow): StoreCoverageSourceRow {
     kind: row.kind,
     city: row.city,
     state: row.state,
+    addressLine: row.address_line?.trim() || null,
+    postalCode: row.postal_code?.trim() || null,
     latitude: parseCoordinate(row.latitude),
     longitude: parseCoordinate(row.longitude),
     sourceName: row.source_name,
@@ -160,6 +164,8 @@ export async function loadBuiltStoreCoverageRows(): Promise<{
           kind,
           city,
           state,
+          address_line,
+          postal_code,
           latitude,
           longitude,
           source_name,

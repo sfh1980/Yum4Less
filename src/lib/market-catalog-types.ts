@@ -8,6 +8,8 @@ export type CatalogStore = {
   kind: StoreKind;
   city: string;
   state: string;
+  addressLine?: string;
+  postalCode?: string;
   latitude: number;
   longitude: number;
   sourceName?: string;

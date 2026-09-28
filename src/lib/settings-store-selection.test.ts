@@ -441,4 +441,16 @@ describe("formatSettingsStoreOptionLabel", () => {
       }),
     ).toBe("Kroger — Mechanicsville, VA (2.4 mi straight-line)");
   });
+
+  it("includes a saved street ahead of the city", () => {
+    expect(
+      formatSettingsStoreOptionLabel({
+        name: "Kroger",
+        city: "Mechanicsville",
+        state: "VA",
+        addressLine: "9351 Atlee Rd",
+        distanceMiles: 2.4,
+      }),
+    ).toBe("Kroger — 9351 Atlee Rd, Mechanicsville, VA (2.4 mi straight-line)");
+  });
 });

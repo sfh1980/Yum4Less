@@ -214,7 +214,19 @@ describe("OwnerMarketsPanel", () => {
             {
               zipCode: "23225",
               storeCount: 2,
-              stores: [{ name: "Forest Hill", chainLabel: "Aldi", reason: "Turn this ZIP on." }],
+              reason: "Turn this ZIP on.",
+              stores: [
+                {
+                  storeId: "aldi-7003",
+                  name: "Forest Hill",
+                  chainLabel: "Aldi",
+                  city: "Richmond",
+                  state: "VA",
+                  sourceStoreId: "7003",
+                  addressLine: "7319 Forest Hill Ave",
+                  postalCode: "23225",
+                },
+              ],
             },
           ],
         });
@@ -231,5 +243,11 @@ describe("OwnerMarketsPanel", () => {
       await screen.findByText(/2 sit in ZIPs that are still off/),
     ).toBeInTheDocument();
     expect(screen.getByText("23225 · 2 stores")).toBeInTheDocument();
+    await user.click(screen.getByText("23225 · 2 stores"));
+    expect(screen.getByRole("heading", { name: "Aldi" })).toBeInTheDocument();
+    expect(screen.getByText("Forest Hill")).toBeInTheDocument();
+    expect(screen.getByText("7319 Forest Hill Ave, Richmond, VA 23225")).toBeInTheDocument();
+    expect(screen.getByText("Store id 7003")).toBeInTheDocument();
+    expect(screen.getAllByText("Turn this ZIP on.")).toHaveLength(1);
   });
 });

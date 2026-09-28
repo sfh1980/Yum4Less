@@ -31,6 +31,8 @@ export function buildWholeFoodsCatalogStoreFromLocator(
     longitude: store.longitude,
     sourceName: WHOLE_FOODS_STORE_LOCATOR_SOURCE,
     sourceStoreId: store.storeId,
+    ...(store.addressLine1?.trim() ? { addressLine: store.addressLine1.trim() } : {}),
+    ...(store.postalCode?.trim() ? { postalCode: store.postalCode.trim() } : {}),
   };
 }
 

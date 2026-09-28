@@ -15,6 +15,13 @@ import type {
 } from "@/lib/owner/owner-market-coverage-map-model";
 import { formatOwnerChainToolLine } from "@/lib/owner/owner-chain-tools";
 import { formatOwnerMarketPreviewLine } from "@/lib/owner/owner-market-preview-format";
+import {
+  groupReachStoresByChain,
+  reachStoreIdLine,
+  reachStorePlace,
+  reachStoreTitle,
+  type MarketReachStoreLine,
+} from "@/lib/owner/market-reach-format";
 
 type OwnerMarketsPanelProps = {
   adminKey: string;
@@ -29,7 +36,8 @@ type MarketReachState = {
   offZips: Array<{
     zipCode: string;
     storeCount: number;
-    stores: Array<{ name: string; chainLabel: string; reason: string }>;
+    reason: string;
+    stores: MarketReachStoreLine[];
   }>;
   notice?: string;
 };
@@ -473,13 +481,25 @@ export function OwnerMarketsPanel({ adminKey }: OwnerMarketsPanelProps) {
                 {group.zipCode} · {group.storeCount}{" "}
                 {group.storeCount === 1 ? "store" : "stores"}
               </summary>
-              <ul className="owner-market-store-list">
-                {group.stores.map((store) => (
-                  <li key={`${group.zipCode}-${store.chainLabel}-${store.name}`}>
-                    {store.chainLabel} · {store.name}. {store.reason}
-                  </li>
-                ))}
-              </ul>
+              <p className="panel-copy">{group.reason}</p>
+              {groupReachStoresByChain(group.stores).map((chain) => (
+                <section key={`${group.zipCode}-${chain.chainLabel}`}>
+                  <h4 className="owner-market-reach-chain">{chain.chainLabel}</h4>
+                  <ul className="owner-market-store-list">
+                    {chain.stores.map((store) => {
+                      const title = reachStoreTitle(store);
+                      const idLine = reachStoreIdLine(store);
+                      return (
+                        <li key={store.storeId}>
+                          {title ? <span className="owner-market-reach-name">{title}</span> : null}
+                          <span className="owner-market-reach-place">{reachStorePlace(store)}</span>
+                          {idLine ? <span className="owner-market-reach-id">{idLine}</span> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
             </details>
           ))}
         </div>
