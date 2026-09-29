@@ -277,6 +277,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 ## Changelog (newest first)
 
+### 2026-09-29 — Settings street label passes typecheck
+
+**Theme:** CI verify rejected `fb882b7`, so the app and ingest images were not published.
+
+**Shipped:** The Settings store label accepts `addressLine`, the same field the store line already prints.
+
+**Limits:** Live still waits a green publish plus a TrueNAS migrate of `037`. Watchtower does not migrate.
+
+**Evidence:** `npm run typecheck` pass this session (exit 0). CI publish follows this push.
+
 ### 2026-09-28 — Store street on the building row
 
 **Theme:** A street arrived from Kroger, Publix, Target, Whole Foods, or a linked SNAP directory row, then was not kept on the store. Markets could also show a map pin beside the chain pin for the same building.
@@ -3454,6 +3464,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm run typecheck` (Settings street label) | 2026-09-29 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run test:e2e:ci` (store street column `037`) | 2026-09-28 | **37 passed**, 2 skipped |
 | `npm test` (store street column `037`) | 2026-09-28 | **1319/1319** pass (235 files) |
 | `npm run test:integration:reset` (store street `037`) | 2026-09-28 | **54/54** pass (17 files); applied `037_store_street_address.sql` |

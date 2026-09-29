@@ -115,6 +115,7 @@ export function formatSettingsStoreOptionLabel(
   store: Pick<NearbyStoreSummary, "name" | "distanceMiles"> & {
     city?: string;
     state?: string;
+    addressLine?: string;
   },
 ): string {
   return `${formatStoreNameWithLocation(store)} (${formatStraightLineDistanceMiles(store.distanceMiles)})`;
