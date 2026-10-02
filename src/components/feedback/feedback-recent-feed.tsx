@@ -9,6 +9,7 @@ type FeedbackRecentFeedProps = {
 const ISSUE_TYPE_LABELS: Record<PublicFeedbackRow["issueType"], string> = {
   wrong_price: "Wrong price",
   missing_item: "Missing item",
+  missing_store: "Add a grocery store",
   stale_ad: "Stale weekly ad",
   bug: "Bug report",
   general: "General feedback",

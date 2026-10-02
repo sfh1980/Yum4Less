@@ -63,6 +63,10 @@ test.describe("Settings store selection", () => {
     await expect(
       page.getByRole("heading", { name: "Which stores should we use?" }),
     ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("link", { name: "Request a grocery store" })).toHaveAttribute(
+      "href",
+      "/feedback?topic=missing_store",
+    );
 
     await expect(page.getByRole("checkbox", { name: /Kroger/ }).first()).toBeVisible();
     await expect(page.getByRole("checkbox", { name: /Aldi/ }).first()).toBeVisible();

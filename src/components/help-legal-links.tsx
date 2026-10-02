@@ -15,7 +15,7 @@ export function HelpLegalLinks({ includeFeedback = true }: HelpLegalLinksProps) 
       </Link>
       {includeFeedback ? (
         <Link className="text-link" href="/feedback">
-          Send feedback or report a wrong price
+          Send feedback or request a store
         </Link>
       ) : null}
     </nav>

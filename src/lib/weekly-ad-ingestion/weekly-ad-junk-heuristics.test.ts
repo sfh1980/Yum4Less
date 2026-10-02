@@ -752,6 +752,76 @@ describe("isWeeklyAdJunkProduct", () => {
     }
   });
 
+  it("skips Lidl and Walmart merch classes plus finished sweets from the 2026-10-01 queue", () => {
+    const junkTitles = [
+      "Lidl Preferred Selection frozen tiramisu",
+      "LUPILU baby gym & play mat",
+      "PARKSIDE 4V cordless pruning shears",
+      "ESMARA ladies' lightweight jacket",
+      "ESMARA ladies' coat",
+      "SHARPER IMAGE® dual voltage travel iron",
+      "PARKSIDE® leaf scoops",
+      "ESMARA ladies' ankle boots",
+      "Italiamo tarallini baked snack",
+      "ERNESTO cast iron fry pan",
+      "PARKSIDE men's work pants",
+      "PARKSIDE outdoor broom / leaf rake",
+      "Point Pelee™ mum",
+      "cyclamen",
+      "LUPILU® baby knit overalls",
+      "LUPILU baby knit cardigan",
+      "PARKSIDE telescoping lopper/shear",
+      "PARKSIDE yard waste bag(s)",
+      "Gelatelli frozen mochi",
+      "spray rose",
+      "VITALCONTROL® pacifier thermometer",
+      "Italiamo frozen dairy dessert cups",
+      "Italiamo cannoli with crème filling",
+      "fall bulbs",
+      "PARKSIDE tarp with tie-down rope",
+      "12 stem roses",
+      "pantry staples",
+      "fall mum",
+      "OLIPOP Single-Serve Probiotic Sodas, 12 fl oz",
+      "Protege 7-Piece Softside Polyester Luggage Set with 360 Spinner Wheels, 3 Suitcases and 4 Packing Cubes, Gray",
+      "Renwick Faux Leather Armchair for Living Room, Dark Brown",
+      "BTL 20-inch Carry-On Expandable Nylon Softside Upright Luggage with 360-Spinner Wheels and Divider Pockets, Black",
+      "American Tourister Dash XLT Softside Medium Checked Luggage with Spinner Wheels Single Piece - Sapphire Blue",
+      "American Tourister Kontour Hardside Expandable Spinner Luggage Set with Divider Pockets - Black",
+      "RAZER BARRACUDA X (2022) - 2.4GHz Wireless/BT Headset, Multi-Platform Gaming and Mobile - Mercury (White)",
+      "Alden Design Modern Accent Chair with Wooden Frame, Warm Brown Faux Leather",
+    ];
+    for (const title of junkTitles) {
+      expect(isWeeklyAdJunkProduct(title), title).toBe(true);
+    }
+  });
+
+  it("keeps dinner grocery from the 2026-10-01 queue", () => {
+    const foodTitles = [
+      "Italiamo lady fingers",
+      "Sondey lady fingers, family size",
+      "Italiamo frozen whole calamari",
+      "Italiamo olives",
+      "gold kiwis",
+      "Organic Golden Kiwis, 16 oz",
+      "strawberry fruit spread, family size",
+      "Italiamo risotto",
+      "half & half",
+      "corn, 4 pack",
+      "Italiamo maccheroni al ferretto",
+      "berry blast muffin",
+      "dip",
+      "Vitasia garnishes",
+      "English muffins",
+      "rose water",
+      "rosemary",
+      "fennel bulbs",
+    ];
+    for (const title of foodTitles) {
+      expect(isWeeklyAdJunkProduct(title), title).toBe(false);
+    }
+  });
+
   it("treats either the raw title or the normalized label as junk", () => {
     expect(
       flyerLineLooksLikeJunk(

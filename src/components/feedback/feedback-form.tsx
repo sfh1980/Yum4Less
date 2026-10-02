@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { FEEDBACK_ISSUE_TYPES } from "@/lib/feedback/feedback-types";
+import {
+  FEEDBACK_ISSUE_TYPES,
+  type FeedbackIssueType,
+} from "@/lib/feedback/feedback-types";
 
 type FeedbackFormProps = {
   enabled: boolean;
+  initialIssueType?: FeedbackIssueType;
 };
 
 type SubmitState =
@@ -13,18 +17,23 @@ type SubmitState =
   | { status: "success" }
   | { status: "error"; message: string };
 
-const ISSUE_TYPE_LABELS: Record<(typeof FEEDBACK_ISSUE_TYPES)[number], string> = {
+const ISSUE_TYPE_LABELS: Record<FeedbackIssueType, string> = {
   wrong_price: "Wrong price",
   missing_item: "Missing item",
+  missing_store: "Add a grocery store",
   stale_ad: "Stale weekly ad",
   bug: "Bug or broken flow",
   general: "General product feedback",
   other: "Other",
 };
 
-export function FeedbackForm({ enabled }: FeedbackFormProps) {
-  const [issueType, setIssueType] =
-    useState<(typeof FEEDBACK_ISSUE_TYPES)[number]>("general");
+export function FeedbackForm({
+  enabled,
+  initialIssueType = "general",
+}: FeedbackFormProps) {
+  const [issueType, setIssueType] = useState<FeedbackIssueType>(
+    FEEDBACK_ISSUE_TYPES.includes(initialIssueType) ? initialIssueType : "general",
+  );
   const [chainLabel, setChainLabel] = useState("");
   const [productDescription, setProductDescription] = useState("");
   const [note, setNote] = useState("");
@@ -78,6 +87,8 @@ export function FeedbackForm({ enabled }: FeedbackFormProps) {
     }
   }
 
+  const requestingStore = issueType === "missing_store";
+
   return (
     <form className="form-grid feedback-form" onSubmit={handleSubmit}>
       <div className="field">
@@ -86,7 +97,7 @@ export function FeedbackForm({ enabled }: FeedbackFormProps) {
           id="feedback-issue-type"
           name="issueType"
           onChange={(event) =>
-            setIssueType(event.target.value as (typeof FEEDBACK_ISSUE_TYPES)[number])
+            setIssueType(event.target.value as FeedbackIssueType)
           }
           value={issueType}
         >
@@ -97,37 +108,46 @@ export function FeedbackForm({ enabled }: FeedbackFormProps) {
           ))}
         </select>
         <p className="field-hint">
-          For wrong prices or missing items, name the chain and what you saw — not your
-          location.
+          {requestingStore
+            ? "Name the grocery store. A city in the note helps us find it. Skip your street address, ZIP, and contact details."
+            : "For wrong prices or missing items, name the chain and what you saw — not your location."}
         </p>
       </div>
 
       <div className="field">
-        <label htmlFor="feedback-chain-label">Store chain (optional)</label>
+        <label htmlFor="feedback-chain-label">
+          {requestingStore ? "Grocery store" : "Store chain (optional)"}
+        </label>
         <input
           id="feedback-chain-label"
           maxLength={60}
           name="chainLabel"
           onChange={(event) => setChainLabel(event.target.value)}
-          placeholder="Example: Kroger"
+          placeholder={requestingStore ? "Example: Harris Teeter" : "Example: Kroger"}
           type="text"
           value={chainLabel}
         />
-        <p className="field-hint">Chain name only (e.g. Kroger, Aldi).</p>
+        <p className="field-hint">
+          {requestingStore
+            ? "The store name is required for this request."
+            : "Chain name only (e.g. Kroger, Aldi)."}
+        </p>
       </div>
 
-      <div className="field">
-        <label htmlFor="feedback-product-description">Ingredient or product (optional)</label>
-        <input
-          id="feedback-product-description"
-          maxLength={200}
-          name="productDescription"
-          onChange={(event) => setProductDescription(event.target.value)}
-          placeholder="Example: boneless chicken breast"
-          type="text"
-          value={productDescription}
-        />
-      </div>
+      {requestingStore ? null : (
+        <div className="field">
+          <label htmlFor="feedback-product-description">Ingredient or product (optional)</label>
+          <input
+            id="feedback-product-description"
+            maxLength={200}
+            name="productDescription"
+            onChange={(event) => setProductDescription(event.target.value)}
+            placeholder="Example: boneless chicken breast"
+            type="text"
+            value={productDescription}
+          />
+        </div>
+      )}
 
       <div className="field">
         <label htmlFor="feedback-note">Additional details (optional)</label>
@@ -136,7 +156,11 @@ export function FeedbackForm({ enabled }: FeedbackFormProps) {
           maxLength={500}
           name="note"
           onChange={(event) => setNote(event.target.value)}
-          placeholder="What looked wrong or what would help us improve?"
+          placeholder={
+            requestingStore
+              ? "Example: the store on the north side of town"
+              : "What looked wrong or what would help us improve?"
+          }
           rows={4}
           value={note}
         />

@@ -4,7 +4,7 @@
 
 ---
 
-## Resume (as of 2026-09-28)
+## Resume (as of 2026-10-02)
 
 **Owner lock:** Membership cutover **shipped in code** — `chain_registry` drives who we *attempt* for dinners / fail-loud ingest; **floors stay in code**. **Adapters do not hardcode stores/ZIPs/rosters** — Postgres holds those facts (`.cursor/rules/yum4less-db-owned-data.mdc`). Thin sale coverage ⇒ pin stays tracked, dinners stay off. **Lidl lock (2026-09-03):** map/context only until a store-bound sale feed exists — no ranked dinners, no store-finder scrape work. **Dollar General (2026-09-03):** Flipp-first ZIP circular ingest; directional sales can show without dinners; dinner totals only when **no other shopper-ranked grocer is nearby** and the **same** floors pass (area circular, not that building’s shelf). Banner grain later via **shared adapter keys**. Owner Check brand lists stay research. **Ingest fence:** nightly ingest admits grocery pins in the **Census ZIP outline** with a **26 mi** safety cap — same set Owner Check lists. Shopper map stays pin + radius. Neighbor-ZIP pins on that map need those ZIPs Activated too. **Next product work:** Coverage leftovers in `23111` — Target and Whole Foods adapters shipped dinners-off; BJ's Flipp confirm done (map/context, thin absolute prices); **Walmart yield plan closed** (Flipp primary + junk SSOT + `/owner` Ingredient review; scrape only if Flipp empty); **Scale risk A closed** (client-trust API audit); **Cuisine chips R11 closed** (`033`); **Bright Data MCP usage paused**. Full open-task list → [`docs/open-work-inventory-2026-09-09.md`](docs/open-work-inventory-2026-09-09.md) (point-in-time; Resume stays live status). **Live yum4less.com app + ingest Watchtower-recreated 2026-09-14 21:43Z** (`ghcr.io/sfh1980/yum4less-app:homelab` + `yum4less-ingest:homelab` after `d3e9396` Clear obvious). Leftover-grocery ops **closed** 2026-09-15 (planner + button live; owner monitors `/owner` as needed). **Local 2026-09-16:** merch-class + simple-food classifier (mower/nightstand junk; apples/chicken breast/spam/papaya/sirloin food) is **not** on yum4less.com until CI ingest publish + Watchtower, then **Clear obvious**. Do **not** SQL-reject. Older same-day app recreate **19:43Z** was the store-list omit check. Older pair **2026-09-04** was app `55ad51dac9b6` / ingest `6b541e14fc3f`. Nightly worker **6/6 `succeeded`** every `run_date` **2026-08-31 through 2026-09-14** (**15** nights; enqueue ~**07:00:03Z** = 3am Eastern; owner paste-back 2026-09-14). Live `chain_registry` **2026-09-14:** shopper-ranked **kroger / aldi / publix / food-lion / walmart / dollar-general**; Lidl **map_context** (`shopper_ranked` false). Walmart weekly-ad in-stock **19** rows, **19** in 24h (newest **07:09:43Z**). Dollar General and Lidl **0** in-stock rows. Ledger **000–013, 015–031** (no `014` in repo); **`029`** applied **2026-08-30 07:00:03Z**; **`030`/`031`** **2026-09-03 23:59:42Z**. Prior full freshness **`[OK] 428/428`** was **2026-09-05** (not re-run this paste). Junk heal **2026-09-14: scanned=393 rejected=0 remaining=393**, then owner Yes/No **165** accepted / **231** pending; `owner:resolve-pending-reviews --apply` **yes=190 no=14 skip=27 applied_ok=204 applied_fail=0**. Dry-run **2026-09-15: yes=3 no=0 skip=34**. Extra ZIP **`23220`** stays active. TheMealDB **dev test key** is a known ops gap.
 
@@ -33,6 +33,10 @@
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **Missing-store request (2026-10-02, local):** The store list after ZIP or GPS says to request a grocery store if the list misses their area, and links to `/feedback?topic=missing_store`. Feedback (page and tab) has **Add a grocery store**. The store name is required. ZIP and street address stay off the form. `038` allows `missing_store` on `customer_feedback`. Live waits an app image. Does **not** add stores by itself.
+
+- **Ingredient review junk tokens (2026-10-01, local):** Clear obvious and ingest skip now file Lidl house lines (Parkside, Esmara, Lupilu, Sharper Image), plus luggage, faux leather, headsets, thermometers, fry pans, mums, and a few finished sweets and drink brands (tiramisu, tarallini, cannoli, dessert cups, Gelatelli, OLIPOP). Lady fingers, calamari, olives, kiwis, risotto, half & half, corn, maccheroni, fruit spread, muffins, dip, and garnishes stay in review. Live `/owner` drops these only after the ingest image is pulled, then persist ingest or `owner:reject-pending-junk-reviews`. Does **not** claim more dinners.
 
 - **Owner Markets 8-mile reach (2026-09-28, local):** Pick a saved ZIP on Markets. The map draws that ZIP, a dashed ~8-mile circle, and pale shapes for ZIPs still off that hold a ranked store inside the circle. ZIP numbers are only on those pale shapes. One sentence says how many nearby stores can be priced. Tap a line: one row per building (chain pin wins; no map-pin id). Street and city come from `stores.address_line` when saved; shoppers see that same street. A ZIP is still all or nothing. Live waits app image and ingest migrate for `037`. Watchtower does not migrate. Does not add buildings or prices.
 
@@ -276,6 +280,26 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-10-02 — Shoppers can ask for a missing grocery store
+
+**Theme:** The store list after ZIP or GPS had no way to say a store was missing.
+
+**Shipped:** That screen links to `/feedback?topic=missing_store`. The feedback page and Feedback tab include **Add a grocery store**, ask for the store name, and still tell people to skip ZIP codes and street addresses. `038_feedback_missing_store.sql` adds `missing_store` to the feedback check.
+
+**Limits:** Sending the form does not add the store. Live waits an app image and ingest migrate for `038`. Does **not** claim more dinners.
+
+**Evidence:** `npm test` **1323/1323** (235 files) this session. `npm run build` pass (Next.js 15.5.25). Browser on `127.0.0.1:3010`: ZIP 23111 → store list shows **Request a grocery store** → feedback opens with **Add a grocery store** selected. `npm run test:e2e:ci` did not finish (Playwright browser executable was not available in that run).
+
+### 2026-10-01 — Owner-queue merch and finished sweets skip
+
+**Theme:** Lidl tools, apparel, baby gear, plants, and Walmart luggage/chairs/headsets were sitting in Ingredient review as Unsure.
+
+**Shipped:** Junk SSOT gained class nouns (`fry pan`, `mum`, `cyclamen`, `spray rose`, `stem roses`, `fall bulbs`, `thermometer`, `luggage`, `faux leather`, `headset`) and closed house lines (`parkside`, `esmara`, `lupilu`, `sharper image`), plus grocery phrases that are not dinner ingredients (`tiramisu`, `tarallini`, `cannoli`, `dessert cups`, `pantry staples`, `gelatelli`, `olipop`). Same list ingest already uses, so new flyers skip and Clear obvious files the pending rows.
+
+**Limits:** Rows already pending stay on `/owner` until persist ingest or `npm run owner:reject-pending-junk-reviews`. Live waits an ingest image pull. Kiwi plurals, corn 4-packs, olives, risotto, pasta, calamari, half & half, lady fingers, fruit spread, dip, and garnishes are still Unsure. Does **not** claim more dinners.
+
+**Evidence:** `npm test` **1321/1321** (235 files) this session. Did not run `test:integration` or `test:e2e:ci` (heuristic only; no schema or shopper flow).
 
 ### 2026-09-29 — Settings street label passes typecheck
 
@@ -3464,6 +3488,9 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (missing-store feedback) | 2026-10-02 | **1323/1323** pass (235 files) |
+| `npm run build` (missing-store feedback) | 2026-10-02 | **Pass** (Next.js 15.5.25) |
+| `npm test` (2026-10-01 junk tokens) | 2026-10-01 | **1321/1321** pass (235 files) |
 | `npm run typecheck` (Settings street label) | 2026-09-29 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run test:e2e:ci` (store street column `037`) | 2026-09-28 | **37 passed**, 2 skipped |
 | `npm test` (store street column `037`) | 2026-09-28 | **1319/1319** pass (235 files) |

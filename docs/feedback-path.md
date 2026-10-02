@@ -6,7 +6,7 @@ Yum4Less keeps **first-party analytics** separate from customer feedback. Analyt
 
 | Channel | Purpose | Status |
 | --- | --- | --- |
-| In-app feedback form (`/feedback`) | Bug reports, wrong-price reports, general product feedback | Implemented (disabled by default; enable with `YUM4LESS_FEEDBACK_ENABLED=1`) |
+| In-app feedback form (`/feedback` and the Feedback tab) | Bug reports, wrong-price reports, missing-store requests, general product feedback | Implemented (disabled by default; enable with `YUM4LESS_FEEDBACK_ENABLED=1`) |
 | Admin list API (`GET /api/feedback`) | Owner reads recent rows with `YUM4LESS_FEEDBACK_ADMIN_KEY` | Implemented |
 | Owner console (`/owner`) | Key-gated UI with tabs for weekly-ad ingredient Yes/No (map or create food ids), ingest markets, store coverage, user feedback, and Postgres analytics events | Implemented (same admin key; not linked from shopper nav; page `noindex`; site `robots.ts` also disallows `/owner`) |
 | Public recent-feedback feed on `/feedback` | — | **Removed** from shopper UI (2026-08-04) |
@@ -15,16 +15,20 @@ Yum4Less keeps **first-party analytics** separate from customer feedback. Analyt
 | Analytics (`POST /api/analytics/events`) | Product usage signals only | Implemented, off by default (client flag is **build-time** `NEXT_PUBLIC_…`) |
 | Analytics list API (`GET /api/analytics/events`) | Owner reads recent Postgres rows with the feedback admin key | Implemented |
 
-## Wrong-price and store-item reports
+## Wrong-price, store-item, and missing-store reports
 
 The feedback form collects only what is needed to investigate:
 
-- Chain label (user typed, length-capped — chain name only, e.g. Kroger)
-- Ingredient or product description (user typed, length-capped)
-- Coarse issue type: `wrong_price`, `missing_item`, `stale_ad`, `bug`, `general`, or `other`
+- Chain or grocery-store name (user typed, length-capped — name only, e.g. Kroger or Harris Teeter)
+- Ingredient or product description (user typed, length-capped; hidden for a missing-store request)
+- Coarse issue type: `wrong_price`, `missing_item`, `missing_store`, `stale_ad`, `bug`, `general`, or `other`
 - Optional free-text note (length-capped, no PII prompts)
 
 Do **not** store full shopping carts, checkout receipts, geolocation, ZIP codes, meal titles, or internal store IDs in the feedback payload.
+
+**Add a grocery store** (`missing_store`) is opened from the store list after ZIP or GPS (`/feedback?topic=missing_store`). The store name is required. A city in the note is enough. The form still refuses a ZIP or street address. Saving the row does not add the store.
+
+`missing_store` needs `db/init/038_feedback_missing_store.sql` on that database. `007` creates the table; `038` widens the issue-type check.
 
 ## Environment
 
@@ -34,7 +38,7 @@ Do **not** store full shopping carts, checkout receipts, geolocation, ZIP codes,
 # YUM4LESS_FEEDBACK_ADMIN_KEY=<secret for GET /api/feedback, GET /api/analytics/events, GET/POST /api/owner/ingredient-reviews, GET /api/owner/store-coverage, GET/POST /api/owner/markets, and /owner unlock>
 ```
 
-Apply `db/init/007_customer_feedback.sql` before enabling feedback in deployed environments.
+Apply `db/init/007_customer_feedback.sql` before enabling feedback in deployed environments. Apply `038_feedback_missing_store.sql` before `missing_store` submissions can be saved.
 
 ### Owner console
 
@@ -49,7 +53,7 @@ Open **`/owner`** (for example `https://yum4less.com/owner`). Paste `YUM4LESS_FE
 
 On Yes, fill **Canonical food id** (lowercase kebab-case, 2–56 characters; spaces/capitals are formatted on save), **Shopper-facing name**, and **category**. If the id already exists, name and category are ignored and the flyer title becomes a nickname. If it does not exist, Yes inserts `ingredients` (`weekly-ad-catalog`) then the nickname. Example: `imitation-crab` / Imitation crab / protein. Do not encode brands, sizes, or pack counts in the id.
 
-**Clear obvious** (and live persist ingest) run the same leftover grocery planner: high-confidence dinner food → Yes (including short simple foods such as apples or chicken breast), high-confidence junk → No. The Ingredient review table shows a **Food / Junk / Unsure** preview before you click. Junk includes merch *classes* (`looksLikeNonFoodMerchandise`: mower, nightstand, soundbar — not a pasted model number) plus the existing snack/drink/pharmacy phrase list (`isWeeklyAdJunkProduct`). Unsure stays pending. `npm run owner:resolve-pending-reviews` is the CLI dry-run; `-- --apply` writes. That does not add shopper dinners by itself. Teach new GM families with a class noun, not another SKU.
+**Clear obvious** (and live persist ingest) run the same leftover grocery planner: high-confidence dinner food → Yes (including short simple foods such as apples or chicken breast), high-confidence junk → No. The Ingredient review table shows a **Food / Junk / Unsure** preview before you click. Junk includes merch *classes* (`looksLikeNonFoodMerchandise`: mower, nightstand, soundbar, luggage, faux leather, headset, thermometer — not a pasted model number), closed house lines (Parkside, Esmara, Lupilu, Sharper Image), and the snack/drink/pharmacy phrase list (`isWeeklyAdJunkProduct`, including tiramisu, tarallini, cannoli, dessert cups, Gelatelli, and OLIPOP). Unsure stays pending. `npm run owner:resolve-pending-reviews` is the CLI dry-run; `-- --apply` writes. That does not add shopper dinners by itself. Teach new GM families with a class noun, not another SKU.
 
 Analytics are shown **grouped by session** with a **loaded-page scoreboard** (searches, ranks finished/failed, zero-dinner ranks, pins). Sessions are collapsed until opened. Responses include `hasMore` so the console can offer the next page without dumping the full table at once.
 

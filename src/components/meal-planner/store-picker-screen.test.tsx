@@ -74,6 +74,9 @@ describe("StorePickerScreen coverage help", () => {
       "href",
       "/faq/why-do-some-stores-only-appear-on-the-map",
     );
+    expect(
+      screen.getByRole("link", { name: "Request a grocery store" }),
+    ).toHaveAttribute("href", "/feedback?topic=missing_store");
     expect(screen.getByRole("link", { name: "FAQ" })).toHaveAttribute("href", "/faq");
     expect(screen.getByRole("link", { name: "Terms of use" })).toHaveAttribute(
       "href",

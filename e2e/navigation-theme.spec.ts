@@ -29,7 +29,9 @@ test.describe("Bottom navigation and theme", () => {
 
     await switchMainTab(page, "Feedback");
     await expect(
-      page.getByRole("heading", { name: "Send feedback or report a wrong price." }),
+      page.getByRole("heading", {
+        name: "Send feedback, report a wrong price, or ask us to add a store.",
+      }),
     ).toBeVisible();
   });
 

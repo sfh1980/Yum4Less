@@ -40,7 +40,7 @@ Public read-only routes (cache-first; ingest scripts are the write path):
 | `/faq` | Question list |
 | `/faq/[slug]` | One FAQ article |
 | `/terms` | Short beta terms (estimates, no accounts, verify in store) |
-| `/feedback` | Standalone feedback form |
+| `/feedback` | Standalone feedback form, including a missing-store request (`?topic=missing_store`) |
 | `/owner` | Private owner console (admin key; not in shopper nav) |
 
 ### Owner ops (same admin key as feedback)

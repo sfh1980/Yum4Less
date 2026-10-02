@@ -33,6 +33,32 @@ describe("validateFeedbackPayload", () => {
     });
   });
 
+  it("accepts a grocery-store request that names the store", () => {
+    const result = validateFeedbackPayload({
+      issueType: "missing_store",
+      chainLabel: "Harris Teeter",
+      note: "Short Pump",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.feedback.issueType).toBe("missing_store");
+      expect(result.feedback.chainLabel).toBe("Harris Teeter");
+    }
+  });
+
+  it("rejects a grocery-store request that does not name the store", () => {
+    const result = validateFeedbackPayload({
+      issueType: "missing_store",
+      note: "Please add my store",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Name the grocery store you want us to look into.",
+    });
+  });
+
   it("requires chain or product context for store-item reports", () => {
     const result = validateFeedbackPayload({
       issueType: "stale_ad",

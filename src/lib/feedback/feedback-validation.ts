@@ -66,6 +66,12 @@ export function validateFeedbackPayload(
   }
 
   const issueType = record.issueType as FeedbackIssueType;
+  if (issueType === "missing_store" && !chainLabel) {
+    return {
+      ok: false,
+      error: "Name the grocery store you want us to look into.",
+    };
+  }
   if (
     (issueType === "wrong_price" || issueType === "missing_item" || issueType === "stale_ad") &&
     !chainLabel &&

@@ -53,7 +53,9 @@ test.describe("FAQ and Terms pages", () => {
 
       await switchMainTab(page, "Feedback");
       await expect(
-        page.getByRole("heading", { name: "Send feedback or report a wrong price." }),
+        page.getByRole("heading", {
+          name: "Send feedback, report a wrong price, or ask us to add a store.",
+        }),
       ).toBeVisible();
       await expect(page.getByRole("link", { name: "FAQ" })).toBeVisible();
       await expect(page.getByRole("link", { name: "Terms of use" })).toBeVisible();

@@ -174,6 +174,8 @@ flowchart TD
 
 **One store:** exactly one checkbox. **Several stores:** one or more. Unselected stores do not appear on the map, ingredient list, or rank.
 
+If the list misses a store, **Request a grocery store** opens `/feedback?topic=missing_store`. That saves a named request. It does not add the pin. ZIP and street address stay off the form.
+
 **Key files:** `src/lib/settings-store-selection.ts`, `src/components/meal-planner/store-picker-screen.tsx`
 
 ---

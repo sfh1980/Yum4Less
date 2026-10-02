@@ -306,6 +306,17 @@ export function migrationEffectPresent(version, db) {
         db.columnExists("store_coverage", "address_line") &&
         db.columnExists("store_coverage", "postal_code")
       );
+    case "038":
+      return (
+        db.tableExists("customer_feedback") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from pg_constraint
+             where conname = 'customer_feedback_issue_type_check'
+               and pg_get_constraintdef(oid) like '%missing_store%'`,
+          ),
+        ) === 1
+      );
     default:
       return false;
   }

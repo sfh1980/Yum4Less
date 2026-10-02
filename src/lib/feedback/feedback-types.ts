@@ -1,6 +1,7 @@
 export const FEEDBACK_ISSUE_TYPES = [
   "wrong_price",
   "missing_item",
+  "missing_store",
   "stale_ad",
   "bug",
   "general",

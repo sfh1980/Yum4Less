@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MapPinIcon } from "@/components/map-pin-icon";
 import { SingleStoreMapOverlay } from "@/components/single-store-map-overlay";
 import { WizardContinueButton } from "@/components/meal-planner/wizard-continue-button";
@@ -114,6 +115,13 @@ export function StorePickerScreen({
       </div>
       <p className="wizard-copy">
         Now we can start looking for dinner options.
+      </p>
+      <p className="wizard-copy">
+        Don&apos;t see a store you shop, or does this list miss stores in your area?{" "}
+        <Link className="text-link" href="/feedback?topic=missing_store">
+          Request a grocery store
+        </Link>{" "}
+        and we&apos;ll look into adding it.
       </p>
       {storeCoverageHelp ? (
         <p className="field-hint">{formatStoreCoverageHelpOneLiner(storeCoverageHelp)}</p>

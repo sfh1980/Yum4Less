@@ -45,7 +45,7 @@ Order: find buildings → weekly ads → SNAP → official prices → recipes fr
 
 Prove it like a shopper (ZIP or GPS, radius, pick stores). Extra ZIPs are often **map first** (example: 23220 can show many Settings pins and still zero dinner cards). That is not a broken Check ZIP.
 
-Glance at **Coverage** (search by ZIP) and **Ingredient review** (Clear obvious preview: food / junk / unsure). Do not SQL-delete junk. Unsure junk is a classifier gap.
+Glance at **Coverage** (search by ZIP) and **Ingredient review** (Clear obvious preview: food / junk / unsure). Do not SQL-delete junk. Unsure junk is a classifier gap. A shopper who does not see their store sends **Add a grocery store** on the Feedback tab (`missing_store`). That row does not add a pin.
 
 Do not say we added more dinners because Check ZIP or Slice D looks cleaner.
 

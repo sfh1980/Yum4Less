@@ -123,7 +123,7 @@ Expired sale rows stay in `price_observations` as history; unchanged sales with 
 
 **Kroger:** set `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`; verify with `npm run probe:kroger-api`. Certification API omits store-specific prices.
 
-**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1` — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; Ingredient review, Markets Check/Activate plus a zoomable coverage-area map, Coverage search that lists tracked banners then stores, Analytics scoreboard, feedback). Operator ZIP steps → [`docs/owner-zip-intake.md`](docs/owner-zip-intake.md).
+**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1`, including a missing-store request from the store list — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; Ingredient review, Markets Check/Activate plus a zoomable coverage-area map, Coverage search that lists tracked banners then stores, Analytics scoreboard, feedback). Operator ZIP steps → [`docs/owner-zip-intake.md`](docs/owner-zip-intake.md).
 
 **Semgrep:** CI runs `semgrep ci` when the GitHub repository secret `SEMGREP_APP_TOKEN` is set (Settings → Secrets → Actions). Local Cursor hooks use the optional `semgrep` CLI — not the same token. Lint, unit tests, build, integration, and E2E remain merge gates.
 
@@ -143,7 +143,7 @@ Copy `.env.example` → `.env.local`. Key variables:
 | `YUM4LESS_ENABLE_API_DB_WRITES` | Local dev only — allow public API Postgres writes (**never in production**) |
 | `TRUST_PROXY_HEADERS` | `=1` only behind a trusted reverse proxy |
 | `NEXT_PUBLIC_YUM4LESS_ANALYTICS` + `YUM4LESS_ENABLE_ANALYTICS` | Both required to record events |
-| `YUM4LESS_FEEDBACK_ENABLED` | Enable `/feedback` (requires `db/init/007_customer_feedback.sql`) |
+| `YUM4LESS_FEEDBACK_ENABLED` | Enable `/feedback` (`db/init/007_customer_feedback.sql`; `038` for missing-store requests) |
 
 Full list and ingest flags → `.env.example`.
 

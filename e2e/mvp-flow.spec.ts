@@ -75,7 +75,9 @@ test.describe("Yum4Less beta v1 (ZIP 23111)", () => {
     await expect(page.getByText(/Totals are estimates/i)).toBeVisible();
     await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "Feedback" }).click();
     await expect(
-      page.getByRole("heading", { name: "Send feedback or report a wrong price." }),
+      page.getByRole("heading", {
+        name: "Send feedback, report a wrong price, or ask us to add a store.",
+      }),
     ).toBeVisible();
   });
 

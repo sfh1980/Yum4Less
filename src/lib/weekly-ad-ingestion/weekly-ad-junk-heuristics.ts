@@ -872,6 +872,23 @@ const JUNK_PATTERNS: RegExp[] = [
   /\bfrozen snacks?\b/i,
   /\bstauffer'?s\b/i,
   /\bmini sticks?\b/i,
+  // Owner-queue leftovers (2026-10-01): flowers, finished sweets, drink brands.
+  // GM classes and closed house lines live in looksLikeNonFoodMerchandise.
+  // Do not use bare rose, bulb, muffin, soda, or mochi (rosemary, fennel bulbs,
+  // English muffins, baking soda, mochi as a food).
+  /\bcyclamen\b/i,
+  /\bmums?\b/i,
+  /\bspray roses?\b/i,
+  /\bstem roses\b/i,
+  /\bfall bulbs\b/i,
+  /\bfry pans?\b/i,
+  /\bolipop\b/i,
+  /\bgelatelli\b/i,
+  /\btiramisu\b/i,
+  /\btarallini\b/i,
+  /\bcannolis?\b/i,
+  /\bdessert cups\b/i,
+  /\bpantry staples\b/i,
 ];
 
 /**
@@ -937,6 +954,10 @@ const NON_FOOD_PRODUCT_CLASS_FRAGMENTS = [
   "melamine",
   "trampolines?",
   "tents?",
+  "thermometers?",
+  "luggage",
+  "faux leather",
+  "headsets?",
   "kayaks?",
   "bicycles?",
   "exercise bikes?",
@@ -958,6 +979,10 @@ const NON_FOOD_HOUSE_BRAND_FRAGMENTS = [
   "momcozy",
   "child of mine",
   "christopher knight",
+  "parkside",
+  "esmara",
+  "lupilu",
+  "sharper image",
 ];
 
 const NON_FOOD_PRODUCT_CLASS_RE = new RegExp(
