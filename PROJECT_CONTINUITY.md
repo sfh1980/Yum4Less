@@ -281,6 +281,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 ## Changelog (newest first)
 
+### 2026-10-02 — Audit pins so the image publish can run
+
+**Theme:** GitHub `verify` stopped on `npm audit --audit-level=high` before tests, the build, or the image jobs. The failing pins were already in `package.json` overrides.
+
+**Shipped:** `undici` `7.29.0` → `7.30.0`. `brace-expansion@1` `1.1.18` → `1.1.21`. `brace-expansion@5` `5.0.9` → `5.0.12`.
+
+**Limits:** Two **moderate** Vitest findings remain (`@vitest/mocker`). They do not fail `--audit-level=high`. Live still waits a green publish plus Watchtower. Does **not** claim more dinners.
+
+**Evidence:** `npm audit --audit-level=high` exit 0 this session. `npm test` **1323/1323** (235 files). `npm run build` pass (Next.js 15.5.25). `npm run test:e2e:ci` **37 passed**, 2 skipped. Image publish runs on GitHub after this push.
+
 ### 2026-10-02 — Shoppers can ask for a missing grocery store
 
 **Theme:** The store list after ZIP or GPS had no way to say a store was missing.
@@ -3488,6 +3498,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm audit --audit-level=high` (undici + brace-expansion pins) | 2026-10-02 | **Exit 0.** High findings cleared. Two moderate Vitest findings remain and do not fail this gate. |
+| `npm test` (audit pin bump) | 2026-10-02 | **1323/1323** pass (235 files) |
+| `npm run build` (audit pin bump) | 2026-10-02 | **Pass** (Next.js 15.5.25) |
+| `npm run test:e2e:ci` (audit pin bump) | 2026-10-02 | **37 passed**, 2 skipped. First attempt looked for Chromium in the sandbox cache; retry used the installed Playwright browsers. |
 | `npm test` (missing-store feedback) | 2026-10-02 | **1323/1323** pass (235 files) |
 | `npm run build` (missing-store feedback) | 2026-10-02 | **Pass** (Next.js 15.5.25) |
 | `npm test` (2026-10-01 junk tokens) | 2026-10-01 | **1321/1321** pass (235 files) |
