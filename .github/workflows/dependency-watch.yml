@@ -38,6 +38,12 @@ jobs:
               console.log(`- ${entry.name} (${entry.severity}): ${entry.via}`);
             }
           }
+          const braces = advisories.filter((entry) =>
+            JSON.stringify(entry.via ?? '').includes('GHSA-vfj7-8cjw-p6xm')
+          );
+          if (braces.length > 0) {
+            console.log('::warning::braces GHSA-vfj7-8cjw-p6xm has no patched release (eslint-config-next only). CI allows this one high advisory. Remove the exception in scripts/audit-high-gate.mjs when it disappears.');
+          }
           NODE
 
       - name: Upload audit report

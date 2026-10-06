@@ -34,7 +34,9 @@
 
 ### Working today (honest)
 
-- **After update checks (2026-10-06, local):** `/owner` **After update** runs six read-only lines against this database: migrations applied, active ZIPs have map points, last `ingest_jobs` night finished, ranked prices inside 24 hours, shopper-ranked chains have adapters, and one TheMealDB search at `37.6085`, `-77.3739`. A line can be run again. Nothing starts ingest or Activate. A pass does not mean more dinners. Laptop and yum4less.com stay separate databases. Live waits an app image.
+- **After update checks (2026-10-06, local):** `/owner` **After update** runs six read-only lines against this database: migrations applied, active ZIPs have map points, last `ingest_jobs` night finished, ranked prices inside 24 hours, shopper-ranked chains have adapters, and one TheMealDB search at `37.6085`, `-77.3739`. A line can be run again. Nothing starts ingest or Activate. A pass does not mean more dinners. Laptop and yum4less.com stay separate databases. Push `75b6136` did not publish an image (`verify` failed the high audit before tests and the build). Live waits the follow-up image.
+
+- **CI audit pins (2026-10-06):** `sharp` `0.35.5` and `source-map-js` `1.2.2`. `npm run audit:high` still fails every other high or critical advisory. It allows only unpatched `braces` `GHSA-vfj7-8cjw-p6xm` (eslint-only, no release above `3.0.3`). Delete that exception when the advisory leaves the report. Does **not** claim the image is on yum4less.com until Watchtower pulls a green publish.
 
 - **Richmond ingest markets (2026-10-06, local `yum4less_dev`):** `active_markets` has 18 active rows: `23060`, `23111`, `23219`, `23220`, `23221`, `23222`, `23223`, `23224`, `23225`, `23226`, `23227`, `23228`, `23229`, `23230`, `23233`, `23234`, `23235`, `23298`. Booked with `npm run markets:activate` (Geocodio). `YUM4LESS_INGEST_ZIPS` is unset, so the next local ingest reads this table. Laptop Compose has no 3am cron. yum4less.com is a different database. Does **not** claim more dinners, and does **not** claim the live site already ingested these ZIPs.
 
@@ -284,6 +286,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-10-06 — Audit pins so After update can publish
+
+**Theme:** Push `75b6136` (After update) never published `:homelab`. GitHub `verify` failed `npm audit --audit-level=high` on new advisories before tests, the build, or the image jobs. This commit did not change those dependencies; the advisories appeared after the 2026-10-02 pins.
+
+**Shipped:** `overrides.sharp` `0.35.4` → `0.35.5` (`GHSA-wq5f-xc86-pv6w`). `overrides.source-map-js` `1.2.2` (`GHSA-68fv-2mgg-jv7q`). CI step is `npm run audit:high`. That gate still fails any other high or critical advisory. It allows only `GHSA-vfj7-8cjw-p6xm` (`braces` `<=3.0.3`, patched version null, pulled by `eslint-config-next`, not in the app image). The script fails when that advisory disappears so the exception is removed. Weekly `dependency-watch` warns while it remains. Did not use `npm audit fix --force`.
+
+**Limits:** Two moderate Vitest findings remain and do not fail this gate. Live still waits a green publish plus Watchtower. Does **not** claim more dinners.
+
+**Evidence:** `npm run audit:high` exit 0 this session. `npm test` **1348/1348** (240 files). No `test:integration` (no schema change). No `test:e2e:ci` (no shopper-flow change). Image publish runs on GitHub after this push.
 
 ### 2026-10-06 — Owner After update checks
 
@@ -3360,6 +3372,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-10-06 | **High audit gate allows only the unpatched braces advisory.** `sharp` stays on `0.35.5` and `source-map-js` on `1.2.2`. `GHSA-vfj7-8cjw-p6xm` (`braces` `<=3.0.3`, eslint-only, no patched release) does not block the image. Any other high or critical advisory still fails CI. Remove the exception when braces leaves the audit report. Do not `npm audit fix --force`. | **Active** |
 | 2026-10-06 | **After update checks are a read of this database.** `/owner` After update does not start ingest, Activate, or scrape. A pass is not more dinners and is not yum4less.com unless you ran it there. | **Active** |
 | 2026-10-06 | **Local Richmond ingest set is 18 ZIPs in `active_markets`.** `23060`, `23111`, `23219`–`23230`, `23233`, `23234`, `23235`, `23298`. Not a TypeScript roster. Laptop and yum4less.com stay separate databases. Overnight pricing happens only where those rows exist and a night job runs. Do not claim more dinners from Activate alone. | **Active** |
 | 2026-09-28 | **One street on the store row, one line per building.** `stores.address_line` and `stores.postal_code` are the street Markets and the shopper store line both read. Kroger, Publix, Target, and Whole Foods keep a street the night job already received. Other banners get one only from a linked SNAP row. A missing street stays blank. Markets shows one row per building (chain pin wins; no map-pin id), plus the chain store id. Shoppers see street and city. | **Active** (narrows 2026-09-25 one row per building) |
@@ -3524,6 +3537,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm run audit:high` (sharp 0.35.5, source-map-js 1.2.2, braces exception) | 2026-10-06 | **Exit 0.** Other high and critical advisories cleared. `GHSA-vfj7-8cjw-p6xm` still present and excluded. Two moderate Vitest findings remain. |
+| `npm test` (audit pin bump) | 2026-10-06 | **1348/1348** pass (240 files) |
 | `npm audit --audit-level=high` (undici + brace-expansion pins) | 2026-10-02 | **Exit 0.** High findings cleared. Two moderate Vitest findings remain and do not fail this gate. |
 | `npm test` (audit pin bump) | 2026-10-02 | **1323/1323** pass (235 files) |
 | `npm run build` (audit pin bump) | 2026-10-02 | **Pass** (Next.js 15.5.25) |

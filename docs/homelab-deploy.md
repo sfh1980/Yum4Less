@@ -761,7 +761,7 @@ Expect `200`. Then proceed to the ingest container (§10) and freshness checks (
 
 **Status (2026-09-14 owner paste-back):** Unattended 3am cron two-night proof closed. Unattended ingest-worker night closed. **15-night `ingest_jobs` rollup closed** (`run_date` **2026-08-31 through 2026-09-14**, each **6/6 `succeeded`**, `first_queued` ~07:00:03Z). Backup/restore drill closed (276/324/29 round-trip). Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. Overlay unset; `active_markets` includes **`23111`** and **`23220`**.
 
-**Later local book (2026-10-06):** laptop `yum4less_dev` now has 18 active Richmond ZIPs (list in [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Working today). That write did not touch this box. Treat yum4less.com as still the 2026-09-14 pair until a paste after a night job shows the new rows.
+**Later local book (2026-10-06):** laptop `yum4less_dev` now has 18 active Richmond ZIPs (list in [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Working today). That write did not touch this box. Treat yum4less.com as still the 2026-09-14 pair until a paste after a night job shows the new rows. `/owner` **After update** is in the app image only after a green master publish. The first push of that tab did not publish (`verify` failed the high audit). Watchtower should pull the follow-up that pins `sharp` `0.35.5` and `source-map-js` `1.2.2`.
 
 **Evidence (owner TrueNAS session, ZIP `23111`):**
 - One-shot dry-run (`YUM4LESS_INGEST_ONCE=1`) completed against production data.

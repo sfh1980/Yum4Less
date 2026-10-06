@@ -217,7 +217,7 @@ May 2026 audit: no classic SQL injection / IDOR / BOLA; parameterized SQL throug
 | Geographic scope | Continental US bounds (`us-service-area.ts`) |
 | Rate limiting | In-memory per-process; `TRUST_PROXY_HEADERS=1` for trusted proxy IP; optional edge `/api/*` throttle before multi-instance; Redis only when running multiple app instances |
 
-**Dependency monitoring:** A moderate PostCSS advisory (`GHSA-qx2v-qp2m-jg93`, transitive via Next.js) is tracked via Dependabot and the weekly `dependency-watch` workflow — wait for an upstream Next.js fix; do **not** run `npm audit fix --force`.
+**Dependency monitoring:** A moderate PostCSS advisory (`GHSA-qx2v-qp2m-jg93`, transitive via Next.js) is tracked via Dependabot and the weekly `dependency-watch` workflow — wait for an upstream Next.js fix; do **not** run `npm audit fix --force`. `overrides` pin `sharp` to `0.35.5` and `source-map-js` to `1.2.2`. CI `npm run audit:high` still fails other high or critical advisories. It allows only `GHSA-vfj7-8cjw-p6xm` (`braces` `<=3.0.3`, no patched release, pulled by `eslint-config-next` and not shipped in the app image). Delete that exception when the advisory leaves the report.
 | Security headers | X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy |
 | Analytics gate | Disabled by default; allowlisted, privacy-safe events only |
 
