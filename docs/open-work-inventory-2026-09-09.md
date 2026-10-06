@@ -148,7 +148,7 @@ Homelab deploy precursors that were blocking go-live are **closed** (Custom App,
 | Ingredient-review keyboard / bulk triage | Called out as later | Standing human monitor of skip/unsure titles; not the closed Clear obvious ops task |
 | Local Windows lint/build drift vs Linux CI | Historical P2 | Do not trust local gates over CI |
 
-Live markets (as of 2026-09-05 paste-back): **`23111`** (owner ranked ingest anchor) + **`23220`**. Expansion = more owner Activate clicks, not a code ZIP list.
+Live markets (as of 2026-09-05 paste-back): **`23111`** (owner ranked ingest anchor) + **`23220`**. Expansion = more owner Activate clicks, not a code ZIP list. **Local `yum4less_dev` (2026-10-06)** is the 18-ZIP Richmond set in [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md). This inventory line stays the 2026-09-05 live paste.
 
 ---
 

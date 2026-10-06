@@ -10,6 +10,8 @@ Companion: [`feedback-path.md`](feedback-path.md) (console unlock and APIs). Com
 - ZIP is five digits, in the lower 48, and findable on the map.
 - Laptop Postgres and yum4less.com are **different databases**. Rehearse locally first.
 
+**Local `yum4less_dev` (2026-10-06):** 18 active rows — `23060`, `23111`, `23219`, `23220`, `23221`, `23222`, `23223`, `23224`, `23225`, `23226`, `23227`, `23228`, `23229`, `23230`, `23233`, `23234`, `23235`, `23298`. Booked with `npm run markets:activate`. That does not write yum4less.com. The laptop Compose stack has no 3am cron.
+
 ## 1. Check ZIP
 
 Type the ZIP and click **Check ZIP**. Read two lists:
@@ -44,6 +46,8 @@ Coverage stays empty until Search. Search lists tracked banners that match the n
 Order: find buildings → weekly ads → SNAP → official prices → recipes from sale overlap → freshness check.
 
 Prove it like a shopper (ZIP or GPS, radius, pick stores). Extra ZIPs are often **map first** (example: 23220 can show many Settings pins and still zero dinner cards). That is not a broken Check ZIP.
+
+On `/owner` **After update**, press **Run checks**. Six lines read this database only: database updates applied, ZIPs have map points, the last night finished, ranked prices are from the last day, dinner chains match code this app has, and one shopper search at the usual test pin. A line can be run again by itself. A pass does not mean more dinners. The laptop and yum4less.com are different databases, so run it on the copy you just updated.
 
 Glance at **Coverage** (search by ZIP) and **Ingredient review** (Clear obvious preview: food / junk / unsure). Do not SQL-delete junk. Unsure junk is a classifier gap. A shopper who does not see their store sends **Add a grocery store** on the Feedback tab (`missing_store`). That row does not add a pin.
 

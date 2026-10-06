@@ -161,6 +161,12 @@ describe("OwnerConsole", () => {
 
     await user.keyboard("{ArrowRight}");
     expect(
+      screen.getByRole("tab", { name: "After update" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "After update" })).toBeInTheDocument();
+
+    await user.keyboard("{ArrowRight}");
+    expect(
       screen.getByRole("tab", { name: "Ingredient review" }),
     ).toHaveAttribute("aria-selected", "true");
 

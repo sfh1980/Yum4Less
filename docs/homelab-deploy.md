@@ -761,6 +761,8 @@ Expect `200`. Then proceed to the ingest container (§10) and freshness checks (
 
 **Status (2026-09-14 owner paste-back):** Unattended 3am cron two-night proof closed. Unattended ingest-worker night closed. **15-night `ingest_jobs` rollup closed** (`run_date` **2026-08-31 through 2026-09-14**, each **6/6 `succeeded`**, `first_queued` ~07:00:03Z). Backup/restore drill closed (276/324/29 round-trip). Ingest runs in the **same** `yum4less` Custom App stack as `db` / `app`. Overlay unset; `active_markets` includes **`23111`** and **`23220`**.
 
+**Later local book (2026-10-06):** laptop `yum4less_dev` now has 18 active Richmond ZIPs (list in [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Working today). That write did not touch this box. Treat yum4less.com as still the 2026-09-14 pair until a paste after a night job shows the new rows.
+
 **Evidence (owner TrueNAS session, ZIP `23111`):**
 - One-shot dry-run (`YUM4LESS_INGEST_ONCE=1`) completed against production data.
 - Live scrapes observed for **Kroger**, **Aldi**, **Publix**, **Food Lion**, and **Walmart**.
@@ -820,7 +822,7 @@ After local tests pass:
 
 Until step 2–3, leave `YUM4LESS_INGEST_QUEUE_WORKER` unset so 3am still runs map-catalog → weekly-ad → … inline (same as today).
 
-Unattended worker night **closed 2026-08-31**. **15-night standing proof closed 2026-09-14** (`ingest_jobs` **2026-08-31 through 2026-09-14**, each **6/6 succeeded**). Extra ZIP **23220** is Activated. Do not disable the host worker Cron Job.
+Unattended worker night **closed 2026-08-31**. **15-night standing proof closed 2026-09-14** (`ingest_jobs` **2026-08-31 through 2026-09-14**, each **6/6 succeeded**). Extra ZIP **23220** is Activated on the box as of that paste. Local `yum4less_dev` gained the wider Richmond set on **2026-10-06**; confirm the same rows on this database before expecting the 3am job to visit them. Do not disable the host worker Cron Job.
 
 **Network:** `ingest` **must** share the Custom App compose network with `db` (same YAML stack). Do not publish ingest ports.
 

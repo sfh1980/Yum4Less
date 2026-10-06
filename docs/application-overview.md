@@ -55,6 +55,7 @@ Public read-only routes (cache-first; ingest scripts are the write path):
 | `GET /api/owner/markets/reach?zip=` | For one active or paused ZIP: 8-mile circle, still-off neighbor ZIPs that hold a ranked store inside it, and a one-sentence priced count (same admin key). |
 | `POST /api/owner/markets/preview` | Check a ZIP (geocode + nearby pins, no insert). |
 | `POST /api/owner/markets/activate` | Activate a ZIP into `active_markets`. |
+| `GET /api/owner/after-update` | Read-only pass/fail lines for this database after an app update or night job. Optional `?check=` reruns one line. Does not activate, ingest, or scrape. |
 
 Live weekly-ad ingest matches flyer lines against Postgres `ingredients` (97-id seed remains fixture SSOT). Unmatched lines skip junk (`isWeeklyAdJunkProduct`), auto-create simple foods, or wait on `/owner`. Live persist also rejects pending reviews that later match junk. Fixture ingest does not write skips/reviews. One-shot heal: `npm run owner:reject-pending-junk-reviews`.
 
@@ -85,7 +86,7 @@ Live weekly-ad ingest matches flyer lines against Postgres `ingredients` (97-id 
 | **ZIP locator + retailer JSON** | Store bind then promotions JSON | Target (dinners off) |
 | **Kroger product API** (fallback) | Partial last-resort fill when scrape + Flipp return nothing | Kroger only; not full ad coverage |
 
-Ingest runs via scheduled scripts (`npm run ingest:weekly-ads:scheduled`, `ingest:map-catalog`, `sync:provider-prices`) — not on every user search. Watchtower does not migrate. TrueNAS applied `024` on **2026-08-24**, and **`025` + `026`** on **2026-08-27 00:04Z** (owner paste-back). Future `db/init` files still need an operator migrate. `active_markets` stays empty until `/owner` Markets (or `npm run markets:activate -- <ZIP>`). Keep the ingest ZIP overlay until `23111` is an active table row, then drop it.
+Ingest runs via scheduled scripts (`npm run ingest:weekly-ads:scheduled`, `ingest:map-catalog`, `sync:provider-prices`) — not on every user search. Watchtower does not migrate. TrueNAS applied `024` on **2026-08-24**, and **`025` + `026`** on **2026-08-27 00:04Z** (owner paste-back). Future `db/init` files still need an operator migrate. `active_markets` is filled from `/owner` Markets or `npm run markets:activate -- <ZIP>`. An empty table with no `YUM4LESS_INGEST_ZIPS` overlay fails closed. Local `yum4less_dev` already has the 18-ZIP Richmond set (2026-10-06). yum4less.com is a separate database.
 
 ### Recipes
 

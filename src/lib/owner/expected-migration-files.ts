@@ -1,0 +1,46 @@
+/**
+ * SQL files the running app expects on `schema_migrations`.
+ * The app image does not ship `db/init`, so this list is what the After update
+ * check compares. `expected-migration-files.test.ts` fails when `db/init` changes
+ * and this list is not updated in the same change.
+ */
+export const EXPECTED_MIGRATION_FILENAMES = [
+  "000_schema_migrations.sql",
+  "001_schema.sql",
+  "002_seed.sql",
+  "003_provider_store_search_snapshots.sql",
+  "004_provider_product_pricing_snapshots.sql",
+  "005_dynamic_pricing_freshness.sql",
+  "006_analytics_events.sql",
+  "007_customer_feedback.sql",
+  "008_expand_ingredient_catalog.sql",
+  "009_ingredient_aliases_and_recipe_eligibility.sql",
+  "010_snap_retailer_locations.sql",
+  "011_provider_search_terms.sql",
+  "012_provider_search_terms_notes.sql",
+  "013_kroger_search_terms_full.sql",
+  "015_retire_publix_atlee_bootstrap.sql",
+  "016_retire_duplicate_publix_osm_pins.sql",
+  "017_retire_fake_aldi_osm_fixture_pin.sql",
+  "018_retire_synthetic_osm_fixture_pins.sql",
+  "019_retire_aldi_zip_catalog_twin.sql",
+  "020_kroger_search_terms_p2_gaps.sql",
+  "021_store_identities.sql",
+  "022_seed_kroger_mechanicsville_identity.sql",
+  "023_seed_aldi_mechanicsville_identity.sql",
+  "024_ingredient_match_catalog.sql",
+  "025_active_markets_and_zip_geocode_cache.sql",
+  "026_chain_registry_and_store_coverage.sql",
+  "027_promote_lidl_shopper_ranked.sql",
+  "028_promote_walmart_shopper_ranked.sql",
+  "029_market_admission_density.sql",
+  "030_demote_lidl_shopper_ranked.sql",
+  "031_promote_dollar_general_shopper_ranked.sql",
+  "032_enable_target_weekly_ad_eligible.sql",
+  "033_recipe_cuisine_tags.sql",
+  "034_enable_whole_foods_weekly_ad_eligible.sql",
+  "035_promote_whole_foods_shopper_ranked.sql",
+  "036_promote_target_and_lidl_shopper_ranked.sql",
+  "037_store_street_address.sql",
+  "038_feedback_missing_store.sql",
+] as const;

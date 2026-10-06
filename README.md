@@ -29,7 +29,7 @@ Yum4Less helps people find **affordable dinner ideas** using nearby grocery stor
 | **Slice D** — OSM↔official proximity matcher | In repo (provisional aliases only; AUTO_CONFIRM and shopper expand **OFF**) |
 | **Membership** — dinner attempts + fail-loud ingest from `chain_registry.shopper_ranked` | Shipped (live `030`/`031` applied) |
 
-TrueNAS ingest reads `active_markets` (`23111` + `23220` active; overlay unset). Dinner attempts follow `chain_registry.shopper_ranked`; match/confidence/freshness floors stay in code. C does **not** auto-queue shopper ZIPs. Live ledger is **000–013, 015–031**. Current product status → [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) Resume.
+Ingest reads `active_markets` (overlay unset). Local `yum4less_dev` holds the 18-ZIP Richmond set as of **2026-10-06**. Last confirmed yum4less.com pair is `23111` + `23220` (2026-09-14 paste). Dinner attempts follow `chain_registry.shopper_ranked`; match/confidence/freshness floors stay in code. C does **not** auto-queue shopper ZIPs. Live ledger is **000–013, 015–031**. Current product status → [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) Resume.
 
 ---
 
@@ -292,7 +292,7 @@ Agent checklists, Playwright MCP flow, and MCP setup → [`AGENTS.md`](AGENTS.md
 
 ## Development status
 
-Runnable **beta v1** on TrueNAS with daily ingest path + Postgres — **public HTTPS live** at `https://yum4less.com` (Cloudflare Tunnel). Unattended 3am cron and backup drill **closed**. Extra ZIP `23220` first ingest is the next 3am worker. **Redesign slices 1–5 + D1–D7** shipped; **cross-device Saved** still deferred; cuisine chips (R11) **shipped** 2026-09-15.
+Runnable **beta v1** on TrueNAS with daily ingest path + Postgres — **public HTTPS live** at `https://yum4less.com` (Cloudflare Tunnel). Unattended 3am cron and backup drill **closed**. `23220` first ingest **closed** 2026-09-01. Local `yum4less_dev` market roster → [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) Resume (18 Richmond ZIPs, 2026-10-06). **Redesign slices 1–5 + D1–D7** shipped; **cross-device Saved** still deferred; cuisine chips (R11) **shipped** 2026-09-15.
 
 Verification snapshot (test counts, CI link) → [`PROJECT_CONTINUITY.md` → Appendix](PROJECT_CONTINUITY.md#appendix).
 
