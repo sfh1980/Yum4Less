@@ -426,6 +426,7 @@ export async function inspectOwnerIngestMarket(
 
 export async function activateOwnerIngestMarket(
   zipCode: string,
+  options?: { notes?: string },
 ): Promise<
   | { ok: true; result: OwnerMarketInspectResult }
   | { ok: false; error: string }
@@ -459,7 +460,7 @@ export async function activateOwnerIngestMarket(
     longitude: location.longitude,
     densityClass: admission.densityClass,
     ingestMiles: admission.ingestMiles,
-    notes: "Activated by /owner Markets",
+    notes: options?.notes ?? "Activated by /owner Markets",
   });
   await rememberIngestZipGeocode({
     zipCode,

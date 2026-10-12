@@ -2356,6 +2356,10 @@ body.modal-open {
   gap: 0.45rem;
 }
 
+.owner-morning-note {
+  white-space: pre-wrap;
+}
+
 .owner-tab {
   border: 1px solid var(--panel-border);
   border-radius: 999px;

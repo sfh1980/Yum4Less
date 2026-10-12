@@ -1,0 +1,135 @@
+name: Daily checks
+
+# 09:20 UTC is 5:20am Eastern during daylight time and 4:20am Eastern in winter.
+# The ingest image writes the morning note at 8:15am container time, after this
+# run can store its result. This workflow does not publish an image.
+on:
+  schedule:
+    - cron: "20 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Identity SSOT gate
+        run: npm run check:identity-ssot
+
+      - name: Compose DB bind gate
+        run: npm run check:compose-db-bind
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Audit dependencies
+        run: npm run audit:high
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build app
+        run: npm run build
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [verify, integration]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Run end-to-end tests
+        run: npm run test:e2e:ci
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5433/yum4less_dev
+          CI: "1"
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY }}
+
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check yum4less.com from outside
+        run: npm run smoke:live-site
+
+  report:
+    if: always()
+    needs: [verify, integration, e2e, site]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save the outside result for the morning note
+        env:
+          ADMIN_KEY: ${{ secrets.YUM4LESS_FEEDBACK_ADMIN_KEY }}
+        run: |
+          if [ -z "$ADMIN_KEY" ]; then
+            echo "YUM4LESS_FEEDBACK_ADMIN_KEY is not set. The morning note will say the outside checks were not reported."
+            exit 0
+          fi
+          code="failed"
+          if [ "${{ needs.verify.result }}" = "success" ] && [ "${{ needs.integration.result }}" = "success" ] && [ "${{ needs.e2e.result }}" = "success" ]; then
+            code="passed"
+          fi
+          site="failed"
+          if [ "${{ needs.site.result }}" = "success" ]; then
+            site="passed"
+          fi
+          curl --fail --silent --show-error --max-time 20 \
+            -X POST "https://yum4less.com/api/owner/morning-report/external" \
+            -H "Authorization: Bearer ${ADMIN_KEY}" \
+            -H "content-type: application/json" \
+            -d "{\"codeTests\":\"${code}\",\"siteCheck\":\"${site}\"}"

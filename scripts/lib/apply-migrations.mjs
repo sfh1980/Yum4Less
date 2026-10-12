@@ -317,6 +317,12 @@ export function migrationEffectPresent(version, db) {
           ),
         ) === 1
       );
+    case "039":
+      return (
+        db.tableExists("morning_reports") &&
+        db.tableExists("morning_external_checks") &&
+        db.tableExists("morning_zip_adds")
+      );
     default:
       return false;
   }

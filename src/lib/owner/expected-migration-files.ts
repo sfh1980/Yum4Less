@@ -43,4 +43,5 @@ export const EXPECTED_MIGRATION_FILENAMES = [
   "036_promote_target_and_lidl_shopper_ranked.sql",
   "037_store_street_address.sql",
   "038_feedback_missing_store.sql",
+  "039_morning_reports.sql",
 ] as const;

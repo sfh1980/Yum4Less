@@ -5,6 +5,7 @@ export const OWNER_CONSOLE_TABS = [
   { id: "coverage", label: "Coverage" },
   { id: "markets", label: "Markets" },
   { id: "after-update", label: "After update" },
+  { id: "morning", label: "This morning" },
 ] as const;
 
 export type OwnerConsoleTab = (typeof OWNER_CONSOLE_TABS)[number]["id"];
