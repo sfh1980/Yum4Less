@@ -16,6 +16,7 @@ Source of truth for locked decisions: **`PROJECT_CONTINUITY.md` → [Decision lo
 | `PROJECT_CONTINUITY.md` | Newest-first **changelog**, **Resume**, **Decision log**, **redesign plan**, verification snapshot |
 | `AGENTS.md` | Agent/MCP/hook index and verification gates |
 | `.env.example` | Environment variable truth |
+| Obsidian vault | Owner’s durable notes. Canonical path `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`. Yum4Less Home: `Projects/Yum4Less/Yum4Less Home.md` (status, decisions, open loops, next actions). Session records: `Nexus/Cursor_Conversations/`. OneDrive-synced — no secrets. Home notes outrank Nexus. `PROJECT_CONTINUITY.md` stays the committed history |
 | `.private/` | Owner archive and mockups only — **not** shared decision authority for agents |
 
 ## Beta v1 scope (active)

@@ -4,7 +4,7 @@ Index for Cursor **project agents**, **MCP servers**, and the **verification flo
 
 **Mandatory on every slice:** [`.cursor/rules/yum4less-agent-orchestration.mdc`](.cursor/rules/yum4less-agent-orchestration.mdc) (routing, trigger table, before-done checklist). **Every fix response** also includes the Scale check block from [`.cursor/rules/yum4less-scale-awareness.mdc`](.cursor/rules/yum4less-scale-awareness.mdc). **Operational facts** (stores, ZIPs, membership, catalog, prices) live in Postgres — [`.cursor/rules/yum4less-db-owned-data.mdc`](.cursor/rules/yum4less-db-owned-data.mdc).
 
-> **Also:** [`README.md`](README.md) · [`docs/shopper-workflows.md`](docs/shopper-workflows.md) (shopper path) · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) (decisions + redesign plan)
+> **Also:** [`README.md`](README.md) · [`docs/shopper-workflows.md`](docs/shopper-workflows.md) (shopper path) · [`PROJECT_CONTINUITY.md`](PROJECT_CONTINUITY.md) (decisions + redesign plan) · Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault` (owner status, decisions, open loops; no secrets)
 
 ---
 

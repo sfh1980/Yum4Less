@@ -2,12 +2,19 @@ import { NextResponse } from "next/server";
 import { enforceApiRateLimit, rateLimitResponse } from "@/lib/api-rate-limit";
 import { parseJsonBody } from "@/lib/api-request";
 import { isFeedbackListAuthorized } from "@/lib/feedback/feedback-admin-auth";
+import { postMorningDiscord } from "@/lib/owner/morning-discord";
 import {
   isMissingMorningReportSchema,
+  readMorningReport,
   saveExternalCheck,
+  saveMorningReport,
 } from "@/lib/owner/morning-report-repository";
 import {
+  appendMorningIssue,
+  applyOutsideResultToMorningNote,
+  isDiscordWebhookUrl,
   morningReportDate,
+  outsideChecksAreReported,
   type MorningCheckState,
 } from "@/lib/owner/morning-report";
 import { publicApiErrorResponse } from "@/lib/public-api-error";
@@ -56,13 +63,42 @@ export async function POST(request: Request) {
   const detail =
     typeof body.detail === "string" ? body.detail.trim().slice(0, 500) : "";
 
+  const codeTests = body.codeTests as MorningCheckState;
+  const siteCheck = body.siteCheck as MorningCheckState;
+
   try {
+    const reportDate = morningReportDate();
     await saveExternalCheck({
-      reportDate: morningReportDate(),
-      codeTests: body.codeTests as MorningCheckState,
-      siteCheck: body.siteCheck as MorningCheckState,
+      reportDate,
+      codeTests,
+      siteCheck,
       detail,
     });
+    const existing = await readMorningReport(reportDate);
+    if (existing) {
+      const discordConfigured = isDiscordWebhookUrl(
+        process.env.YUM4LESS_MORNING_DISCORD_WEBHOOK_URL,
+      );
+      let note = applyOutsideResultToMorningNote(existing.body, {
+        codeTests,
+        siteCheck,
+        discordConfigured,
+      });
+      if (note.body !== existing.body) {
+        if (discordConfigured && outsideChecksAreReported(codeTests, siteCheck)) {
+          const posted = await postMorningDiscord(note.body).catch(() => ({ ok: false }));
+          if (!posted.ok) {
+            note = appendMorningIssue(note, "Discord did not accept the note.");
+          }
+        }
+        await saveMorningReport({
+          reportDate,
+          kind: "morning",
+          body: note.body,
+          needsAttention: note.needsAttention,
+        });
+      }
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (isMissingMorningReportSchema(error)) {

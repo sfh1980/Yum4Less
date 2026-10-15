@@ -2,7 +2,7 @@
 
 Living catalog of **shopper-facing** control flow. Inferred from the repo (the same code yum4less.com deploys after Watchtower). This is the only document that owns shopper trees, step tables, and “what happens next.”
 
-**Not this file:** owner `/owner` console, ingest/cron, CI. Flyer-line classification → [`provider-integration-pattern.md`](provider-integration-pattern.md#unmatched-flyer-line-classification). Chain status tonight → [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Resume. How to run tests → [`e2e/README.md`](../e2e/README.md).
+**Not this file:** owner `/owner` console, ingest/cron, CI. Flyer-line classification → [`provider-integration-pattern.md`](provider-integration-pattern.md#unmatched-flyer-line-classification). Chain status tonight → [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) Resume. Owner durable notes → Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`. How to run tests → [`e2e/README.md`](../e2e/README.md).
 
 **Key files:** `src/components/meal-planner/onboarding-step.ts`, `flow-step.ts`, `app-tab.ts`, `use-meal-planner.ts`, `index.tsx`.
 

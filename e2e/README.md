@@ -2,7 +2,7 @@
 
 Committed browser tests (`@playwright/test`) gate merge via `npm run test:e2e:ci` (CI workflow `e2e` job). **Playwright MCP** in Cursor is for exploratory checks beyond this suite — not a substitute for these specs.
 
-Shopper control-flow catalog (trees, not this spec map): [`docs/shopper-workflows.md`](../docs/shopper-workflows.md).
+Shopper control-flow catalog (trees, not this spec map): [`docs/shopper-workflows.md`](../docs/shopper-workflows.md). Owner notes: Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`.
 
 ## Layout
 

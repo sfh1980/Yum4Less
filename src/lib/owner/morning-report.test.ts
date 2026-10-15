@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyOutsideResultToMorningNote,
   composeMissedMorningReport,
   composeMorningReport,
   isDiscordWebhookUrl,
@@ -108,6 +109,25 @@ describe("morning report", () => {
     expect(good.body).toContain("2 are on the map only.");
     expect(good.body).toContain("1 showed dinners.");
     expect(good.body).toContain("Nothing needs you.");
+
+    const late = applyOutsideResultToMorningNote(
+      [
+        "Thursday morning",
+        "Code tests were not reported.",
+        "The outside site check was not reported.",
+        "Last night finished.",
+        "Prices are from the last day.",
+        "No new areas today.",
+        "Discord was not sent. The morning webhook is not set.",
+        "Needs you.",
+      ].join("\n"),
+      { codeTests: "passed", siteCheck: "passed", discordConfigured: true },
+    );
+    expect(late.needsAttention).toBe(false);
+    expect(late.body).toContain("Code tests passed.");
+    expect(late.body).toContain("The site answered from outside.");
+    expect(late.body).not.toContain("webhook is not set");
+    expect(late.body).toContain("Nothing needs you.");
 
     const bad = composeMorningReport({
       ...quiet,

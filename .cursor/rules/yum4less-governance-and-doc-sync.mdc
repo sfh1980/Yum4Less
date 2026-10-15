@@ -19,5 +19,5 @@ For **npm dependencies**, state intent and proceed unless the owner objects — 
 - Keep shared docs truthful about what is implemented versus planned; do not let roadmap items read like shipped features.
 - If tooling setup succeeds but still needs restart, first launch, admin approval, or manual sign-in, document that clearly instead of implying the setup is finished.
 - Treat local/dev completion and hosted/deployed completion as different milestones until the user explicitly chooses a deployment target.
-- **Documentation owners** → **`.cursor/rules/yum4less-product-and-trust.mdc`**
+- **Documentation owners** → **`.cursor/rules/yum4less-product-and-trust.mdc`** (includes the Obsidian vault Home note)
 - **Per-slice continuity journal** → **`.cursor/rules/yum4less-continuity-journal.mdc`** (update `PROJECT_CONTINUITY.md` after material slices; agents update Decision log when direction locks — not the full `.private/owner-decisions.md` unless asked).

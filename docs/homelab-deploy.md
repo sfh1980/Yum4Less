@@ -4,7 +4,7 @@ Copy-paste guide for a **dedicated Linux / TrueNAS SCALE box** running Postgres,
 
 **Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). **Unattended ingest-worker night closed** (owner paste-back 2026-08-31). **15-night `ingest_jobs` rollup closed** (owner paste-back 2026-09-14: **2026-08-31 through 2026-09-14**, each **6/6 succeeded**, enqueue ~07:00:03Z). **Backup/restore drill closed** (2026-08-31). Remaining open ops: TheMealDB **dev test key**. Watchtower pull and extra ZIP **`23220`** first ingest **closed** (owner paste 2026-09-01).
 
-**Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths).
+**Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths). Owner notes: Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`.
 
 ---
 

@@ -137,6 +137,35 @@ export async function saveMorningReport(input: {
   );
 }
 
+export async function readMorningReport(
+  reportDate: string,
+): Promise<StoredMorningReport | null> {
+  const result = await getDbPool().query<{
+    report_date: Date | string;
+    kind: "morning" | "missed";
+    body: string;
+    needs_attention: boolean;
+  }>(
+    `
+      select report_date, kind, body, needs_attention
+      from morning_reports
+      where report_date = $1::date
+        and kind = 'morning'
+    `,
+    [reportDate],
+  );
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return {
+    reportDate: dateText(row.report_date),
+    kind: row.kind,
+    body: row.body,
+    needsAttention: row.needs_attention,
+  };
+}
+
 export async function readLatestMorningReport(): Promise<StoredMorningReport | null> {
   const result = await getDbPool().query<{
     report_date: Date | string;

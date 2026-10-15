@@ -13,13 +13,14 @@ Follow **`.cursor/rules/yum4less-product-and-trust.mdc`** for doc owners.
 - What Yum4Less is and **honest beta v1 scope**
 - Quick start, prerequisites, commands, env pointers (detail in `.env.example`)
 - Trust/security defaults and troubleshooting
-- Links to **`PROJECT_CONTINUITY.md`** (history/snapshot) and **`AGENTS.md`** (agents/MCP)
+- Links to **`PROJECT_CONTINUITY.md`** (history/snapshot), **`AGENTS.md`** (agents/MCP), and the Obsidian vault Home note
 
 ## README does not own
 
 - Changelog, roadmap, competitive analysis, or verification tables → **`PROJECT_CONTINUITY.md`**
 - Agent/MCP setup walkthrough detail → **`AGENTS.md`**
 - Distilled locked decisions → **`.private/owner-decisions.md`**
+- Owner durable notes → Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`
 
 ## When to update README
 

@@ -233,6 +233,88 @@ export function composeMissedMorningReport(weekday: string): {
   };
 }
 
+const CODE_LINES = new Set([
+  "Code tests passed.",
+  "Code tests failed.",
+  "Code tests were not reported.",
+]);
+
+const SITE_LINES = new Set([
+  "The site answered from outside.",
+  "The site did not answer from outside.",
+  "The outside site check was not reported.",
+]);
+
+const DISCORD_MISSING_LINE = "Discord was not sent. The morning webhook is not set.";
+
+export function outsideChecksAreReported(
+  codeTests: MorningCheckState,
+  siteCheck: MorningCheckState,
+): boolean {
+  return codeTests !== "not_reported" && siteCheck !== "not_reported";
+}
+
+/** Fill in a note that was written before the outside result arrived. */
+export function applyOutsideResultToMorningNote(
+  body: string,
+  input: {
+    codeTests: MorningCheckState;
+    siteCheck: MorningCheckState;
+    discordConfigured: boolean;
+  },
+): { body: string; needsAttention: boolean } {
+  const lines = body
+    .split("\n")
+    .filter(
+      (line) =>
+        line !== DISCORD_MISSING_LINE &&
+        line !== "Discord did not accept the note." &&
+        !/^(?:Nothing needs you|Needs you)\.$/.test(line),
+    );
+  let replacedCode = false;
+  let replacedSite = false;
+  const next = lines.map((line) => {
+    if (!replacedCode && CODE_LINES.has(line)) {
+      replacedCode = true;
+      return codeLine(input.codeTests);
+    }
+    if (!replacedSite && SITE_LINES.has(line)) {
+      replacedSite = true;
+      return siteLine(input.siteCheck);
+    }
+    return line;
+  });
+  if (!replacedCode) {
+    next.splice(Math.min(1, next.length), 0, codeLine(input.codeTests));
+  }
+  if (!replacedSite) {
+    const codeIndex = next.findIndex((line) => CODE_LINES.has(line));
+    next.splice(codeIndex + 1, 0, siteLine(input.siteCheck));
+  }
+  if (!input.discordConfigured) {
+    next.push(DISCORD_MISSING_LINE);
+  }
+  const needsAttention =
+    input.codeTests !== "passed" ||
+    input.siteCheck !== "passed" ||
+    !input.discordConfigured ||
+    next.some((line) => otherMorningLineNeedsAttention(line));
+  next.push(needsAttention ? "Needs you." : "Nothing needs you.");
+  return { body: next.join("\n"), needsAttention };
+}
+
+function otherMorningLineNeedsAttention(line: string): boolean {
+  return (
+    line === "Last night did not finish." ||
+    line === "Prices are not from the last day." ||
+    line === "No new areas were added." ||
+    line === "No nearby areas are left to add." ||
+    line.startsWith("Could not add ") ||
+    line.includes("could not be listed") ||
+    line.includes("did not answer")
+  );
+}
+
 export function appendMorningIssue(
   note: { body: string; needsAttention: boolean },
   line: string,

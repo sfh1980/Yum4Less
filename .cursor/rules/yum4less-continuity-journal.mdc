@@ -16,6 +16,7 @@ alwaysApply: false
 | Shopper UI control-flow catalog | `docs/shopper-workflows.md` |
 | Agents, MCP, hooks, verification gates | `AGENTS.md` + `.cursor/rules/yum4less-agent-orchestration.mdc` + `.cursor/rules/yum4less-testing-and-release-gates.mdc` |
 | Linear history, decisions, verification snapshot | `PROJECT_CONTINUITY.md` |
+| Owner durable notes (status, decisions, open loops, next actions) | Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`. Session record: `Nexus/Cursor_Conversations/`. No secrets |
 | Distilled locked decisions | `.private/owner-decisions.md` (gitignored) |
 
 ## After each material implementation slice
@@ -26,6 +27,7 @@ Before saying **done** on a slice that changed product behavior, architecture, t
 2. Refresh **Resume**: bump as-of date; update working / not working / next (keep one screen).
 3. Update **Decision log** when direction locks or supersedes a prior row.
 4. Bump **Appendix → Verification snapshot** when test counts, CI status, or merge gates changed — **in the same slice** that added/changed tests (see **`AGENTS.md` → Verification floor**); do not defer count updates.
+5. Update the Obsidian Home note for that project (`Projects/Yum4Less/Yum4Less Home.md`) when the slice changes status, a decision, or next actions. Write it with the Obsidian tools. Do not paste a chat transcript. Do not store secrets.
 
 Skip continuity updates for trivial typos, comment-only edits, or pure refactors with no behavior or direction change.
 

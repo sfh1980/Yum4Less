@@ -4,6 +4,7 @@ import { loadEnvLocal } from "@/lib/load-env-local";
 import { runAfterUpdateChecks } from "@/lib/owner/after-update-repository";
 import { activateOwnerIngestMarket } from "@/lib/owner/ingest-markets";
 import { buildOwnerMarketReach } from "@/lib/owner/market-reach-repository";
+import { postMorningDiscord } from "@/lib/owner/morning-discord";
 import {
   appendMorningIssue,
   composeMorningReport,
@@ -12,6 +13,7 @@ import {
   mergeOffZipCounts,
   morningReportDate,
   morningWeekday,
+  outsideChecksAreReported,
   pickMorningZipCandidates,
   type ZipProbeOutcome,
 } from "@/lib/owner/morning-report";
@@ -30,20 +32,6 @@ loadEnvLocal();
 
 const APP_ORIGIN =
   process.env.YUM4LESS_MORNING_APP_ORIGIN?.trim() || "http://yum4less-app:3000";
-
-async function postDiscord(body: string): Promise<{ ok: boolean }> {
-  const url = process.env.YUM4LESS_MORNING_DISCORD_WEBHOOK_URL?.trim();
-  if (!isDiscordWebhookUrl(url)) {
-    return { ok: false };
-  }
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ content: body.slice(0, 1800) }),
-    signal: AbortSignal.timeout(8_000),
-  });
-  return { ok: response.ok };
-}
 
 export async function runMorningReport(): Promise<void> {
   if (process.env.YUM4LESS_MORNING_REPORT !== "1") {
@@ -180,8 +168,12 @@ export async function runMorningReport(): Promise<void> {
     discordConfigured,
   });
 
-  if (discordConfigured) {
-    const posted = await postDiscord(note.body).catch(() => ({ ok: false }));
+  const checksReported = outsideChecksAreReported(
+    external?.codeTests ?? "not_reported",
+    external?.siteCheck ?? "not_reported",
+  );
+  if (discordConfigured && checksReported) {
+    const posted = await postMorningDiscord(note.body).catch(() => ({ ok: false }));
     if (!posted.ok) {
       note = appendMorningIssue(note, "Discord did not accept the note.");
     }

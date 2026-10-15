@@ -1,8 +1,9 @@
 name: Daily checks
 
 # 09:20 UTC is 5:20am Eastern during daylight time and 4:20am Eastern in winter.
-# The ingest image writes the morning note at 8:15am container time, after this
-# run can store its result. This workflow does not publish an image.
+# The ingest image writes the morning note at 8:15am container time. This run
+# often starts later; saving the result then rewrites that note. This workflow
+# does not publish an image.
 on:
   schedule:
     - cron: "20 9 * * *"

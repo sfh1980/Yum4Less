@@ -41,7 +41,7 @@ Full product scope, trust labeling, and forbidden claims → **`yum4less-product
 1. Identify which rows in the trigger table below apply to files you changed.
 2. Run the **required** commands and MCP checks for those rows (see **`yum4less-testing-and-release-gates.mdc`** for gate detail).
 3. If trust-sensitive UI or pricing claims changed, invoke **`verifier`** or apply its checklist yourself in readonly mode.
-4. On **material implementation slices**, update **`PROJECT_CONTINUITY.md`** per **`.cursor/rules/yum4less-continuity-journal.mdc`**: changelog at top, refresh Resume, update Decision log / verification snapshot when applicable; **no chat summaries** (transcript index links only).
+4. On **material implementation slices**, update **`PROJECT_CONTINUITY.md`** per **`.cursor/rules/yum4less-continuity-journal.mdc`**: changelog at top, refresh Resume, update Decision log / verification snapshot when applicable; **no chat summaries** (transcript index links only). Update the Obsidian Home note `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault` when status, a decision, or next actions changed.
 5. State what you ran and what you did **not** run (with reason).
 6. On any response that includes a fix, include the **Scale check** block from **`yum4less-scale-awareness.mdc`** in routing/findings.
 
@@ -57,7 +57,7 @@ Do **not** claim `verified`, `production-ready`, `CI green`, `deploy-ready`, or 
 | `.github/workflows/**`, release/CI claims | Inspect workflow result | GitHub MCP or `gh` (read-only for status) |
 | Security-sensitive code, dependency/config changes, auth/privacy/secrets surfaces | `npm test` where code changed; Semgrep Guardian scan when configured | `@senior-auditor`; Semgrep MCP/hooks |
 | Provider/pricing/trust rollout logic | `npm test` + fixture-based before/after when ranking changes | `@verifier`; Postgres MCP when DB rows matter |
-| Material slice (orchestration paths below) or `PROJECT_CONTINUITY.md` | Update continuity journal: changelog top, Resume, Decision log / verification as needed; no transcript dumps | `.cursor/rules/yum4less-continuity-journal.mdc` |
+| Material slice (orchestration paths below) or `PROJECT_CONTINUITY.md` | Update continuity journal: changelog top, Resume, Decision log / verification as needed; no transcript dumps. Update Obsidian `Projects/Yum4Less/Yum4Less Home.md` when status, a decision, or next actions changed | `.cursor/rules/yum4less-continuity-journal.mdc` |
 
 ## Project agents (invoke when triggered)
 
