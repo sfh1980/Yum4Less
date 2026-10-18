@@ -802,6 +802,9 @@ Set these on the **ingest** service (Custom App env). **`YUM4LESS_INGEST_ZIPS` i
 | `KROGER_API_ENV` | **Strongly yes** | Set `production` or official Kroger sync no-ops. |
 | `TZ` | Recommended | Container-local cron timezone. |
 | `YUM4LESS_FRESHNESS_WEBHOOK_URL` | Optional | POST on freshness fail (native fetch). |
+| `YUM4LESS_CLOUDFLARE_ACCOUNT_ID` | Optional | Morning note only. With the zone id and API token, 8:15am adds one Cloudflare line. Ingest service only. |
+| `YUM4LESS_CLOUDFLARE_ZONE_ID` | Optional | yum4less.com zone id. Same ingest service. |
+| `YUM4LESS_CLOUDFLARE_API_TOKEN` | Optional | Read-only token: Cloudflare Tunnel Read for this account, Analytics Read for that zone. Not the wide account token. |
 | `YUM4LESS_INGEST_ONCE` | Dry-run only | `1` = run once and exit (see §10.3). |
 | `YUM4LESS_INGEST_CRON` | Optional | `0` = disable in-container cron (host `docker exec` path). |
 

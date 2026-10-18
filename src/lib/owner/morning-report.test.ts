@@ -155,6 +155,21 @@ describe("morning report", () => {
     });
     expect(empty.body).toContain("No nearby areas are left to add.");
     expect(empty.needsAttention).toBe(true);
+
+    const cloudflare = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      cloudflare: { checked: true, tunnel: "connected", errorCount: 4 },
+    });
+    expect(cloudflare.body).toContain("Cloudflare saw 4 errors.");
+    expect(cloudflare.needsAttention).toBe(true);
+    const kept = applyOutsideResultToMorningNote(cloudflare.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(kept.body).toContain("Cloudflare saw 4 errors.");
+    expect(kept.needsAttention).toBe(true);
     expect(composeMissedMorningReport("Tuesday").body).toContain(
       "The morning check did not run.",
     );

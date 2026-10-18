@@ -1,5 +1,10 @@
 /** Plain-language morning note. ZIP text stays on /owner and Discord, not in analytics. */
 
+import {
+  describeCloudflareMorning,
+  type CloudflareMorningFacts,
+} from "@/lib/owner/cloudflare-morning";
+
 export const MORNING_ZIP_BATCH = 3;
 export const MORNING_REPORT_TIME_ZONE = "America/New_York";
 
@@ -160,6 +165,7 @@ export type MorningReportInput = {
   zipResults: readonly { zipCode: string; outcome: ZipProbeOutcome }[];
   nearbyLeft: boolean;
   discordConfigured: boolean;
+  cloudflare?: CloudflareMorningFacts;
 };
 
 export function composeMorningReport(input: MorningReportInput): {
@@ -204,6 +210,13 @@ export function composeMorningReport(input: MorningReportInput): {
     lines.push("Nearby areas are still left.");
   }
 
+  const cloudflare = input.cloudflare
+    ? describeCloudflareMorning(input.cloudflare)
+    : null;
+  if (cloudflare) {
+    lines.push(...cloudflare.lines);
+  }
+
   if (!input.discordConfigured) {
     lines.push("Discord was not sent. The morning webhook is not set.");
   }
@@ -217,7 +230,8 @@ export function composeMorningReport(input: MorningReportInput): {
     input.addSkipped === "none-left" ||
     input.addErrors.length > 0 ||
     input.zipResults.some((row) => row.outcome === "failed") ||
-    !input.discordConfigured;
+    !input.discordConfigured ||
+    cloudflare?.needsAttention === true;
 
   lines.push(needsAttention ? "Needs you." : "Nothing needs you.");
   return { body: lines.join("\n"), needsAttention };
@@ -309,6 +323,10 @@ function otherMorningLineNeedsAttention(line: string): boolean {
     line === "Prices are not from the last day." ||
     line === "No new areas were added." ||
     line === "No nearby areas are left to add." ||
+    line === "Cloudflare was not checked." ||
+    line === "The tunnel was not connected." ||
+    line === "The tunnel was not fully connected." ||
+    /^Cloudflare saw \d+ errors?\.$/.test(line) ||
     line.startsWith("Could not add ") ||
     line.includes("could not be listed") ||
     line.includes("did not answer")

@@ -4,6 +4,7 @@ import { loadEnvLocal } from "@/lib/load-env-local";
 import { runAfterUpdateChecks } from "@/lib/owner/after-update-repository";
 import { activateOwnerIngestMarket } from "@/lib/owner/ingest-markets";
 import { buildOwnerMarketReach } from "@/lib/owner/market-reach-repository";
+import { fetchCloudflareMorning } from "@/lib/owner/cloudflare-morning-client";
 import { postMorningDiscord } from "@/lib/owner/morning-discord";
 import {
   appendMorningIssue,
@@ -153,6 +154,7 @@ export async function runMorningReport(): Promise<void> {
     }
   }
 
+  const cloudflare = await fetchCloudflareMorning();
   let note = composeMorningReport({
     weekday,
     codeTests: external?.codeTests ?? "not_reported",
@@ -166,6 +168,7 @@ export async function runMorningReport(): Promise<void> {
     zipResults,
     nearbyLeft,
     discordConfigured,
+    ...(cloudflare ? { cloudflare } : {}),
   });
 
   const checksReported = outsideChecksAreReported(

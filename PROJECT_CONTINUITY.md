@@ -4,9 +4,9 @@
 
 ---
 
-## Resume (as of 2026-10-15)
+## Resume (as of 2026-10-17)
 
-**Morning note:** One plain-language note each morning, same words in Discord and on `/owner` **This morning**. The first version is already on yum4less.com. GitHub’s daily check often starts after 8:15am, so that note can still say the checks were not reported. Saving the outside result rewrites today’s note and sends Discord once. That rewrite is in the repo and is not on yum4less.com until this commit’s app image is published and Watchtower pulls it. Thursday’s note stays as written. Friday’s note is the first one this can update. The Discord webhook must be set on the **app** service as well as ingest. Clocks stay at 5:20am, 8:15am, and 9:15am. Every other even UTC day the ingest job Activates up to 3 nearby off-ZIPs when last night finished. Friday 2026-10-16 is an add day. A pass is not more dinners.
+**Morning note:** One plain-language note each morning, same words in Discord and on `/owner` **This morning**. A late GitHub result rewrites that morning’s note and sends Discord once. That behavior is on yum4less.com. Clocks stay at 5:20am, 8:15am, and 9:15am. Nearby adding is paused: no nearby off-ZIPs are left, so an add morning says **Needs you** for that line. The ingest service can add one Cloudflare line (tunnel connected, or how many errors yum4less.com had yesterday) once this commit’s ingest image is pulled. Account id, zone id, and API token are already on that service. A pass is not more dinners.
 
 **Owner lock:** Membership cutover **shipped in code** — `chain_registry` drives who we *attempt* for dinners / fail-loud ingest; **floors stay in code**. **Adapters do not hardcode stores/ZIPs/rosters** — Postgres holds those facts (`.cursor/rules/yum4less-db-owned-data.mdc`). Thin sale coverage ⇒ pin stays tracked, dinners stay off. **Lidl lock (2026-09-03):** map/context only until a store-bound sale feed exists — no ranked dinners, no store-finder scrape work. **Dollar General (2026-09-03):** Flipp-first ZIP circular ingest; directional sales can show without dinners; dinner totals only when **no other shopper-ranked grocer is nearby** and the **same** floors pass (area circular, not that building’s shelf). Banner grain later via **shared adapter keys**. Owner Check brand lists stay research. **Ingest fence:** nightly ingest admits grocery pins in the **Census ZIP outline** with a **26 mi** safety cap — same set Owner Check lists. Shopper map stays pin + radius. Neighbor-ZIP pins on that map need those ZIPs Activated too. **Next product work:** Coverage leftovers in `23111` — Target and Whole Foods adapters shipped dinners-off; BJ's Flipp confirm done (map/context, thin absolute prices); **Walmart yield plan closed** (Flipp primary + junk SSOT + `/owner` Ingredient review; scrape only if Flipp empty); **Scale risk A closed** (client-trust API audit); **Cuisine chips R11 closed** (`033`); **Bright Data MCP usage paused**. Full open-task list → [`docs/open-work-inventory-2026-09-09.md`](docs/open-work-inventory-2026-09-09.md) (point-in-time; Resume stays live status). **Live yum4less.com app + ingest Watchtower-recreated 2026-09-14 21:43Z** (`ghcr.io/sfh1980/yum4less-app:homelab` + `yum4less-ingest:homelab` after `d3e9396` Clear obvious). Leftover-grocery ops **closed** 2026-09-15 (planner + button live; owner monitors `/owner` as needed). **Local 2026-09-16:** merch-class + simple-food classifier (mower/nightstand junk; apples/chicken breast/spam/papaya/sirloin food) is **not** on yum4less.com until CI ingest publish + Watchtower, then **Clear obvious**. Do **not** SQL-reject. Older same-day app recreate **19:43Z** was the store-list omit check. Older pair **2026-09-04** was app `55ad51dac9b6` / ingest `6b541e14fc3f`. Nightly worker **6/6 `succeeded`** every `run_date` **2026-08-31 through 2026-09-14** (**15** nights; enqueue ~**07:00:03Z** = 3am Eastern; owner paste-back 2026-09-14). Live `chain_registry` **2026-09-14:** shopper-ranked **kroger / aldi / publix / food-lion / walmart / dollar-general**; Lidl **map_context** (`shopper_ranked` false). Walmart weekly-ad in-stock **19** rows, **19** in 24h (newest **07:09:43Z**). Dollar General and Lidl **0** in-stock rows. Ledger **000–013, 015–031** (no `014` in repo); **`029`** applied **2026-08-30 07:00:03Z**; **`030`/`031`** **2026-09-03 23:59:42Z**. Prior full freshness **`[OK] 428/428`** was **2026-09-05** (not re-run this paste). Junk heal **2026-09-14: scanned=393 rejected=0 remaining=393**, then owner Yes/No **165** accepted / **231** pending; `owner:resolve-pending-reviews --apply` **yes=190 no=14 skip=27 applied_ok=204 applied_fail=0**. Dry-run **2026-09-15: yes=3 no=0 skip=34**. Local `yum4less_dev` **`active_markets`** is the 18-ZIP Richmond set booked **2026-10-06** (see Working today). Last confirmed yum4less.com pair remains **`23111`** + **`23220`** (2026-09-14 paste) until a box paste after a night that includes the new rows. TheMealDB **dev test key** is a known ops gap.
 
@@ -36,7 +36,9 @@
 
 ### Working today (honest)
 
-- **Late morning rewrite (2026-10-15, local):** When GitHub’s outside result arrives after 8:15am, saving it rewrites that day’s note and sends Discord once. The 8:15am job sends Discord only if the result is already saved. Clocks stay. Needs the same Discord webhook on the app service. Not on yum4less.com until the app image is published and Watchtower pulls. Thursday’s note stays as written. Friday’s note is the first one this can update. A pass is not more dinners.
+- **Cloudflare morning line (2026-10-17, local):** At 8:15am the ingest job can add one line: the tunnel is connected, or yum4less.com had errors yesterday. Needs the account id, zone id, and a narrow API token on the ingest service. Those three are set. The line is not on yum4less.com until the ingest image is published and Watchtower pulls it. Raw logs stay out of the note. A pass is not more dinners.
+
+- **Late morning rewrite (2026-10-15):** When GitHub’s outside result arrives after 8:15am, saving it rewrites that day’s note and sends Discord once. The 8:15am job sends Discord only if the result is already saved. Clocks stay. Needs the same Discord webhook on the app service. Not on yum4less.com until the app image is published and Watchtower pulls. Thursday’s note stays as written. Friday’s note is the first one this can update. A pass is not more dinners.
 
 - **Docs name the vault (2026-10-12):** README, AGENTS, and the owner checklists point at Obsidian `Projects/Yum4Less/Yum4Less Home.md`. The vault is not in git. `PROJECT_CONTINUITY.md` stays the committed history.
 
@@ -294,6 +296,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-10-17 — Cloudflare line on the morning note
+
+**Theme:** The morning note can say whether Cloudflare still has yum4less.com connected, and whether yesterday had site errors.
+
+**Shipped:** The 8:15am ingest job reads the tunnel named `truenas-homelab` and yesterday’s zone totals. One plain line. Errors or a down tunnel end with **Needs you.** No token, no raw logs, no IP addresses. The three settings stay on the ingest service.
+
+**Limits:** Live waits the ingest image. If the three settings are missing, the line is omitted. A quiet day with no visits still counts as up. A pass is not more dinners.
+
+**Evidence:** `npm test` **1365/1365** (244 files) this session. `npm run build` passed (Next.js 15.5.25). Semgrep on the Cloudflare reader and morning note: 0 findings.
 
 ### 2026-10-15 — Late outside result rewrites the morning note
 
@@ -3410,6 +3422,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-10-17 | **The morning note can include one Cloudflare line.** Ingest reads whether the `truenas-homelab` tunnel is connected and how many 500-level responses yum4less.com had yesterday. Errors or a down tunnel say **Needs you.** The token is read-only and stays on the ingest service. Raw logs are not stored. A pass is not more dinners. | **Active** |
 | 2026-10-15 | **A late outside result rewrites today’s note.** GitHub’s daily check may start hours after 8:15am. Saving the result updates that morning’s note and sends it to Discord once. The 8:15am job sends Discord only when the result is already there. Clocks stay. The app service needs the same Discord webhook as ingest. A pass is not more dinners. | **Active** |
 | 2026-10-12 | **Obsidian vault holds the durable notes.** Canonical vault `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`. Yum4Less Home is `Projects/Yum4Less/Yum4Less Home.md`. This file stays the committed history, decision log, and verification snapshot. A material slice updates both when status, a decision, or next actions changed. Nexus session records are archive. Do not store secrets in the vault. | **Active** |
 | 2026-10-12 | **Morning note books nearby off-ZIPs.** Every other even UTC day the ingest morning job Activates up to 3 ZIPs that Markets already shows as pale shapes (a ranked store within about 8 miles of an active ZIP). Shoppers still do not create a waiting list. Owner Markets Check then Activate stays for a ZIP you type. If last night failed, add none. An empty nearby pool pauses adding and the note says so. One note each morning, same words on Discord and `/owner`, including good days. A pass is not more dinners. Not live until the image is published, Watchtower pulls, `039` is applied, the Discord webhook is set, and the GitHub admin-key secret is set. | **Active** (narrows 2026-08-27 Phase C for this job only) |
@@ -3578,7 +3591,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` (late morning rewrite) | 2026-10-15 | **1360/1360** pass (243 files) |
+| `npm test` (Cloudflare morning line) | 2026-10-17 | **1365/1365** pass (244 files) |
+| `npm run build` (Cloudflare morning line) | 2026-10-17 | **Pass** (Next.js 15.5.25) |
 | `npm run build` (late morning rewrite) | 2026-10-15 | **Pass** (Next.js 15.5.25). Lists `/api/owner/morning-report` and `/api/owner/morning-report/external` |
 | `npm run test:integration` (morning note `039`) | 2026-10-12 | **54/54** pass (17 files); exit 0 |
 | `npm run build` (morning note routes) | 2026-10-12 | **Pass** (Next.js 15.5.25). Lists `/api/owner/morning-report` and `/api/owner/morning-report/external` |
