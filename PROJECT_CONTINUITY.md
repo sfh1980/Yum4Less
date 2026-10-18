@@ -297,6 +297,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 ## Changelog (newest first)
 
+### 2026-10-17 — Cloudflare morning line typecheck
+
+**Theme:** `bc67fd6` did not publish an image. CI typecheck rejected the Cloudflare settings test.
+
+**Shipped:** The settings reader accepts the three values without requiring `NODE_ENV`.
+
+**Limits:** The Cloudflare line still waits a green publish and a Watchtower pull of the ingest image. A pass is not more dinners.
+
+**Evidence:** `npx tsc --noEmit` exit 0 this session. The unit suite for the note was **1365/1365** before this type-only change. This push is not CI green until the new run finishes.
+
 ### 2026-10-17 — Cloudflare line on the morning note
 
 **Theme:** The morning note can say whether Cloudflare still has yum4less.com connected, and whether yesterday had site errors.
@@ -3591,7 +3601,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` (Cloudflare morning line) | 2026-10-17 | **1365/1365** pass (244 files) |
+| `npx tsc --noEmit` (Cloudflare settings reader) | 2026-10-17 | **Pass** (exit 0). Fixes the `bc67fd6` verify failure. |
 | `npm run build` (Cloudflare morning line) | 2026-10-17 | **Pass** (Next.js 15.5.25) |
 | `npm run build` (late morning rewrite) | 2026-10-15 | **Pass** (Next.js 15.5.25). Lists `/api/owner/morning-report` and `/api/owner/morning-report/external` |
 | `npm run test:integration` (morning note `039`) | 2026-10-12 | **54/54** pass (17 files); exit 0 |

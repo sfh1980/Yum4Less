@@ -22,7 +22,7 @@ export type CloudflareMorningConfig = {
 };
 
 export function readCloudflareMorningConfig(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): CloudflareMorningConfig | null {
   const accountId = env.YUM4LESS_CLOUDFLARE_ACCOUNT_ID?.trim() ?? "";
   const zoneId = env.YUM4LESS_CLOUDFLARE_ZONE_ID?.trim() ?? "";
