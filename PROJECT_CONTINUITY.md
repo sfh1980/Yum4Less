@@ -36,6 +36,8 @@
 
 ### Working today (honest)
 
+- **Vite pin for image publish (2026-10-20, local):** `5011fa7` did not publish. The high audit stopped on `vite` `8.0.16`. `overrides.vite` is now `8.3.4`, past the launch-editor advisory range (`8.0.0`–`8.1.5`). `npm run audit:high` exit 0. `npm test` **1371/1371**. Watchtower still has the `537a21e` image until this commit’s CI publishes. A pass is not more dinners.
+
 - **Surrounding ZIP expansion (2026-10-20, local):** Add mornings use touching Census ZIP outlines, not the 8-mile shopper circle. The night map job keeps supermarket, grocery, and warehouse-club pins and skips convenience, bakery, and specialty. One map row per building. A new chain name is written map-only. The shared flyer feed is tried before any custom scraper. Meals still need a saved flyer and the existing sale floors. `npm test` **1371/1371**. Integration **54/54**. Browser tests **37 passed**, 2 skipped. Build passed (Next.js 15.5.25). Not on yum4less.com. A pass is not more dinners.
 
 - **Cloudflare morning line (2026-10-17, local):** At 8:15am the ingest job can add one line: the tunnel is connected, or yum4less.com had errors yesterday. Needs the account id, zone id, and a narrow API token on the ingest service. Those three are set. The line is not on yum4less.com until the ingest image is published and Watchtower pulls it. Raw logs stay out of the note. A pass is not more dinners.
@@ -298,6 +300,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-10-20 — Vite pin so the image can publish
+
+**Theme:** `5011fa7` did not publish an image. The high audit stopped on `vite`.
+
+**Shipped:** `overrides.vite` is `8.3.4`. The launch-editor advisory covers `8.0.0`–`8.1.5`. The braces exception stays. Did not use `npm audit fix --force`.
+
+**Limits:** Watchtower still has the `537a21e` image until this commit’s CI publishes both images. A pass is not more dinners.
+
+**Evidence:** `npm run audit:high` exit 0. `npm test` **1371/1371** pass (246 files).
 
 ### 2026-10-20 — Surrounding ZIP codes and new grocery chains
 
@@ -3444,6 +3456,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-10-20 | **Vite is pinned at 8.3.4 so the image can publish.** `vite` `8.0.16` failed the high audit through `launch-editor` (`8.0.0`–`8.1.5`). The pin is an override, same as `sharp`. The braces exception stays the only allowed unpatched high advisory. Do not `npm audit fix --force`. | **Active** |
 | 2026-10-20 | **New ZIP codes are surrounding Census outlines.** Every other even UTC day the morning job Activates up to 3 off ZIPs whose outline touches a ZIP that is already on, in numeric order. The 8-mile circle stays the shopper nearby picture. A supermarket, grocery, or warehouse club is saved once. Convenience, bakery, and specialty shops stay out. A new chain name is stored map-only. The shared flyer feed is tried before a custom scraper. Meals use a chain only after that flyer is saved and the existing sale floors pass. The night job stays six steps. A pass is not more dinners. | **Active** (narrows the ZIP-choice half of 2026-10-12) |
 | 2026-10-17 | **The morning note can include one Cloudflare line.** Ingest reads whether the `truenas-homelab` tunnel is connected and how many 500-level responses yum4less.com had yesterday. Errors or a down tunnel say **Needs you.** The token is read-only and stays on the ingest service. Raw logs are not stored. A pass is not more dinners. | **Active** |
 | 2026-10-15 | **A late outside result rewrites today’s note.** GitHub’s daily check may start hours after 8:15am. Saving the result updates that morning’s note and sends it to Discord once. The 8:15am job sends Discord only when the result is already there. Clocks stay. The app service needs the same Discord webhook as ingest. A pass is not more dinners. | **Active** |
@@ -3614,6 +3627,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm run audit:high` (vite 8.3.4) | 2026-10-20 | **Exit 0.** `GHSA-587h-7wmj-h5pm` cleared. Braces exception still present. |
+| `npm test` (vite 8.3.4) | 2026-10-20 | **1371/1371** pass (246 files) |
 | `npm test` (surrounding ZIP expansion) | 2026-10-20 | **1371/1371** pass (246 files) |
 | `npm run test:integration` (surrounding ZIP expansion) | 2026-10-20 | **54/54** pass (17 files); applied `040_touching_zips.sql` on `yum4less_test` |
 | `npm run test:e2e:ci` (surrounding ZIP expansion) | 2026-10-20 | **37 passed**, 2 skipped. First attempt looked for Chromium in the sandbox cache; retry used the installed Playwright browsers. |
