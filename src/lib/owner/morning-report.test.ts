@@ -7,7 +7,6 @@ import {
   isMorningZipAddDay,
   judgeLiveSite,
   judgeShopperProbeWithDinners,
-  mergeOffZipCounts,
   morningReportDate,
   pickMorningZipCandidates,
 } from "@/lib/owner/morning-report";
@@ -39,21 +38,15 @@ describe("morning report", () => {
     expect(isMorningZipAddDay("not-a-date")).toBe(false);
   });
 
-  it("picks the fullest nearby ZIPs that are still off", () => {
+  it("picks surrounding ZIPs in numeric order", () => {
     expect(
       pickMorningZipCandidates({
-        offZips: mergeOffZipCounts([
-          [
-            { zipCode: "23227", storeCount: 4 },
-            { zipCode: "unknown", storeCount: 9 },
-          ],
-          [{ zipCode: "23227", storeCount: 2 }, { zipCode: "23226", storeCount: 4 }],
-        ]),
+        zipCodes: ["23230", "23227", "nope", "23221", "23227"],
         activeZipCodes: new Set(["23220"]),
-        alreadyAdded: new Set(["23226"]),
-        limit: 3,
+        alreadyAdded: new Set(["23221"]),
+        limit: 2,
       }),
-    ).toEqual(["23227"]);
+    ).toEqual(["23227", "23230"]);
   });
 
   it("treats a normal answer with no dinners as on the map only", () => {
@@ -153,7 +146,7 @@ describe("morning report", () => {
       addSkipped: "none-left",
       nearbyLeft: false,
     });
-    expect(empty.body).toContain("No nearby areas are left to add.");
+    expect(empty.body).toContain("No surrounding areas are left to add.");
     expect(empty.needsAttention).toBe(true);
 
     const cloudflare = composeMorningReport({

@@ -428,7 +428,7 @@ describe("store catalog sync (integration)", () => {
     expect(slug.rows[0]?.source_store_id).toBe("osm-node-6531578976");
   });
 
-  it("creates aldi-{zip} only when no collocated slug exists", async () => {
+  it("does not create a second Aldi row when no slug exists", async () => {
     const pool = getDbPool();
     await pool.query(`delete from price_observations where store_id like 'aldi-%'`);
     await clearIngestIdentityAttachments();
@@ -460,26 +460,15 @@ describe("store catalog sync (integration)", () => {
       osmFoodRetailStores: [...fixtureOsmFoodRetailStores23111, liveOsmAldi],
     });
 
-    expect(merged).toBeGreaterThan(0);
+    expect(merged).toBe(0);
 
-    const after = await pool.query<{
-      id: string;
-      latitude: string;
-      longitude: string;
-      source_name: string | null;
-      source_store_id: string | null;
-    }>(`
-      select id, latitude, longitude, source_name, source_store_id
+    const after = await pool.query<{ id: string }>(`
+      select id
       from stores
       where id like 'aldi-%'
-      order by id
     `);
 
-    expect(after.rows.map((row) => row.id)).toEqual(["aldi-23111"]);
-    expect(Number(after.rows[0]?.latitude)).toBeCloseTo(37.611004, 3);
-    expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.336853, 3);
-    expect(after.rows[0]?.source_name).toBe("yum4less-market-catalog");
-    expect(after.rows[0]?.source_store_id).toBe("osm-node-6531578976");
+    expect(after.rows).toEqual([]);
   });
 
   it("keeps separate Kroger API rows when source_store_id does not match legacy slug rows", async () => {
@@ -596,7 +585,7 @@ describe("store catalog sync (integration)", () => {
     expect(
       krogerRows.rows.find((row) => row.id === "kroger-mechanicsville")?.source_store_id,
     ).toBe("kroger-mechanicsville");
-    expect(krogerRows.rows.some((row) => row.id === "kroger-02900515")).toBe(true);
+    expect(krogerRows.rows.some((row) => row.id === "kroger-02900515")).toBe(false);
 
     const migratedObservation = await pool.query<{ store_id: string }>(
       `

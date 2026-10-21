@@ -26,6 +26,12 @@ import {
   type CollocatedCatalogStoreLike,
 } from "@/lib/catalog-store-colocated-identity";
 import { getDistanceMiles } from "@/lib/geo-distance";
+import {
+  attachOfficialDetailsToStore,
+  findSavedStoreForOfficialPin,
+} from "@/lib/official-store-attach";
+import { isKeptGroceryBuilding } from "@/lib/owner/owner-market-admission";
+import { ensureMapOnlyChains } from "@/lib/chain-registry-ensure";
 import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
 import {
   findProximityLinkedKrogerStore,
@@ -618,7 +624,22 @@ export async function syncV1ChainStoresToCatalog(input: {
         continue;
       }
 
-      catalogStores.push(catalogStore);
+      const mapRow = findSavedStoreForOfficialPin({
+        stores: existingStores,
+        name: discovered.name,
+        latitude: discovered.latitude,
+        longitude: discovered.longitude,
+        chainHint: "kroger",
+        radiusMiles: KROGER_SAME_STORE_MERGE_PROXIMITY_MILES,
+      });
+      if (mapRow) {
+        mergedCount += await attachOfficialDetailsToStore({
+          storeId: mapRow.id,
+          addressLine: discovered.addressLine1,
+          postalCode: discovered.zipCode,
+          sourceStoreId: discovered.providerStoreId,
+        });
+      }
     }
   }
 
@@ -649,7 +670,7 @@ export async function syncV1ChainStoresToCatalog(input: {
     );
 
     if (target.shouldCreateCandidateId) {
-      catalogStores.push(aldiCatalog);
+      // The map pin is already the Aldi row. Do not copy it to aldi-{zip}.
     } else {
       // Prefer existing slug/API twin: refresh its coordinates, do not upsert aldi-{zip}.
       // Slice 5c: alias ensure runs inside updateIngestedRankedStoreCoordinates.
@@ -1380,8 +1401,11 @@ export async function syncUniversalMapCatalogForZip(input: {
     zipCode: input.zipCode,
     useFixture: input.useFixture,
   });
-  const fencedDiscoveryStores = discovery.stores.filter((store) =>
-    storePassesIngestFence({
+  const fencedDiscoveryStores = discovery.stores.filter((store) => {
+    if (!isKeptGroceryBuilding(store)) {
+      return false;
+    }
+    return storePassesIngestFence({
       latitude: store.latitude,
       longitude: store.longitude,
       center: locationResult.location,
@@ -1389,8 +1413,8 @@ export async function syncUniversalMapCatalogForZip(input: {
         ingestMiles: radiusMiles,
         geometry: fence.geometry,
       },
-    }),
-  );
+    });
+  });
 
   const useFixtureIdentity =
     input.useFixture === true || discovery.source === "fixture";
@@ -1406,6 +1430,9 @@ export async function syncUniversalMapCatalogForZip(input: {
   const osmUpserted = await upsertCatalogStores(osmStores, {
     preserveRankedSources: true,
   });
+  if (!useFixtureIdentity) {
+    await ensureMapOnlyChains(fencedDiscoveryStores.map((store) => store.name));
+  }
 
   let rankedUpserted = 0;
   let publixUpserted = 0;

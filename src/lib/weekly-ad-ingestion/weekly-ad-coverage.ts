@@ -52,18 +52,22 @@ export function buildWeeklyAdStoreCoverage(input: {
    * member store_id count toward this store's coverage. Omit → exact id.
    */
   equivalentStoreIds?: ReadonlySet<string>;
+  /** Sale-feed chains use `${chainId}-weekly-ad-scrape` instead of the fixed list. */
+  priceSourceName?: string;
 }): WeeklyAdStoreCoverage {
-  const weeklyAdSource = getWeeklyAdSourceNameForChain(input.chain);
+  const weeklyAdSource = input.priceSourceName ?? getWeeklyAdSourceNameForChain(input.chain);
   const storeIds =
     input.equivalentStoreIds ?? new Set([input.storeId]);
-  const weeklyAdObservations = input.priceObservations.filter(
+  const weeklyAdObservations = weeklyAdSource
+    ? input.priceObservations.filter(
     (observation) =>
       storeIds.has(observation.storeId) &&
       observation.priceSource === weeklyAdSource &&
       observation.inStock &&
       observation.ingredientId !== undefined &&
       isFreshWeeklyAdObservation(observation),
-  );
+    )
+    : [];
 
   const matchedIngredientIds = new Set(
     weeklyAdObservations
@@ -113,10 +117,12 @@ export function buildWeeklyAdStoreCoverage(input: {
 
 export function weeklyAdPromotionGatesPass(
   coverage: WeeklyAdStoreCoverage,
-  chain: StoreChain,
+  chain: string,
   membership: ChainMembershipSnapshot = FIXTURE_CHAIN_MEMBERSHIP,
 ): boolean {
-  if (!isShopperRankedChain(membership, chain)) {
+  const hasSaleFeed =
+    membership.saleFeedChains?.some((row) => row.chainId === chain) ?? false;
+  if (!isShopperRankedChain(membership, chain) && !hasSaleFeed) {
     return false;
   }
 

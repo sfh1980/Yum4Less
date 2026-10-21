@@ -9,7 +9,11 @@ import {
 } from "@/lib/providers/publix/publix-services-api-client";
 import type { PublixStoreRecord } from "@/lib/providers/publix/publix-services-api-types";
 import type { CatalogStoreRecord } from "@/lib/store-catalog-sync";
-import { upsertCatalogStores } from "@/lib/store-catalog-sync";
+import {
+  attachOfficialDetailsToStore,
+  findSavedStoreForOfficialPin,
+} from "@/lib/official-store-attach";
+import { CATALOG_COLLOCATED_MERGE_MILES } from "@/lib/catalog-store-colocated-identity";
 import { deleteStoreIdentityAttachmentsForStore } from "@/lib/store-identity-ingest-aliases";
 
 export const PUBLIX_STORE_LOCATOR_SOURCE = "publix-store-locator";
@@ -242,19 +246,47 @@ export async function syncPublixContextStoresForZip(input: {
       };
     }
 
-    const upserted = await upsertCatalogStores(catalogStores, {
-      preserveRankedSources: true,
-    });
-
-    const nearestStore = catalogStores[0]!;
-    const retirement = await retirePublixAtleeBootstrapStore(nearestStore.id);
-    const osmRetirement = await retireDuplicateOsmPublixNearLocatorStores();
+    const saved = await getDbPool().query<{
+      id: string;
+      name: string;
+      latitude: string;
+      longitude: string;
+    }>(`
+      select id, name, latitude, longitude
+      from stores
+      where latitude is not null and longitude is not null
+    `);
+    let attached = 0;
+    for (const store of catalogStores) {
+      const mapRow = findSavedStoreForOfficialPin({
+        stores: saved.rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          latitude: Number(row.latitude),
+          longitude: Number(row.longitude),
+        })),
+        name: store.name,
+        latitude: store.latitude,
+        longitude: store.longitude,
+        chainHint: "publix",
+        radiusMiles: CATALOG_COLLOCATED_MERGE_MILES,
+      });
+      if (!mapRow) {
+        continue;
+      }
+      attached += await attachOfficialDetailsToStore({
+        storeId: mapRow.id,
+        addressLine: store.addressLine,
+        postalCode: store.postalCode,
+        sourceStoreId: store.sourceStoreId,
+      });
+    }
 
     return {
-      upserted,
-      message: `Publix store locator mapped ${catalogStores.length} context store(s) for ZIP ${input.zipCode}.`,
-      retiredAtlee: retirement.deletedStore,
-      retiredOsmDuplicates: osmRetirement.deletedStoreIds.length,
+      upserted: attached,
+      message: `Publix store locator filled in ${attached} saved building(s) for ZIP ${input.zipCode}.`,
+      retiredAtlee: false,
+      retiredOsmDuplicates: 0,
     };
   } catch (error) {
     logServerError("publix-catalog-sync", error);

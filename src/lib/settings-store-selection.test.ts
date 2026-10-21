@@ -118,7 +118,7 @@ describe("filterSettingsSelectableStores", () => {
     ]);
   });
 
-  it("omits convenience, bakeries, specialty, and independent OSM grocery leftovers", () => {
+  it("omits convenience, bakeries, and specialty shops and keeps a grocery", () => {
     const filtered = filterSettingsSelectableStores([
       store({ id: "snack-1", name: "Snack Shop", chain: "unknown", kind: "grocery" }),
       store({ id: "dash-1", name: "Dash In", chain: "unknown", kind: "specialty" }),
@@ -145,7 +145,7 @@ describe("filterSettingsSelectableStores", () => {
       }),
     ]);
 
-    expect(filtered.map((entry) => entry.id)).toEqual(["kroger-1"]);
+    expect(filtered.map((entry) => entry.id)).toEqual(["kroger-1", "joes-1"]);
   });
 
   it("prefers non-OSM Kroger rows when catalog stores exist", () => {

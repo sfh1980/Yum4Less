@@ -55,4 +55,4 @@ Do not say we added more dinners because Check ZIP or Slice D looks cleaner.
 
 ## Not this checklist
 
-No **Run intake now** button. The morning job turns on up to 3 nearby off-ZIPs every other day after a finished night. You can still type a ZIP and Activate it yourself. The night job stays ZIP-shape, not the shopper circle.
+No **Run intake now** button. The morning job turns on up to 3 surrounding off-ZIPs every other day after a finished night. Surrounding means the Census outline touches a ZIP that is already on. The 8-mile circle stays the shopper's nearby area. You can still type a ZIP and Activate it yourself. The night job stays the same six steps for every ZIP that is on.

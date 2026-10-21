@@ -196,8 +196,27 @@ export function isRecognizedGroceryBannerPin(input: GroceryPinInput): boolean {
   );
 }
 
+const KEPT_GROCERY_SHOP_TAGS = ["supermarket", "greengrocer", "wholesale"] as const;
+
+/**
+ * A map pin the shopper and the night job keep: supermarket, grocery, or
+ * warehouse club. Convenience, bakery, and specialty names stay out.
+ * A familiar chain name is not required.
+ */
+export function isKeptGroceryBuilding(input: GroceryPinInput): boolean {
+  if (isMapOnlyFoodRetailPin(input) || isPharmacyPin(input.name)) {
+    return false;
+  }
+  const shop = input.shopTag?.trim().toLowerCase() ?? "";
+  if (KEPT_GROCERY_SHOP_TAGS.includes(shop as (typeof KEPT_GROCERY_SHOP_TAGS)[number])) {
+    return true;
+  }
+  const kind = input.kind?.trim().toLowerCase() ?? "";
+  return kind === "grocery" || kind === "big-box" || kind === "dollar-market";
+}
+
 export function isGroceryPinForDensity(input: GroceryPinInput): boolean {
-  return isRecognizedGroceryBannerPin(input);
+  return isKeptGroceryBuilding(input);
 }
 
 export function isOwnerCheckListedPin(input: GroceryPinInput): boolean {
@@ -207,7 +226,7 @@ export function isOwnerCheckListedPin(input: GroceryPinInput): boolean {
   if (isPharmacyPin(input.name)) {
     return true;
   }
-  return isRecognizedGroceryBannerPin(input);
+  return isKeptGroceryBuilding(input);
 }
 
 export function classifyOwnerAdmissionGroup(name: string): OwnerAdmissionGroup {
@@ -237,7 +256,7 @@ export function formatOmittedPinsNotice(omittedCount: number): string | undefine
   if (omittedCount <= 0) {
     return undefined;
   }
-  return `Omitted ${omittedCount} convenience, bakery, specialty, or independent pin(s) (not listed).`;
+  return `Omitted ${omittedCount} convenience, bakery, or specialty pin(s) (not listed).`;
 }
 
 export function formatDensityHeadline(input: {

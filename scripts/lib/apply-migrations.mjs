@@ -323,6 +323,11 @@ export function migrationEffectPresent(version, db) {
         db.tableExists("morning_external_checks") &&
         db.tableExists("morning_zip_adds")
       );
+    case "040":
+      return (
+        db.columnExists("zip_geocode_cache", "touching_zips") &&
+        db.columnExists("zip_geocode_cache", "touching_zips_fetched_at")
+      );
     default:
       return false;
   }

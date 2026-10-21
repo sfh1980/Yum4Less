@@ -4,14 +4,7 @@ import { fetchWithRetries } from "@/lib/weekly-ad-ingestion/weekly-ad-fetch-help
 export const FLIPP_WEEKLY_AD_SEARCH_URL =
   "https://backflipp.wishabi.com/flipp/items/search";
 
-export type FlippWeeklyAdMerchantName =
-  | "Kroger"
-  | "Walmart"
-  | "Publix"
-  | "ALDI"
-  | "Food Lion"
-  | "Lidl"
-  | "Dollar General";
+export type FlippWeeklyAdMerchantName = string;
 
 export type FlippWeeklyAdItem = {
   name?: string;

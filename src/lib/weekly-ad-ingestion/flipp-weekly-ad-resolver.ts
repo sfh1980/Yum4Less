@@ -9,16 +9,13 @@ import {
 } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { getWeeklyAdIngredientSearchTerms } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-search-terms";
 import { matchWeeklyAdOffers } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
-import type {
-  WeeklyAdChain,
-  WeeklyAdRawOffer,
-} from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
+import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 /** Cap per-chain Flipp ingredient lookups to keep scheduled ingest bounded. */
 export const FLIPP_SUPPLEMENTAL_MAX_SEARCH_TERMS = 30;
 
 export async function resolveFlippWeeklyAdOffersForChain(input: {
-  chain: WeeklyAdChain;
+  chain: string;
   zipCode: string;
   merchantName: FlippWeeklyAdMerchantName;
   trackedIngredientIds: string[];
@@ -108,7 +105,7 @@ export function buildSupplementalFlippSearchTermsForIngredients(
 }
 
 function listUnmatchedTrackedIngredientIds(
-  chain: WeeklyAdChain,
+  chain: string,
   rawOffers: WeeklyAdRawOffer[],
   trackedIngredientIds: string[],
   catalogIngredients?: CatalogIngredient[],

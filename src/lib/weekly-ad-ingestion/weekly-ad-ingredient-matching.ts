@@ -24,7 +24,7 @@ export function weeklyAdMatchFieldsFromIngest(input: WeeklyAdIngestionInput): {
 }
 
 export function matchWeeklyAdOffers(input: {
-  chain: WeeklyAdOffer["chain"];
+  chain: string;
   storeId: string;
   sourceUrl: string;
   observedAt: string;
@@ -87,7 +87,7 @@ export function matchWeeklyAdOffers(input: {
     }
 
     offers.push({
-      chain: input.chain,
+      chain: input.chain as WeeklyAdOffer["chain"],
       storeId: input.storeId,
       ingredientId: bestMatch?.ingredientId,
       productName: rawOffer.productName,

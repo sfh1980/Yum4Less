@@ -273,7 +273,7 @@ async function previewNearbyStores(input: {
     }
     if (ingestPreview.total > OWNER_MARKET_PREVIEW_STORE_LIMIT) {
       warnings.push(
-        `Showing ${OWNER_MARKET_PREVIEW_STORE_LIMIT} of ${ingestPreview.total} pins inside this ZIP (ranked banners first). This first look is not a full ingest catalog.`,
+        `Showing ${OWNER_MARKET_PREVIEW_STORE_LIMIT} of ${ingestPreview.total} pins inside this ZIP, in name order. The rest are left off this first look.`,
       );
     }
     if (neighborPreview.stores.length > 0) {

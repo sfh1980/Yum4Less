@@ -82,25 +82,21 @@ export function mergeOffZipCounts(
 }
 
 export function pickMorningZipCandidates(input: {
-  offZips: readonly { zipCode: string; storeCount: number }[];
+  zipCodes: readonly string[];
   activeZipCodes: ReadonlySet<string>;
   alreadyAdded: ReadonlySet<string>;
   limit?: number;
 }): string[] {
   const limit = input.limit ?? MORNING_ZIP_BATCH;
-  return [...input.offZips]
+  return [...new Set(input.zipCodes.map((zipCode) => zipCode.trim()))]
     .filter(
-      (row) =>
-        ZIP5.test(row.zipCode) &&
-        !input.activeZipCodes.has(row.zipCode) &&
-        !input.alreadyAdded.has(row.zipCode),
+      (zipCode) =>
+        ZIP5.test(zipCode) &&
+        !input.activeZipCodes.has(zipCode) &&
+        !input.alreadyAdded.has(zipCode),
     )
-    .sort(
-      (a, b) =>
-        b.storeCount - a.storeCount || a.zipCode.localeCompare(b.zipCode),
-    )
-    .slice(0, limit)
-    .map((row) => row.zipCode);
+    .sort((a, b) => a.localeCompare(b))
+    .slice(0, limit);
 }
 
 export function judgeShopperProbe(input: {
@@ -165,6 +161,7 @@ export type MorningReportInput = {
   zipResults: readonly { zipCode: string; outcome: ZipProbeOutcome }[];
   nearbyLeft: boolean;
   discordConfigured: boolean;
+  chainsWithoutSaleSource?: readonly string[];
   cloudflare?: CloudflareMorningFacts;
 };
 
@@ -190,7 +187,7 @@ export function composeMorningReport(input: MorningReportInput): {
       `Added ${count} ${count === 1 ? "area" : "areas"}. They will be checked after tonight.`,
     );
   } else if (input.addSkipped === "none-left") {
-    lines.push("No nearby areas are left to add.");
+    lines.push("No surrounding areas are left to add.");
   } else if (input.addSkipped === "last-night") {
     lines.push("No new areas were added.");
   } else if (input.addSkipped === "not-add-day") {
@@ -207,7 +204,14 @@ export function composeMorningReport(input: MorningReportInput): {
   }
 
   if (input.addDay && input.addSkipped !== "none-left" && input.nearbyLeft) {
-    lines.push("Nearby areas are still left.");
+    lines.push("Surrounding areas are still left.");
+  }
+
+  for (const chainName of input.chainsWithoutSaleSource ?? []) {
+    const name = chainName.trim();
+    if (name) {
+      lines.push(`${name} has no sale source.`);
+    }
   }
 
   const cloudflare = input.cloudflare
@@ -228,6 +232,7 @@ export function composeMorningReport(input: MorningReportInput): {
     !input.pricesFresh ||
     input.addSkipped === "last-night" ||
     input.addSkipped === "none-left" ||
+    (input.chainsWithoutSaleSource?.length ?? 0) > 0 ||
     input.addErrors.length > 0 ||
     input.zipResults.some((row) => row.outcome === "failed") ||
     !input.discordConfigured ||
@@ -323,12 +328,14 @@ function otherMorningLineNeedsAttention(line: string): boolean {
     line === "Prices are not from the last day." ||
     line === "No new areas were added." ||
     line === "No nearby areas are left to add." ||
+    line === "No surrounding areas are left to add." ||
     line === "Cloudflare was not checked." ||
     line === "The tunnel was not connected." ||
     line === "The tunnel was not fully connected." ||
     /^Cloudflare saw \d+ errors?\.$/.test(line) ||
     line.startsWith("Could not add ") ||
     line.includes("could not be listed") ||
+    line.endsWith("has no sale source.") ||
     line.includes("did not answer")
   );
 }

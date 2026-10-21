@@ -310,15 +310,17 @@ describe("owner ingest markets", () => {
     if (!inspected.ok) {
       return;
     }
-    expect(inspected.result.stores[0]).toMatchObject({
-      name: "Kroger",
+    expect(inspected.result.stores.map((store) => store.name)).toEqual([
+      "Joe's",
+      "Kroger",
+    ]);
+    expect(inspected.result.stores.find((store) => store.name === "Kroger")).toMatchObject({
       city: "Richmond",
       state: "VA",
       localityIsApproximate: false,
     });
-    expect(inspected.result.stores.map((store) => store.name)).toEqual(["Kroger"]);
     expect(inspected.result.warnings.join(" ")).toMatch(
-      /Omitted 3 convenience, bakery, specialty, or independent/i,
+      /Omitted 2 convenience, bakery, or specialty/i,
     );
   });
 

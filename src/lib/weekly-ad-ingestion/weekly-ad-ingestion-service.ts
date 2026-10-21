@@ -33,6 +33,7 @@ import type {
   WeeklyAdIngestionResult,
   WeeklyAdOfferSyncSummary,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
+import { tryDiscoveredChainFlyers } from "@/lib/weekly-ad-ingestion/discovered-chain-flyer";
 import { rejectPendingReviewsMatchingJunk } from "@/lib/owner/ingredient-review-repository";
 import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
 import { logServerError } from "@/lib/server-log";
@@ -182,6 +183,11 @@ export async function runWeeklyAdIngestionForStores(input: {
   }
 
   if (input.persistToDatabase && !isFixtureIngestMode()) {
+    await tryDiscoveredChainFlyers({
+      zipCode,
+      stores: input.nearbyStores,
+      trackedIngredientIds,
+    });
     try {
       const heal = await rejectPendingReviewsMatchingJunk();
       if (heal.rejected > 0) {

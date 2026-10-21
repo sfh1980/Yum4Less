@@ -6,7 +6,7 @@ import {
   membershipFromShopperRankedIds,
   type ChainMembershipSnapshot,
 } from "@/lib/chain-membership";
-import { isRecognizedGroceryBannerPin } from "@/lib/owner/owner-market-admission";
+import { isKeptGroceryBuilding } from "@/lib/owner/owner-market-admission";
 import {
   isFixtureOsmCatalogSource,
   isFixtureOsmStoreId,
@@ -69,7 +69,7 @@ function isShopperSettingsGroceryPin(store: NearbyStoreSummary): boolean {
   if (isShopperExcludedMapFixture(store)) {
     return false;
   }
-  return isRecognizedGroceryBannerPin({
+  return isKeptGroceryBuilding({
     name: store.name,
     kind: store.kind,
   });
@@ -90,10 +90,9 @@ function orderedDedupeKeys(
 }
 
 /**
- * Stores eligible for the Settings / wizard picker — recognized supermarket,
- * club, and dollar banners in radius (plus Target / Whole Foods), not the
- * TypeScript ranked-chain allowlist. Omit convenience, bakeries, specialty,
- * pharmacies, independent OSM grocery leftovers, and map fixtures. Per dedupe
+ * Stores eligible for the Settings / wizard picker — supermarket, grocery,
+ * and warehouse-club buildings in radius. Omit convenience, bakeries,
+ * specialty shops, pharmacies, and map fixtures. Per dedupe
  * key, keep catalog rows and include live OSM pins unless a catalog row is
  * already within 1.5 mi. Dinner estimates still require recommendationEnabled
  * / promotion floors.

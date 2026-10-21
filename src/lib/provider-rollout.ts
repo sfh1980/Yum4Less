@@ -42,6 +42,7 @@ export type WeeklyAdRolloutContext = {
   weeklyAdPromotionPassed: boolean;
   krogerOfficialApiPromotionPassed?: boolean;
   freshOfficialApiMatchedCount?: number;
+  label?: string;
 };
 
 const PROVIDER_ROLLOUT: Record<StoreChain, ProviderRolloutEntry> = {
@@ -184,12 +185,13 @@ function resolveProviderRolloutForBase(
 ): ProviderRolloutEntry {
   if (weeklyAdContext?.weeklyAdPromotionPassed) {
     const matched = weeklyAdContext.matchedIngredientCount;
+    const label = weeklyAdContext.label ?? base.label;
     const note =
       base.chain === "dollar-general"
         ? `These Dollar General prices are from a weekly ad for this ZIP, not this store (${matched} matching items). Check the price, package size, and tags in the store.`
         : base.chain === "lidl"
           ? `These Lidl prices are from a weekly ad for this ZIP, not this store (${matched} matching items). Check the price in the store.`
-          : `${base.label} meal prices use saved sale prices (${matched} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`;
+          : `${label} meal prices use saved sale prices (${matched} matched ingredients). Totals are estimated—verify price, package size, and tags in store before checkout.`;
     return {
       ...base,
       status: "weekly-ad-preview",

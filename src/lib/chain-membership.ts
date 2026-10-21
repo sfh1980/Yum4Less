@@ -3,10 +3,18 @@
  * Production loads this from `chain_registry`. Floors (match count, confidence)
  * stay in code.
  */
+export type SaleFeedChain = {
+  chainId: string;
+  displayName: string;
+  nameMatchFragments: readonly string[];
+};
+
 export type ChainMembershipSnapshot = {
   shopperRankedChainIds: readonly string[];
   settingsSelectableChainIds: readonly string[];
   weeklyAdEligibleChainIds: readonly string[];
+  /** Chains whose flyer feed has already saved sale prices. */
+  saleFeedChains?: readonly SaleFeedChain[];
 };
 
 /**
@@ -64,6 +72,9 @@ export function membershipFromRegistryRows(
     shopperRanked: boolean;
     settingsSelectable: boolean;
     weeklyAdEligible: boolean;
+    displayName?: string;
+    nameMatchFragments?: readonly string[];
+    saleDiscoveryStrategy?: string;
   }[],
 ): ChainMembershipSnapshot {
   return {
@@ -76,7 +87,37 @@ export function membershipFromRegistryRows(
     weeklyAdEligibleChainIds: rows
       .filter((row) => row.weeklyAdEligible)
       .map((row) => row.chainId),
+    saleFeedChains: rows
+      .filter((row) => row.saleDiscoveryStrategy === "flipp")
+      .map((row) => ({
+        chainId: row.chainId,
+        displayName: row.displayName ?? row.chainId,
+        nameMatchFragments: row.nameMatchFragments ?? [],
+      })),
   };
+}
+
+export function matchSaleFeedChainByName(
+  name: string,
+  chains: readonly SaleFeedChain[] | undefined,
+): SaleFeedChain | undefined {
+  const normalized = name.trim().toLowerCase();
+  if (!normalized || !chains) {
+    return undefined;
+  }
+  let best: SaleFeedChain | undefined;
+  let bestLength = 2;
+  for (const chain of chains) {
+    const needles = [chain.displayName, ...chain.nameMatchFragments];
+    for (const fragment of needles) {
+      const needle = fragment.trim().toLowerCase();
+      if (needle.length > bestLength && normalized.includes(needle)) {
+        best = chain;
+        bestLength = needle.length;
+      }
+    }
+  }
+  return best;
 }
 
 export function membershipFromShopperRankedIds(

@@ -3,7 +3,8 @@ import { resetDbPoolForTests } from "@/lib/db";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { runAfterUpdateChecks } from "@/lib/owner/after-update-repository";
 import { activateOwnerIngestMarket } from "@/lib/owner/ingest-markets";
-import { buildOwnerMarketReach } from "@/lib/owner/market-reach-repository";
+import { listDiscoveredChainsWithoutSaleSource } from "@/lib/chain-registry-ensure";
+import { listSurroundingZipCodes } from "@/lib/owner/surrounding-zips";
 import { fetchCloudflareMorning } from "@/lib/owner/cloudflare-morning-client";
 import { postMorningDiscord } from "@/lib/owner/morning-discord";
 import {
@@ -11,7 +12,6 @@ import {
   composeMorningReport,
   isDiscordWebhookUrl,
   isMorningZipAddDay,
-  mergeOffZipCounts,
   morningReportDate,
   morningWeekday,
   outsideChecksAreReported,
@@ -107,31 +107,31 @@ export async function runMorningReport(): Promise<void> {
   } else if (!lastNightOk) {
     addSkipped = "last-night";
   } else {
-    const groups: { zipCode: string; storeCount: number }[][] = [];
-    for (const market of active) {
-      const reach = await buildOwnerMarketReach(market.zipCode);
-      if (reach.ok) {
-        groups.push(
-          reach.reach.offZips.map((zip) => ({
-            zipCode: zip.zipCode,
-            storeCount: zip.storeCount,
-          })),
-        );
-      }
+    const blockedZipCodes = new Set(
+      markets
+        .filter((market) => market.status === "active" || market.status === "paused")
+        .map((market) => market.zipCode),
+    );
+    for (const zipCode of alreadyAdded) {
+      blockedZipCodes.add(zipCode);
     }
-    if (active.length > 0 && groups.length === 0) {
-      addErrors.push("Nearby areas could not be listed.");
+    const surrounding = await listSurroundingZipCodes({
+      activeZipCodes: active.map((market) => market.zipCode),
+      blockedZipCodes,
+    });
+    if (!surrounding.ok) {
+      addErrors.push("Surrounding areas could not be listed.");
     } else {
-    const offZips = mergeOffZipCounts(groups);
+    const offZips = surrounding.zipCodes;
     const candidates = pickMorningZipCandidates({
-      offZips,
+      zipCodes: offZips,
       activeZipCodes,
       alreadyAdded,
     });
     nearbyLeft =
       offZips.filter(
-        (zip) =>
-          !activeZipCodes.has(zip.zipCode) && !alreadyAdded.has(zip.zipCode),
+        (zipCode) =>
+          !activeZipCodes.has(zipCode) && !alreadyAdded.has(zipCode),
       ).length > candidates.length;
     if (candidates.length === 0) {
       addSkipped = "none-left";
@@ -154,6 +154,9 @@ export async function runMorningReport(): Promise<void> {
     }
   }
 
+  const chainsWithoutSaleSource = await listDiscoveredChainsWithoutSaleSource().catch(
+    () => [],
+  );
   const cloudflare = await fetchCloudflareMorning();
   let note = composeMorningReport({
     weekday,
@@ -168,6 +171,7 @@ export async function runMorningReport(): Promise<void> {
     zipResults,
     nearbyLeft,
     discordConfigured,
+    chainsWithoutSaleSource,
     ...(cloudflare ? { cloudflare } : {}),
   });
 

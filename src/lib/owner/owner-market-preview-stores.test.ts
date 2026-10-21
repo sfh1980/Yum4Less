@@ -44,7 +44,7 @@ describe("owner market preview stores", () => {
     ).toBe("Food Lion · near Mechanicsville, VA");
   });
 
-  it("lists ranked banners before convenience OSM pins", () => {
+  it("lists buildings in name order", () => {
     const preview = buildOwnerMarketPreviewList({
       catalogStores: [],
       osmStores: [
@@ -74,9 +74,9 @@ describe("owner market preview stores", () => {
       limit: 20,
     });
 
-    expect(preview.stores[0]?.name).toBe("Kroger");
-    expect(preview.stores[1]?.name).toBe("7-Eleven");
-    expect(preview.stores[1]?.localityIsApproximate).toBe(true);
+    expect(preview.stores[0]?.name).toBe("7-Eleven");
+    expect(preview.stores[0]?.localityIsApproximate).toBe(true);
+    expect(preview.stores[1]?.name).toBe("Kroger");
   });
 
   it("prefers ingested catalog city/state over a nearby OSM twin", () => {

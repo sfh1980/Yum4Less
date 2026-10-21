@@ -20,6 +20,7 @@ import { isDinnerEligibleForNearbyMarket } from "@/lib/dollar-general-dinner-eli
 import {
   FIXTURE_CHAIN_MEMBERSHIP,
   isShopperRankedChain,
+  matchSaleFeedChainByName,
   type ChainMembershipSnapshot,
 } from "@/lib/chain-membership";
 import { loadChainMembership } from "@/lib/chain-membership-repository";
@@ -353,6 +354,7 @@ export function buildNearbyStoresForSearch(
   return stores
     .map((store) => {
       const baseRollout = getProviderRolloutForCatalogStore(store);
+      const saleFeed = matchSaleFeedChainByName(store.name, membership.saleFeedChains);
       const equivalentStoreIds = new Set(
         expandStoreIdsForRead(lookup, [store.id], env),
       );
@@ -362,6 +364,9 @@ export function buildNearbyStoresForSearch(
         priceObservations,
         recipeIngredientIds,
         equivalentStoreIds,
+        ...(saleFeed
+          ? { priceSourceName: `${saleFeed.chainId}-weekly-ad-scrape` }
+          : {}),
       });
       const officialApiCoverage =
         baseRollout.chain === "kroger"
@@ -371,10 +376,15 @@ export function buildNearbyStoresForSearch(
               equivalentStoreIds,
             })
           : null;
-      const rankedEligible = isShopperRankedChain(membership, baseRollout.chain);
+      const rankedEligible =
+        isShopperRankedChain(membership, baseRollout.chain) || Boolean(saleFeed);
       const weeklyAdPromotionPassed =
         rankedEligible &&
-        weeklyAdPromotionGatesPass(coverage, baseRollout.chain, membership) &&
+        weeklyAdPromotionGatesPass(
+          coverage,
+          saleFeed?.chainId ?? baseRollout.chain,
+          membership,
+        ) &&
         isDinnerEligibleForNearbyMarket({
           chain: baseRollout.chain,
           nearbyChains,
@@ -384,6 +394,7 @@ export function buildNearbyStoresForSearch(
         matchedIngredientCount: coverage.matchedIngredientCount,
         usesWeeklyAdSource: coverage.usesWeeklyAdSource,
         weeklyAdPromotionPassed,
+        ...(saleFeed ? { label: saleFeed.displayName } : {}),
         krogerOfficialApiPromotionPassed:
           rankedEligible &&
           officialApiCoverage !== null &&

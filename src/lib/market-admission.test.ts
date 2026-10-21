@@ -139,7 +139,13 @@ describe("market admission helpers", () => {
     expect(
       isGroceryPinForDensity({ name: "Capt Gregs Seafood", kind: "grocery" }),
     ).toBe(false);
-    expect(isGroceryPinForDensity({ name: "Joe's", kind: "grocery" })).toBe(false);
+    expect(isGroceryPinForDensity({ name: "Joe's", kind: "grocery" })).toBe(true);
+    expect(
+      isGroceryPinForDensity({ name: "Winn-Dixie", kind: "grocery", shopTag: "supermarket" }),
+    ).toBe(true);
+    expect(
+      isGroceryPinForDensity({ name: "Costco", shopTag: "wholesale" }),
+    ).toBe(true);
     expect(isGroceryPinForDensity({ name: "Kroger", kind: "grocery" })).toBe(true);
     expect(
       isGroceryPinForDensity({ name: "Whole Foods Market", kind: "grocery" }),
