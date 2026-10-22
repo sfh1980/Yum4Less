@@ -228,6 +228,22 @@ describe("migrationEffectPresent", () => {
             : "0",
       }),
     ).toBe(true);
+    expect(
+      migrationEffectPresent("041", {
+        ...db,
+        columnExists: (table, column) =>
+          table === "zip_geocode_cache" && column === "touching_zips",
+        queryScalar: () => "0",
+      }),
+    ).toBe(true);
+    expect(
+      migrationEffectPresent("041", {
+        ...db,
+        columnExists: (table, column) =>
+          table === "zip_geocode_cache" && column === "touching_zips",
+        queryScalar: () => "15",
+      }),
+    ).toBe(false);
   });
 
   it("has an effect probe for every db/init migration file", () => {

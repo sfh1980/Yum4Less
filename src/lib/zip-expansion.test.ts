@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTouchingZctaCodes } from "@/lib/geo/zcta-neighbors";
+import { parseTouchingZctaCodes, readTouchingZctaResponse, usableTouchingZipList, ZCTA_NEIGHBOR_SPATIAL_REL } from "@/lib/geo/zcta-neighbors";
 import {
   chainIdFromDisplayName,
   matchChainIdByName,
@@ -21,6 +21,29 @@ describe("surrounding ZIP codes", () => {
         "23220",
       ),
     ).toEqual(["23221", "23227"]);
+  });
+
+  it("asks Census for outlines that intersect, and drops the ZIP itself", () => {
+    expect(ZCTA_NEIGHBOR_SPATIAL_REL).toBe("esriSpatialRelIntersects");
+    expect(
+      readTouchingZctaResponse(
+        {
+          features: [
+            { attributes: { ZCTA5: "23220" } },
+            { attributes: { ZCTA5: "23219" } },
+          ],
+        },
+        "23220",
+      ),
+    ).toEqual({ ok: true, zipCodes: ["23219"] });
+  });
+
+  it("does not keep an empty neighbor list or a Census error", () => {
+    expect(usableTouchingZipList([])).toBeNull();
+    expect(usableTouchingZipList(null)).toBeNull();
+    expect(usableTouchingZipList(["23219"])).toEqual(["23219"]);
+    expect(readTouchingZctaResponse({ error: { code: 400 } }, "23220").ok).toBe(false);
+    expect(readTouchingZctaResponse({}, "23220").ok).toBe(false);
   });
 });
 

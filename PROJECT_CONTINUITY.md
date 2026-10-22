@@ -4,9 +4,9 @@
 
 ---
 
-## Resume (as of 2026-10-20)
+## Resume (as of 2026-10-22)
 
-**Morning note:** One plain-language note each morning, same words in Discord and on `/owner` **This morning**. A late GitHub result rewrites that morning’s note and sends Discord once. That behavior is on yum4less.com. Clocks stay at 5:20am, 8:15am, and 9:15am. On an add morning the job turns on up to 3 ZIP codes whose Census outline touches a ZIP that is already on, in numeric order. The 8-mile circle stays the shopper picture. A new supermarket, grocery, or warehouse club is saved. Convenience, bakery, and specialty shops are skipped. A new chain name is remembered as map-only until the shared flyer feed returns a flyer. The night job is still the same six steps. A pass is not more dinners. Not live until the image is published and `040` is applied. The ingest service can add one Cloudflare line once that image is pulled.
+**Morning note:** One plain-language note each morning, same words in Discord and on `/owner` **This morning**. A late GitHub result rewrites that morning’s note and sends Discord once. That behavior is on yum4less.com. Clocks stay at 5:20am, 8:15am, and 9:15am. On an add morning the job turns on up to 3 ZIP codes whose Census outline touches a ZIP that is already on, in numeric order. The 8-mile circle stays the shopper picture. A new supermarket, grocery, or warehouse club is saved. Convenience, bakery, and specialty shops are skipped. A new chain name is remembered as map-only until the shared flyer feed returns a flyer. The night job is still the same six steps. A pass is not more dinners. Owner paste **2026-10-22:** `040` is applied (`applied_at` **2026-10-21 07:00:02Z**). Thursday’s add found no ZIP because Census “touches” had saved **15** empty neighbor lists. The repo now asks for intersecting outlines, ignores an empty saved list, and `041` clears those empty lists at the next 3am migrate. Not on yum4less.com until the ingest image is published and Watchtower pulls it. The ingest service can add one Cloudflare line once that image is pulled.
 
 **Owner lock:** Membership cutover **shipped in code** — `chain_registry` drives who we *attempt* for dinners / fail-loud ingest; **floors stay in code**. **Adapters do not hardcode stores/ZIPs/rosters** — Postgres holds those facts (`.cursor/rules/yum4less-db-owned-data.mdc`). Thin sale coverage ⇒ pin stays tracked, dinners stay off. **Lidl lock (2026-09-03):** map/context only until a store-bound sale feed exists — no ranked dinners, no store-finder scrape work. **Dollar General (2026-09-03):** Flipp-first ZIP circular ingest; directional sales can show without dinners; dinner totals only when **no other shopper-ranked grocer is nearby** and the **same** floors pass (area circular, not that building’s shelf). Banner grain later via **shared adapter keys**. Owner Check brand lists stay research. **Ingest fence:** nightly ingest admits grocery pins in the **Census ZIP outline** with a **26 mi** safety cap — same set Owner Check lists. Shopper map stays pin + radius. Neighbor-ZIP pins on that map need those ZIPs Activated too. **Next product work:** Coverage leftovers in `23111` — Target and Whole Foods adapters shipped dinners-off; BJ's Flipp confirm done (map/context, thin absolute prices); **Walmart yield plan closed** (Flipp primary + junk SSOT + `/owner` Ingredient review; scrape only if Flipp empty); **Scale risk A closed** (client-trust API audit); **Cuisine chips R11 closed** (`033`); **Bright Data MCP usage paused**. Full open-task list → [`docs/open-work-inventory-2026-09-09.md`](docs/open-work-inventory-2026-09-09.md) (point-in-time; Resume stays live status). **Live yum4less.com app + ingest Watchtower-recreated 2026-09-14 21:43Z** (`ghcr.io/sfh1980/yum4less-app:homelab` + `yum4less-ingest:homelab` after `d3e9396` Clear obvious). Leftover-grocery ops **closed** 2026-09-15 (planner + button live; owner monitors `/owner` as needed). **Local 2026-09-16:** merch-class + simple-food classifier (mower/nightstand junk; apples/chicken breast/spam/papaya/sirloin food) is **not** on yum4less.com until CI ingest publish + Watchtower, then **Clear obvious**. Do **not** SQL-reject. Older same-day app recreate **19:43Z** was the store-list omit check. Older pair **2026-09-04** was app `55ad51dac9b6` / ingest `6b541e14fc3f`. Nightly worker **6/6 `succeeded`** every `run_date` **2026-08-31 through 2026-09-14** (**15** nights; enqueue ~**07:00:03Z** = 3am Eastern; owner paste-back 2026-09-14). Live `chain_registry` **2026-09-14:** shopper-ranked **kroger / aldi / publix / food-lion / walmart / dollar-general**; Lidl **map_context** (`shopper_ranked` false). Walmart weekly-ad in-stock **19** rows, **19** in 24h (newest **07:09:43Z**). Dollar General and Lidl **0** in-stock rows. Ledger **000–013, 015–031** (no `014` in repo); **`029`** applied **2026-08-30 07:00:03Z**; **`030`/`031`** **2026-09-03 23:59:42Z**. Prior full freshness **`[OK] 428/428`** was **2026-09-05** (not re-run this paste). Junk heal **2026-09-14: scanned=393 rejected=0 remaining=393**, then owner Yes/No **165** accepted / **231** pending; `owner:resolve-pending-reviews --apply` **yes=190 no=14 skip=27 applied_ok=204 applied_fail=0**. Dry-run **2026-09-15: yes=3 no=0 skip=34**. Local `yum4less_dev` **`active_markets`** is the 18-ZIP Richmond set booked **2026-10-06** (see Working today). Last confirmed yum4less.com pair remains **`23111`** + **`23220`** (2026-09-14 paste) until a box paste after a night that includes the new rows. TheMealDB **dev test key** is a known ops gap.
 
@@ -18,9 +18,9 @@
 
 **Provider integration pattern:** Reusable three-category model (store location / item pricing / sale discovery), per-source capability table, and new-chain audit checklist → [`docs/provider-integration-pattern.md`](docs/provider-integration-pattern.md). Kroger worked example → [`docs/audits/kroger-data-path-audit-2026-06-26.md`](docs/audits/kroger-data-path-audit-2026-06-26.md). Store-identity onboarding (Slice 6) → [`docs/store-identity-source-onboarding.md`](docs/store-identity-source-onboarding.md).
 
-**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`**. Wizard shopper UI is on **`master`**. Market-admission ingest image is on the box (worker drain 2026-08-30). Rollback: **`backup/settings-ui-plus-catalog`** (`38bad3a`, Settings-first + catalog) or older **`backup/pre-catalog-expansion-live`** / **`:800c450`**. Watchtower still does **not** migrate by itself. Live ledger includes **`024`** (`applied_at` **2026-08-24 07:00:02Z**), **`025`/`026`** (**2026-08-27 00:04:01Z**), **`027`/`028`** (**2026-08-28 07:00:02–03Z**), **`029`** (**2026-08-30 07:00:03Z**), and **`030`/`031`** (**2026-09-03 23:59:42Z**). New `db/init` files apply at **3am** ingest prep; hand `npm run db:migrate` on `yum4less-ingest` if you need them sooner.
+**Hosting:** Self-hosted TrueNAS SCALE — **Custom App `yum4less` (`db`+`app`+`ingest`) healthy**; **Watchtower** sibling up; **Cloudflare Tunnel** live at **`https://yum4less.com/`** (LAN `:3000` remains). Images on **`:homelab`**. Wizard shopper UI is on **`master`**. Market-admission ingest image is on the box (worker drain 2026-08-30). Rollback: **`backup/settings-ui-plus-catalog`** (`38bad3a`, Settings-first + catalog) or older **`backup/pre-catalog-expansion-live`** / **`:800c450`**. Watchtower still does **not** migrate by itself. Live ledger (owner paste **2026-10-22**, newest five rows): **`040`** `applied_at` **2026-10-21 07:00:02Z**, **`039`** **2026-10-13 07:00:02Z**, **`038`** **2026-10-03 07:00:02Z**, **`037`** **2026-09-30 07:00:02Z**, **`036`** **2026-09-26 07:00:03Z**. Older paste **2026-09-14** had **`024`** through **`031`**. New `db/init` files apply at **3am** ingest prep; hand `npm run db:migrate` on `yum4less-ingest` if you need them sooner.
 
-**Production-ranked focus:** **Kroger-family banners, Aldi, Publix, Food Lion, Walmart, Target, and Whole Foods** when daily ingest and promotion gates pass. **Dollar General** dinner totals only when it is the only shopper-ranked grocer nearby. **Lidl** dinner totals use a ZIP weekly ad, not that store. Same floors for every ranked banner. Missing estimates stay map context with an honest reason — not a permanent block. **BJ's** stays map/context. **Walmart yield plan closed** (Flipp + `/owner` review) — not a coupon/checkout path. Live still waits `035`/`036` migrate.
+**Production-ranked focus:** **Kroger-family banners, Aldi, Publix, Food Lion, Walmart, Target, and Whole Foods** when daily ingest and promotion gates pass. **Dollar General** dinner totals only when it is the only shopper-ranked grocer nearby. **Lidl** dinner totals use a ZIP weekly ad, not that store. Same floors for every ranked banner. Missing estimates stay map context with an honest reason — not a permanent block. **BJ's** stays map/context. **Walmart yield plan closed** (Flipp + `/owner` review) — not a coupon/checkout path. Live ledger through **`040`** (owner paste **2026-10-22**); **`036`** applied **2026-09-26 07:00:03Z**.
 
 **Owner ingest path:** `npm run setup:local` / `ingest:weekly-ads:scheduled` runs **map-catalog → weekly-ad → provider sync → TheMealDB** when `GEOCODIO_API_KEY` + Kroger credentials set. Fixture ingest requires `CI=true`, Vitest (`NODE_ENV=test`), or aligned `DATABASE_URL` + `DATABASE_URL_TEST`. Map-catalog fixtures write `fixture-osm-*` / `yum4less-map-fixture` only — never live Overpass identity.
 
@@ -35,6 +35,8 @@
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **Neighbor lookup for add mornings (2026-10-22, local):** Census neighbor queries use intersects. An empty `touching_zips` list is treated as not fetched and is not saved. `041_clear_empty_touching_zips.sql` clears empty lists only. `npm test` **1373/1373**. Integration **54/54** on `yum4less_test`. Not on yum4less.com until the ingest image is published and Watchtower pulls it. The 3am job then applies `041`. A pass is not more dinners.
 
 - **Vite pin for image publish (2026-10-20, local):** `5011fa7` did not publish. The high audit stopped on `vite` `8.0.16`. `overrides.vite` is now `8.3.4`, past the launch-editor advisory range (`8.0.0`–`8.1.5`). `npm run audit:high` exit 0. `npm test` **1371/1371**. Watchtower still has the `537a21e` image until this commit’s CI publishes. A pass is not more dinners.
 
@@ -300,6 +302,26 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-10-22 — Surrounding ZIP lookup uses intersecting outlines
+
+**Theme:** Thursday’s add morning stopped because Census “touches” saved empty neighbor lists.
+
+**Shipped:** The neighbor query uses `esriSpatialRelIntersects` and drops the ZIP itself. A saved empty list is a miss and is not written again. A Census error payload is a failure. `041_clear_empty_touching_zips.sql` sets empty `touching_zips` rows back to unset. Lists that already have neighbors stay.
+
+**Limits:** yum4less.com still runs the previous ingest image until Watchtower pulls this one. `041` runs at the next 3am migrate after that pull. Do not clear the 15 empty lists by hand before that image is on the box. A pass is not more dinners.
+
+**Evidence:** `npm test` **1373/1373** pass (246 files). `npm run test:integration` **54/54** pass (17 files) on `yum4less_test`. `npm run build` and `npm run test:e2e:ci` were not run. No shopper UI change.
+
+### 2026-10-22 — Live ledger through `040`
+
+**Theme:** Owner paste of the newest `schema_migrations` rows on yum4less.com.
+
+**Shipped:** `040_touching_zips.sql` applied **2026-10-21 07:00:02Z** (3am Eastern ingest prep). Also on the ledger: `039` **2026-10-13**, `038` **2026-10-03**, `037` **2026-09-30**, `036` **2026-09-26**. Watchtower did not apply them.
+
+**Limits:** The column is live. Thursday’s add morning still booked no ZIP. Owner paste the same day: `zip_geocode_cache` has **15** empty `touching_zips` lists, **3** with neighbors, and **0** not yet fetched. An empty list is kept, so those 15 are not looked up again. A pass is not more dinners.
+
+**Evidence:** Owner paste **2026-10-22** of `version, filename, applied_at` for `036`–`040`. No test run this turn.
 
 ### 2026-10-20 — Vite pin so the image can publish
 
@@ -3627,6 +3649,8 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (intersecting ZIP neighbors) | 2026-10-22 | **1373/1373** pass (246 files) |
+| `npm run test:integration` (migration `041`) | 2026-10-22 | **54/54** pass (17 files) on `yum4less_test` |
 | `npm run audit:high` (vite 8.3.4) | 2026-10-20 | **Exit 0.** `GHSA-587h-7wmj-h5pm` cleared. Braces exception still present. |
 | `npm test` (vite 8.3.4) | 2026-10-20 | **1371/1371** pass (246 files) |
 | `npm test` (surrounding ZIP expansion) | 2026-10-20 | **1371/1371** pass (246 files) |

@@ -6,7 +6,38 @@ import { logServerError } from "@/lib/server-log";
 const TIGERWEB_ZCTA_QUERY =
   "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/PUMA_TAD_TAZ_UGA_ZCTA/MapServer/1/query";
 
+/** Adjacent Census outlines overlap slightly, so "touches" returns no neighbors. */
+export const ZCTA_NEIGHBOR_SPATIAL_REL = "esriSpatialRelIntersects";
+
 const ZIP5 = /^\d{5}$/;
+
+/** A saved empty list is a miss. Census "touches" stored those for real ZIP codes. */
+export function usableTouchingZipList(
+  zipCodes: readonly string[] | null | undefined,
+): string[] | null {
+  if (!zipCodes || zipCodes.length === 0) {
+    return null;
+  }
+  const usable = zipCodes.filter((zipCode) => ZIP5.test(zipCode));
+  return usable.length > 0 ? usable.sort((a, b) => a.localeCompare(b)) : null;
+}
+
+export function readTouchingZctaResponse(
+  payload: unknown,
+  selfZip: string,
+): { ok: true; zipCodes: string[] } | { ok: false; error: string } {
+  if (!payload || typeof payload !== "object") {
+    return { ok: false, error: "Census touching-ZIP lookup returned no ZIP list." };
+  }
+  const record = payload as { error?: unknown; features?: unknown };
+  if (record.error) {
+    return { ok: false, error: "Census touching-ZIP lookup returned an error." };
+  }
+  if (!Array.isArray(record.features)) {
+    return { ok: false, error: "Census touching-ZIP lookup returned no ZIP list." };
+  }
+  return { ok: true, zipCodes: parseTouchingZctaCodes(payload, selfZip) };
+}
 
 export function parseTouchingZctaCodes(payload: unknown, selfZip: string): string[] {
   const found = new Set<string>();
@@ -49,7 +80,7 @@ export async function listTouchingZipCodes(input: {
     return { ok: false, error: "Touching ZIP lookup needs a 5-digit ZIP." };
   }
 
-  const cached = await readCachedTouchingZips(zipCode);
+  const cached = usableTouchingZipList(await readCachedTouchingZips(zipCode));
   if (cached) {
     return { ok: true, zipCodes: cached };
   }
@@ -79,7 +110,9 @@ export async function listTouchingZipCodes(input: {
   }
 
   const sorted = [...zipCodes].sort((a, b) => a.localeCompare(b));
-  await writeCachedTouchingZips(zipCode, sorted);
+  if (sorted.length > 0) {
+    await writeCachedTouchingZips(zipCode, sorted);
+  }
   return { ok: true, zipCodes: sorted };
 }
 
@@ -92,7 +125,7 @@ async function fetchTouchingZctas(input: {
     geometry: JSON.stringify({ rings: input.rings }),
     geometryType: "esriGeometryPolygon",
     inSR: "4326",
-    spatialRel: "esriSpatialRelTouches",
+    spatialRel: ZCTA_NEIGHBOR_SPATIAL_REL,
     outFields: "ZCTA5",
     returnGeometry: "false",
     f: "json",
@@ -113,10 +146,7 @@ async function fetchTouchingZctas(input: {
         error: `Census touching-ZIP lookup returned HTTP ${response.status}.`,
       };
     }
-    return {
-      ok: true,
-      zipCodes: parseTouchingZctaCodes(await response.json(), input.selfZip),
-    };
+    return readTouchingZctaResponse(await response.json(), input.selfZip);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { ok: false, error: `Census touching-ZIP lookup failed: ${message}` };
@@ -137,11 +167,7 @@ async function readCachedTouchingZips(zipCode: string): Promise<string[] | null>
       `,
       [zipCode],
     );
-    const zips = result.rows[0]?.touching_zips;
-    if (!zips) {
-      return null;
-    }
-    return zips.filter((zip) => ZIP5.test(zip)).sort((a, b) => a.localeCompare(b));
+    return usableTouchingZipList(result.rows[0]?.touching_zips);
   } catch {
     return null;
   }
@@ -151,7 +177,7 @@ async function writeCachedTouchingZips(
   zipCode: string,
   zipCodes: readonly string[],
 ): Promise<void> {
-  if (!process.env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL || zipCodes.length === 0) {
     return;
   }
   try {

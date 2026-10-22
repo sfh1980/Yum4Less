@@ -328,6 +328,17 @@ export function migrationEffectPresent(version, db) {
         db.columnExists("zip_geocode_cache", "touching_zips") &&
         db.columnExists("zip_geocode_cache", "touching_zips_fetched_at")
       );
+    case "041":
+      return (
+        db.columnExists("zip_geocode_cache", "touching_zips") &&
+        Number(
+          db.queryScalar(
+            `select count(*) from zip_geocode_cache
+             where touching_zips is not null
+               and cardinality(touching_zips) = 0`,
+          ),
+        ) === 0
+      );
     default:
       return false;
   }
