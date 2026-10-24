@@ -250,4 +250,38 @@ describe("OwnerMarketsPanel", () => {
     expect(screen.getByText("Store id 7003")).toBeInTheDocument();
     expect(screen.getAllByText("Turn this ZIP on.")).toHaveLength(1);
   });
+
+  it("lists a market that has no saved density", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/owner/markets")) {
+        return jsonOk({
+          ok: true,
+          markets: [
+            {
+              zipCode: "28269",
+              status: "active",
+              source: "ops",
+              priority: 1,
+              latitude: 35.33,
+              longitude: -80.79,
+              densityClass: null,
+              ingestMiles: null,
+              notes: null,
+              updatedAt: null,
+            },
+          ],
+          coverageShades: [],
+        });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnerMarketsPanel adminKey="secret-owner-key" />);
+
+    const row = await screen.findByRole("button", { name: "28269" });
+    expect(row.closest("li")?.textContent).toMatch(/28269\s*· active · ops/);
+    expect(row.closest("li")?.textContent).not.toMatch(/null|packed|urban|suburban|rural|mi/);
+  });
 });

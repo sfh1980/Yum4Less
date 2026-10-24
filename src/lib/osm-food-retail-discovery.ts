@@ -21,6 +21,17 @@ export type OsmFoodRetailDiscoveryResult = {
 
 /** Minimum spacing between Overpass requests (cron ingest and search-time discovery). */
 export const OSM_OVERPASS_MIN_INTERVAL_MS = 1_000;
+/** Shown when live Overpass is switched off. Not a failed lookup. */
+export const OSM_OVERPASS_DISABLED_MESSAGE =
+  "Store lookup was turned off on purpose.";
+
+/** True when live Overpass must not be called. Fixture rehearsal is unchanged. */
+export function isOsmOverpassDisabled(
+  value = process.env.YUM4LESS_OSM_OVERPASS_DISABLED,
+): boolean {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
 /** Live Overpass catalog provenance — never used for synthetic map fixtures. */
 export const OSM_MAP_CATALOG_SOURCE = "openstreetmap-overpass";
 /** Rehearsal map-fixture provenance — never written as live Overpass. */
@@ -139,6 +150,14 @@ export async function discoverFoodRetailStoresNearLocation(input: {
       source: "fixture",
       message:
         "Using deterministic OSM-style fixture stores for map catalog ingest (not live Overpass).",
+    };
+  }
+
+  if (isOsmOverpassDisabled()) {
+    return {
+      stores: [],
+      source: "openstreetmap-overpass",
+      message: OSM_OVERPASS_DISABLED_MESSAGE,
     };
   }
 

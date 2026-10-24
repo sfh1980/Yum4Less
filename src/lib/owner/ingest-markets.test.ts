@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ZipLookupResult } from "@/lib/geocoding";
+import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 
 const readIngestMarket = vi.fn();
 const upsertActiveMarket = vi.fn();
@@ -442,5 +443,87 @@ describe("owner ingest markets", () => {
       notes: "Activated by /owner Markets",
     });
     expect(rememberIngestZipGeocode).toHaveBeenCalled();
+  });
+
+  it("says the lookup was turned off and does not save a density", async () => {
+    resolveZipLocation.mockResolvedValue(geocodeOk());
+    readIngestMarket.mockResolvedValue({
+      zipCode: "23220",
+      status: "active",
+      priority: 100,
+      source: "ops",
+      latitude: 37.5467,
+      longitude: -77.4366,
+      notes: null,
+      densityClass: "urban",
+      ingestMiles: 9,
+      updatedAt: "2026-08-27T12:00:00.000Z",
+    });
+    discoverMapContextStores.mockResolvedValue({
+      stores: [],
+      sources: [
+        {
+          source: "openstreetmap-overpass",
+          stores: [],
+          message: OSM_OVERPASS_DISABLED_MESSAGE,
+        },
+      ],
+    });
+
+    const inspected = await inspectOwnerIngestMarket("23220");
+    expect(inspected.ok).toBe(true);
+    if (!inspected.ok) {
+      return;
+    }
+    expect(inspected.result.lookupTurnedOff).toBe(true);
+    expect(inspected.result.admission.densityClass).toBeNull();
+    expect(inspected.result.admission.headline).toBe(
+      `23220 · Richmond, VA · ${OSM_OVERPASS_DISABLED_MESSAGE} · already active`,
+    );
+    expect(inspected.result.warnings).toContain(OSM_OVERPASS_DISABLED_MESSAGE);
+    expect(inspected.result.warnings.join(" ")).not.toMatch(/failed|timed out/i);
+    expect(saveMarketDensity).not.toHaveBeenCalled();
+  });
+
+  it("activates a new ZIP without writing a density when lookup is turned off", async () => {
+    resolveZipLocation.mockResolvedValue(geocodeOk());
+    readIngestMarket.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      zipCode: "23220",
+      status: "active",
+      priority: 100,
+      source: "ops",
+      latitude: 37.5467,
+      longitude: -77.4366,
+      notes: "Activated by /owner Markets",
+      densityClass: null,
+      ingestMiles: null,
+      updatedAt: "2026-08-27T12:00:00.000Z",
+    });
+    discoverMapContextStores.mockResolvedValue({
+      stores: [],
+      sources: [
+        {
+          source: "openstreetmap-overpass",
+          stores: [],
+          message: OSM_OVERPASS_DISABLED_MESSAGE,
+        },
+      ],
+    });
+    upsertActiveMarket.mockResolvedValue(undefined);
+    rememberIngestZipGeocode.mockResolvedValue(undefined);
+
+    const activated = await activateOwnerIngestMarket("23220", {
+      notes: "Activated by the morning job",
+    });
+    expect(activated.ok).toBe(true);
+    expect(upsertActiveMarket).toHaveBeenCalledWith(
+      expect.objectContaining({
+        zipCode: "23220",
+        densityClass: null,
+        ingestMiles: null,
+        notes: "Activated by the morning job",
+      }),
+    );
+    expect(saveMarketDensity).not.toHaveBeenCalled();
   });
 });

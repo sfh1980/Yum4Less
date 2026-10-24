@@ -28,6 +28,7 @@ import {
   saveMorningReport,
 } from "@/lib/owner/morning-report-repository";
 import { probeShopperArea } from "@/lib/owner/morning-shopper-probe";
+import { isOsmOverpassDisabled } from "@/lib/osm-food-retail-discovery";
 
 loadEnvLocal();
 
@@ -172,6 +173,7 @@ export async function runMorningReport(): Promise<void> {
     nearbyLeft,
     discordConfigured,
     chainsWithoutSaleSource,
+    storeLookupTurnedOff: isOsmOverpassDisabled(),
     ...(cloudflare ? { cloudflare } : {}),
   });
 

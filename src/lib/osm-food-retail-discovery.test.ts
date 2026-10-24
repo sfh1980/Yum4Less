@@ -4,6 +4,8 @@ import {
   discoverFoodRetailStoresNearLocation,
   GROCERY_OSM_SHOP_TAG_ALLOWLIST,
   isAllowedGroceryOsmShopTag,
+  isOsmOverpassDisabled,
+  OSM_OVERPASS_DISABLED_MESSAGE,
   isTargetGroceryBannerName,
   parseOverpassElements,
   resolveOsmAddressLocality,
@@ -230,6 +232,65 @@ describe("osm food retail discovery", () => {
         delete process.env.YUM4LESS_OSM_OVERPASS_MAX_ATTEMPTS;
       } else {
         process.env.YUM4LESS_OSM_OVERPASS_MAX_ATTEMPTS = previousAttempts;
+      }
+    }
+  });
+
+  it("does not call Overpass when YUM4LESS_OSM_OVERPASS_DISABLED is set", async () => {
+    const previous = process.env.YUM4LESS_OSM_OVERPASS_DISABLED;
+    process.env.YUM4LESS_OSM_OVERPASS_DISABLED = "1";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const result = await discoverFoodRetailStoresNearLocation({
+        latitude: 37.6085,
+        longitude: -77.3321,
+        radiusMiles: 8,
+        zipCode: "28269",
+        useFixture: false,
+      });
+
+      expect(isOsmOverpassDisabled()).toBe(true);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        stores: [],
+        source: "openstreetmap-overpass",
+        message: OSM_OVERPASS_DISABLED_MESSAGE,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+      if (previous === undefined) {
+        delete process.env.YUM4LESS_OSM_OVERPASS_DISABLED;
+      } else {
+        process.env.YUM4LESS_OSM_OVERPASS_DISABLED = previous;
+      }
+    }
+  });
+
+  it("still returns fixture stores when the live lookup is turned off", async () => {
+    const previous = process.env.YUM4LESS_OSM_OVERPASS_DISABLED;
+    process.env.YUM4LESS_OSM_OVERPASS_DISABLED = "1";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const result = await discoverFoodRetailStoresNearLocation({
+        latitude: 37.6085,
+        longitude: -77.3321,
+        radiusMiles: 8,
+        useFixture: true,
+      });
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result.source).toBe("fixture");
+      expect(result.stores.length).toBeGreaterThan(0);
+    } finally {
+      vi.unstubAllGlobals();
+      if (previous === undefined) {
+        delete process.env.YUM4LESS_OSM_OVERPASS_DISABLED;
+      } else {
+        process.env.YUM4LESS_OSM_OVERPASS_DISABLED = previous;
       }
     }
   });

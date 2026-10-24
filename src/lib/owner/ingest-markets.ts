@@ -28,6 +28,7 @@ import {
   storePassesIngestFence,
 } from "@/lib/market-ingest-fence";
 import { discoverMapContextStores } from "@/lib/map-context-discovery";
+import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 import {
   formatDensityHeadline,
   formatOmittedPinsNotice,
@@ -78,6 +79,8 @@ export type OwnerMarketInspectResult = {
   stores: OwnerMarketStorePreview[];
   warnings: string[];
   admission: OwnerMarketAdmission;
+  /** True when this check did not call live store lookup. Density must not be saved. */
+  lookupTurnedOff: boolean;
   zctaGeometry: GeoJsonGeometry | null;
 };
 
@@ -107,6 +110,7 @@ async function previewNearbyStores(input: {
   stores: OwnerMarketStorePreview[];
   warnings: string[];
   admission: OwnerMarketAdmission;
+  lookupTurnedOff: boolean;
   zctaGeometry: GeoJsonGeometry | null;
 }> {
   const warnings: string[] = [];
@@ -118,6 +122,7 @@ async function previewNearbyStores(input: {
 
   let osmStores: OwnerMarketPreviewOsmCandidate[] = [];
   let osmLookupFailed = false;
+  let lookupTurnedOff = false;
 
   try {
     const discovery = await Promise.race([
@@ -135,6 +140,9 @@ async function previewNearbyStores(input: {
       }),
     ]);
     osmStores = discovery.stores;
+    lookupTurnedOff = discovery.sources.some(
+      (source) => source.message === OSM_OVERPASS_DISABLED_MESSAGE,
+    );
   } catch {
     osmLookupFailed = true;
   }
@@ -165,10 +173,12 @@ async function previewNearbyStores(input: {
     );
   }).length;
 
-  const classified = classifyAndMilesFromGroceryCount(groceryCountIn8Mi);
+  const classified = lookupTurnedOff
+    ? null
+    : classifyAndMilesFromGroceryCount(groceryCountIn8Mi);
   const ingestMiles = pickPersistedIngestMiles({
     savedMiles: input.savedIngestMiles,
-    computedMiles: classified.ingestMiles,
+    computedMiles: classified?.ingestMiles ?? INGEST_ZCTA_SAFETY_CAP_MILES,
   });
 
   const zcta = await resolveZctaGeometry({ zipCode: input.zipCode });
@@ -259,18 +269,20 @@ async function previewNearbyStores(input: {
     warnings.unshift(omittedNotice);
   }
 
-  if (stores.length === 0) {
+  if (lookupTurnedOff) {
+    warnings.push(OSM_OVERPASS_DISABLED_MESSAGE);
+  } else if (stores.length === 0) {
     warnings.push(
       osmLookupFailed
         ? "Store lookup timed out or failed. The ZIP can still be activated; coverage comes from the next ingest run."
         : "No grocery pins showed up in this first look. The ZIP can still be activated; coverage comes from the next ingest run.",
     );
-  } else {
-    if (osmLookupFailed) {
-      warnings.push(
-        "Live map lookup timed out or failed. Showing ingested catalog pins for this ZIP.",
-      );
-    }
+  } else if (osmLookupFailed) {
+    warnings.push(
+      "Live map lookup timed out or failed. Showing ingested catalog pins for this ZIP.",
+    );
+  }
+  if (stores.length > 0) {
     if (ingestPreview.total > OWNER_MARKET_PREVIEW_STORE_LIMIT) {
       warnings.push(
         `Showing ${OWNER_MARKET_PREVIEW_STORE_LIMIT} of ${ingestPreview.total} pins inside this ZIP, in name order. The rest are left off this first look.`,
@@ -289,23 +301,26 @@ async function previewNearbyStores(input: {
   }
 
   const admission: OwnerMarketAdmission = {
-    densityClass: classified.densityClass,
-    groceryCountIn8Mi,
+    densityClass: classified?.densityClass ?? null,
+    groceryCountIn8Mi: lookupTurnedOff ? 0 : groceryCountIn8Mi,
     ingestMiles,
     omittedCount: omitted.length,
-    headline: formatDensityHeadline({
-      zipCode: input.zipCode,
-      city: input.city,
-      state: input.state,
-      densityClass: classified.densityClass,
-      groceryCountIn8Mi,
-      ingestMiles,
-    }),
+    headline: lookupTurnedOff
+      ? `${input.zipCode} · ${input.city}, ${input.state} · ${OSM_OVERPASS_DISABLED_MESSAGE}`
+      : formatDensityHeadline({
+          zipCode: input.zipCode,
+          city: input.city,
+          state: input.state,
+          densityClass: classified!.densityClass,
+          groceryCountIn8Mi,
+          ingestMiles,
+        }),
     zctaWarning: zcta.ok ? undefined : zcta.error,
     chainTools: listOwnerChainTools(),
   };
 
   return {
+    lookupTurnedOff,
     stores,
     warnings,
     admission,
@@ -363,20 +378,24 @@ export async function inspectOwnerIngestMarket(
     savedIngestMiles: existing?.ingestMiles ?? null,
   });
   const warnings = [...nearby.warnings];
+  const alreadyActive = existing?.status === "active";
   const admission: OwnerMarketAdmission = {
     ...nearby.admission,
-    headline: formatDensityHeadline({
-      zipCode,
-      city: resolved.location.city,
-      state: resolved.location.state,
-      densityClass: nearby.admission.densityClass,
-      groceryCountIn8Mi: nearby.admission.groceryCountIn8Mi,
-      ingestMiles: nearby.admission.ingestMiles,
-      alreadyActive: existing?.status === "active",
-    }),
+    headline:
+      nearby.lookupTurnedOff || !nearby.admission.densityClass
+        ? `${zipCode} · ${resolved.location.city}, ${resolved.location.state} · ${OSM_OVERPASS_DISABLED_MESSAGE}${alreadyActive ? " · already active" : ""}`
+        : formatDensityHeadline({
+            zipCode,
+            city: resolved.location.city,
+            state: resolved.location.state,
+            densityClass: nearby.admission.densityClass,
+            groceryCountIn8Mi: nearby.admission.groceryCountIn8Mi,
+            ingestMiles: nearby.admission.ingestMiles,
+            alreadyActive,
+          }),
   };
 
-  if (existing?.status === "active") {
+  if (alreadyActive && !nearby.lookupTurnedOff && admission.densityClass) {
     try {
       await saveMarketDensity({
         zipCode,
@@ -414,11 +433,12 @@ export async function inspectOwnerIngestMarket(
         source: resolved.location.source,
       },
       existing,
-      alreadyActive: existing?.status === "active",
+      alreadyActive,
       activatedNow: false,
       stores: nearby.stores,
       warnings,
       admission,
+      lookupTurnedOff: nearby.lookupTurnedOff,
       zctaGeometry: nearby.zctaGeometry,
     },
   };
@@ -437,14 +457,19 @@ export async function activateOwnerIngestMarket(
   }
 
   if (inspected.result.alreadyActive) {
-    try {
-      await saveMarketDensity({
-        zipCode,
-        densityClass: inspected.result.admission.densityClass,
-        ingestMiles: inspected.result.admission.ingestMiles,
-      });
-    } catch {
-      // density columns may be missing until 029
+    if (
+      !inspected.result.lookupTurnedOff &&
+      inspected.result.admission.densityClass
+    ) {
+      try {
+        await saveMarketDensity({
+          zipCode,
+          densityClass: inspected.result.admission.densityClass,
+          ingestMiles: inspected.result.admission.ingestMiles,
+        });
+      } catch {
+        // density columns may be missing until 029
+      }
     }
     return {
       ok: true,
@@ -458,8 +483,8 @@ export async function activateOwnerIngestMarket(
     source: "ops",
     latitude: location.latitude,
     longitude: location.longitude,
-    densityClass: admission.densityClass,
-    ingestMiles: admission.ingestMiles,
+    densityClass: inspected.result.lookupTurnedOff ? null : admission.densityClass,
+    ingestMiles: inspected.result.lookupTurnedOff ? null : admission.ingestMiles,
     notes: options?.notes ?? "Activated by /owner Markets",
   });
   await rememberIngestZipGeocode({

@@ -5,6 +5,7 @@ import { buildZip23111RankingSnapshot } from "@/lib/recommendation-service-ranki
 import { zip23111MechanicsvilleLocation } from "@/lib/recommendation-service-ranking.fixture";
 import * as mapContextDiscovery from "@/lib/map-context-discovery";
 import { FIXTURE_CHAIN_MEMBERSHIP } from "@/lib/chain-membership";
+import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 
 const { buildProviderPricingPreviews, searchOfficialProviderStores, getMarketDataSnapshot } =
   vi.hoisted(() => ({
@@ -264,5 +265,40 @@ describe("getMarketSearchExperience map merge", () => {
     );
 
     warnSpy.mockRestore();
+  });
+
+  it("keeps the missing-stores notice when lookup is turned off", async () => {
+    getMarketDataSnapshot.mockResolvedValue({
+      source: "database",
+      snapshot: {
+        ...buildZip23111RankingSnapshot(),
+        stores: [],
+      },
+    });
+    const discoverySpy = vi
+      .spyOn(mapContextDiscovery, "discoverMapContextStores")
+      .mockResolvedValue({
+        stores: [],
+        sources: [
+          {
+            source: "openstreetmap-overpass",
+            stores: [],
+            message: OSM_OVERPASS_DISABLED_MESSAGE,
+          },
+        ],
+      });
+
+    const { market } = await getMarketSearchExperience(
+      12,
+      zip23111MechanicsvilleLocation,
+      false,
+      { membership: FIXTURE_CHAIN_MEMBERSHIP },
+    );
+
+    expect(market.mapDiscoveryNotice).toBe(
+      "Some nearby stores may be missing from the map. Verify store locations before visiting.",
+    );
+    expect(market.mapDiscoveryNotice).not.toBe(OSM_OVERPASS_DISABLED_MESSAGE);
+    discoverySpy.mockRestore();
   });
 });

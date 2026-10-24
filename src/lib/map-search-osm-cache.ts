@@ -1,5 +1,9 @@
 import type { OsmDiscoveredFoodRetailStore } from "@/lib/osm-food-retail-discovery";
-import { discoverFoodRetailStoresNearLocation } from "@/lib/osm-food-retail-discovery";
+import {
+  discoverFoodRetailStoresNearLocation,
+  isOsmOverpassDisabled,
+  OSM_OVERPASS_DISABLED_MESSAGE,
+} from "@/lib/osm-food-retail-discovery";
 
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -55,6 +59,15 @@ export async function discoverOsmStoresForMapSearch(input: {
   source: "openstreetmap-overpass" | "fixture";
   cacheHit: boolean;
 }> {
+  if (isOsmOverpassDisabled()) {
+    return {
+      stores: [],
+      message: OSM_OVERPASS_DISABLED_MESSAGE,
+      source: "openstreetmap-overpass",
+      cacheHit: false,
+    };
+  }
+
   const cacheKey = buildSearchOsmCacheKey(input);
   const now = Date.now();
   const cached = searchOsmCache.get(cacheKey);

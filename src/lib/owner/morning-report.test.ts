@@ -10,6 +10,7 @@ import {
   morningReportDate,
   pickMorningZipCandidates,
 } from "@/lib/owner/morning-report";
+import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 
 const quiet = {
   weekday: "Monday",
@@ -166,6 +167,26 @@ describe("morning report", () => {
     expect(composeMissedMorningReport("Tuesday").body).toContain(
       "The morning check did not run.",
     );
+  });
+
+  it("says store lookup was turned off without needing you", () => {
+    const note = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      storeLookupTurnedOff: true,
+    });
+    expect(note.body).toContain(OSM_OVERPASS_DISABLED_MESSAGE);
+    expect(note.needsAttention).toBe(false);
+    expect(note.body.endsWith("Nothing needs you.")).toBe(true);
+
+    const kept = applyOutsideResultToMorningNote(note.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(kept.body).toContain(OSM_OVERPASS_DISABLED_MESSAGE);
+    expect(kept.needsAttention).toBe(false);
+    expect(kept.body.endsWith("Nothing needs you.")).toBe(true);
   });
 
   it("accepts only a Discord webhook URL", () => {

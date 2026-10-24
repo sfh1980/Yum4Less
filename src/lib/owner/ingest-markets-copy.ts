@@ -25,7 +25,8 @@ export type OwnerMarketStorePreview = {
 };
 
 export type OwnerMarketAdmission = {
-  densityClass: "packed" | "urban" | "suburban" | "rural";
+  /** Null when the live lookup was turned off and this check must not invent a class. */
+  densityClass: "packed" | "urban" | "suburban" | "rural" | null;
   groceryCountIn8Mi: number;
   ingestMiles: number;
   omittedCount: number;

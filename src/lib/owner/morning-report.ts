@@ -4,6 +4,7 @@ import {
   describeCloudflareMorning,
   type CloudflareMorningFacts,
 } from "@/lib/owner/cloudflare-morning";
+import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 
 export const MORNING_ZIP_BATCH = 3;
 export const MORNING_REPORT_TIME_ZONE = "America/New_York";
@@ -163,6 +164,8 @@ export type MorningReportInput = {
   discordConfigured: boolean;
   chainsWithoutSaleSource?: readonly string[];
   cloudflare?: CloudflareMorningFacts;
+  /** Night Overpass was skipped on purpose. Informational; does not set Needs you. */
+  storeLookupTurnedOff?: boolean;
 };
 
 export function composeMorningReport(input: MorningReportInput): {
@@ -223,6 +226,10 @@ export function composeMorningReport(input: MorningReportInput): {
 
   if (!input.discordConfigured) {
     lines.push("Discord was not sent. The morning webhook is not set.");
+  }
+
+  if (input.storeLookupTurnedOff) {
+    lines.push(OSM_OVERPASS_DISABLED_MESSAGE);
   }
 
   const needsAttention =

@@ -58,6 +58,23 @@ describe("market admission helpers", () => {
     expect(pickPersistedIngestMiles({ savedMiles: null, computedMiles: 9 })).toBe(9);
   });
 
+  it("uses the 26 mile cap when a skipped lookup saved no miles", () => {
+    const ingestMiles = pickPersistedIngestMiles({
+      savedMiles: null,
+      computedMiles: INGEST_ZCTA_SAFETY_CAP_MILES,
+    });
+    expect(ingestMiles).toBe(26);
+    const center = { latitude: 37.55, longitude: -77.45 };
+    expect(
+      storePassesIngestFence({
+        latitude: 37.6946,
+        longitude: -77.45,
+        center,
+        fence: { ingestMiles, geometry: null },
+      }),
+    ).toBe(true);
+  });
+
   it("treats a point inside a polygon as in the ZCTA and a far point as out", () => {
     expect(geometryContainsPoint(squareAround, -77.37, 37.61)).toBe(true);
     expect(geometryContainsPoint(squareAround, -78, 38)).toBe(false);
