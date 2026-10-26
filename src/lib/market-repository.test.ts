@@ -198,6 +198,34 @@ describe("getMarketDataSnapshot", () => {
       ),
     );
   });
+
+  it("keeps the market available when store_id_redirects does not exist yet", async () => {
+    const logSpy = vi.spyOn(serverLog, "logServerError").mockImplementation(() => {});
+    const missingTable = Object.assign(
+      new Error('relation "store_id_redirects" does not exist'),
+      { code: "42P01" },
+    );
+    getDbPool.mockReturnValue({
+      query: vi.fn().mockImplementation((sql: string) => {
+        if (sql.includes("store_id_redirects")) {
+          return Promise.reject(missingTable);
+        }
+        return Promise.resolve({ rows: [] });
+      }),
+    });
+
+    const result = await getMarketDataSnapshot();
+
+    expect(result.source).toBe("database");
+    expect(result.snapshot.stores).toEqual([]);
+    expect(result.snapshot.storeIdRedirects).toEqual({});
+    expect(logSpy).toHaveBeenCalledWith("store-id-redirects.load", missingTable);
+    expect(logSpy).not.toHaveBeenCalledWith(
+      "market-repository.getMarketDataSnapshot",
+      expect.anything(),
+    );
+    logSpy.mockRestore();
+  });
 });
 
 describe("getMarketPricingContext", () => {
