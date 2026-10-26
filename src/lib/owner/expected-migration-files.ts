@@ -46,4 +46,5 @@ export const EXPECTED_MIGRATION_FILENAMES = [
   "039_morning_reports.sql",
   "040_touching_zips.sql",
   "041_clear_empty_touching_zips.sql",
+  "042_store_id_redirects.sql",
 ] as const;

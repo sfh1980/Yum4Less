@@ -15,6 +15,7 @@ import {
   parseIngestZipCodesFromEnv,
   resolveIngestRadiusMiles,
 } from "@/lib/store-catalog-sync";
+import { SAME_BUILDING_MILES } from "@/lib/official-store-attach";
 import { getProviderRolloutForCatalogStore } from "@/lib/provider-rollout";
 import type { ProviderDiscoveredStore } from "@/lib/providers/provider-types";
 import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.fixtures";
@@ -308,5 +309,33 @@ describe("store-catalog-sync", () => {
     });
 
     expect(canonicalId).toBe("kroger-mechanicsville");
+  });
+
+  it("does not treat a same store number 0.2 miles away as the same building", () => {
+    const canonicalId = findCanonicalStoreIdForApiDiscoveredStore({
+      existingStores: [
+        {
+          id: "kroger-mechanicsville",
+          name: "Kroger",
+          source_name: "kroger-official-api",
+          source_store_id: "02900529",
+          latitude: 37.61546,
+          longitude: -77.32939,
+          city: "Mechanicsville",
+          state: "VA",
+        },
+      ],
+      chain: "kroger",
+      discovered: {
+        providerStoreId: "02900529",
+        latitude: 37.61546 + 0.2 / 69,
+        longitude: -77.32939,
+      },
+      catalogStoreId: "kroger-02900529",
+      getRolloutForStore: getProviderRolloutForCatalogStore,
+      mergeRadiusMiles: SAME_BUILDING_MILES,
+    });
+
+    expect(canonicalId).toBeUndefined();
   });
 });

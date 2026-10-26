@@ -1,36 +1,79 @@
 import { getDbPool } from "@/lib/db";
 import { getDistanceMiles } from "@/lib/geo-distance";
-import { inferStoreChainFromName } from "@/lib/chain-rollout-policy";
+import { inferStoreChainFromCatalog } from "@/lib/chain-rollout-policy";
 import { isLiveOsmStoreId, isOsmStyleStoreId } from "@/lib/osm-food-retail-discovery";
+
+/**
+ * Same physical building. A second same-chain grocery farther than this stays
+ * its own row. This is tighter than the older 0.15-mile Kroger cleanup.
+ */
+export const SAME_BUILDING_MILES = 0.04;
 
 export type OfficialPinStore = {
   id: string;
   name: string;
   latitude: number;
   longitude: number;
+  sourceName?: string | null;
+  sourceStoreId?: string | null;
 };
+
+function isPharmacyOrMoneyCounter(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return (
+    normalized.includes("pharmacy") ||
+    normalized.includes("western union") ||
+    normalized.includes("money transfer")
+  );
+}
+
+/**
+ * Same chain from the saved source, id, or store number. A Publix row whose
+ * display name is the shopping center still matches. The display name is used
+ * only when the source and id do not already name a chain, which is how an
+ * OpenStreetMap "Publix" pin matches. A pharmacy or money counter in the
+ * building does not match.
+ */
+export function savedStoreMatchesOfficialChain(
+  store: OfficialPinStore,
+  chainHint: string,
+): boolean {
+  if (isPharmacyOrMoneyCounter(store.name)) {
+    return false;
+  }
+
+  const hint = chainHint.trim().toLowerCase();
+  if (!hint) {
+    return false;
+  }
+
+  return (
+    inferStoreChainFromCatalog({
+      id: store.id,
+      name: store.name,
+      sourceName: store.sourceName,
+    }) === hint
+  );
+}
 
 /**
  * Prefer the map pin for this building. An existing chain row is used only
- * when the map pin is not already saved.
+ * when the map pin is not already saved. No match means the locator may insert.
  */
 export function findSavedStoreForOfficialPin(input: {
   stores: readonly OfficialPinStore[];
-  name: string;
   latitude: number;
   longitude: number;
   chainHint: string;
   radiusMiles: number;
+  locatorStoreNumber?: string | null;
 }): OfficialPinStore | undefined {
-  const hint = input.chainHint.trim().toLowerCase();
+  const locatorNumber = input.locatorStoreNumber?.trim() || "";
   const nearby = input.stores.filter((store) => {
     if (!Number.isFinite(store.latitude) || !Number.isFinite(store.longitude)) {
       return false;
     }
-    const chain = inferStoreChainFromName(store.name);
-    const sameChain =
-      chain === hint || store.name.trim().toLowerCase().includes(hint);
-    if (!sameChain) {
+    if (!savedStoreMatchesOfficialChain(store, input.chainHint)) {
       return false;
     }
     return (
@@ -42,7 +85,17 @@ export function findSavedStoreForOfficialPin(input: {
       ) <= input.radiusMiles
     );
   });
-  return nearby.find((store) => isLiveOsmStoreId(store.id)) ?? nearby[0];
+  const mapPin = nearby.find((store) => isLiveOsmStoreId(store.id));
+  if (mapPin) {
+    return mapPin;
+  }
+  if (locatorNumber) {
+    const numbered = nearby.find((store) => store.sourceStoreId?.trim() === locatorNumber);
+    if (numbered) {
+      return numbered;
+    }
+  }
+  return nearby[0];
 }
 
 /**

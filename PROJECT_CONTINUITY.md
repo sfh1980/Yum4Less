@@ -4,7 +4,7 @@
 
 ---
 
-## Resume (as of 2026-10-22)
+## Resume (as of 2026-10-26)
 
 **Morning note:** One plain-language note each morning, same words in Discord and on `/owner` **This morning**. A late GitHub result rewrites that morning’s note and sends Discord once. That behavior is on yum4less.com. Clocks stay at 5:20am, 8:15am, and 9:15am. On an add morning the job turns on up to 3 ZIP codes whose Census outline touches a ZIP that is already on, in numeric order. The 8-mile circle stays the shopper picture. A new supermarket, grocery, or warehouse club is saved. Convenience, bakery, and specialty shops are skipped. A new chain name is remembered as map-only until the shared flyer feed returns a flyer. The night job is still the same six steps. A pass is not more dinners. Owner paste **2026-10-22:** `040` is applied (`applied_at` **2026-10-21 07:00:02Z**). Thursday’s add found no ZIP because Census “touches” had saved **15** empty neighbor lists. The repo now asks for intersecting outlines, ignores an empty saved list, and `041` clears those empty lists at the next 3am migrate. Not on yum4less.com until the ingest image is published and Watchtower pulls it. The ingest service can add one Cloudflare line once that image is pulled.
 
@@ -35,6 +35,8 @@
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **Same-building Kroger and Publix rows (2026-10-26, local, not pushed):** A locator adds a store only when no same-chain building is within 0.04 miles, and it keeps the id that is already saved. Publix matches by coordinates and chain, including a shopping-center name. The Kroger cleanup that used to delete within 0.15 miles now deletes only within 0.04 miles, moves prices, and writes `store_id_redirects`. Settings follows that redirect while identity expand is off. Classification still hides a pin by not saving it. `042` is not on yum4less.com. Do not push until after the Wednesday 3:00am run. A pass is not more dinners.
 
 - **Neighbor lookup for add mornings (2026-10-22, local):** Census neighbor queries use intersects. An empty `touching_zips` list is treated as not fetched and is not saved. `041_clear_empty_touching_zips.sql` clears empty lists only. `npm test` **1373/1373**. Integration **54/54** on `yum4less_test`. Not on yum4less.com until the ingest image is published and Watchtower pulls it. The 3am job then applies `041`. A pass is not more dinners.
 
@@ -302,6 +304,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-10-26 — Same-building locator rows
+
+**Theme:** Kroger and Publix can add a store when the map has no pin for that building, without creating a second row on top of one that is already saved.
+
+**Shipped:** Insert only when no same-chain building is within 0.04 miles. The existing id is kept inside that distance. Publix matches coordinates plus chain (source, id, or store number), so a shopping-center name still matches. The Kroger proximity delete is 0.04 miles, moves prices, and writes `store_id_redirects` (`042`). Settings reads that map while expand is off. A skipped grocery category is left out of the save. It is not deleted. Aldi still has no locator. The old Publix retire calls stay off the night path.
+
+**Limits:** Local commit only. Not pushed. `042` applies on the next ingest migrate after an image that contains it is pulled. A pharmacy or money counter whose name is only the banner can still match, because saved rows have no category. The Settings list fold for Kroger twins remains 0.15 miles and does not delete. A pass is not more dinners. Whole Foods was not called and was not changed.
+
+**Evidence:** `npm test` **1393/1393** pass (248 files). `npm run test:integration` **58/58** pass (17 files) on `yum4less_test` (applied `042`). `npx tsc --noEmit` pass. `npm run lint` pass. `npm run build` pass (Next.js 15.5.28). `npm run audit:high` exit 0. `npm run test:e2e:ci` was not run.
 
 ### 2026-10-22 — Surrounding ZIP lookup uses intersecting outlines
 
@@ -3478,6 +3490,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-10-26 | **One row per same-chain building at 0.04 miles.** Kroger and Publix locators insert only when no same-chain building is that close, and they keep the existing id. Publix matches coordinates plus chain, not the shopping-center display name. The Kroger delete that used 0.15 miles is now 0.04 miles and leaves `store_id_redirects`. Settings follows the redirect while expand is off. Classification hides. It does not delete. Not pushed until after the Wednesday 3:00am run. A pass is not more dinners. | **Active** |
 | 2026-10-20 | **Vite is pinned at 8.3.4 so the image can publish.** `vite` `8.0.16` failed the high audit through `launch-editor` (`8.0.0`–`8.1.5`). The pin is an override, same as `sharp`. The braces exception stays the only allowed unpatched high advisory. Do not `npm audit fix --force`. | **Active** |
 | 2026-10-20 | **New ZIP codes are surrounding Census outlines.** Every other even UTC day the morning job Activates up to 3 off ZIPs whose outline touches a ZIP that is already on, in numeric order. The 8-mile circle stays the shopper nearby picture. A supermarket, grocery, or warehouse club is saved once. Convenience, bakery, and specialty shops stay out. A new chain name is stored map-only. The shared flyer feed is tried before a custom scraper. Meals use a chain only after that flyer is saved and the existing sale floors pass. The night job stays six steps. A pass is not more dinners. | **Active** (narrows the ZIP-choice half of 2026-10-12) |
 | 2026-10-17 | **The morning note can include one Cloudflare line.** Ingest reads whether the `truenas-homelab` tunnel is connected and how many 500-level responses yum4less.com had yesterday. Errors or a down tunnel say **Needs you.** The token is read-only and stays on the ingest service. Raw logs are not stored. A pass is not more dinners. | **Active** |
@@ -3649,6 +3662,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (same-building locator rows) | 2026-10-26 | **1393/1393** pass (248 files) |
+| `npm run test:integration` (migration `042`) | 2026-10-26 | **58/58** pass (17 files) on `yum4less_test` |
+| `npx tsc --noEmit` (same-building locator rows) | 2026-10-26 | **Pass** (exit 0) |
+| `npm run lint` (same-building locator rows) | 2026-10-26 | **Pass** (exit 0) |
+| `npm run build` (same-building locator rows) | 2026-10-26 | **Pass** (Next.js 15.5.28) |
+| `npm run audit:high` (same-building locator rows) | 2026-10-26 | **Exit 0.** No high or critical advisories. |
 | `npm test` (intersecting ZIP neighbors) | 2026-10-22 | **1373/1373** pass (246 files) |
 | `npm run test:integration` (migration `041`) | 2026-10-22 | **54/54** pass (17 files) on `yum4less_test` |
 | `npm run audit:high` (vite 8.3.4) | 2026-10-20 | **Exit 0.** `GHSA-587h-7wmj-h5pm` cleared. Braces exception still present. |

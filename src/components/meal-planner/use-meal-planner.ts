@@ -696,6 +696,9 @@ export function useMealPlanner() {
         const persistedSelection = filterSelectedStoreIdsAgainstSelectable(
           current.selectedStoreIds,
           selectableIds,
+          undefined,
+          undefined,
+          result.market.storeIdRedirects,
         );
         const selectedStoreIds =
           persistedSelection.length > 0

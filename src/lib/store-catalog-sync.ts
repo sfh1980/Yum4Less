@@ -29,7 +29,9 @@ import { getDistanceMiles } from "@/lib/geo-distance";
 import {
   attachOfficialDetailsToStore,
   findSavedStoreForOfficialPin,
+  SAME_BUILDING_MILES,
 } from "@/lib/official-store-attach";
+import { recordStoreIdRedirect } from "@/lib/store-id-redirects";
 import { isKeptGroceryBuilding } from "@/lib/owner/owner-market-admission";
 import { ensureMapOnlyChains } from "@/lib/chain-registry-ensure";
 import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
@@ -106,12 +108,26 @@ export function findCanonicalStoreIdForApiDiscoveredStore(input: {
   };
   mergeRadiusMiles?: number;
 }): string | undefined {
-  const linkedStores = input.existingStores.filter(
-    (store) =>
-      store.id !== input.catalogStoreId &&
-      store.source_store_id === input.discovered.providerStoreId &&
-      input.getRolloutForStore(store).chain === input.chain,
-  );
+  const radiusMiles = input.mergeRadiusMiles ?? KROGER_SAME_STORE_MERGE_PROXIMITY_MILES;
+  const linkedStores = input.existingStores.filter((store) => {
+    if (store.id === input.catalogStoreId) {
+      return false;
+    }
+    if (store.source_store_id !== input.discovered.providerStoreId) {
+      return false;
+    }
+    if (input.getRolloutForStore(store).chain !== input.chain) {
+      return false;
+    }
+    return (
+      getDistanceMiles(
+        store.latitude,
+        store.longitude,
+        input.discovered.latitude,
+        input.discovered.longitude,
+      ) <= radiusMiles
+    );
+  });
 
   if (linkedStores.length === 0) {
     if (input.chain !== "kroger") {
@@ -126,7 +142,7 @@ export function findCanonicalStoreIdForApiDiscoveredStore(input: {
         longitude: input.discovered.longitude,
         source_store_id: input.discovered.providerStoreId,
       },
-      input.mergeRadiusMiles ?? KROGER_SAME_STORE_MERGE_PROXIMITY_MILES,
+      radiusMiles,
     );
 
     if (!proximityMatch) {
@@ -182,6 +198,7 @@ async function mergeApiDiscoveredStoreIntoCanonical(input: {
     );
     // Self-alias identities RESTRICT store deletes — drop singleton attachments first.
     await deleteStoreIdentityAttachmentsForStore(input.duplicateStoreId, pool);
+    await recordStoreIdRedirect(input.duplicateStoreId, input.canonicalStoreId, pool);
     await pool.query(`delete from stores where id = $1`, [input.duplicateStoreId]);
   }
 
@@ -338,6 +355,7 @@ export async function upsertCatalogStores(
   options?: {
     preserveRankedSources?: boolean;
     aliasStats?: StoreIdentityAliasWriteStats;
+    skipCollocatedRedirect?: boolean;
   },
 ): Promise<number> {
   if (stores.length === 0) {
@@ -387,8 +405,11 @@ export async function upsertCatalogStores(
       const candidateChain = resolveSelectableCatalogChain(candidate);
       // Kroger keeps dedicated findCanonical / proximity-reconcile paths that may
       // retain distinct slug vs API rows (different source_store_id). Do not
-      // silently collapse those at generic upsert time.
+      // silently collapse those at generic upsert time. A locator insert that
+      // already checked 0.04 miles must not be folded again at the wider
+      // catalog radius.
       if (
+        !options?.skipCollocatedRedirect &&
         candidateChain &&
         candidateChain !== "kroger" &&
         !isMapContextLikeCatalogStore(candidate)
@@ -606,6 +627,7 @@ export async function syncV1ChainStoresToCatalog(input: {
         discovered,
         catalogStoreId: catalogStore.id,
         getRolloutForStore: getProviderRolloutForCatalogStore,
+        mergeRadiusMiles: SAME_BUILDING_MILES,
       });
 
       if (canonicalStoreId && canonicalStoreId !== catalogStore.id) {
@@ -625,12 +647,19 @@ export async function syncV1ChainStoresToCatalog(input: {
       }
 
       const mapRow = findSavedStoreForOfficialPin({
-        stores: existingStores,
-        name: discovered.name,
+        stores: existingStores.map((store) => ({
+          id: store.id,
+          name: store.name,
+          latitude: store.latitude,
+          longitude: store.longitude,
+          sourceName: store.source_name,
+          sourceStoreId: store.source_store_id,
+        })),
         latitude: discovered.latitude,
         longitude: discovered.longitude,
         chainHint: "kroger",
-        radiusMiles: KROGER_SAME_STORE_MERGE_PROXIMITY_MILES,
+        radiusMiles: SAME_BUILDING_MILES,
+        locatorStoreNumber: discovered.providerStoreId,
       });
       if (mapRow) {
         mergedCount += await attachOfficialDetailsToStore({
@@ -639,7 +668,10 @@ export async function syncV1ChainStoresToCatalog(input: {
           postalCode: discovered.zipCode,
           sourceStoreId: discovered.providerStoreId,
         });
+        continue;
       }
+
+      catalogStores.push(catalogStore);
     }
   }
 
@@ -798,6 +830,7 @@ async function reconcileDuplicateApiDerivedKrogerStores(): Promise<number> {
       },
       catalogStoreId,
       getRolloutForStore: getProviderRolloutForCatalogStore,
+      mergeRadiusMiles: SAME_BUILDING_MILES,
     });
 
     if (!canonicalStoreId || canonicalStoreId === catalogStoreId) {
@@ -897,7 +930,7 @@ async function reconcileProximityDuplicateKrogerSlugStores(): Promise<number> {
           store.longitude,
           candidate.latitude,
           candidate.longitude,
-        ) <= KROGER_SAME_STORE_MERGE_PROXIMITY_MILES
+        ) <= SAME_BUILDING_MILES
       );
     });
 
@@ -1401,6 +1434,8 @@ export async function syncUniversalMapCatalogForZip(input: {
     zipCode: input.zipCode,
     useFixture: input.useFixture,
   });
+  // Classification hides a pin by leaving it out of this save.
+  // It does not delete a row that is already saved.
   const fencedDiscoveryStores = discovery.stores.filter((store) => {
     if (!isKeptGroceryBuilding(store)) {
       return false;

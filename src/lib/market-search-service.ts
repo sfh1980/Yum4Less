@@ -665,6 +665,7 @@ function buildMarketSummary(
     lookupProviderConfigured,
     dataSource,
     saleIngredientChoices,
+    storeIdRedirects: snapshot.storeIdRedirects ?? {},
     cuisineFacetCounts,
     shopperRankedChainIds: [...(mapDiscovery?.shopperRankedChainIds ?? [])],
     ...(mapDiscovery?.mapDiscoveryNotice

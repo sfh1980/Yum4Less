@@ -10,6 +10,10 @@
  */
 
 import {
+  applyStoreIdRedirects,
+  type StoreIdRedirectMap,
+} from "@/lib/store-id-redirect-map";
+import {
   isStoreIdentityExpandEnabled,
   type StoreIdentityEnv,
 } from "@/lib/store-identity-flags";
@@ -113,15 +117,19 @@ export function filterSelectedStoreIdsAgainstSelectable(
   enabledSelectableIds: ReadonlySet<string>,
   env: StoreIdentityEnv = process.env,
   lookup: StoreIdentityLookup = createSettingsKnownPairIdentityLookup(),
+  redirects?: StoreIdRedirectMap,
 ): string[] {
+  // A deleted same-building id must follow the kept row even while expand is off.
+  // Otherwise Settings drops the saved id because it is no longer in the list.
+  const resolvedIds = applyStoreIdRedirects(selectedIds, redirects);
   if (!isStoreIdentityExpandEnabled(env)) {
-    return selectedIds.filter((storeId) => enabledSelectableIds.has(storeId));
+    return resolvedIds.filter((storeId) => enabledSelectableIds.has(storeId));
   }
 
   const kept: string[] = [];
   const seen = new Set<string>();
 
-  for (const storeId of selectedIds) {
+  for (const storeId of resolvedIds) {
     const members = expandStoreIds(lookup, [storeId]);
     const hit = members.find((memberId) => enabledSelectableIds.has(memberId));
     if (!hit) {

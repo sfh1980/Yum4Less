@@ -10,6 +10,7 @@ import {
   loadCatalogStores,
   loadRecipeCatalog,
 } from "@/lib/market-catalog-repository";
+import { loadStoreIdRedirects } from "@/lib/store-id-redirects";
 import {
   countLivePriceObservationsForStore as countLivePriceObservationsForStoreInternal,
   getRankedPriceObservationsWithTimestamps as getRankedPriceObservationsWithTimestampsInternal,
@@ -24,6 +25,7 @@ export type MarketDataSnapshot = {
   ingredients: CatalogIngredient[];
   recipes: CatalogRecipeRecord[];
   priceObservations: CatalogPriceObservation[];
+  storeIdRedirects?: Readonly<Record<string, string>>;
 };
 
 export type MarketDataSource = "database" | "unavailable";
@@ -114,6 +116,7 @@ export async function getMarketDataSnapshot(): Promise<{
         ingredients,
         recipes,
         priceObservations,
+        storeIdRedirects: await loadStoreIdRedirects(),
       },
     };
   } catch (error) {

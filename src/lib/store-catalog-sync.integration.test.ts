@@ -11,6 +11,19 @@ import {
 import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.fixtures";
 
 describe("store catalog sync (integration)", () => {
+  async function clearSameBuildingRedirects() {
+    const pool = getDbPool();
+    await pool.query(`
+      delete from store_id_redirects
+      where from_id like 'osm-%'
+         or from_id like 'kroger-%'
+         or from_id like 'publix-%'
+         or to_id like 'osm-%'
+         or to_id like 'kroger-%'
+         or to_id like 'publix-%'
+    `);
+  }
+
   async function clearIngestIdentityAttachments() {
     const pool = getDbPool();
     // Slice 5c self-alias / pointer rows RESTRICT store deletes — clear first.
@@ -36,6 +49,7 @@ describe("store catalog sync (integration)", () => {
 
   beforeEach(async () => {
     const pool = getDbPool();
+    await clearSameBuildingRedirects();
     await clearIngestIdentityAttachments();
     await pool.query(`delete from stores where id like 'osm-%' or id like 'fixture-osm-%'`);
     await pool.query(`delete from stores where source_name = 'yum4less-map-fixture'`);
@@ -70,6 +84,7 @@ describe("store catalog sync (integration)", () => {
 
   afterEach(async () => {
     const pool = getDbPool();
+    await clearSameBuildingRedirects();
     await pool.query(`
       insert into stores (
         id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
@@ -585,7 +600,7 @@ describe("store catalog sync (integration)", () => {
     expect(
       krogerRows.rows.find((row) => row.id === "kroger-mechanicsville")?.source_store_id,
     ).toBe("kroger-mechanicsville");
-    expect(krogerRows.rows.some((row) => row.id === "kroger-02900515")).toBe(false);
+    expect(krogerRows.rows.some((row) => row.id === "kroger-02900515")).toBe(true);
 
     const migratedObservation = await pool.query<{ store_id: string }>(
       `
@@ -680,5 +695,231 @@ describe("store catalog sync (integration)", () => {
     expect(Number(after.rows[0]?.longitude)).toBeCloseTo(-77.336853, 3);
     expect(after.rows[0]?.source_name).toBe("yum4less-market-catalog");
     expect(after.rows[0]?.source_store_id).toBe("osm-node-6531578976");
+  });
+
+  function krogerDiscovery(input: {
+    providerStoreId: string;
+    latitude: number;
+    longitude: number;
+  }) {
+    return {
+      location: {
+        city: "Far",
+        state: "VA",
+        latitude: input.latitude,
+        longitude: input.longitude,
+        source: "geocodio" as const,
+        zipCode: "23111",
+      },
+      zipCode: "23111",
+      providerStoreSearches: [
+        {
+          provider: "kroger" as const,
+          label: "Kroger",
+          configured: true,
+          status: "available" as const,
+          provenance: "official-api" as const,
+          retrievalMode: "live" as const,
+          fallbackUsed: false,
+          message: "Same-building locator fixture.",
+          fetchedAt: new Date().toISOString(),
+          stores: [
+            {
+              provider: "kroger" as const,
+              providerStoreId: input.providerStoreId,
+              name: "Kroger",
+              city: "Far",
+              state: "VA",
+              latitude: input.latitude,
+              longitude: input.longitude,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("inserts a Kroger row when no same-chain building is within 0.04 miles", async () => {
+    const pool = getDbPool();
+    await syncV1ChainStoresToCatalog(
+      krogerDiscovery({
+        providerStoreId: "66666666",
+        latitude: 36.2,
+        longitude: -78.2,
+      }),
+    );
+
+    const inserted = await pool.query<{ id: string }>(
+      `select id from stores where id = 'kroger-66666666'`,
+    );
+    expect(inserted.rows).toHaveLength(1);
+  });
+
+  it("keeps the existing id when a same-chain building is within 0.04 miles", async () => {
+    const pool = getDbPool();
+    await pool.query(`
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values (
+        'osm-way-900000111',
+        'Kroger',
+        'grocery',
+        'Far',
+        'VA',
+        36.5,
+        -78.5,
+        'openstreetmap-overpass',
+        'osm-way-900000111',
+        now()
+      )
+    `);
+
+    await syncV1ChainStoresToCatalog(
+      krogerDiscovery({
+        providerStoreId: "77777777",
+        latitude: 36.5,
+        longitude: -78.5,
+      }),
+    );
+
+    const rows = await pool.query<{ id: string }>(`
+      select id from stores
+      where id in ('osm-way-900000111', 'kroger-77777777')
+      order by id
+    `);
+    expect(rows.rows.map((row) => row.id)).toEqual(["osm-way-900000111"]);
+
+    const redirect = await pool.query<{ from_id: string }>(
+      `select from_id from store_id_redirects where from_id = 'osm-way-900000111'`,
+    );
+    expect(redirect.rows).toEqual([]);
+  });
+
+  it("deletes a same-building Kroger twin within 0.04 miles and leaves a redirect", async () => {
+    const pool = getDbPool();
+    await pool.query(`
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+      )
+      values
+        (
+          'osm-way-900000333',
+          'Kroger',
+          'grocery',
+          'Far',
+          'VA',
+          36.7,
+          -78.7,
+          'openstreetmap-overpass',
+          null,
+          now()
+        ),
+        (
+          'kroger-44444444',
+          'Kroger',
+          'grocery',
+          'Far',
+          'VA',
+          36.7,
+          -78.7,
+          'kroger-official-api',
+          '44444444',
+          now()
+        )
+    `);
+    await pool.query(`
+      insert into price_observations (
+        store_id, ingredient_id, price, in_stock, observed_at, source_name, confidence_score
+      )
+      values (
+        'osm-way-900000333', 'chicken-thighs', 4.50, true, now(), 'kroger-official-api', 0.9
+      )
+    `);
+
+    await syncV1ChainStoresToCatalog(
+      krogerDiscovery({
+        providerStoreId: "44444444",
+        latitude: 36.7,
+        longitude: -78.7,
+      }),
+    );
+
+    const rows = await pool.query<{ id: string }>(`
+      select id from stores where id in ('osm-way-900000333', 'kroger-44444444') order by id
+    `);
+    expect(rows.rows.map((row) => row.id)).toEqual(["kroger-44444444"]);
+
+    const redirect = await pool.query<{ to_id: string }>(
+      `select to_id from store_id_redirects where from_id = 'osm-way-900000333'`,
+    );
+    expect(redirect.rows[0]?.to_id).toBe("kroger-44444444");
+
+    const price = await pool.query<{ store_id: string }>(`
+      select store_id from price_observations
+      where ingredient_id = 'chicken-thighs' and store_id = 'kroger-44444444'
+    `);
+    expect(price.rows.length).toBeGreaterThan(0);
+  });
+
+  it("keeps two Kroger rows that sit between 0.04 and 0.15 miles", async () => {
+    const pool = getDbPool();
+    const farLatitude = 36.9 + 0.1 / 69;
+    await pool.query(
+      `
+        insert into stores (
+          id, name, kind, city, state, latitude, longitude, source_name, source_store_id, last_verified_at
+        )
+        values
+          (
+            'osm-way-900000222',
+            'Kroger',
+            'grocery',
+            'Far',
+            'VA',
+            $1,
+            -78.9,
+            'openstreetmap-overpass',
+            null,
+            now()
+          ),
+          (
+            'kroger-55555555',
+            'Kroger',
+            'grocery',
+            'Far',
+            'VA',
+            36.9,
+            -78.9,
+            'kroger-official-api',
+            '55555555',
+            now()
+          )
+      `,
+      [farLatitude],
+    );
+
+    await syncV1ChainStoresToCatalog(
+      krogerDiscovery({
+        providerStoreId: "55555555",
+        latitude: 36.9,
+        longitude: -78.9,
+      }),
+    );
+
+    const rows = await pool.query<{ id: string }>(`
+      select id from stores
+      where id in ('osm-way-900000222', 'kroger-55555555')
+      order by id
+    `);
+    expect(rows.rows.map((row) => row.id)).toEqual([
+      "kroger-55555555",
+      "osm-way-900000222",
+    ]);
+
+    const redirect = await pool.query(
+      `select from_id from store_id_redirects where from_id = 'osm-way-900000222'`,
+    );
+    expect(redirect.rows).toEqual([]);
   });
 });

@@ -339,6 +339,8 @@ export function migrationEffectPresent(version, db) {
           ),
         ) === 0
       );
+    case "042":
+      return db.tableExists("store_id_redirects");
     default:
       return false;
   }

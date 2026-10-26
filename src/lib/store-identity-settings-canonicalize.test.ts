@@ -40,6 +40,19 @@ describe("Settings identity canonicalize (Slice 3)", () => {
     expect(kept.length).toBeGreaterThan(0);
   });
 
+  it("flag OFF follows a same-building redirect before the selectable filter", () => {
+    const selectable = new Set(["kroger-02900529", "aldi-mechanicsville"]);
+    expect(
+      filterSelectedStoreIdsAgainstSelectable(
+        ["osm-way-1", "aldi-mechanicsville"],
+        selectable,
+        FLAG_OFF,
+        undefined,
+        { "osm-way-1": "kroger-02900529" },
+      ),
+    ).toEqual(["kroger-02900529", "aldi-mechanicsville"]);
+  });
+
   it("T2: flag OFF leaves Settings ids unchanged (exact-id today)", () => {
     expect(
       canonicalizeStoreIdsForSettings([SETTINGS_KNOWN_KROGER_ALIAS_ID], FLAG_OFF),

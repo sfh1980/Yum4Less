@@ -134,6 +134,11 @@ export type MarketSummary = {
    * picker sort and honesty copy use this — not a hardcoded TypeScript list.
    */
   shopperRankedChainIds?: string[];
+  /**
+   * Deleted store id → kept store id after a same-building merge.
+   * Settings follows this while identity expand is off.
+   */
+  storeIdRedirects?: Readonly<Record<string, string>>;
   /** Honest notice when search-time OSM discovery is degraded, sparse, or ephemeral. */
   mapDiscoveryNotice?: string;
   /** True when any visible pin came from ephemeral search-time OSM merge (not Postgres). */

@@ -12,8 +12,9 @@ import type { CatalogStoreRecord } from "@/lib/store-catalog-sync";
 import {
   attachOfficialDetailsToStore,
   findSavedStoreForOfficialPin,
+  SAME_BUILDING_MILES,
+  type OfficialPinStore,
 } from "@/lib/official-store-attach";
-import { CATALOG_COLLOCATED_MERGE_MILES } from "@/lib/catalog-store-colocated-identity";
 import { deleteStoreIdentityAttachmentsForStore } from "@/lib/store-identity-ingest-aliases";
 
 export const PUBLIX_STORE_LOCATOR_SOURCE = "publix-store-locator";
@@ -249,42 +250,58 @@ export async function syncPublixContextStoresForZip(input: {
     const saved = await getDbPool().query<{
       id: string;
       name: string;
+      source_name: string | null;
+      source_store_id: string | null;
       latitude: string;
       longitude: string;
     }>(`
-      select id, name, latitude, longitude
+      select id, name, source_name, source_store_id, latitude, longitude
       from stores
       where latitude is not null and longitude is not null
     `);
+    const savedPins: OfficialPinStore[] = saved.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      latitude: Number(row.latitude),
+      longitude: Number(row.longitude),
+      sourceName: row.source_name,
+      sourceStoreId: row.source_store_id,
+    }));
     let attached = 0;
+    const toInsert: CatalogStoreRecord[] = [];
     for (const store of catalogStores) {
       const mapRow = findSavedStoreForOfficialPin({
-        stores: saved.rows.map((row) => ({
-          id: row.id,
-          name: row.name,
-          latitude: Number(row.latitude),
-          longitude: Number(row.longitude),
-        })),
-        name: store.name,
+        stores: savedPins,
         latitude: store.latitude,
         longitude: store.longitude,
         chainHint: "publix",
-        radiusMiles: CATALOG_COLLOCATED_MERGE_MILES,
+        radiusMiles: SAME_BUILDING_MILES,
+        locatorStoreNumber: store.sourceStoreId,
       });
-      if (!mapRow) {
+      if (mapRow) {
+        attached += await attachOfficialDetailsToStore({
+          storeId: mapRow.id,
+          addressLine: store.addressLine,
+          postalCode: store.postalCode,
+          sourceStoreId: store.sourceStoreId,
+        });
         continue;
       }
-      attached += await attachOfficialDetailsToStore({
-        storeId: mapRow.id,
-        addressLine: store.addressLine,
-        postalCode: store.postalCode,
-        sourceStoreId: store.sourceStoreId,
+      toInsert.push(store);
+    }
+
+    let inserted = 0;
+    if (toInsert.length > 0) {
+      const { upsertCatalogStores } = await import("@/lib/store-catalog-sync");
+      inserted = await upsertCatalogStores(toInsert, {
+        preserveRankedSources: true,
+        skipCollocatedRedirect: true,
       });
     }
 
     return {
-      upserted: attached,
-      message: `Publix store locator filled in ${attached} saved building(s) for ZIP ${input.zipCode}.`,
+      upserted: attached + inserted,
+      message: `Publix store locator kept ${attached} saved building(s) and added ${inserted} for ZIP ${input.zipCode}.`,
       retiredAtlee: false,
       retiredOsmDuplicates: 0,
     };
