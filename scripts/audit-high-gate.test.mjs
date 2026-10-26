@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { BRACES_ADVISORY, judgeHighAudit } from "./audit-high-gate.mjs";
+import { judgeHighAudit } from "./audit-high-gate.mjs";
 
 const bracesVia = {
-  url: `https://github.com/advisories/${BRACES_ADVISORY}`,
+  url: "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
   severity: "high",
 };
 
 describe("judgeHighAudit", () => {
-  it("allows the unpatched braces chain and nothing else", () => {
+  it("blocks a high braces chain", () => {
     const result = judgeHighAudit({
       vulnerabilities: {
         braces: { severity: "high", via: [bracesVia] },
@@ -17,8 +17,11 @@ describe("judgeHighAudit", () => {
       },
     });
 
-    expect(result.blocking).toEqual([]);
-    expect(result.bracesPresent).toBe(true);
+    expect(result.blocking.map((item) => item.name)).toEqual([
+      "braces",
+      "micromatch",
+      "eslint-config-next",
+    ]);
   });
 
   it("blocks a different high advisory", () => {
@@ -32,7 +35,6 @@ describe("judgeHighAudit", () => {
       },
     });
 
-    expect(result.bracesPresent).toBe(false);
     expect(result.blocking.map((item) => item.name)).toEqual(["sharp", "next"]);
   });
 
@@ -50,12 +52,11 @@ describe("judgeHighAudit", () => {
       },
     });
 
-    expect(result.blocking.map((item) => item.name)).toEqual(["eslint-config-next"]);
+    expect(result.blocking.map((item) => item.name)).toEqual(["braces", "eslint-config-next"]);
   });
 
-  it("reports the braces exception unused when the report has no high findings", () => {
+  it("passes when the report has no high or critical findings", () => {
     const result = judgeHighAudit({ vulnerabilities: {} });
     expect(result.blocking).toEqual([]);
-    expect(result.bracesPresent).toBe(false);
   });
 });
