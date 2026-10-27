@@ -244,6 +244,16 @@ describe("migrationEffectPresent", () => {
         queryScalar: () => "15",
       }),
     ).toBe(false);
+    expect(
+      migrationEffectPresent("042", {
+        ...db,
+        columnExists: (table, column) =>
+          (table === "price_observations" &&
+            (column === "source_flyer_key" || column === "source_flyer_kind")) ||
+          (table === "weekly_ad_flyer_hashes" && column === "flyer_key"),
+      }),
+    ).toBe(true);
+    expect(migrationEffectPresent("042", db)).toBe(false);
   });
 
   it("has an effect probe for every db/init migration file", () => {

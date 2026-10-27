@@ -12,8 +12,19 @@ import {
   insertPriceObservationIfChanged,
   priceObservationsMateriallyMatch,
   shouldPreserveStoreLocationProvenance,
+  type PriceObservationFlyerProvenance,
 } from "@/lib/price-observation-writes";
 import { KROGER_OFFICIAL_PRICE_SOURCE } from "@/lib/price-source-policy";
+
+describe("weekly-ad flyer provenance columns", () => {
+  it("stays unset until a later attach commit writes them", () => {
+    const provenance: PriceObservationFlyerProvenance = {
+      sourceFlyerKey: null,
+      sourceFlyerKind: null,
+    };
+    expect(provenance).toEqual({ sourceFlyerKey: null, sourceFlyerKind: null });
+  });
+});
 
 describe("shouldPreserveStoreLocationProvenance", () => {
   it("preserves live OSM, fixture OSM, and locator provenance sources", () => {

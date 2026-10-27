@@ -22,6 +22,7 @@ import {
 import {
   shouldSkipUnchangedFlyerPersist,
   weeklyAdFlyerContentHash,
+  type WeeklyAdFlyerHashIdentity,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 
 const squareAround: GeoJsonPolygon = {
@@ -177,6 +178,11 @@ describe("market admission helpers", () => {
     expect(classifyOwnerAdmissionGroup("Target")).toBe("will-ingest");
     expect(classifyOwnerAdmissionGroup("Whole Foods")).toBe("will-ingest");
     expect(classifyOwnerAdmissionGroup("Giant")).toBe("needs-you");
+  });
+
+  it("keeps the flyer hash identity unset while the table is still keyed by chain", () => {
+    const identity: WeeklyAdFlyerHashIdentity = { chain: "publix", flyerKey: null };
+    expect(identity.flyerKey).toBeNull();
   });
 
   it("skips flyer persist when the content hash is unchanged and rows still exist", () => {

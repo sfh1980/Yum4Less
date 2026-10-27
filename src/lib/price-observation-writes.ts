@@ -66,6 +66,14 @@ export function shouldPreserveStoreLocationProvenance(input: {
   return false;
 }
 
+/** Columns from 042. Writers leave them null until a later attach commit. */
+export type PriceObservationFlyerKind = "flyer" | "store";
+
+export type PriceObservationFlyerProvenance = {
+  sourceFlyerKey: string | null;
+  sourceFlyerKind: PriceObservationFlyerKind | null;
+};
+
 export type PriceObservationInsert = {
   storeId: string;
   ingredientId: string;

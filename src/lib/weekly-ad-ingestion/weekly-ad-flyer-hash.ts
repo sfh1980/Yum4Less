@@ -4,6 +4,12 @@ import { logServerError } from "@/lib/server-log";
 import { readWeeklyAdMaxUnverifiedDays } from "@/lib/weekly-ad-ingestion/weekly-ad-settings";
 import type { WeeklyAdOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
+/** Column from 042. The table primary key is still chain. This upsert does not write flyerKey. */
+export type WeeklyAdFlyerHashIdentity = {
+  chain: string;
+  flyerKey: string | null;
+};
+
 export function weeklyAdFlyerContentHash(
   offers: Pick<WeeklyAdOffer, "productName" | "price" | "saleLabel">[],
 ): string {
