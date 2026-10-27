@@ -7,8 +7,10 @@ import { listDiscoveredChainsWithoutSaleSource } from "@/lib/chain-registry-ensu
 import { listSurroundingZipCodes } from "@/lib/owner/surrounding-zips";
 import { fetchCloudflareMorning } from "@/lib/owner/cloudflare-morning-client";
 import { postMorningDiscord } from "@/lib/owner/morning-discord";
+import { logMorningChainPriceFailure, loadMorningChainPriceFacts } from "@/lib/owner/morning-chain-prices";
 import {
   appendMorningIssue,
+  chainPriceExceptionsInNote,
   composeMorningReport,
   isDiscordWebhookUrl,
   isMorningZipAddDay,
@@ -16,6 +18,8 @@ import {
   morningWeekday,
   outsideChecksAreReported,
   pickMorningZipCandidates,
+  previousMorningReportDate,
+  type MorningChainPriceFact,
   type ZipProbeOutcome,
 } from "@/lib/owner/morning-report";
 import {
@@ -23,6 +27,7 @@ import {
   listAddedZipCodes,
   listZipsWaitingForTest,
   readExternalCheck,
+  readMorningReport,
   recordZipAdd,
   recordZipTest,
   saveMorningReport,
@@ -158,6 +163,22 @@ export async function runMorningReport(): Promise<void> {
   const chainsWithoutSaleSource = await listDiscoveredChainsWithoutSaleSource().catch(
     () => [],
   );
+  let chainPrices: MorningChainPriceFact[] | undefined;
+  let priorChainPriceExceptions: string[] | null | undefined;
+  try {
+    chainPrices = await loadMorningChainPriceFacts({
+      activeZipCodes: active.map((market) => market.zipCode),
+    });
+    const yesterday = previousMorningReportDate(reportDate);
+    const priorNote = yesterday ? await readMorningReport(yesterday) : null;
+    priorChainPriceExceptions = priorNote
+      ? chainPriceExceptionsInNote(priorNote.body)
+      : null;
+  } catch (error) {
+    logMorningChainPriceFailure(error);
+    chainPrices = undefined;
+    priorChainPriceExceptions = undefined;
+  }
   const cloudflare = await fetchCloudflareMorning();
   let note = composeMorningReport({
     weekday,
@@ -173,6 +194,7 @@ export async function runMorningReport(): Promise<void> {
     nearbyLeft,
     discordConfigured,
     chainsWithoutSaleSource,
+    ...(chainPrices ? { chainPrices, priorChainPriceExceptions } : {}),
     storeLookupTurnedOff: isOsmOverpassDisabled(),
     ...(cloudflare ? { cloudflare } : {}),
   });

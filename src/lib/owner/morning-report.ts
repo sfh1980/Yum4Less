@@ -149,6 +149,89 @@ export function judgeLiveSite(input: {
   return "failed";
 }
 
+export type MorningChainPriceFact = {
+  displayName: string;
+  admittedStore: boolean;
+  saleSource: boolean;
+  freshOfficialCount: number;
+  freshFlyerCount: number;
+};
+
+const CHAIN_PRICE_EXCEPTION_LINE = /^(.+) has no prices from the last day\.$/;
+const CHAIN_PRICE_REPEAT_LINE =
+  /^\d+ of \d+ chains? (?:is|are) missing prices from the last day again\.$/;
+
+export function previousMorningReportDate(reportDate: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(reportDate);
+  if (!match) {
+    return null;
+  }
+  const utc = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+  );
+  return new Date(utc - 86_400_000).toISOString().slice(0, 10);
+}
+
+export function chainPriceExceptionsInNote(body: string): string[] {
+  return body.split("\n").flatMap((line) => {
+    const match = CHAIN_PRICE_EXCEPTION_LINE.exec(line.trim());
+    return match?.[1] ? [match[1]] : [];
+  });
+}
+
+export function describeMorningChainPrices(input: {
+  chains: readonly MorningChainPriceFact[];
+  priorExceptionNames: readonly string[] | null;
+}): {
+  lines: string[];
+  needsAttention: boolean;
+  exceptionNames: string[];
+  counted: number;
+} {
+  const counted = input.chains.filter(
+    (chain) => chain.admittedStore && chain.saleSource && chain.displayName.trim(),
+  );
+  if (counted.length === 0) {
+    return { lines: [], needsAttention: false, exceptionNames: [], counted: 0 };
+  }
+
+  const exceptionNames = counted
+    .filter((chain) => chain.freshOfficialCount + chain.freshFlyerCount <= 0)
+    .map((chain) => chain.displayName.trim());
+  const prior = input.priorExceptionNames;
+  const repeated = prior
+    ? exceptionNames.filter((name) => prior.includes(name))
+    : [];
+
+  if (exceptionNames.length === 0) {
+    const count = counted.length;
+    const noun = count === 1 ? "chain" : "chains";
+    const verb = count === 1 ? "has" : "have";
+    return {
+      lines: [`All ${count} ${noun} ${verb} prices from the last day.`],
+      needsAttention: false,
+      exceptionNames: [],
+      counted: count,
+    };
+  }
+
+  const missing = exceptionNames.length;
+  const total = counted.length;
+  const verb = missing === 1 ? "is" : "are";
+  const again = repeated.length > 0 ? " again" : "";
+  return {
+    lines: [
+      ...exceptionNames.map((name) => `${name} has no prices from the last day.`),
+      `${missing} of ${total} ${total === 1 ? "chain" : "chains"} ${verb} missing prices from the last day${again}.`,
+    ],
+    needsAttention: repeated.length > 0,
+    exceptionNames,
+    counted: total,
+  };
+}
+
 export type MorningReportInput = {
   weekday: string;
   codeTests: MorningCheckState;
@@ -163,6 +246,13 @@ export type MorningReportInput = {
   nearbyLeft: boolean;
   discordConfigured: boolean;
   chainsWithoutSaleSource?: readonly string[];
+  /** Per-chain price facts. When set, they replace the single freshness sentence. */
+  chainPrices?: readonly MorningChainPriceFact[];
+  /**
+   * Exception names from the previous morning note.
+   * Null means that note does not exist.
+   */
+  priorChainPriceExceptions?: readonly string[] | null;
   cloudflare?: CloudflareMorningFacts;
   /** Night Overpass was skipped on purpose. Informational; does not set Needs you. */
   storeLookupTurnedOff?: boolean;
@@ -178,11 +268,25 @@ export function composeMorningReport(input: MorningReportInput): {
   lines.push(
     input.lastNightOk ? "Last night finished." : "Last night did not finish.",
   );
-  lines.push(
-    input.pricesFresh
-      ? "Prices are from the last day."
-      : "Prices are not from the last day.",
-  );
+  const describedPrices = input.chainPrices
+    ? describeMorningChainPrices({
+        chains: input.chainPrices,
+        priorExceptionNames: input.priorChainPriceExceptions ?? null,
+      })
+    : null;
+  const priceGapNeedsYou =
+    describedPrices && describedPrices.counted > 0
+      ? describedPrices.needsAttention
+      : !input.pricesFresh;
+  if (describedPrices && describedPrices.counted > 0) {
+    lines.push(...describedPrices.lines);
+  } else {
+    lines.push(
+      input.pricesFresh
+        ? "Prices are from the last day."
+        : "Prices are not from the last day.",
+    );
+  }
 
   if (input.addedZipCodes.length > 0) {
     const count = input.addedZipCodes.length;
@@ -236,7 +340,7 @@ export function composeMorningReport(input: MorningReportInput): {
     input.codeTests !== "passed" ||
     input.siteCheck !== "passed" ||
     !input.lastNightOk ||
-    !input.pricesFresh ||
+    priceGapNeedsYou ||
     input.addSkipped === "last-night" ||
     input.addSkipped === "none-left" ||
     (input.chainsWithoutSaleSource?.length ?? 0) > 0 ||
@@ -333,6 +437,7 @@ function otherMorningLineNeedsAttention(line: string): boolean {
   return (
     line === "Last night did not finish." ||
     line === "Prices are not from the last day." ||
+    CHAIN_PRICE_REPEAT_LINE.test(line) ||
     line === "No new areas were added." ||
     line === "No nearby areas are left to add." ||
     line === "No surrounding areas are left to add." ||

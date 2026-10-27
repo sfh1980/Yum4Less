@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyOutsideResultToMorningNote,
+  chainPriceExceptionsInNote,
   composeMissedMorningReport,
   composeMorningReport,
   isDiscordWebhookUrl,
@@ -9,8 +10,22 @@ import {
   judgeShopperProbeWithDinners,
   morningReportDate,
   pickMorningZipCandidates,
+  previousMorningReportDate,
+  type MorningChainPriceFact,
 } from "@/lib/owner/morning-report";
 import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
+
+function priceChain(
+  overrides: Partial<MorningChainPriceFact> & Pick<MorningChainPriceFact, "displayName">,
+): MorningChainPriceFact {
+  return {
+    admittedStore: true,
+    saleSource: true,
+    freshOfficialCount: 0,
+    freshFlyerCount: 1,
+    ...overrides,
+  };
+}
 
 const quiet = {
   weekday: "Monday",
@@ -187,6 +202,119 @@ describe("morning report", () => {
     expect(kept.body).toContain(OSM_OVERPASS_DISABLED_MESSAGE);
     expect(kept.needsAttention).toBe(false);
     expect(kept.body.endsWith("Nothing needs you.")).toBe(true);
+  });
+
+  it("prints one all-clear price line and lists only the chains that are missing", () => {
+    const clear = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({ displayName: "Aldi" }),
+        priceChain({ displayName: "Kroger", freshOfficialCount: 4, freshFlyerCount: 0 }),
+      ],
+      priorChainPriceExceptions: [],
+    });
+    expect(clear.needsAttention).toBe(false);
+    expect(clear.body).toContain("All 2 chains have prices from the last day.");
+    expect(clear.body).not.toContain("Prices are from the last day.");
+    expect(clear.body).not.toContain("has no prices");
+
+    const one = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({ displayName: "Aldi" }),
+        priceChain({ displayName: "Lidl", freshFlyerCount: 0 }),
+        priceChain({ displayName: "BJ's", admittedStore: false, freshFlyerCount: 0 }),
+        priceChain({
+          displayName: "Trader Joe's",
+          saleSource: false,
+          freshFlyerCount: 0,
+        }),
+      ],
+      priorChainPriceExceptions: [],
+    });
+    expect(one.needsAttention).toBe(false);
+    expect(one.body).toContain("Lidl has no prices from the last day.");
+    expect(one.body).toContain("1 of 2 chains is missing prices from the last day.");
+    expect(one.body).not.toContain("Aldi has no prices");
+    expect(one.body).not.toContain("BJ's");
+    expect(one.body).not.toContain("Trader Joe's");
+    expect(one.body).toContain("Nothing needs you.");
+  });
+
+  it("stays quiet when Kroger's official rows are fresh and the flyer is not", () => {
+    const note = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Kroger",
+          freshOfficialCount: 12,
+          freshFlyerCount: 0,
+        }),
+      ],
+      priorChainPriceExceptions: ["Kroger"],
+    });
+    expect(note.needsAttention).toBe(false);
+    expect(note.body).toContain("All 1 chain has prices from the last day.");
+    expect(note.body).not.toContain("Kroger has no prices");
+  });
+
+  it("treats the first missing morning as information and the next as Needs you", () => {
+    const chains = [
+      priceChain({ displayName: "Aldi", freshFlyerCount: 0 }),
+      priceChain({ displayName: "Food Lion" }),
+    ];
+    const first = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: [],
+    });
+    expect(first.needsAttention).toBe(false);
+    expect(first.body).toContain("Aldi has no prices from the last day.");
+    expect(first.body).toContain("1 of 2 chains is missing prices from the last day.");
+    expect(first.body).not.toContain("again");
+    expect(first.body).toContain("Nothing needs you.");
+
+    const noPrior = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: null,
+    });
+    expect(noPrior.needsAttention).toBe(false);
+    expect(noPrior.body).not.toContain("again");
+    expect(noPrior.body).toContain("Nothing needs you.");
+
+    const second = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: chainPriceExceptionsInNote(first.body),
+    });
+    expect(second.needsAttention).toBe(true);
+    expect(second.body).toContain(
+      "1 of 2 chains is missing prices from the last day again.",
+    );
+    expect(second.body.endsWith("Needs you.")).toBe(true);
+
+    const kept = applyOutsideResultToMorningNote(second.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(kept.needsAttention).toBe(true);
+    expect(kept.body.endsWith("Needs you.")).toBe(true);
+
+    const stillInformation = applyOutsideResultToMorningNote(first.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(stillInformation.needsAttention).toBe(false);
+    expect(previousMorningReportDate("2026-10-27")).toBe("2026-10-26");
   });
 
   it("accepts only a Discord webhook URL", () => {
