@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { getDbPool } from "@/lib/db";
 import { logServerError } from "@/lib/server-log";
+import { readWeeklyAdMaxUnverifiedDays } from "@/lib/weekly-ad-ingestion/weekly-ad-settings";
 import type { WeeklyAdOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 export function weeklyAdFlyerContentHash(
@@ -123,7 +124,9 @@ export function shouldSkipUnchangedFlyerPersist(input: {
  * The unchanged-hash skip does not rewrite rows. Ranked reads still require
  * last_verified_at or observed_at inside 24 hours, so bump last_verified_at
  * on the rows this flyer already wrote. observed_at stays. A row past
- * valid_through is left alone.
+ * valid_through is left alone. A row whose observed_at is older than
+ * YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS is left alone so a stuck source
+ * stops looking fresh.
  */
 export async function refreshUnchangedWeeklyAdVerification(input: {
   storeIds: readonly string[];
@@ -136,6 +139,7 @@ export async function refreshUnchangedWeeklyAdVerification(input: {
     return 0;
   }
 
+  const maxUnverifiedDays = readWeeklyAdMaxUnverifiedDays();
   const result = await getDbPool().query(
     `
       update price_observations
@@ -145,8 +149,9 @@ export async function refreshUnchangedWeeklyAdVerification(input: {
         and source_record_id = any($3::text[])
         and in_stock
         and (valid_through is null or valid_through >= now())
+        and observed_at >= now() - ($4::int * interval '1 day')
     `,
-    [storeIds, input.sourceName, sourceRecordIds],
+    [storeIds, input.sourceName, sourceRecordIds, maxUnverifiedDays],
   );
   return result.rowCount ?? 0;
 }

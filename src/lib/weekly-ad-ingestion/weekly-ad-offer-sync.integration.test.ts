@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
-import { deletePriceObservationsForStore } from "@/lib/price-observation-writes";
+import {
+  deletePriceObservationsForStore,
+  purgeStaleRankedPriceObservations,
+} from "@/lib/price-observation-writes";
 import {
   countLivePriceObservationsForStore,
   getMarketDataSnapshot,
@@ -214,9 +217,11 @@ function sameInstant(left: Date, right: Date) {
 
 describe("unchanged weekly-ad flyer hash", () => {
   const originalFlyerHash = process.env.YUM4LESS_FLYER_HASH;
+  const originalMaxUnverifiedDays = process.env.YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS;
 
   beforeEach(async () => {
     process.env.YUM4LESS_FLYER_HASH = "1";
+    delete process.env.YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS;
     await deletePriceObservationsForStore(HASH_STORE_ID);
     await getDbPool().query(`delete from weekly_ad_flyer_hashes where chain = 'kroger'`);
   });
@@ -228,6 +233,11 @@ describe("unchanged weekly-ad flyer hash", () => {
       delete process.env.YUM4LESS_FLYER_HASH;
     } else {
       process.env.YUM4LESS_FLYER_HASH = originalFlyerHash;
+    }
+    if (originalMaxUnverifiedDays === undefined) {
+      delete process.env.YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS;
+    } else {
+      process.env.YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS = originalMaxUnverifiedDays;
     }
     await resetDbPoolForTests();
   });
@@ -387,5 +397,94 @@ describe("unchanged weekly-ad flyer hash", () => {
     const rows = await readFlyerRows(WEEKLY_AD_SOURCE);
     expect(rows).toHaveLength(1);
     expect(Number(rows[0].price)).toBe(5.99);
+  });
+
+  it("does not refresh a row observed longer ago than the unverified-day setting", async () => {
+    process.env.YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS = "8";
+    const tooOld = new Date(Date.now() - 9 * 24 * 60 * 60 * 1000);
+    const stillInside = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const oldOffer = flyerOffer({
+      ingredientId: "chicken-thighs",
+      productName: "Chicken thighs",
+      price: 5.99,
+    });
+    const freshOffer = flyerOffer({
+      ingredientId: "broccoli",
+      productName: "Broccoli",
+      price: 1.99,
+    });
+    await rememberWeeklyAdFlyerHash({
+      chain: "kroger",
+      contentHash: weeklyAdFlyerContentHash([oldOffer, freshOffer]),
+      offerCount: 2,
+    });
+    await insertFlyerRow({
+      ingredientId: "chicken-thighs",
+      productName: "Chicken thighs",
+      price: 5.99,
+      observedAt: tooOld,
+      validThrough: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    });
+    await insertFlyerRow({
+      ingredientId: "broccoli",
+      productName: "Broccoli",
+      price: 1.99,
+      observedAt: stillInside,
+      validThrough: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    });
+
+    const summary = await syncWeeklyAdOffersToPriceObservations({
+      result: flyerResult([oldOffer, freshOffer]),
+    });
+
+    expect(summary.syncedCount).toBe(0);
+    expect(summary.message).toContain("skipped PostgreSQL rewrite");
+    const rows = await readFlyerRows(WEEKLY_AD_SOURCE);
+    const oldRow = rows.find((row) => row.ingredient_id === "chicken-thighs");
+    const insideRow = rows.find((row) => row.ingredient_id === "broccoli");
+    expect(oldRow).toBeDefined();
+    expect(insideRow).toBeDefined();
+    expect(sameInstant(oldRow!.observed_at, tooOld)).toBe(true);
+    expect(sameInstant(oldRow!.last_verified_at, tooOld)).toBe(true);
+    expect(sameInstant(insideRow!.observed_at, stillInside)).toBe(true);
+    expect(insideRow!.last_verified_at.getTime()).toBeGreaterThan(stillInside.getTime());
+  });
+
+  it("purges, then skips, then refreshes a row that is 23.5 hours old", async () => {
+    const observedAt = new Date(Date.now() - 23.5 * 60 * 60 * 1000);
+    const offer = flyerOffer({
+      ingredientId: "chicken-thighs",
+      productName: "Chicken thighs",
+      price: 5.99,
+    });
+    await rememberWeeklyAdFlyerHash({
+      chain: "kroger",
+      contentHash: weeklyAdFlyerContentHash([offer]),
+      offerCount: 1,
+    });
+    await insertFlyerRow({
+      ingredientId: "chicken-thighs",
+      productName: "Chicken thighs",
+      price: 5.99,
+      observedAt,
+      validThrough: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    });
+
+    await purgeStaleRankedPriceObservations();
+
+    const afterPurge = await readFlyerRows(WEEKLY_AD_SOURCE);
+    expect(afterPurge).toHaveLength(1);
+    expect(sameInstant(afterPurge[0].observed_at, observedAt)).toBe(true);
+    expect(sameInstant(afterPurge[0].last_verified_at, observedAt)).toBe(true);
+
+    const summary = await syncWeeklyAdOffersToPriceObservations({
+      result: flyerResult([offer]),
+    });
+
+    expect(summary.syncedCount).toBe(0);
+    expect(summary.message).toContain("skipped PostgreSQL rewrite");
+    const [afterRefresh] = await readFlyerRows(WEEKLY_AD_SOURCE);
+    expect(sameInstant(afterRefresh.observed_at, observedAt)).toBe(true);
+    expect(afterRefresh.last_verified_at.getTime()).toBeGreaterThan(observedAt.getTime());
   });
 });
