@@ -27,6 +27,8 @@ export type WeeklyAdRawOffer = {
   price: number;
   saleLabel?: string;
   validThrough?: string;
+  /** Flipp flyer id when the offer came from that flyer's item list. Not written yet. */
+  flyerId?: number;
 };
 
 export type WeeklyAdOffer = {
@@ -37,6 +39,8 @@ export type WeeklyAdOffer = {
   price: number;
   saleLabel?: string;
   validThrough?: string;
+  /** Carried from the raw flyer list. Persist still leaves source_flyer_key null. */
+  flyerId?: number;
   sourceUrl: string;
   observedAt: string;
   confidenceScore: number;

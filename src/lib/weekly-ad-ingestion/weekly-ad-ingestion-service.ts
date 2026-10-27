@@ -37,6 +37,7 @@ import { tryDiscoveredChainFlyers } from "@/lib/weekly-ad-ingestion/discovered-c
 import { rejectPendingReviewsMatchingJunk } from "@/lib/owner/ingredient-review-repository";
 import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
 import { logServerError } from "@/lib/server-log";
+import { clearFlippWeeklyAdFetchCache } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { readWeeklyAdFlyerHash } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import {
   getWeeklyAdIngestionStatusSummaries,
@@ -83,6 +84,7 @@ export async function runWeeklyAdIngestionForStores(input: {
   results: WeeklyAdIngestionResult[];
   syncSummaries: WeeklyAdOfferSyncSummary[];
 }> {
+  clearFlippWeeklyAdFetchCache();
   const catalog = await loadWeeklyAdMatchCatalog();
   const trackedIngredientIds = isFixtureIngestMode()
     ? WEEKLY_AD_TRACKED_INGREDIENT_IDS

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildFlippWeeklyAdSearchUrl,
+  clearFlippWeeklyAdFetchCache,
   fetchFlippSearchOffersForMerchant,
+  fetchFlippWeeklyAdOffersForMerchantFlyers,
+  fetchFlippWeeklyAdOffersForSearchTerms,
   parseFlippWeeklyAdItems,
   parseFlippWeeklyAdItemsForMerchant,
   selectFlyersForWeeklyAdPersist,
@@ -168,4 +171,155 @@ describe("flipp-weekly-ad-feed", () => {
       "Clover Valley Spaghetti",
     ]);
   });
+
+  it("fetches one item list when two ZIPs return the same flyer id", async () => {
+    clearFlippWeeklyAdFetchCache();
+    const counts = { lists: 0, items: 0 };
+    const fetchImpl = flippFetch((url) => {
+      if (url.includes("/flipp/flyers")) {
+        counts.lists += 1;
+        return { flyers: [{ id: 42, merchant: "ALDI", categories: ["Grocery"] }] };
+      }
+      if (url.includes("flyer_id=42")) {
+        counts.items += 1;
+        return {
+          items: [{ name: "Milk", current_price: 1.29, merchant_name: "ALDI" }],
+        };
+      }
+      throw new Error(url);
+    });
+
+    const first = await fetchFlippWeeklyAdOffersForMerchantFlyers({
+      zipCode: "23005",
+      merchantName: "ALDI",
+      fetchImpl,
+    });
+    const second = await fetchFlippWeeklyAdOffersForMerchantFlyers({
+      zipCode: "28269",
+      merchantName: "ALDI",
+      fetchImpl,
+    });
+
+    expect(counts.lists).toBe(2);
+    expect(counts.items).toBe(1);
+    expect(first[0]?.flyerId).toBe(42);
+    expect(second[0]?.flyerId).toBe(42);
+  });
+
+  it("fetches two item lists when the flyer ids differ", async () => {
+    clearFlippWeeklyAdFetchCache();
+    const counts = { lists: 0, items: 0 };
+    const fetchImpl = flippFetch((url) => {
+      if (url.includes("/flipp/flyers")) {
+        counts.lists += 1;
+        const postal = new URL(url).searchParams.get("postal_code");
+        const id = postal === "23005" ? 42 : 77;
+        return { flyers: [{ id, merchant: "ALDI", categories: ["Grocery"] }] };
+      }
+      if (url.includes("flyer_id=")) {
+        counts.items += 1;
+        return {
+          items: [{ name: "Milk", current_price: 1.29, merchant_name: "ALDI" }],
+        };
+      }
+      throw new Error(url);
+    });
+
+    await fetchFlippWeeklyAdOffersForMerchantFlyers({
+      zipCode: "23005",
+      merchantName: "ALDI",
+      fetchImpl,
+    });
+    await fetchFlippWeeklyAdOffersForMerchantFlyers({
+      zipCode: "28269",
+      merchantName: "ALDI",
+      fetchImpl,
+    });
+
+    expect(counts.lists).toBe(2);
+    expect(counts.items).toBe(2);
+  });
+
+  it("fetches one flyer list when two merchants share a ZIP", async () => {
+    clearFlippWeeklyAdFetchCache();
+    const counts = { lists: 0, items: 0 };
+    const fetchImpl = flippFetch((url) => {
+      if (url.includes("/flipp/flyers")) {
+        counts.lists += 1;
+        return {
+          flyers: [
+            { id: 1, merchant: "ALDI", categories: ["Grocery"] },
+            { id: 2, merchant: "Lidl", categories: ["Grocery"] },
+          ],
+        };
+      }
+      if (url.includes("flyer_id=")) {
+        counts.items += 1;
+        const id = new URL(url).searchParams.get("flyer_id");
+        return {
+          items: [
+            {
+              name: id === "1" ? "Aldi Milk" : "Lidl Milk",
+              current_price: 1,
+              merchant_name: id === "1" ? "ALDI" : "Lidl",
+            },
+          ],
+        };
+      }
+      throw new Error(url);
+    });
+
+    await fetchFlippWeeklyAdOffersForMerchantFlyers({
+      zipCode: "23005",
+      merchantName: "ALDI",
+      fetchImpl,
+    });
+    await fetchFlippWeeklyAdOffersForMerchantFlyers({
+      zipCode: "23005",
+      merchantName: "Lidl",
+      fetchImpl,
+    });
+
+    expect(counts.lists).toBe(1);
+    expect(counts.items).toBe(2);
+  });
+
+  it("searches a supplemental term once when two ZIPs ask for it", async () => {
+    clearFlippWeeklyAdFetchCache();
+    let searches = 0;
+    const fetchImpl = flippFetch((url) => {
+      if (url.includes("q=")) {
+        searches += 1;
+        return {
+          items: [{ name: "Fresh Lemon", current_price: 0.99, merchant_name: "ALDI" }],
+        };
+      }
+      throw new Error(url);
+    });
+
+    await fetchFlippWeeklyAdOffersForSearchTerms({
+      zipCode: "23005",
+      merchantName: "ALDI",
+      searchTerms: ["Lemon"],
+      fetchImpl,
+    });
+    await fetchFlippWeeklyAdOffersForSearchTerms({
+      zipCode: "28269",
+      merchantName: "ALDI",
+      searchTerms: ["Lemon"],
+      fetchImpl,
+    });
+
+    expect(searches).toBe(1);
+  });
 });
+
+function flippFetch(respond: (url: string) => unknown): typeof fetch {
+  return (async (input: RequestInfo | URL) => {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => respond(String(input)),
+    } as Response;
+  }) as typeof fetch;
+}

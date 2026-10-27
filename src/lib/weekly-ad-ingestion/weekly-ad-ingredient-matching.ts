@@ -94,6 +94,7 @@ export function matchWeeklyAdOffers(input: {
       price: rawOffer.price,
       saleLabel: rawOffer.saleLabel,
       validThrough: rawOffer.validThrough,
+      flyerId: rawOffer.flyerId,
       sourceUrl: input.sourceUrl,
       observedAt: input.observedAt,
       confidenceScore: bestMatch?.matchConfidence ?? 0.25,

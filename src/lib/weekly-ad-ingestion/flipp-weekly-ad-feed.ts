@@ -58,6 +58,49 @@ export function buildFlippFlyersUrl(zipCode: string) {
   return url.toString();
 }
 
+const fetchImplIds = new WeakMap<object, number>();
+let nextFetchImplId = 1;
+const flyerListCache = new Map<string, Promise<FlippFlyerSummary[]>>();
+const flyerItemCache = new Map<string, Promise<WeeklyAdRawOffer[]>>();
+const merchantSearchCache = new Map<string, Promise<WeeklyAdRawOffer[]>>();
+const supplementalTermCache = new Map<string, Promise<WeeklyAdRawOffer[]>>();
+
+function fetchImplKey(fetchImpl: typeof fetch): string {
+  const existing = fetchImplIds.get(fetchImpl);
+  if (existing !== undefined) {
+    return String(existing);
+  }
+  const id = nextFetchImplId;
+  nextFetchImplId += 1;
+  fetchImplIds.set(fetchImpl, id);
+  return String(id);
+}
+
+function cachedLoad<T>(
+  cache: Map<string, Promise<T>>,
+  key: string,
+  load: () => Promise<T>,
+): Promise<T> {
+  const existing = cache.get(key);
+  if (existing) {
+    return existing;
+  }
+  const promise = load().catch((error: unknown) => {
+    cache.delete(key);
+    throw error;
+  });
+  cache.set(key, promise);
+  return promise;
+}
+
+/** Drop deduped Flipp responses at the start of a weekly-ad run. */
+export function clearFlippWeeklyAdFetchCache() {
+  flyerListCache.clear();
+  flyerItemCache.clear();
+  merchantSearchCache.clear();
+  supplementalTermCache.clear();
+}
+
 export async function fetchFlippWeeklyAdOffers(input: {
   zipCode: string;
   merchantName: FlippWeeklyAdMerchantName;
@@ -81,15 +124,18 @@ export async function fetchFlippSearchOffersForMerchant(input: {
   fetchImpl?: typeof fetch;
 }): Promise<WeeklyAdRawOffer[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
-    buildFlippWeeklyAdSearchUrl({
-      zipCode: input.zipCode,
-      merchantName: input.merchantName,
-    }),
-    fetchImpl,
-    `Flipp weekly-ad search for ${input.merchantName}`,
-  );
-  return parseFlippWeeklyAdItemsForMerchant(payload!.items ?? [], input.merchantName);
+  const cacheKey = `${fetchImplKey(fetchImpl)}|${input.zipCode}|${input.merchantName.toLowerCase()}`;
+  return cachedLoad(merchantSearchCache, cacheKey, async () => {
+    const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
+      buildFlippWeeklyAdSearchUrl({
+        zipCode: input.zipCode,
+        merchantName: input.merchantName,
+      }),
+      fetchImpl,
+      `Flipp weekly-ad search for ${input.merchantName}`,
+    );
+    return parseFlippWeeklyAdItemsForMerchant(payload!.items ?? [], input.merchantName);
+  });
 }
 
 export async function fetchFlippFlyerSummaries(input: {
@@ -97,8 +143,16 @@ export async function fetchFlippFlyerSummaries(input: {
   fetchImpl?: typeof fetch;
 }): Promise<FlippFlyerSummary[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
+  const cacheKey = `${fetchImplKey(fetchImpl)}|${input.zipCode}`;
+  return cachedLoad(flyerListCache, cacheKey, () => loadFlippFlyerSummaries(input.zipCode, fetchImpl));
+}
+
+async function loadFlippFlyerSummaries(
+  zipCode: string,
+  fetchImpl: typeof fetch,
+): Promise<FlippFlyerSummary[]> {
   const payload = await fetchFlippJson<FlippFlyersResponse | FlippFlyerSummary[]>(
-    buildFlippFlyersUrl(input.zipCode),
+    buildFlippFlyersUrl(zipCode),
     fetchImpl,
     "Flipp flyers lookup",
   );
@@ -130,27 +184,42 @@ export async function fetchFlippWeeklyAdOffersForMerchantFlyers(input: {
       continue;
     }
 
-    const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
-      buildFlippWeeklyAdSearchUrl({
-        zipCode: input.zipCode,
-        flyerId: flyer.id,
-      }),
+    const offers = await fetchFlippOffersForFlyerId({
+      zipCode: input.zipCode,
+      merchantName: input.merchantName,
+      flyerId: flyer.id,
       fetchImpl,
-      `Flipp flyer ${flyer.id} lookup`,
-      { returnEmptyOnFailure: true },
-    );
-
-    if (!payload) {
-      continue;
-    }
-
-    appendUniqueFlippOffers(
-      merged,
-      parseFlippWeeklyAdItemsForMerchant(payload.items ?? [], input.merchantName),
-    );
+    });
+    appendUniqueFlippOffers(merged, offers);
   }
 
   return merged;
+}
+
+async function fetchFlippOffersForFlyerId(input: {
+  zipCode: string;
+  merchantName: FlippWeeklyAdMerchantName;
+  flyerId: number;
+  fetchImpl: typeof fetch;
+}): Promise<WeeklyAdRawOffer[]> {
+  const cacheKey = `${fetchImplKey(input.fetchImpl)}|${input.flyerId}|${input.merchantName.toLowerCase()}`;
+  return cachedLoad(flyerItemCache, cacheKey, async () => {
+    const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
+      buildFlippWeeklyAdSearchUrl({
+        zipCode: input.zipCode,
+        flyerId: input.flyerId,
+      }),
+      input.fetchImpl,
+      `Flipp flyer ${input.flyerId} lookup`,
+      { returnEmptyOnFailure: true },
+    );
+    if (!payload) {
+      return [];
+    }
+    return parseFlippWeeklyAdItemsForMerchant(payload.items ?? [], input.merchantName).map(
+      (offer) => ({ ...offer, flyerId: input.flyerId }),
+    );
+  });
 }
 
 const NON_GROCERY_FLYER_DEPARTMENT =
@@ -201,29 +270,44 @@ export async function fetchFlippWeeklyAdOffersForSearchTerms(input: {
   const merged: WeeklyAdRawOffer[] = [];
 
   for (const searchTerm of input.searchTerms) {
-    const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
-      buildFlippWeeklyAdSearchUrl({
+    const cacheKey = `${fetchImplKey(fetchImpl)}|${input.merchantName.toLowerCase()}|${searchTerm.trim().toLowerCase()}`;
+    const offers = await cachedLoad(supplementalTermCache, cacheKey, () =>
+      loadFlippOffersForSearchTerm({
         zipCode: input.zipCode,
-        merchantName: `${input.merchantName} ${searchTerm}`,
+        merchantName: input.merchantName,
+        searchTerm,
+        fetchImpl,
       }),
-      fetchImpl,
-      `Flipp ${input.merchantName} ${searchTerm} lookup`,
-      { returnEmptyOnFailure: true },
     );
-
-    if (!payload) {
-      continue;
-    }
-
-    appendUniqueFlippOffers(
-      merged,
-      parseFlippWeeklyAdItems(payload.items ?? []).filter((offer) =>
-        offer.productName.toLowerCase().includes(searchTerm.toLowerCase()),
-      ),
-    );
+    appendUniqueFlippOffers(merged, offers);
   }
 
   return merged;
+}
+
+async function loadFlippOffersForSearchTerm(input: {
+  zipCode: string;
+  merchantName: FlippWeeklyAdMerchantName;
+  searchTerm: string;
+  fetchImpl: typeof fetch;
+}): Promise<WeeklyAdRawOffer[]> {
+  const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
+    buildFlippWeeklyAdSearchUrl({
+      zipCode: input.zipCode,
+      merchantName: `${input.merchantName} ${input.searchTerm}`,
+    }),
+    input.fetchImpl,
+    `Flipp ${input.merchantName} ${input.searchTerm} lookup`,
+    { returnEmptyOnFailure: true },
+  );
+
+  if (!payload) {
+    return [];
+  }
+
+  return parseFlippWeeklyAdItems(payload.items ?? []).filter((offer) =>
+    offer.productName.toLowerCase().includes(input.searchTerm.toLowerCase()),
+  );
 }
 
 export function mergeWeeklyAdRawOffers(
