@@ -118,3 +118,35 @@ export function shouldSkipUnchangedFlyerPersist(input: {
     input.targetStoresHaveObservations
   );
 }
+
+/**
+ * The unchanged-hash skip does not rewrite rows. Ranked reads still require
+ * last_verified_at or observed_at inside 24 hours, so bump last_verified_at
+ * on the rows this flyer already wrote. observed_at stays. A row past
+ * valid_through is left alone.
+ */
+export async function refreshUnchangedWeeklyAdVerification(input: {
+  storeIds: readonly string[];
+  sourceName: string;
+  sourceRecordIds: readonly string[];
+}): Promise<number> {
+  const storeIds = [...new Set(input.storeIds.filter(Boolean))];
+  const sourceRecordIds = [...new Set(input.sourceRecordIds.filter(Boolean))];
+  if (!flyerHashDbEnabled() || storeIds.length === 0 || sourceRecordIds.length === 0) {
+    return 0;
+  }
+
+  const result = await getDbPool().query(
+    `
+      update price_observations
+      set last_verified_at = now()
+      where store_id = any($1::text[])
+        and source_name = $2
+        and source_record_id = any($3::text[])
+        and in_stock
+        and (valid_through is null or valid_through >= now())
+    `,
+    [storeIds, input.sourceName, sourceRecordIds],
+  );
+  return result.rowCount ?? 0;
+}

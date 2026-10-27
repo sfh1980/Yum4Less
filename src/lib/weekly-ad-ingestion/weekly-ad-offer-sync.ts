@@ -9,6 +9,7 @@ import { flyerLineLooksLikeJunk } from "@/lib/weekly-ad-ingestion/weekly-ad-junk
 import { MIN_WEEKLY_AD_MATCH_CONFIDENCE } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import {
   readWeeklyAdFlyerHash,
+  refreshUnchangedWeeklyAdVerification,
   rememberWeeklyAdFlyerHash,
   shouldSkipUnchangedFlyerPersist,
   weeklyAdFlyerContentHash,
@@ -66,6 +67,13 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
       targetStoresHaveObservations,
     })
   ) {
+    await refreshUnchangedWeeklyAdVerification({
+      storeIds: targetStoreIds,
+      sourceName: getWeeklyAdSourceName(input.result.chain),
+      sourceRecordIds: offersToPersist.map(
+        (offer) => `${offer.storeId}:${offer.ingredientId}:${offer.productName}`,
+      ),
+    });
     return {
       ...baseSummary,
       storeId,
