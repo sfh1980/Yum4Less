@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildFlippWeeklyAdSearchUrl,
-  clearFlippWeeklyAdFetchCache,
   fetchFlippSearchOffersForMerchant,
+  runWithFlippWeeklyAdFetchCache,
   fetchFlippWeeklyAdOffersForMerchantFlyers,
   fetchFlippWeeklyAdOffersForSearchTerms,
   parseFlippWeeklyAdItems,
@@ -173,7 +173,7 @@ describe("flipp-weekly-ad-feed", () => {
   });
 
   it("fetches one item list when two ZIPs return the same flyer id", async () => {
-    clearFlippWeeklyAdFetchCache();
+    await runWithFlippWeeklyAdFetchCache(async () => {
     const counts = { lists: 0, items: 0 };
     const fetchImpl = flippFetch((url) => {
       if (url.includes("/flipp/flyers")) {
@@ -204,10 +204,11 @@ describe("flipp-weekly-ad-feed", () => {
     expect(counts.items).toBe(1);
     expect(first[0]?.flyerId).toBe(42);
     expect(second[0]?.flyerId).toBe(42);
+    });
   });
 
   it("fetches two item lists when the flyer ids differ", async () => {
-    clearFlippWeeklyAdFetchCache();
+    await runWithFlippWeeklyAdFetchCache(async () => {
     const counts = { lists: 0, items: 0 };
     const fetchImpl = flippFetch((url) => {
       if (url.includes("/flipp/flyers")) {
@@ -238,10 +239,11 @@ describe("flipp-weekly-ad-feed", () => {
 
     expect(counts.lists).toBe(2);
     expect(counts.items).toBe(2);
+    });
   });
 
   it("fetches one flyer list when two merchants share a ZIP", async () => {
-    clearFlippWeeklyAdFetchCache();
+    await runWithFlippWeeklyAdFetchCache(async () => {
     const counts = { lists: 0, items: 0 };
     const fetchImpl = flippFetch((url) => {
       if (url.includes("/flipp/flyers")) {
@@ -282,10 +284,11 @@ describe("flipp-weekly-ad-feed", () => {
 
     expect(counts.lists).toBe(1);
     expect(counts.items).toBe(2);
+    });
   });
 
   it("searches a supplemental term once when two ZIPs ask for it", async () => {
-    clearFlippWeeklyAdFetchCache();
+    await runWithFlippWeeklyAdFetchCache(async () => {
     let searches = 0;
     const fetchImpl = flippFetch((url) => {
       if (url.includes("q=")) {
@@ -311,6 +314,7 @@ describe("flipp-weekly-ad-feed", () => {
     });
 
     expect(searches).toBe(1);
+    });
   });
 });
 

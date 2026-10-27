@@ -37,7 +37,10 @@ import { tryDiscoveredChainFlyers } from "@/lib/weekly-ad-ingestion/discovered-c
 import { rejectPendingReviewsMatchingJunk } from "@/lib/owner/ingredient-review-repository";
 import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
 import { logServerError } from "@/lib/server-log";
-import { clearFlippWeeklyAdFetchCache } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
+import {
+  clearFlippWeeklyAdFetchCache,
+  runWithFlippWeeklyAdFetchCache,
+} from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { readWeeklyAdFlyerHash } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import {
   getWeeklyAdIngestionStatusSummaries,
@@ -77,6 +80,17 @@ export function getWeeklyAdIngestionClient(
 }
 
 export async function runWeeklyAdIngestionForStores(input: {
+  nearbyStores: Pick<NearbyStoreSummary, "id" | "name" | "chain">[];
+  zipCode: string;
+  persistToDatabase?: boolean;
+}): Promise<{
+  results: WeeklyAdIngestionResult[];
+  syncSummaries: WeeklyAdOfferSyncSummary[];
+}> {
+  return runWithFlippWeeklyAdFetchCache(() => ingestWeeklyAdsForStores(input));
+}
+
+async function ingestWeeklyAdsForStores(input: {
   nearbyStores: Pick<NearbyStoreSummary, "id" | "name" | "chain">[];
   zipCode: string;
   persistToDatabase?: boolean;

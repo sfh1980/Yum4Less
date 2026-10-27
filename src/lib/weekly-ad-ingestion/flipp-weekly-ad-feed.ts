@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import { fetchWithRetries } from "@/lib/weekly-ad-ingestion/weekly-ad-fetch-helpers";
 
@@ -60,10 +61,34 @@ export function buildFlippFlyersUrl(zipCode: string) {
 
 const fetchImplIds = new WeakMap<object, number>();
 let nextFetchImplId = 1;
-const flyerListCache = new Map<string, Promise<FlippFlyerSummary[]>>();
-const flyerItemCache = new Map<string, Promise<WeeklyAdRawOffer[]>>();
-const merchantSearchCache = new Map<string, Promise<WeeklyAdRawOffer[]>>();
-const supplementalTermCache = new Map<string, Promise<WeeklyAdRawOffer[]>>();
+
+type FlippFetchCache = {
+  flyerListCache: Map<string, Promise<FlippFlyerSummary[]>>;
+  flyerItemCache: Map<string, Promise<WeeklyAdRawOffer[]>>;
+  merchantSearchCache: Map<string, Promise<WeeklyAdRawOffer[]>>;
+  supplementalTermCache: Map<string, Promise<WeeklyAdRawOffer[]>>;
+};
+
+const flippFetchCacheStore = new AsyncLocalStorage<FlippFetchCache>();
+
+function createFlippFetchCache(): FlippFetchCache {
+  return {
+    flyerListCache: new Map(),
+    flyerItemCache: new Map(),
+    merchantSearchCache: new Map(),
+    supplementalTermCache: new Map(),
+  };
+}
+
+/**
+ * Hold Flipp responses for one weekly-ad run. Search and Owner Check import
+ * this module, so the maps must not live on the process.
+ */
+export function runWithFlippWeeklyAdFetchCache<T>(
+  run: () => Promise<T>,
+): Promise<T> {
+  return flippFetchCacheStore.run(createFlippFetchCache(), run);
+}
 
 function fetchImplKey(fetchImpl: typeof fetch): string {
   const existing = fetchImplIds.get(fetchImpl);
@@ -77,10 +102,13 @@ function fetchImplKey(fetchImpl: typeof fetch): string {
 }
 
 function cachedLoad<T>(
-  cache: Map<string, Promise<T>>,
+  cache: Map<string, Promise<T>> | undefined,
   key: string,
   load: () => Promise<T>,
 ): Promise<T> {
+  if (!cache) {
+    return load();
+  }
   const existing = cache.get(key);
   if (existing) {
     return existing;
@@ -93,12 +121,16 @@ function cachedLoad<T>(
   return promise;
 }
 
-/** Drop deduped Flipp responses at the start of a weekly-ad run. */
+/** Drop deduped Flipp responses for the weekly-ad run in progress. */
 export function clearFlippWeeklyAdFetchCache() {
-  flyerListCache.clear();
-  flyerItemCache.clear();
-  merchantSearchCache.clear();
-  supplementalTermCache.clear();
+  const cache = flippFetchCacheStore.getStore();
+  if (!cache) {
+    return;
+  }
+  cache.flyerListCache.clear();
+  cache.flyerItemCache.clear();
+  cache.merchantSearchCache.clear();
+  cache.supplementalTermCache.clear();
 }
 
 export async function fetchFlippWeeklyAdOffers(input: {
@@ -125,7 +157,7 @@ export async function fetchFlippSearchOffersForMerchant(input: {
 }): Promise<WeeklyAdRawOffer[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const cacheKey = `${fetchImplKey(fetchImpl)}|${input.zipCode}|${input.merchantName.toLowerCase()}`;
-  return cachedLoad(merchantSearchCache, cacheKey, async () => {
+  return cachedLoad(flippFetchCacheStore.getStore()?.merchantSearchCache, cacheKey, async () => {
     const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
       buildFlippWeeklyAdSearchUrl({
         zipCode: input.zipCode,
@@ -144,7 +176,11 @@ export async function fetchFlippFlyerSummaries(input: {
 }): Promise<FlippFlyerSummary[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const cacheKey = `${fetchImplKey(fetchImpl)}|${input.zipCode}`;
-  return cachedLoad(flyerListCache, cacheKey, () => loadFlippFlyerSummaries(input.zipCode, fetchImpl));
+  return cachedLoad(
+    flippFetchCacheStore.getStore()?.flyerListCache,
+    cacheKey,
+    () => loadFlippFlyerSummaries(input.zipCode, fetchImpl),
+  );
 }
 
 async function loadFlippFlyerSummaries(
@@ -203,7 +239,7 @@ async function fetchFlippOffersForFlyerId(input: {
   fetchImpl: typeof fetch;
 }): Promise<WeeklyAdRawOffer[]> {
   const cacheKey = `${fetchImplKey(input.fetchImpl)}|${input.flyerId}|${input.merchantName.toLowerCase()}`;
-  return cachedLoad(flyerItemCache, cacheKey, async () => {
+  return cachedLoad(flippFetchCacheStore.getStore()?.flyerItemCache, cacheKey, async () => {
     const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
       buildFlippWeeklyAdSearchUrl({
         zipCode: input.zipCode,
@@ -271,13 +307,16 @@ export async function fetchFlippWeeklyAdOffersForSearchTerms(input: {
 
   for (const searchTerm of input.searchTerms) {
     const cacheKey = `${fetchImplKey(fetchImpl)}|${input.merchantName.toLowerCase()}|${searchTerm.trim().toLowerCase()}`;
-    const offers = await cachedLoad(supplementalTermCache, cacheKey, () =>
-      loadFlippOffersForSearchTerm({
-        zipCode: input.zipCode,
-        merchantName: input.merchantName,
-        searchTerm,
-        fetchImpl,
-      }),
+    const offers = await cachedLoad(
+      flippFetchCacheStore.getStore()?.supplementalTermCache,
+      cacheKey,
+      () =>
+        loadFlippOffersForSearchTerm({
+          zipCode: input.zipCode,
+          merchantName: input.merchantName,
+          searchTerm,
+          fetchImpl,
+        }),
     );
     appendUniqueFlippOffers(merged, offers);
   }
