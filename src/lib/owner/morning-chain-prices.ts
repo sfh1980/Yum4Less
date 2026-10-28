@@ -1,16 +1,13 @@
 import { inferStoreChainFromCatalog } from "@/lib/chain-rollout-policy";
 import { getDbPool } from "@/lib/db";
 import { queryRankedPriceFreshness } from "@/lib/ingest/ingest-freshness-heartbeat";
+import { storesInsideIngestFence } from "@/lib/ingest/stores-inside-ingest-fence";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { loadCatalogStores } from "@/lib/market-catalog-repository";
-import {
-  resolveIngestFenceForZip,
-  storePassesIngestFence,
-} from "@/lib/market-ingest-fence";
+import { resolveIngestFenceForZip } from "@/lib/market-ingest-fence";
 import type { MorningChainPriceFact } from "@/lib/owner/morning-report";
 import { getRankedPriceSourceKind } from "@/lib/price-source-policy";
 import { logServerError } from "@/lib/server-log";
-import { filterCatalogStoresNearLocation } from "@/lib/store-catalog-sync";
 import { isWeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-registry";
 
 export type MorningChainRegistryRow = {
@@ -99,7 +96,7 @@ export async function loadMorningChainPriceFacts(input: {
 
 /**
  * Chains with a catalog store inside an active ZIP's ingest fence.
- * Same fence the weekly-ad night uses. This walk is separate from that script.
+ * Same fence walk the weekly-ad night uses.
  */
 async function listAdmittedChainIds(
   activeZipCodes: readonly string[],
@@ -112,18 +109,11 @@ async function listAdmittedChainIds(
       continue;
     }
     const fence = await resolveIngestFenceForZip(zipCode);
-    const nearby = filterCatalogStoresNearLocation(
+    const nearby = storesInsideIngestFence({
       stores,
-      locationResult.location,
-      fence.ingestMiles,
-    ).filter((store) =>
-      storePassesIngestFence({
-        latitude: store.latitude,
-        longitude: store.longitude,
-        center: locationResult.location,
-        fence,
-      }),
-    );
+      location: locationResult.location,
+      fence,
+    });
     for (const store of nearby) {
       const chain = inferStoreChainFromCatalog(store);
       if (isWeeklyAdChain(chain)) {

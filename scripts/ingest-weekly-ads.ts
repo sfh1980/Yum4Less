@@ -2,18 +2,10 @@ import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
 import { buildWeeklyAdIngestStoreCandidates } from "@/lib/ingest/weekly-ad-ingest-store-selection";
-import {
-  filterCatalogStoresNearLocation,
-  resolveScheduledIngestZipCodes,
-} from "@/lib/store-catalog-sync";
-import {
-  resolveIngestFenceForZip,
-  storePassesIngestFence,
-} from "@/lib/market-ingest-fence";
-import {
-  isWeeklyAdChain,
-  runWeeklyAdIngestionForStores,
-} from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
+import { storesInsideIngestFence } from "@/lib/ingest/stores-inside-ingest-fence";
+import { resolveIngestFenceForZip } from "@/lib/market-ingest-fence";
+import { resolveScheduledIngestZipCodes } from "@/lib/store-catalog-sync";
+import { runWeeklyAdIngestionForStores } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
 import {
@@ -78,18 +70,11 @@ async function main() {
       console.warn(`[ingest-fence:${zipCode}] ${fence.zctaWarning}`);
     }
 
-    const nearbyStores = filterCatalogStoresNearLocation(
-      weeklyAdCandidates,
-      locationResult.location,
-      fence.ingestMiles,
-    ).filter((store) =>
-      storePassesIngestFence({
-        latitude: store.latitude,
-        longitude: store.longitude,
-        center: locationResult.location,
-        fence,
-      }),
-    );
+    const nearbyStores = storesInsideIngestFence({
+      stores: weeklyAdCandidates,
+      location: locationResult.location,
+      fence,
+    });
 
     console.log(
       `Admitting ${nearbyStores.length} weekly-ad store(s) within ZIP outline (cap ${fence.ingestMiles} mi) of ${zipCode}...`,
