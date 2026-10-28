@@ -13,7 +13,7 @@ import {
   rememberWeeklyAdFlyerHash,
   shouldSkipUnchangedFlyerPersist,
   weeklyAdFlyerContentHash,
-  weeklyAdObservationsExistForStores,
+  weeklyAdStoresCoveredByFlyer,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import type {
   WeeklyAdIngestionResult,
@@ -24,6 +24,12 @@ import { getWeeklyAdSourceName } from "@/lib/weekly-ad-ingestion/weekly-ad-inges
 
 export async function syncWeeklyAdOffersToPriceObservations(input: {
   result: WeeklyAdIngestionResult;
+  /**
+   * Chain hash stored before this run's writes. Fan-out passes one value to
+   * every store so the first store's remember() cannot make the rest look unchanged.
+   * Omit it only for a single-store caller, which reads the table itself.
+   */
+  previousFlyerHash?: string | null;
 }): Promise<WeeklyAdOfferSyncSummary> {
   const baseSummary: WeeklyAdOfferSyncSummary = {
     chain: input.result.chain,
@@ -51,42 +57,74 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
 
   const offersToPersist = selectBestWeeklyAdOffersPerIngredient(input.result.offers);
   const contentHash = weeklyAdFlyerContentHash(offersToPersist);
-  const previousHash = await readWeeklyAdFlyerHash(input.result.chain);
+  const previousHash =
+    input.previousFlyerHash !== undefined
+      ? input.previousFlyerHash
+      : await readWeeklyAdFlyerHash(input.result.chain);
+  const sourceName = getWeeklyAdSourceName(input.result.chain);
+  const sourceRecordIdFor = (offer: WeeklyAdOffer) =>
+    `${offer.storeId}:${offer.ingredientId}:${offer.productName}`;
   const targetStoreIds = [
     ...new Set(offersToPersist.map((offer) => offer.storeId).filter(Boolean)),
   ];
-  const targetStoresHaveObservations = await weeklyAdObservationsExistForStores({
-    storeIds: targetStoreIds,
-    sourceName: getWeeklyAdSourceName(input.result.chain),
-    minObservationsPerStore: offersToPersist.length,
-  });
+  const offerCountByStore = new Map<string, number>();
+  for (const offer of offersToPersist) {
+    if (!offer.storeId) {
+      continue;
+    }
+    offerCountByStore.set(offer.storeId, (offerCountByStore.get(offer.storeId) ?? 0) + 1);
+  }
+  const hashUnchanged = Boolean(previousHash) && previousHash === contentHash;
+  const coveredStoreIds = hashUnchanged
+    ? await weeklyAdStoresCoveredByFlyer({
+        storeIds: targetStoreIds,
+        sourceName,
+        sourceRecordIds: offersToPersist.map(sourceRecordIdFor),
+        offerCountByStore,
+      })
+    : new Set<string>();
+  const everyStoreCovered =
+    targetStoreIds.length > 0 &&
+    targetStoreIds.every((storeId) => coveredStoreIds.has(storeId));
   if (
     shouldSkipUnchangedFlyerPersist({
       previousHash,
       nextHash: contentHash,
-      targetStoresHaveObservations,
+      targetStoresHaveObservations: everyStoreCovered,
     })
   ) {
     await refreshUnchangedWeeklyAdVerification({
       storeIds: targetStoreIds,
-      sourceName: getWeeklyAdSourceName(input.result.chain),
-      sourceRecordIds: offersToPersist.map(
-        (offer) => `${offer.storeId}:${offer.ingredientId}:${offer.productName}`,
-      ),
+      sourceName,
+      sourceRecordIds: offersToPersist.map(sourceRecordIdFor),
     });
     return {
       ...baseSummary,
       storeId,
       skippedCount: offersToPersist.length,
-      message: `${input.result.chain} weekly-ad flyer hash unchanged; skipped PostgreSQL rewrite.`,
+      message: `${input.result.chain} weekly-ad flyer hash unchanged for ${targetStoreIds.join(", ")}; skipped PostgreSQL rewrite.`,
     };
   }
 
+  const storesToRefresh = targetStoreIds.filter((storeId) => coveredStoreIds.has(storeId));
+  const offersToWrite = offersToPersist.filter(
+    (offer) => !coveredStoreIds.has(offer.storeId),
+  );
+  if (storesToRefresh.length > 0) {
+    await refreshUnchangedWeeklyAdVerification({
+      storeIds: storesToRefresh,
+      sourceName,
+      sourceRecordIds: offersToPersist
+        .filter((offer) => coveredStoreIds.has(offer.storeId))
+        .map(sourceRecordIdFor),
+    });
+  }
+
   let syncedCount = 0;
-  let skippedCount = 0;
+  let skippedCount = offersToPersist.length - offersToWrite.length;
   let failedCount = 0;
 
-  for (const offer of offersToPersist) {
+  for (const offer of offersToWrite) {
     const outcome = await persistWeeklyAdOffer(offer, input.result);
     if (outcome === "inserted") {
       syncedCount += 1;
@@ -124,13 +162,19 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
     offerCount: syncedCount,
   });
 
+  const writtenStoreId = offersToWrite.find((offer) => offer.storeId)?.storeId ?? storeId;
+  const refreshNote =
+    storesToRefresh.length > 0
+      ? ` Refreshed last_verified_at for ${storesToRefresh.join(", ")}; skipped PostgreSQL rewrite for those stores.`
+      : "";
+
   return {
     ...baseSummary,
-    storeId,
+    storeId: writtenStoreId,
     syncedCount,
     skippedCount,
     failedCount,
-    message: `Synced ${syncedCount} ${input.result.chain} weekly-ad price observation(s) into PostgreSQL for ${storeId}. Ranked meal pricing can read these rows on the next DB snapshot while chain rollout gates still apply.`,
+    message: `Synced ${syncedCount} ${input.result.chain} weekly-ad price observation(s) into PostgreSQL for ${writtenStoreId}.${refreshNote} Ranked meal pricing can read these rows on the next DB snapshot while chain rollout gates still apply.`,
   };
 }
 

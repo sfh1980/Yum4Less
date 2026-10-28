@@ -5,6 +5,7 @@ import {
   getWeeklyAdIngestionClients,
   runWeeklyAdIngestionForStores,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
+import * as weeklyAdFlyerHash from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import * as weeklyAdOfferSync from "@/lib/weekly-ad-ingestion/weekly-ad-offer-sync";
 import * as priceObservationWrites from "@/lib/price-observation-writes";
 
@@ -206,6 +207,50 @@ describe("weekly ad ingestion service", () => {
     ).toEqual(["publix-1566", "publix-1626"]);
 
     purgeSpy.mockRestore();
+    syncSpy.mockRestore();
+  });
+
+  it("fans out one Publix weekly-ad ingest to eleven stores with the hash from before any write", async () => {
+    const purgeSpy = vi
+      .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")
+      .mockResolvedValue(0);
+    const hashSpy = vi
+      .spyOn(weeklyAdFlyerHash, "readWeeklyAdFlyerHash")
+      .mockResolvedValue("flyer-hash-before-run");
+    const syncSpy = vi
+      .spyOn(weeklyAdOfferSync, "syncWeeklyAdOffersToPriceObservations")
+      .mockResolvedValue({
+        chain: "publix",
+        storeId: "publix-1566",
+        syncedCount: 1,
+        skippedCount: 0,
+        failedCount: 0,
+        retrievalMode: "cached",
+        message: "synced",
+      });
+    const publixStores = Array.from({ length: 11 }, (_, index) => {
+      const id = `publix-${1560 + index}`;
+      return { id, name: `Publix ${id}`, chain: "publix" as const };
+    });
+
+    await runWeeklyAdIngestionForStores({
+      nearbyStores: publixStores,
+      zipCode: "23111",
+      persistToDatabase: true,
+    });
+
+    expect(hashSpy).toHaveBeenCalledTimes(1);
+    expect(hashSpy).toHaveBeenCalledWith("publix");
+    expect(syncSpy).toHaveBeenCalledTimes(11);
+    expect(
+      syncSpy.mock.calls.map((call) => call[0]?.previousFlyerHash),
+    ).toEqual(Array.from({ length: 11 }, () => "flyer-hash-before-run"));
+    expect(
+      syncSpy.mock.calls.map((call) => call[0]?.result.offers[0]?.storeId).sort(),
+    ).toEqual(publixStores.map((store) => store.id).sort());
+
+    purgeSpy.mockRestore();
+    hashSpy.mockRestore();
     syncSpy.mockRestore();
   });
 

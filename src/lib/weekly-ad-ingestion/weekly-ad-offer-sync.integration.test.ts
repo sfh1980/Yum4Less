@@ -228,6 +228,12 @@ describe("unchanged weekly-ad flyer hash", () => {
 
   afterEach(async () => {
     await deletePriceObservationsForStore(HASH_STORE_ID);
+    await getDbPool().query(`delete from price_observations where store_id = any($1::text[])`, [
+      ["flyer-per-store-a", "flyer-per-store-b", "flyer-per-store-c"],
+    ]);
+    await getDbPool().query(`delete from stores where id = any($1::text[])`, [
+      ["flyer-per-store-a", "flyer-per-store-b", "flyer-per-store-c"],
+    ]);
     await getDbPool().query(`delete from weekly_ad_flyer_hashes where chain = 'kroger'`);
     if (originalFlyerHash === undefined) {
       delete process.env.YUM4LESS_FLYER_HASH;
@@ -487,4 +493,248 @@ describe("unchanged weekly-ad flyer hash", () => {
     expect(sameInstant(afterRefresh.observed_at, observedAt)).toBe(true);
     expect(afterRefresh.last_verified_at.getTime()).toBeGreaterThan(observedAt.getTime());
   });
+
+  it("writes a new flyer to every target store", async () => {
+    await resetPerStoreFixtures();
+    const offers = [
+      storeFlyerOffer("flyer-per-store-a"),
+      storeFlyerOffer("flyer-per-store-b"),
+    ];
+
+    for (const offer of offers) {
+      const summary = await syncWeeklyAdOffersToPriceObservations({
+        result: flyerResult([offer]),
+        previousFlyerHash: null,
+      });
+      expect(summary.syncedCount).toBe(1);
+      expect(summary.message).not.toContain("hash unchanged");
+    }
+
+    expect(await countWeeklyAdRows("flyer-per-store-a")).toBe(1);
+    expect(await countWeeklyAdRows("flyer-per-store-b")).toBe(1);
+  });
+
+  it("writes the store that lacks rows and refreshes stores that already have this flyer", async () => {
+    await resetPerStoreFixtures();
+    const observedAt = new Date(Date.now() - 20 * 60 * 60 * 1000);
+    const validThrough = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const sample = storeFlyerOffer("flyer-per-store-a");
+    const previousHash = weeklyAdFlyerContentHash([sample]);
+    await rememberWeeklyAdFlyerHash({
+      chain: "kroger",
+      contentHash: previousHash,
+      offerCount: 1,
+    });
+    await insertStoreFlyerRow({
+      storeId: "flyer-per-store-a",
+      observedAt,
+      validThrough,
+    });
+    await insertStoreFlyerRow({
+      storeId: "flyer-per-store-b",
+      observedAt,
+      validThrough,
+    });
+
+    const summaries = [];
+    for (const storeId of ["flyer-per-store-a", "flyer-per-store-b", "flyer-per-store-c"]) {
+      summaries.push(
+        await syncWeeklyAdOffersToPriceObservations({
+          result: flyerResult([storeFlyerOffer(storeId)]),
+          previousFlyerHash: previousHash,
+        }),
+      );
+    }
+
+    expect(summaries[0]?.syncedCount).toBe(0);
+    expect(summaries[0]?.message).toContain("flyer-per-store-a");
+    expect(summaries[0]?.message).toContain("skipped PostgreSQL rewrite");
+    expect(summaries[1]?.syncedCount).toBe(0);
+    expect(summaries[1]?.message).toContain("flyer-per-store-b");
+    expect(summaries[2]?.syncedCount).toBe(1);
+    expect(summaries[2]?.message).toContain("flyer-per-store-c");
+    expect(summaries[2]?.message).not.toContain("hash unchanged");
+
+    const covered = await readStoreFlyerRow("flyer-per-store-a");
+    const missing = await readStoreFlyerRow("flyer-per-store-c");
+    expect(covered).toBeDefined();
+    expect(sameInstant(covered!.observed_at, observedAt)).toBe(true);
+    expect(covered!.last_verified_at.getTime()).toBeGreaterThan(observedAt.getTime());
+    expect(missing).toBeDefined();
+    expect(Number(missing!.price)).toBe(5.99);
+    expect(await countWeeklyAdRows("flyer-per-store-b")).toBe(1);
+  });
+
+  it("writes when the chain hash matches and no target store has rows", async () => {
+    await resetPerStoreFixtures();
+    const sample = storeFlyerOffer("flyer-per-store-a");
+    const previousHash = weeklyAdFlyerContentHash([sample]);
+    await rememberWeeklyAdFlyerHash({
+      chain: "kroger",
+      contentHash: previousHash,
+      offerCount: 1,
+    });
+
+    for (const storeId of ["flyer-per-store-a", "flyer-per-store-b"]) {
+      const summary = await syncWeeklyAdOffersToPriceObservations({
+        result: flyerResult([storeFlyerOffer(storeId)]),
+        previousFlyerHash: previousHash,
+      });
+      expect(summary.syncedCount).toBe(1);
+      expect(summary.message).not.toContain("hash unchanged");
+    }
+
+    expect(await countWeeklyAdRows("flyer-per-store-a")).toBe(1);
+    expect(await countWeeklyAdRows("flyer-per-store-b")).toBe(1);
+  });
+
+  it("writes a store that only has rows from a different flyer", async () => {
+    await resetPerStoreFixtures();
+    const chicken = storeFlyerOffer("flyer-per-store-b");
+    const previousHash = weeklyAdFlyerContentHash([chicken]);
+    await rememberWeeklyAdFlyerHash({
+      chain: "kroger",
+      contentHash: previousHash,
+      offerCount: 1,
+    });
+    await insertStoreFlyerRow({
+      storeId: "flyer-per-store-b",
+      ingredientId: "broccoli",
+      productName: "Broccoli",
+      price: 1.99,
+      observedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
+      validThrough: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    });
+
+    const summary = await syncWeeklyAdOffersToPriceObservations({
+      result: flyerResult([chicken]),
+      previousFlyerHash: previousHash,
+    });
+
+    expect(summary.syncedCount).toBe(1);
+    expect(summary.message).not.toContain("hash unchanged");
+    const rows = await readStoreFlyerRows("flyer-per-store-b");
+    expect(rows.some((row) => row.ingredient_id === "chicken-thighs")).toBe(true);
+  });
+
+  it("writes the new price to later stores when an earlier store already saved the new hash", async () => {
+    await resetPerStoreFixtures();
+    const oldOffer = storeFlyerOffer("flyer-per-store-b", 5.99);
+    const previousHash = weeklyAdFlyerContentHash([oldOffer]);
+    await rememberWeeklyAdFlyerHash({
+      chain: "kroger",
+      contentHash: previousHash,
+      offerCount: 1,
+    });
+    await insertStoreFlyerRow({
+      storeId: "flyer-per-store-b",
+      price: 5.99,
+      observedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
+      validThrough: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    });
+
+    const first = await syncWeeklyAdOffersToPriceObservations({
+      result: flyerResult([storeFlyerOffer("flyer-per-store-a", 6.49)]),
+      previousFlyerHash: previousHash,
+    });
+    const second = await syncWeeklyAdOffersToPriceObservations({
+      result: flyerResult([storeFlyerOffer("flyer-per-store-b", 6.49)]),
+      previousFlyerHash: previousHash,
+    });
+
+    expect(first.syncedCount).toBe(1);
+    expect(second.syncedCount).toBe(1);
+    const rewritten = await readStoreFlyerRow("flyer-per-store-b");
+    expect(Number(rewritten?.price)).toBe(6.49);
+  });
 });
+
+const PER_STORE_IDS = ["flyer-per-store-a", "flyer-per-store-b", "flyer-per-store-c"];
+
+function storeFlyerOffer(storeId: string, price = 5.99): WeeklyAdOffer {
+  return {
+    ...flyerOffer({
+      ingredientId: "chicken-thighs",
+      productName: "Chicken thighs",
+      price,
+    }),
+    storeId,
+  };
+}
+
+async function resetPerStoreFixtures() {
+  const pool = getDbPool();
+  await pool.query(`delete from price_observations where store_id = any($1::text[])`, [
+    PER_STORE_IDS,
+  ]);
+  await pool.query(
+    `
+      insert into stores (
+        id, name, kind, city, state, latitude, longitude, source_name, source_store_id
+      )
+      select id, 'Kroger', 'grocery', 'Mechanicsville', 'VA', 37.610000, -77.330000,
+        'kroger-weekly-ad-scrape', id
+      from unnest($1::text[]) as id
+      on conflict (id) do nothing
+    `,
+    [PER_STORE_IDS],
+  );
+}
+
+async function insertStoreFlyerRow(input: {
+  storeId: string;
+  ingredientId?: string;
+  productName?: string;
+  price?: number;
+  observedAt: Date;
+  validThrough: Date | null;
+}) {
+  const ingredientId = input.ingredientId ?? "chicken-thighs";
+  const productName = input.productName ?? "Chicken thighs";
+  const price = input.price ?? 5.99;
+  await getDbPool().query(
+    `
+      insert into price_observations (
+        store_id, ingredient_id, price, in_stock, observed_at,
+        source_name, source_record_id, last_verified_at, valid_through, source_kind
+      ) values ($1, $2, $3, true, $4, $5, $6, $4, $7, 'weekly-ad')
+    `,
+    [
+      input.storeId,
+      ingredientId,
+      price,
+      input.observedAt.toISOString(),
+      WEEKLY_AD_SOURCE,
+      `${input.storeId}:${ingredientId}:${productName}`,
+      input.validThrough?.toISOString() ?? null,
+    ],
+  );
+}
+
+async function readStoreFlyerRows(storeId: string) {
+  const result = await getDbPool().query<{
+    ingredient_id: string;
+    price: string;
+    observed_at: Date;
+    last_verified_at: Date;
+  }>(
+    `
+      select ingredient_id, price::text, observed_at, last_verified_at
+      from price_observations
+      where store_id = $1 and source_name = $2
+      order by ingredient_id
+    `,
+    [storeId, WEEKLY_AD_SOURCE],
+  );
+  return result.rows;
+}
+
+async function readStoreFlyerRow(storeId: string) {
+  const rows = await readStoreFlyerRows(storeId);
+  return rows[0];
+}
+
+async function countWeeklyAdRows(storeId: string) {
+  const rows = await readStoreFlyerRows(storeId);
+  return rows.length;
+}

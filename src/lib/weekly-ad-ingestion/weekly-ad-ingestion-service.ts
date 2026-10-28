@@ -37,6 +37,7 @@ import { tryDiscoveredChainFlyers } from "@/lib/weekly-ad-ingestion/discovered-c
 import { rejectPendingReviewsMatchingJunk } from "@/lib/owner/ingredient-review-repository";
 import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
 import { logServerError } from "@/lib/server-log";
+import { readWeeklyAdFlyerHash } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import {
   getWeeklyAdIngestionStatusSummaries,
   syncWeeklyAdOffersToPriceObservations,
@@ -123,18 +124,13 @@ export async function runWeeklyAdIngestionForStores(input: {
       results.push(result);
 
       if (input.persistToDatabase && result.offers.length > 0) {
-        for (const targetStore of krogerStores) {
-          const fanOutResult: WeeklyAdIngestionResult = {
-            ...result,
-            offers: result.offers.map((offer) => ({
-              ...offer,
-              storeId: targetStore.id,
-            })),
-          };
-          syncSummaries.push(
-            await syncWeeklyAdOffersToPriceObservations({ result: fanOutResult }),
-          );
-        }
+        syncSummaries.push(
+          ...(await syncWeeklyAdResultAcrossStores({
+            chain: "kroger",
+            result,
+            stores: krogerStores,
+          })),
+        );
       }
     }
   }
@@ -167,18 +163,13 @@ export async function runWeeklyAdIngestionForStores(input: {
     results.push(result);
 
     if (input.persistToDatabase && result.offers.length > 0) {
-      for (const targetStore of chainStores) {
-        const fanOutResult: WeeklyAdIngestionResult = {
-          ...result,
-          offers: result.offers.map((offer) => ({
-            ...offer,
-            storeId: targetStore.id,
-          })),
-        };
-        syncSummaries.push(
-          await syncWeeklyAdOffersToPriceObservations({ result: fanOutResult }),
-        );
-      }
+      syncSummaries.push(
+        ...(await syncWeeklyAdResultAcrossStores({
+          chain,
+          result,
+          stores: chainStores,
+        })),
+      );
     }
   }
 
@@ -207,4 +198,29 @@ export async function getWeeklyAdIngestionMarketSummaries(input: {
   storeIds: string[];
 }) {
   return getWeeklyAdIngestionStatusSummaries(input);
+}
+
+/** One chain hash, read before any store write, then one persist decision per store. */
+async function syncWeeklyAdResultAcrossStores(input: {
+  chain: WeeklyAdChain;
+  result: WeeklyAdIngestionResult;
+  stores: Array<{ id: string }>;
+}): Promise<WeeklyAdOfferSyncSummary[]> {
+  const previousFlyerHash = await readWeeklyAdFlyerHash(input.chain);
+  const summaries: WeeklyAdOfferSyncSummary[] = [];
+  for (const targetStore of input.stores) {
+    summaries.push(
+      await syncWeeklyAdOffersToPriceObservations({
+        result: {
+          ...input.result,
+          offers: input.result.offers.map((offer) => ({
+            ...offer,
+            storeId: targetStore.id,
+          })),
+        },
+        previousFlyerHash,
+      }),
+    );
+  }
+  return summaries;
 }

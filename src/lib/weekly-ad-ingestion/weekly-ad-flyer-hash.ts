@@ -70,41 +70,51 @@ export async function rememberWeeklyAdFlyerHash(input: {
 }
 
 /**
- * True when this persist batch already has enough in-stock weekly-ad rows for
- * every target store. Hash-only skip is unsafe after a wipe that leaves a
- * partial leftover (e.g. 2 rows when promotion needs 3+).
+ * Stores that already have this flyer's in-stock rows.
+ * A store counts only when distinct source_record_id matches cover that
+ * store's offers. Any other rows for the chain do not. A partial leftover
+ * (2 matching rows when this flyer has 3 offers) does not count.
+ * Returns an empty set when the hash table is off or the read fails, so the
+ * caller writes instead of skipping.
  */
-export async function weeklyAdObservationsExistForStores(input: {
+export async function weeklyAdStoresCoveredByFlyer(input: {
   storeIds: readonly string[];
   sourceName: string;
-  minObservationsPerStore: number;
-}): Promise<boolean> {
+  sourceRecordIds: readonly string[];
+  offerCountByStore: ReadonlyMap<string, number>;
+}): Promise<Set<string>> {
   const storeIds = [...new Set(input.storeIds.filter(Boolean))];
-  const minObservationsPerStore = Math.max(1, input.minObservationsPerStore);
-  if (!flyerHashDbEnabled() || storeIds.length === 0) {
-    return false;
+  const sourceRecordIds = [...new Set(input.sourceRecordIds.filter(Boolean))];
+  if (!flyerHashDbEnabled() || storeIds.length === 0 || sourceRecordIds.length === 0) {
+    return new Set();
   }
 
   try {
     const result = await getDbPool().query<{ store_id: string; n: string | number }>(
       `
-        select store_id, count(*)::int as n
+        select store_id, count(distinct source_record_id)::int as n
         from price_observations
         where store_id = any($1::text[])
           and in_stock
           and source_name = $2
+          and source_record_id = any($3::text[])
         group by store_id
       `,
-      [storeIds, input.sourceName],
+      [storeIds, input.sourceName, sourceRecordIds],
     );
     const counts = new Map(
       result.rows.map((row) => [row.store_id, Number(row.n) || 0]),
     );
-    return storeIds.every(
-      (storeId) => (counts.get(storeId) ?? 0) >= minObservationsPerStore,
-    );
+    const covered = new Set<string>();
+    for (const storeId of storeIds) {
+      const needed = Math.max(1, input.offerCountByStore.get(storeId) ?? 1);
+      if ((counts.get(storeId) ?? 0) >= needed) {
+        covered.add(storeId);
+      }
+    }
+    return covered;
   } catch {
-    return false;
+    return new Set();
   }
 }
 
