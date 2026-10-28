@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   applyOutsideResultToMorningNote,
   chainPriceExceptionsInNote,
   composeMissedMorningReport,
   composeMorningReport,
+  countConsecutiveRecipeImportMisses,
+  describeRecipeImport,
   isDiscordWebhookUrl,
   isMorningZipAddDay,
   judgeLiveSite,
@@ -229,6 +232,69 @@ describe("morning report", () => {
     expect(note.body).toContain("Recipe import did not finish.");
     expect(note.needsAttention).toBe(false);
     expect(note.body.endsWith("Nothing needs you.")).toBe(true);
+    expect(note.body).not.toContain("Recipe import has missed");
+  });
+
+  it("sets Needs you after the recipe import misses the configured mornings", () => {
+    expect(
+      countConsecutiveRecipeImportMisses([
+        "Monday morning\nRecipe import did not finish.\nNothing needs you.",
+        "Sunday morning\nRecipe import did not finish.\nNothing needs you.",
+        "Saturday morning\nLast night finished.\nNothing needs you.",
+      ]),
+    ).toBe(2);
+
+    const second = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      recipeImportFailed: true,
+      recipeImportPriorMisses: 1,
+      recipeImportNeedsYouAfter: 3,
+    });
+    expect(second.body).toContain("Recipe import did not finish.");
+    expect(second.needsAttention).toBe(false);
+
+    const third = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      recipeImportFailed: true,
+      recipeImportPriorMisses: 2,
+      recipeImportNeedsYouAfter: 3,
+    });
+    expect(third.body).toContain("Recipe import did not finish.");
+    expect(third.body).toContain("Recipe import has missed 3 mornings.");
+    expect(third.needsAttention).toBe(true);
+    expect(describeRecipeImport({
+      failedToday: false,
+      priorConsecutiveMisses: 5,
+      threshold: 3,
+    }).needsAttention).toBe(false);
+
+    const kept = applyOutsideResultToMorningNote(third.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(kept.needsAttention).toBe(true);
+    expect(kept.body).toContain("Recipe import has missed 3 mornings.");
+  });
+
+  it("imports every morning-report name this file calls", () => {
+    const source = readFileSync("src/lib/owner/morning-report.test.ts", "utf8");
+    const importEnd = source.indexOf("} from \"@/lib/owner/morning-report\"");
+    const importBlock = source.slice(0, importEnd);
+    const body = source.slice(importEnd);
+    for (const name of [
+      "previousMorningReportDate",
+      "recipeImportDidNotFinish",
+      "describeAddSkipLine",
+      "describeRecipeImport",
+      "composeMorningReport",
+    ]) {
+      if (body.includes(`${name}(`)) {
+        expect(importBlock, name).toContain(name);
+      }
+    }
   });
 
   it("says why an add morning added nothing", () => {

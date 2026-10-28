@@ -58,6 +58,27 @@ describe("ThemealdbClient", () => {
     expect(signals[0]).toBeInstanceOf(AbortSignal);
     expect(signals[1]).toBeInstanceOf(AbortSignal);
   });
+
+  it("aborts a hung response and retries once", async () => {
+    let calls = 0;
+    const fetchFn = (_url: string, init?: RequestInit) =>
+      new Promise<Response>((resolve, reject) => {
+        calls += 1;
+        const signal = init?.signal;
+        if (calls === 1) {
+          signal?.addEventListener("abort", () => {
+            reject(signal.reason ?? new Error("aborted"));
+          });
+          return;
+        }
+        resolve(new Response(JSON.stringify({ meals: null }), { status: 200 }));
+      });
+
+    const client = new ThemealdbClient({ fetchFn, rateLimitMs: 0, timeoutMs: 30 });
+    await client.filterByIngredient("chicken");
+
+    expect(calls).toBe(2);
+  });
 });
 
 describe("Themealdb parsing helpers", () => {

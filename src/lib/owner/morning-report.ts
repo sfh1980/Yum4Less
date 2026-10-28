@@ -176,6 +176,49 @@ export function previousMorningReportDate(reportDate: string): string | null {
 
 export const RECIPE_IMPORT_DID_NOT_FINISH = "Recipe import did not finish.";
 
+/** A missed import stays informational until this many mornings in a row. */
+export const RECIPE_IMPORT_NEEDS_YOU_MORNINGS_DEFAULT = 3;
+
+const RECIPE_IMPORT_STREAK_LINE = /^Recipe import has missed \d+ mornings\.$/;
+
+/** How many newest-first notes already contain the recipe-import line, stopping at the first that does not. */
+export function countConsecutiveRecipeImportMisses(
+  bodiesNewestFirst: readonly string[],
+): number {
+  let count = 0;
+  for (const body of bodiesNewestFirst) {
+    if (!body.includes(RECIPE_IMPORT_DID_NOT_FINISH)) {
+      break;
+    }
+    count += 1;
+  }
+  return count;
+}
+
+/**
+ * The information line every miss. Needs you only after the streak reaches the setting.
+ * The streak sentence is what a later rewrite still treats as Needs you.
+ */
+export function describeRecipeImport(input: {
+  failedToday: boolean;
+  priorConsecutiveMisses: number;
+  threshold: number;
+}): { lines: string[]; needsAttention: boolean } {
+  if (!input.failedToday) {
+    return { lines: [], needsAttention: false };
+  }
+  const threshold = input.threshold >= 1
+    ? input.threshold
+    : RECIPE_IMPORT_NEEDS_YOU_MORNINGS_DEFAULT;
+  const streak = input.priorConsecutiveMisses + 1;
+  const lines = [RECIPE_IMPORT_DID_NOT_FINISH];
+  const needsAttention = streak >= threshold;
+  if (needsAttention) {
+    lines.push(`Recipe import has missed ${streak} mornings.`);
+  }
+  return { lines, needsAttention };
+}
+
 /** True when the recipe import failed or was recorded as a non-fatal miss. */
 export function recipeImportDidNotFinish(
   jobs: readonly { kind: string; status: string; lastError: string | null }[] | null,
@@ -295,8 +338,12 @@ export type MorningReportInput = {
   cloudflare?: CloudflareMorningFacts;
   /** Night Overpass was skipped on purpose. Informational; does not set Needs you. */
   storeLookupTurnedOff?: boolean;
-  /** Recipe import missed. Informational; does not fail the night or set Needs you. */
+  /** Recipe import missed. Informational until the streak reaches the setting. */
   recipeImportFailed?: boolean;
+  /** Mornings immediately before today that already had the recipe-import line. */
+  recipeImportPriorMisses?: number;
+  /** Consecutive misses before Needs you. Defaults to 3. */
+  recipeImportNeedsYouAfter?: number;
 };
 
 export function composeMorningReport(input: MorningReportInput): {
@@ -309,9 +356,12 @@ export function composeMorningReport(input: MorningReportInput): {
   lines.push(
     input.lastNightOk ? "Last night finished." : "Last night did not finish.",
   );
-  if (input.recipeImportFailed) {
-    lines.push(RECIPE_IMPORT_DID_NOT_FINISH);
-  }
+  const recipeImport = describeRecipeImport({
+    failedToday: input.recipeImportFailed === true,
+    priorConsecutiveMisses: input.recipeImportPriorMisses ?? 0,
+    threshold: input.recipeImportNeedsYouAfter ?? RECIPE_IMPORT_NEEDS_YOU_MORNINGS_DEFAULT,
+  });
+  lines.push(...recipeImport.lines);
   const describedPrices = input.chainPrices
     ? describeMorningChainPrices({
         chains: input.chainPrices,
@@ -399,6 +449,7 @@ export function composeMorningReport(input: MorningReportInput): {
     input.addSkipped === "none-left" ||
     (input.chainsWithoutSaleSource?.length ?? 0) > 0 ||
     input.addErrors.length > 0 ||
+    recipeImport.needsAttention ||
     input.zipResults.some((row) => row.outcome === "failed") ||
     !input.discordConfigured ||
     cloudflare?.needsAttention === true;
@@ -502,6 +553,7 @@ function otherMorningLineNeedsAttention(line: string): boolean {
     line.startsWith("Could not add ") ||
     line.includes("could not be listed") ||
     line.endsWith("has no sale source.") ||
+    RECIPE_IMPORT_STREAK_LINE.test(line) ||
     line.includes("did not answer")
   );
 }

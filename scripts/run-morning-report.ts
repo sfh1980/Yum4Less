@@ -18,7 +18,9 @@ import {
   morningWeekday,
   outsideChecksAreReported,
   pickMorningZipCandidates,
+  countConsecutiveRecipeImportMisses,
   previousMorningReportDate,
+  RECIPE_IMPORT_DID_NOT_FINISH,
   recipeImportDidNotFinish,
   type MorningChainPriceFact,
   type ZipProbeOutcome,
@@ -35,6 +37,7 @@ import {
 } from "@/lib/owner/morning-report-repository";
 import { probeShopperArea } from "@/lib/owner/morning-shopper-probe";
 import { isOsmOverpassDisabled } from "@/lib/osm-food-retail-discovery";
+import { readRecipeImportNeedsYouMornings } from "@/lib/recipe-import/themealdb-settings";
 
 loadEnvLocal();
 
@@ -182,6 +185,11 @@ export async function runMorningReport(): Promise<void> {
     priorChainPriceExceptions = undefined;
   }
   const cloudflare = await fetchCloudflareMorning();
+  const recipeImportFailed = recipeImportDidNotFinish(nightJobs);
+  const recipeImportNeedsYouAfter = readRecipeImportNeedsYouMornings();
+  const recipeImportPriorMisses = recipeImportFailed
+    ? await priorRecipeImportMisses(reportDate, recipeImportNeedsYouAfter).catch(() => 0)
+    : 0;
   let note = composeMorningReport({
     weekday,
     codeTests: external?.codeTests ?? "not_reported",
@@ -198,7 +206,9 @@ export async function runMorningReport(): Promise<void> {
     chainsWithoutSaleSource,
     ...(chainPrices ? { chainPrices, priorChainPriceExceptions } : {}),
     storeLookupTurnedOff: isOsmOverpassDisabled(),
-    recipeImportFailed: recipeImportDidNotFinish(nightJobs),
+    recipeImportFailed,
+    recipeImportPriorMisses,
+    recipeImportNeedsYouAfter,
     ...(cloudflare ? { cloudflare } : {}),
   });
 
@@ -220,6 +230,24 @@ export async function runMorningReport(): Promise<void> {
     needsAttention: note.needsAttention,
   });
   console.log(note.body);
+}
+
+/** Newest-first prior notes. A missing note or a note without the line ends the streak. */
+async function priorRecipeImportMisses(reportDate: string, limit: number): Promise<number> {
+  const bodies: string[] = [];
+  let cursor = previousMorningReportDate(reportDate);
+  for (let index = 0; index < limit && cursor; index += 1) {
+    const note = await readMorningReport(cursor);
+    if (!note) {
+      break;
+    }
+    bodies.push(note.body);
+    if (!note.body.includes(RECIPE_IMPORT_DID_NOT_FINISH)) {
+      break;
+    }
+    cursor = previousMorningReportDate(cursor);
+  }
+  return countConsecutiveRecipeImportMisses(bodies);
 }
 
 async function main() {
