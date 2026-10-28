@@ -38,6 +38,26 @@ describe("ThemealdbClient", () => {
 
     expect(capturedUrls[0]).toContain("/1/filter.php?i=garlic");
   });
+
+  it("retries once when the request throws and passes an abort signal", async () => {
+    let calls = 0;
+    const signals: Array<AbortSignal | undefined> = [];
+    const fetchFn = async (_url: string, init?: RequestInit) => {
+      calls += 1;
+      signals.push(init?.signal ?? undefined);
+      if (calls === 1) {
+        throw new Error("terminated");
+      }
+      return new Response(JSON.stringify({ meals: null }), { status: 200 });
+    };
+
+    const client = new ThemealdbClient({ fetchFn, rateLimitMs: 0, timeoutMs: 1_000 });
+    await client.filterByIngredient("chicken");
+
+    expect(calls).toBe(2);
+    expect(signals[0]).toBeInstanceOf(AbortSignal);
+    expect(signals[1]).toBeInstanceOf(AbortSignal);
+  });
 });
 
 describe("Themealdb parsing helpers", () => {

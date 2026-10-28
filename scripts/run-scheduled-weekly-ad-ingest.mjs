@@ -122,8 +122,16 @@ if (!weeklyOnly && !useFixture) {
   });
 
   if (themealdbImport.status !== 0) {
-    console.error("Scheduled ingest failed during TheMealDB sale-driven import.");
-    process.exit(themealdbImport.status ?? 1);
+    console.warn(`[${new Date().toISOString()}] Recipe import did not finish.`);
+    spawnNpx(
+      [
+        "tsx",
+        "scripts/record-nonfatal-ingest-step.ts",
+        "themealdb-from-sales",
+        "Recipe import did not finish.",
+      ],
+      { env: process.env },
+    );
   }
 }
 

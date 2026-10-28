@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { claimNextIngestJob, finishIngestJob } from "@/lib/ingest-jobs";
+import { isScheduledIngestStepNonFatal } from "@/lib/scheduled-ingest-pipeline";
 
 loadEnvLocal();
 
@@ -42,7 +43,7 @@ function spawnJob(kind: string) {
 }
 
 function isNonFatal(kind: string): boolean {
-  return kind === "map-catalog" || kind === "snap-ensure";
+  return isScheduledIngestStepNonFatal(kind);
 }
 
 async function main() {

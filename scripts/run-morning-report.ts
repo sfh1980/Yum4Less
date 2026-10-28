@@ -1,7 +1,7 @@
 import { listIngestMarkets } from "@/lib/active-markets";
 import { resetDbPoolForTests } from "@/lib/db";
 import { loadEnvLocal } from "@/lib/load-env-local";
-import { runAfterUpdateChecks } from "@/lib/owner/after-update-repository";
+import { loadLatestIngestJobs, runAfterUpdateChecks } from "@/lib/owner/after-update-repository";
 import { activateOwnerIngestMarket } from "@/lib/owner/ingest-markets";
 import { listDiscoveredChainsWithoutSaleSource } from "@/lib/chain-registry-ensure";
 import { listSurroundingZipCodes } from "@/lib/owner/surrounding-zips";
@@ -19,6 +19,7 @@ import {
   outsideChecksAreReported,
   pickMorningZipCandidates,
   previousMorningReportDate,
+  recipeImportDidNotFinish,
   type MorningChainPriceFact,
   type ZipProbeOutcome,
 } from "@/lib/owner/morning-report";
@@ -60,6 +61,7 @@ export async function runMorningReport(): Promise<void> {
     return null;
   });
   const checks = await runAfterUpdateChecks(["last-night", "freshness"]);
+  const nightJobs = await loadLatestIngestJobs();
   const lastNightOk = checks.find((check) => check.id === "last-night")?.ok === true;
   const pricesFresh = checks.find((check) => check.id === "freshness")?.ok === true;
   const markets = await listIngestMarkets();
@@ -196,6 +198,7 @@ export async function runMorningReport(): Promise<void> {
     chainsWithoutSaleSource,
     ...(chainPrices ? { chainPrices, priorChainPriceExceptions } : {}),
     storeLookupTurnedOff: isOsmOverpassDisabled(),
+    recipeImportFailed: recipeImportDidNotFinish(nightJobs),
     ...(cloudflare ? { cloudflare } : {}),
   });
 

@@ -118,28 +118,46 @@ async function loadMarkets(): Promise<AfterUpdateCheckResult> {
   }
 }
 
+async function queryLatestIngestJobs(): Promise<LastNightJob[]> {
+  const result = await getDbPool().query<{
+    run_date: Date | string;
+    kind: string;
+    status: string;
+    last_error: string | null;
+  }>(
+    `
+      select run_date, kind, status, last_error
+      from ingest_jobs
+      where run_date = (select max(run_date) from ingest_jobs)
+      order by kind
+    `,
+  );
+  return result.rows.map((row) => ({
+    kind: row.kind,
+    status: row.status,
+    lastError: row.last_error,
+  }));
+}
+
+export async function loadLatestIngestJobs(): Promise<LastNightJob[] | null> {
+  try {
+    return await queryLatestIngestJobs();
+  } catch (error) {
+    if (isMissingRelation(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 async function loadLastNight(): Promise<AfterUpdateCheckResult> {
   try {
-    const result = await getDbPool().query<{
-      run_date: Date | string;
-      kind: string;
-      status: string;
-      last_error: string | null;
-    }>(
-      `
-        select run_date, kind, status, last_error
-        from ingest_jobs
-        where run_date = (select max(run_date) from ingest_jobs)
-        order by kind
-      `,
+    const jobs = await queryLatestIngestJobs();
+    const runDateResult = await getDbPool().query<{ run_date: Date | string }>(
+      `select max(run_date) as run_date from ingest_jobs`,
     );
-    const jobs: LastNightJob[] = result.rows.map((row) => ({
-      kind: row.kind,
-      status: row.status,
-      lastError: row.last_error,
-    }));
     return judgeLastNight({
-      runDate: formatRunDate(result.rows[0]?.run_date),
+      runDate: formatRunDate(runDateResult.rows[0]?.run_date),
       jobs,
     });
   } catch (error) {

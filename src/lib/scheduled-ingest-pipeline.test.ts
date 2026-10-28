@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SCHEDULED_INGEST_STEP_ORDER } from "@/lib/scheduled-ingest-pipeline";
+import { SCHEDULED_INGEST_STEP_ORDER, isScheduledIngestStepNonFatal } from "@/lib/scheduled-ingest-pipeline";
 
 const SCHEDULED_SCRIPT_PATH = join(
   process.cwd(),
@@ -39,5 +39,21 @@ describe("scheduled ingest pipeline order", () => {
     for (let index = 1; index < positions.length; index += 1) {
       expect(positions[index]!).toBeGreaterThan(positions[index - 1]!);
     }
+  });
+
+  it("keeps a recipe-import failure from stopping the night", () => {
+    expect(isScheduledIngestStepNonFatal("themealdb-from-sales")).toBe(true);
+    expect(isScheduledIngestStepNonFatal("weekly-ad")).toBe(false);
+    const source = readFileSync(SCHEDULED_SCRIPT_PATH, "utf8");
+    const themealdb = source.indexOf("ingest:themealdb:from-sales");
+    const freshness = source.indexOf("check:ranked-price-freshness");
+    const between = source.slice(themealdb, freshness);
+    expect(between).toContain("Recipe import did not finish.");
+    expect(between).not.toContain("process.exit");
+    const worker = readFileSync(
+      join(process.cwd(), "scripts", "run-ingest-worker.ts"),
+      "utf8",
+    );
+    expect(worker).toContain("isScheduledIngestStepNonFatal");
   });
 });

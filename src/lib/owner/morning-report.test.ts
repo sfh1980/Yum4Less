@@ -10,7 +10,7 @@ import {
   judgeShopperProbeWithDinners,
   morningReportDate,
   pickMorningZipCandidates,
-  previousMorningReportDate,
+  recipeImportDidNotFinish,
   type MorningChainPriceFact,
 } from "@/lib/owner/morning-report";
 import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
@@ -202,6 +202,29 @@ describe("morning report", () => {
     expect(kept.body).toContain(OSM_OVERPASS_DISABLED_MESSAGE);
     expect(kept.needsAttention).toBe(false);
     expect(kept.body.endsWith("Nothing needs you.")).toBe(true);
+  });
+
+  it("names a missed recipe import without failing the night or needing you", () => {
+    expect(
+      recipeImportDidNotFinish([
+        { kind: "themealdb-from-sales", status: "succeeded", lastError: "Recipe import did not finish." },
+      ]),
+    ).toBe(true);
+    expect(
+      recipeImportDidNotFinish([
+        { kind: "themealdb-from-sales", status: "succeeded", lastError: null },
+      ]),
+    ).toBe(false);
+
+    const note = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      recipeImportFailed: true,
+    });
+    expect(note.body).toContain("Last night finished.");
+    expect(note.body).toContain("Recipe import did not finish.");
+    expect(note.needsAttention).toBe(false);
+    expect(note.body.endsWith("Nothing needs you.")).toBe(true);
   });
 
   it("prints one all-clear price line and lists only the chains that are missing", () => {

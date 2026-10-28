@@ -5,6 +5,7 @@ import type {
   ThemealdbParsedIngredientLine,
 } from "@/lib/recipe-import/themealdb-types";
 import { normalizeRecipeInstructionSteps } from "@/lib/recipe-instruction-steps";
+import { readThemealdbTimeoutMs } from "@/lib/recipe-import/themealdb-settings";
 import { THEMEALDB_API_BASE } from "@/lib/recipe-import/themealdb-types";
 
 export type ThemealdbFetchFn = (
@@ -17,12 +18,15 @@ export type ThemealdbClientOptions = {
   fetchFn?: ThemealdbFetchFn;
   /** Minimum delay between outbound requests within one import run. */
   rateLimitMs?: number;
+  /** Abort one request after this many milliseconds. Defaults from the setting. */
+  timeoutMs?: number;
 };
 
 export class ThemealdbClient {
   private readonly apiKey: string;
   private readonly fetchFn: ThemealdbFetchFn;
   private readonly rateLimitMs: number;
+  private readonly timeoutMs: number;
   private readonly cache = new Map<string, unknown>();
   private lastRequestAt = 0;
 
@@ -30,6 +34,7 @@ export class ThemealdbClient {
     this.apiKey = options.apiKey ?? process.env.THEMEALDB_API_KEY ?? "1";
     this.fetchFn = options.fetchFn ?? fetch;
     this.rateLimitMs = options.rateLimitMs ?? 100;
+    this.timeoutMs = options.timeoutMs ?? readThemealdbTimeoutMs();
   }
 
   async filterByIngredient(ingredient: string) {
@@ -76,7 +81,16 @@ export class ThemealdbClient {
       await new Promise((resolve) => setTimeout(resolve, waitMs));
     }
     this.lastRequestAt = Date.now();
-    return this.fetchFn(url);
+    return this.fetchWithRetry(url);
+  }
+
+  /** One retry. A hang throws when the abort fires; an HTTP error is returned as-is. */
+  private async fetchWithRetry(url: string) {
+    try {
+      return await this.fetchFn(url, { signal: AbortSignal.timeout(this.timeoutMs) });
+    } catch {
+      return this.fetchFn(url, { signal: AbortSignal.timeout(this.timeoutMs) });
+    }
   }
 }
 

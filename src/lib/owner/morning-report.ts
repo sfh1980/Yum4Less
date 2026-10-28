@@ -174,6 +174,22 @@ export function previousMorningReportDate(reportDate: string): string | null {
   return new Date(utc - 86_400_000).toISOString().slice(0, 10);
 }
 
+export const RECIPE_IMPORT_DID_NOT_FINISH = "Recipe import did not finish.";
+
+/** True when the recipe import failed or was recorded as a non-fatal miss. */
+export function recipeImportDidNotFinish(
+  jobs: readonly { kind: string; status: string; lastError: string | null }[] | null,
+): boolean {
+  const job = jobs?.find((item) => item.kind === "themealdb-from-sales");
+  if (!job) {
+    return false;
+  }
+  if (job.status === "failed") {
+    return true;
+  }
+  return Boolean(job.lastError?.trim());
+}
+
 export function chainPriceExceptionsInNote(body: string): string[] {
   return body.split("\n").flatMap((line) => {
     const match = CHAIN_PRICE_EXCEPTION_LINE.exec(line.trim());
@@ -256,6 +272,8 @@ export type MorningReportInput = {
   cloudflare?: CloudflareMorningFacts;
   /** Night Overpass was skipped on purpose. Informational; does not set Needs you. */
   storeLookupTurnedOff?: boolean;
+  /** Recipe import missed. Informational; does not fail the night or set Needs you. */
+  recipeImportFailed?: boolean;
 };
 
 export function composeMorningReport(input: MorningReportInput): {
@@ -268,6 +286,9 @@ export function composeMorningReport(input: MorningReportInput): {
   lines.push(
     input.lastNightOk ? "Last night finished." : "Last night did not finish.",
   );
+  if (input.recipeImportFailed) {
+    lines.push(RECIPE_IMPORT_DID_NOT_FINISH);
+  }
   const describedPrices = input.chainPrices
     ? describeMorningChainPrices({
         chains: input.chainPrices,

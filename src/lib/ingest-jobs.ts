@@ -113,3 +113,25 @@ export async function finishIngestJob(input: {
     [input.id, input.status, input.error ?? null],
   );
 }
+
+/** A non-fatal step still finished the night. The error is the morning line's source. */
+export async function markNonFatalIngestJob(input: {
+  kind: IngestJobKind;
+  error: string;
+  runDate?: string;
+}): Promise<number> {
+  const runDate = input.runDate ?? utcRunDate();
+  const result = await getDbPool().query(
+    `
+      update ingest_jobs
+      set status = 'succeeded',
+          finished_at = coalesce(finished_at, now()),
+          last_error = $3
+      where kind = $1
+        and run_date = $2::date
+        and status in ('queued', 'running', 'failed')
+    `,
+    [input.kind, runDate, input.error],
+  );
+  return result.rowCount ?? 0;
+}

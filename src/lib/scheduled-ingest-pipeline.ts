@@ -12,3 +12,14 @@ export const SCHEDULED_INGEST_STEP_ORDER = [
 ] as const;
 
 export type ScheduledIngestStep = (typeof SCHEDULED_INGEST_STEP_ORDER)[number];
+
+/** A failure here is logged and the night continues. It does not fail the night. */
+export const NON_FATAL_SCHEDULED_INGEST_STEPS = [
+  "map-catalog",
+  "snap-ensure",
+  "themealdb-from-sales",
+] as const;
+
+export function isScheduledIngestStepNonFatal(kind: string): boolean {
+  return (NON_FATAL_SCHEDULED_INGEST_STEPS as readonly string[]).includes(kind);
+}
