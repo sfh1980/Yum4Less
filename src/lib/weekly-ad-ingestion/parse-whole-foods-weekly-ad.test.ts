@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatWholeFoodsFlyerDateLog,
   parseWholeFoodsOfferPrice,
   parseWholeFoodsWeeklyAd,
+  summarizeWholeFoodsFlyerDates,
 } from "@/lib/weekly-ad-ingestion/parse-whole-foods-weekly-ad";
 
 describe("parseWholeFoodsWeeklyAd", () => {
@@ -37,6 +39,59 @@ describe("parseWholeFoodsWeeklyAd", () => {
     expect(offers.some((offer) => /chicken/i.test(offer.productName))).toBe(true);
     expect(offers.some((offer) => /Seventh Generation/i.test(offer.productName))).toBe(
       false,
+    );
+    expect(offers.find((offer) => /chicken/i.test(offer.productName))?.validThrough).toBe(
+      "2026-09-22T05:00:00Z",
+    );
+  });
+
+  it("stores an end date and leaves valid_through empty when only a start date exists", () => {
+    const withEnd = parseWholeFoodsWeeklyAd({
+      promotions: [
+        {
+          productName: "Organic Hass Avocados",
+          salePrice: "4 for $5",
+          startDate: "2026-10-21T04:00:00Z",
+          endDate: "2026-10-28T04:00:00Z",
+        },
+      ],
+    });
+    expect(withEnd[0]?.validThrough).toBe("2026-10-28T04:00:00Z");
+
+    const startOnly = parseWholeFoodsWeeklyAd({
+      promotions: [
+        {
+          productName: "Organic Hass Avocados",
+          salePrice: "4 for $5",
+          startDate: "2026-10-21T04:00:00Z",
+        },
+      ],
+    });
+    expect(startOnly[0]?.validThrough).toBeUndefined();
+  });
+
+  it("summarizes flyer start and end dates without treating the start as the end", () => {
+    const dates = summarizeWholeFoodsFlyerDates([
+      {
+        productName: "Organic Hass Avocados",
+        startDate: "2026-10-21T04:00:00Z",
+        endDate: "2026-10-28T04:00:00Z",
+      },
+      {
+        productName: "Bananas",
+        startDate: "2026-10-21T04:00:00Z",
+      },
+    ]);
+    expect(dates.startDates).toEqual(["2026-10-21T04:00:00Z"]);
+    expect(dates.endDates).toEqual(["2026-10-28T04:00:00Z"]);
+    expect(
+      formatWholeFoodsFlyerDateLog({
+        storeId: "10257",
+        startDates: dates.startDates,
+        endDates: dates.endDates,
+      }),
+    ).toBe(
+      "[whole-foods] parsed flyer dates for store 10257 start=2026-10-21T04:00:00Z end=2026-10-28T04:00:00Z",
     );
   });
 });

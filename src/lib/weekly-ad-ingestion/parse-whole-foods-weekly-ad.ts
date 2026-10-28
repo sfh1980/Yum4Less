@@ -6,6 +6,43 @@ const DIRECTIONAL_LABEL = "Directional — Whole Foods weekly sales flyer";
  * Parse Whole Foods sales-flyer HTML (`__NEXT_DATA__.props.pageProps.promotions`)
  * into directional unit-priced offers. Percent-only / BOGO lines are skipped.
  */
+/** Distinct start and end strings on the flyer. A start date is not an end date. */
+export function summarizeWholeFoodsFlyerDates(promotions: unknown): {
+  startDates: string[];
+  endDates: string[];
+} {
+  if (!Array.isArray(promotions)) {
+    return { startDates: [], endDates: [] };
+  }
+  const startDates = new Set<string>();
+  const endDates = new Set<string>();
+  for (const entry of promotions) {
+    const record = asRecord(entry);
+    if (!record) {
+      continue;
+    }
+    const startDate = readString(record.startDate);
+    const endDate = readString(record.endDate) ?? readString(record.validThrough);
+    if (startDate) {
+      startDates.add(startDate);
+    }
+    if (endDate) {
+      endDates.add(endDate);
+    }
+  }
+  return { startDates: [...startDates], endDates: [...endDates] };
+}
+
+export function formatWholeFoodsFlyerDateLog(input: {
+  storeId: string;
+  startDates: readonly string[];
+  endDates: readonly string[];
+}): string {
+  const start = input.startDates.length > 0 ? input.startDates.join(", ") : "none";
+  const end = input.endDates.length > 0 ? input.endDates.join(", ") : "none";
+  return `[whole-foods] parsed flyer dates for store ${input.storeId} start=${start} end=${end}`;
+}
+
 export function parseWholeFoodsWeeklyAd(input: {
   html?: string;
   promotions?: unknown;
@@ -127,10 +164,10 @@ function normalizePromotion(entry: unknown): WeeklyAdRawOffer | null {
     return null;
   }
 
+  // A start date is when the flyer began, not when it ends. Storing it
+  // makes valid_through already past, and the later purge deletes the rows.
   const validThrough =
-    readString(record.endDate) ??
-    readString(record.validThrough) ??
-    readString(record.startDate);
+    readString(record.endDate) ?? readString(record.validThrough);
 
   const saleLabelParts = [parsed.saleLabel];
   if (

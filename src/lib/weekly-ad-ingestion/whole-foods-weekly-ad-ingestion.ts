@@ -5,7 +5,12 @@ import {
   matchWeeklyAdOffers,
   weeklyAdMatchFieldsFromIngest,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
-import { parseWholeFoodsWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-whole-foods-weekly-ad";
+import {
+  extractPromotionsFromHtml,
+  formatWholeFoodsFlyerDateLog,
+  parseWholeFoodsWeeklyAd,
+  summarizeWholeFoodsFlyerDates,
+} from "@/lib/weekly-ad-ingestion/parse-whole-foods-weekly-ad";
 import { persistWholeFoodsSourceStoreBinding } from "@/lib/whole-foods-catalog-sync";
 import {
   buildWholeFoodsSalesFlyerUrl,
@@ -96,7 +101,16 @@ async function ingestWholeFoodsWeeklyAd(
 
     const page = await fetchFlyer({ storeId: locatorStore.storeId });
     const sourceUrl = page.url || buildWholeFoodsSalesFlyerUrl(locatorStore.storeId);
-    const rawOffers = parseWholeFoodsWeeklyAd({ html: page.html });
+    const promotions = extractPromotionsFromHtml(page.html);
+    const flyerDates = summarizeWholeFoodsFlyerDates(promotions);
+    console.info(
+      formatWholeFoodsFlyerDateLog({
+        storeId: locatorStore.storeId,
+        startDates: flyerDates.startDates,
+        endDates: flyerDates.endDates,
+      }),
+    );
+    const rawOffers = parseWholeFoodsWeeklyAd({ promotions });
 
     if (rawOffers.length === 0) {
       captureWeeklyAdArtifacts({
