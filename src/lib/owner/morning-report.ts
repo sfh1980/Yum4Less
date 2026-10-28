@@ -190,6 +190,29 @@ export function recipeImportDidNotFinish(
   return Boolean(job.lastError?.trim());
 }
 
+/** Why an add morning turned nothing on. Not an add day stays on its own sentence. */
+export function describeAddSkipLine(input: {
+  addDay: boolean;
+  addedCount: number;
+  addSkipped: MorningZipAddSkip;
+  addErrors: readonly string[];
+}): string | null {
+  if (!input.addDay || input.addedCount > 0 || input.addSkipped === "not-add-day") {
+    return null;
+  }
+  if (input.addSkipped === "last-night") {
+    return "add skipped: last night did not finish.";
+  }
+  if (input.addSkipped === "none-left") {
+    return "add skipped: no areas left.";
+  }
+  const error = input.addErrors.find((line) => line.trim());
+  if (error) {
+    return `add skipped: ${error.trim()}`;
+  }
+  return null;
+}
+
 export function chainPriceExceptionsInNote(body: string): string[] {
   return body.split("\n").flatMap((line) => {
     const match = CHAIN_PRICE_EXCEPTION_LINE.exec(line.trim());
@@ -320,6 +343,16 @@ export function composeMorningReport(input: MorningReportInput): {
     lines.push("No new areas were added.");
   } else if (input.addSkipped === "not-add-day") {
     lines.push("No new areas today.");
+  }
+
+  const addSkipLine = describeAddSkipLine({
+    addDay: input.addDay,
+    addedCount: input.addedZipCodes.length,
+    addSkipped: input.addSkipped,
+    addErrors: input.addErrors,
+  });
+  if (addSkipLine) {
+    lines.push(addSkipLine);
   }
 
   for (const error of input.addErrors) {

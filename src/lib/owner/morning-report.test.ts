@@ -11,6 +11,7 @@ import {
   morningReportDate,
   pickMorningZipCandidates,
   recipeImportDidNotFinish,
+  describeAddSkipLine,
   type MorningChainPriceFact,
 } from "@/lib/owner/morning-report";
 import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
@@ -152,6 +153,7 @@ describe("morning report", () => {
     expect(bad.body).toContain("The site did not answer from outside.");
     expect(bad.body).toContain("Last night did not finish.");
     expect(bad.body).toContain("No new areas were added.");
+    expect(bad.body).toContain("add skipped: last night did not finish.");
     expect(bad.body).toContain("Prices are not from the last day.");
     expect(bad.body.endsWith("Needs you.")).toBe(true);
   });
@@ -163,6 +165,7 @@ describe("morning report", () => {
       nearbyLeft: false,
     });
     expect(empty.body).toContain("No surrounding areas are left to add.");
+    expect(empty.body).toContain("add skipped: no areas left.");
     expect(empty.needsAttention).toBe(true);
 
     const cloudflare = composeMorningReport({
@@ -225,6 +228,26 @@ describe("morning report", () => {
     expect(note.body).toContain("Recipe import did not finish.");
     expect(note.needsAttention).toBe(false);
     expect(note.body.endsWith("Nothing needs you.")).toBe(true);
+  });
+
+  it("says why an add morning added nothing", () => {
+    const census = composeMorningReport({
+      ...quiet,
+      addErrors: ["Surrounding areas could not be listed."],
+    });
+    expect(census.body).toContain("add skipped: Surrounding areas could not be listed.");
+    expect(describeAddSkipLine({
+      addDay: false,
+      addedCount: 0,
+      addSkipped: "not-add-day",
+      addErrors: [],
+    })).toBeNull();
+    const offDay = composeMorningReport({
+      ...quiet,
+      addDay: false,
+      addSkipped: "not-add-day",
+    });
+    expect(offDay.body).not.toContain("add skipped:");
   });
 
   it("prints one all-clear price line and lists only the chains that are missing", () => {
