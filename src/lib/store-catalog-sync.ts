@@ -9,6 +9,7 @@ import {
   deleteStoreIdentityAttachmentsForStore,
   emptyAliasWriteStats,
   ensureCatalogStoreIdentityAliases,
+  formatSelfAliasConflictLine,
   type StoreIdentityAliasWriteStats,
 } from "@/lib/store-identity-ingest-aliases";
 import type { ResolvedSearchLocation } from "@/lib/location-resolution";
@@ -704,6 +705,10 @@ export async function syncV1ChainStoresToCatalog(input: {
     aliasStats.aliasesSkipped > 0 ||
     aliasStats.aliasConflicts > 0
   ) {
+    const conflictLine = formatSelfAliasConflictLine(aliasStats);
+    if (conflictLine) {
+      console.log(conflictLine);
+    }
     console.log(
       JSON.stringify({
         level: "info",

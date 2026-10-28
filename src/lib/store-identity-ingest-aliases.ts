@@ -15,10 +15,16 @@ export type StoreIdentityAliasWriteStats = {
   aliasesEnsured: number;
   aliasesSkipped: number;
   aliasConflicts: number;
+  firstConflictStoreId: string | null;
 };
 
 export function emptyAliasWriteStats(): StoreIdentityAliasWriteStats {
-  return { aliasesEnsured: 0, aliasesSkipped: 0, aliasConflicts: 0 };
+  return {
+    aliasesEnsured: 0,
+    aliasesSkipped: 0,
+    aliasConflicts: 0,
+    firstConflictStoreId: null,
+  };
 }
 
 export function mergeAliasWriteStats(
@@ -29,9 +35,31 @@ export function mergeAliasWriteStats(
       aliasesEnsured: acc.aliasesEnsured + part.aliasesEnsured,
       aliasesSkipped: acc.aliasesSkipped + part.aliasesSkipped,
       aliasConflicts: acc.aliasConflicts + part.aliasConflicts,
+      firstConflictStoreId: acc.firstConflictStoreId ?? part.firstConflictStoreId,
     }),
     emptyAliasWriteStats(),
   );
+}
+
+export function rememberAliasConflict(
+  stats: StoreIdentityAliasWriteStats,
+  storeId: string,
+): void {
+  stats.aliasConflicts += 1;
+  if (!stats.firstConflictStoreId && storeId) {
+    stats.firstConflictStoreId = storeId;
+  }
+}
+
+/** One line for a run. Per-store conflict logs stay off. */
+export function formatSelfAliasConflictLine(
+  stats: StoreIdentityAliasWriteStats,
+): string | null {
+  if (stats.aliasConflicts <= 0) {
+    return null;
+  }
+  const firstId = stats.firstConflictStoreId ?? "unknown";
+  return `store-identity self-alias conflicts: ${stats.aliasConflicts}; first id ${firstId}`;
 }
 
 /** Aldi catalog / weekly-ad sources allowed to create OSM pointer cross-links. */
@@ -302,14 +330,8 @@ export async function ensureStoreSelfAlias(
 
     stats.aliasesEnsured += 1;
     return stats;
-  } catch (error) {
-    stats.aliasConflicts += 1;
-    logServerError("store-identity.ingest-alias-conflict", error, {
-      reason: "self_alias_write_failed",
-      storeId: input.storeId,
-      sourceSystem,
-      externalId,
-    });
+  } catch {
+    rememberAliasConflict(stats, input.storeId);
     return stats;
   }
 }
@@ -538,6 +560,9 @@ export function accumulateAliasWriteStats(
   target.aliasesEnsured += part.aliasesEnsured;
   target.aliasesSkipped += part.aliasesSkipped;
   target.aliasConflicts += part.aliasConflicts;
+  if (!target.firstConflictStoreId && part.firstConflictStoreId) {
+    target.firstConflictStoreId = part.firstConflictStoreId;
+  }
 }
 
 /**

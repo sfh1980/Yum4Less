@@ -3,13 +3,28 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  emptyAliasWriteStats,
+  formatSelfAliasConflictLine,
   isAbsorbableSelfAliasSingleton,
   isAllowlistedAldiPointerCatalogSource,
   isOsmStorePointerTargetId,
+  mergeAliasWriteStats,
+  rememberAliasConflict,
   resolveSelfAliasKeys,
 } from "@/lib/store-identity-ingest-aliases";
 
 describe("store-identity ingest alias policy (Slice 5c)", () => {
+  it("keeps one conflict line with the count and the first id", () => {
+    const first = emptyAliasWriteStats();
+    rememberAliasConflict(first, "kroger-09700466");
+    rememberAliasConflict(first, "kroger-09700467");
+    const merged = mergeAliasWriteStats(emptyAliasWriteStats(), first);
+    expect(formatSelfAliasConflictLine(merged)).toBe(
+      "store-identity self-alias conflicts: 2; first id kroger-09700466",
+    );
+    expect(formatSelfAliasConflictLine(emptyAliasWriteStats())).toBeNull();
+  });
+
   describe("isAllowlistedAldiPointerCatalogSource", () => {
     it("allowlists Aldi market-catalog and weekly-ad only", () => {
       expect(isAllowlistedAldiPointerCatalogSource("yum4less-market-catalog")).toBe(
