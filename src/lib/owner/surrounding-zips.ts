@@ -10,13 +10,21 @@ export async function listSurroundingZipCodes(input: {
   activeZipCodes: readonly string[];
   blockedZipCodes: ReadonlySet<string>;
   fetchImpl?: typeof fetch;
-}): Promise<{ ok: true; zipCodes: string[] } | { ok: false; error: string }> {
+}): Promise<
+  | {
+      ok: true;
+      zipCodes: string[];
+      touchingByActiveZip: ReadonlyMap<string, readonly string[]>;
+    }
+  | { ok: false; error: string }
+> {
   const active = input.activeZipCodes.filter((zipCode) => ZIP5.test(zipCode));
   if (active.length === 0) {
-    return { ok: true, zipCodes: [] };
+    return { ok: true, zipCodes: [], touchingByActiveZip: new Map() };
   }
 
   const found = new Set<string>();
+  const touchingByActiveZip = new Map<string, readonly string[]>();
   let listed = 0;
   let lastError = "Surrounding areas could not be listed.";
   for (const zipCode of active) {
@@ -29,6 +37,7 @@ export async function listSurroundingZipCodes(input: {
       continue;
     }
     listed += 1;
+    touchingByActiveZip.set(zipCode, touching.zipCodes);
     for (const neighbor of touching.zipCodes) {
       if (!input.blockedZipCodes.has(neighbor)) {
         found.add(neighbor);
@@ -43,5 +52,6 @@ export async function listSurroundingZipCodes(input: {
   return {
     ok: true,
     zipCodes: [...found].sort((a, b) => a.localeCompare(b)),
+    touchingByActiveZip,
   };
 }

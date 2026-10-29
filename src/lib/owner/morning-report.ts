@@ -7,6 +7,7 @@ import {
 import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 
 export const MORNING_ZIP_BATCH = 3;
+export const MORNING_ZIP_BATCH_ENV = "YUM4LESS_MORNING_ZIP_BATCH";
 export const MORNING_REPORT_TIME_ZONE = "America/New_York";
 
 export const LIVE_SMOKE_PIN = {
@@ -49,6 +50,22 @@ export function morningWeekday(now = new Date()): string {
   }).format(now);
 }
 
+/**
+ * How many areas one add morning turns on.
+ * Unset or unusable values use the default.
+ */
+export function readMorningZipBatch(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env[MORNING_ZIP_BATCH_ENV]?.trim();
+  if (!raw) {
+    return MORNING_ZIP_BATCH;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return MORNING_ZIP_BATCH;
+  }
+  return parsed;
+}
+
 /** Even UTC day-numbers are add days. Neighbors of an add day are not. */
 export function isMorningZipAddDay(reportDate: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(reportDate);
@@ -87,17 +104,137 @@ export function pickMorningZipCandidates(input: {
   activeZipCodes: ReadonlySet<string>;
   alreadyAdded: ReadonlySet<string>;
   limit?: number;
+  /**
+   * Active ZIP to the ZIPs whose outline touches it.
+   * When set, one candidate is taken from each active cluster in turn.
+   * Without it, candidates stay in numeric order.
+   */
+  touchingByActiveZip?: ReadonlyMap<string, readonly string[]>;
 }): string[] {
   const limit = input.limit ?? MORNING_ZIP_BATCH;
-  return [...new Set(input.zipCodes.map((zipCode) => zipCode.trim()))]
+  const eligible = [...new Set(input.zipCodes.map((zipCode) => zipCode.trim()))]
     .filter(
       (zipCode) =>
         ZIP5.test(zipCode) &&
         !input.activeZipCodes.has(zipCode) &&
         !input.alreadyAdded.has(zipCode),
     )
-    .sort((a, b) => a.localeCompare(b))
-    .slice(0, limit);
+    .sort((a, b) => a.localeCompare(b));
+  if (!input.touchingByActiveZip) {
+    return eligible.slice(0, limit);
+  }
+  return pickRoundRobinFromClusters({
+    eligible,
+    activeZipCodes: input.activeZipCodes,
+    touchingByActiveZip: input.touchingByActiveZip,
+    limit,
+  });
+}
+
+/**
+ * Active ZIPs that list each other as touching are one cluster.
+ * Clusters are ordered by their lowest ZIP. A candidate is filed under the
+ * first cluster that lists it. Candidates no cluster lists stay last.
+ */
+export function clusterActiveZipCodes(input: {
+  activeZipCodes: readonly string[];
+  touchingByActiveZip: ReadonlyMap<string, readonly string[]>;
+}): string[][] {
+  const active = [...new Set(input.activeZipCodes.map((zipCode) => zipCode.trim()))]
+    .filter((zipCode) => ZIP5.test(zipCode))
+    .sort((a, b) => a.localeCompare(b));
+  const activeSet = new Set(active);
+  const parent = new Map<string, string>(active.map((zipCode) => [zipCode, zipCode]));
+  const find = (zipCode: string): string => {
+    const current = parent.get(zipCode) ?? zipCode;
+    if (current === zipCode) {
+      return zipCode;
+    }
+    const root = find(current);
+    parent.set(zipCode, root);
+    return root;
+  };
+  const union = (left: string, right: string) => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot === rightRoot) {
+      return;
+    }
+    if (leftRoot < rightRoot) {
+      parent.set(rightRoot, leftRoot);
+      return;
+    }
+    parent.set(leftRoot, rightRoot);
+  };
+  for (const zipCode of active) {
+    for (const neighbor of input.touchingByActiveZip.get(zipCode) ?? []) {
+      if (activeSet.has(neighbor)) {
+        union(zipCode, neighbor);
+      }
+    }
+  }
+  const groups = new Map<string, string[]>();
+  for (const zipCode of active) {
+    const root = find(zipCode);
+    const members = groups.get(root) ?? [];
+    members.push(zipCode);
+    groups.set(root, members);
+  }
+  return [...groups.values()]
+    .map((members) => members.sort((a, b) => a.localeCompare(b)))
+    .sort((left, right) => left[0]!.localeCompare(right[0]!));
+}
+
+function pickRoundRobinFromClusters(input: {
+  eligible: readonly string[];
+  activeZipCodes: ReadonlySet<string>;
+  touchingByActiveZip: ReadonlyMap<string, readonly string[]>;
+  limit: number;
+}): string[] {
+  const clusters = clusterActiveZipCodes({
+    activeZipCodes: [...input.activeZipCodes],
+    touchingByActiveZip: input.touchingByActiveZip,
+  });
+  const buckets: string[][] = clusters.map(() => []);
+  const orphans: string[] = [];
+  for (const zipCode of input.eligible) {
+    const clusterIndex = clusters.findIndex((members) =>
+      members.some((activeZip) =>
+        (input.touchingByActiveZip.get(activeZip) ?? []).includes(zipCode),
+      ),
+    );
+    if (clusterIndex < 0) {
+      orphans.push(zipCode);
+      continue;
+    }
+    buckets[clusterIndex]!.push(zipCode);
+  }
+  const queues = [...buckets.filter((bucket) => bucket.length > 0)];
+  if (orphans.length > 0) {
+    queues.push(orphans);
+  }
+  const picked: string[] = [];
+  const cursors = queues.map(() => 0);
+  while (picked.length < input.limit) {
+    let progressed = false;
+    for (let index = 0; index < queues.length; index += 1) {
+      if (picked.length >= input.limit) {
+        break;
+      }
+      const cursor = cursors[index] ?? 0;
+      const next = queues[index]?.[cursor];
+      if (!next) {
+        continue;
+      }
+      picked.push(next);
+      cursors[index] = cursor + 1;
+      progressed = true;
+    }
+    if (!progressed) {
+      break;
+    }
+  }
+  return picked;
 }
 
 export function judgeShopperProbe(input: {

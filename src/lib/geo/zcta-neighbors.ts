@@ -22,6 +22,42 @@ export function usableTouchingZipList(
   return usable.length > 0 ? usable.sort((a, b) => a.localeCompare(b)) : null;
 }
 
+/** Saved lists shorter than this are fetched again. Empty lists already miss. */
+export const NEIGHBOR_LIST_MIN_SAVED_ENV = "YUM4LESS_NEIGHBOR_LIST_MIN_SAVED";
+
+export const NEIGHBOR_LIST_MIN_SAVED_DEFAULT = 2;
+
+/**
+ * How many saved neighbors count as a finished list.
+ * Unset or unusable values use the default, so a one-member list is fetched again.
+ */
+export function readNeighborListMinSaved(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env[NEIGHBOR_LIST_MIN_SAVED_ENV]?.trim();
+  if (!raw) {
+    return NEIGHBOR_LIST_MIN_SAVED_DEFAULT;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return NEIGHBOR_LIST_MIN_SAVED_DEFAULT;
+  }
+  return parsed;
+}
+
+/**
+ * A saved list is reused only when it has at least `minimumSaved` ZIP codes.
+ * A shorter list, including one neighbor, is a miss so the next read refetches.
+ */
+export function savedNeighborListIsReusable(
+  zipCodes: readonly string[] | null | undefined,
+  minimumSaved: number,
+): string[] | null {
+  const usable = usableTouchingZipList(zipCodes);
+  if (!usable || usable.length < minimumSaved) {
+    return null;
+  }
+  return usable;
+}
+
 export function readTouchingZctaResponse(
   payload: unknown,
   selfZip: string,
@@ -80,7 +116,10 @@ export async function listTouchingZipCodes(input: {
     return { ok: false, error: "Touching ZIP lookup needs a 5-digit ZIP." };
   }
 
-  const cached = usableTouchingZipList(await readCachedTouchingZips(zipCode));
+  const cached = savedNeighborListIsReusable(
+    await readCachedTouchingZips(zipCode),
+    readNeighborListMinSaved(),
+  );
   if (cached) {
     return { ok: true, zipCodes: cached };
   }
@@ -167,7 +206,11 @@ async function readCachedTouchingZips(zipCode: string): Promise<string[] | null>
       `,
       [zipCode],
     );
-    return usableTouchingZipList(result.rows[0]?.touching_zips);
+    const stored = result.rows[0]?.touching_zips;
+    if (!stored) {
+      return null;
+    }
+    return stored.filter((neighbor) => ZIP5.test(neighbor));
   } catch {
     return null;
   }

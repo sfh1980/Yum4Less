@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { parseTouchingZctaCodes, readTouchingZctaResponse, usableTouchingZipList, ZCTA_NEIGHBOR_SPATIAL_REL } from "@/lib/geo/zcta-neighbors";
+import {
+  parseTouchingZctaCodes,
+  readNeighborListMinSaved,
+  readTouchingZctaResponse,
+  savedNeighborListIsReusable,
+  usableTouchingZipList,
+  ZCTA_NEIGHBOR_SPATIAL_REL,
+} from "@/lib/geo/zcta-neighbors";
 import {
   chainIdFromDisplayName,
   matchChainIdByName,
@@ -42,6 +49,13 @@ describe("surrounding ZIP codes", () => {
     expect(usableTouchingZipList([])).toBeNull();
     expect(usableTouchingZipList(null)).toBeNull();
     expect(usableTouchingZipList(["23219"])).toEqual(["23219"]);
+    expect(readNeighborListMinSaved({ NODE_ENV: "test" })).toBe(2);
+    expect(
+      readNeighborListMinSaved({ NODE_ENV: "test", YUM4LESS_NEIGHBOR_LIST_MIN_SAVED: "1" }),
+    ).toBe(1);
+    expect(savedNeighborListIsReusable(["23224"], 2)).toBeNull();
+    expect(savedNeighborListIsReusable(["23224"], 1)).toEqual(["23224"]);
+    expect(savedNeighborListIsReusable(["23221", "23219"], 2)).toEqual(["23219", "23221"]);
     expect(readTouchingZctaResponse({ error: { code: 400 } }, "23220").ok).toBe(false);
     expect(readTouchingZctaResponse({}, "23220").ok).toBe(false);
   });

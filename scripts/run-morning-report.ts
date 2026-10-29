@@ -18,6 +18,7 @@ import {
   morningWeekday,
   outsideChecksAreReported,
   pickMorningZipCandidates,
+  readMorningZipBatch,
   countConsecutiveRecipeImportMisses,
   previousMorningReportDate,
   RECIPE_IMPORT_DID_NOT_FINISH,
@@ -138,6 +139,8 @@ export async function runMorningReport(): Promise<void> {
       zipCodes: offZips,
       activeZipCodes,
       alreadyAdded,
+      limit: readMorningZipBatch(),
+      touchingByActiveZip: surrounding.touchingByActiveZip,
     });
     nearbyLeft =
       offZips.filter(

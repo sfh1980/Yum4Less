@@ -12,7 +12,9 @@ import {
   judgeLiveSite,
   judgeShopperProbeWithDinners,
   morningReportDate,
+  clusterActiveZipCodes,
   pickMorningZipCandidates,
+  readMorningZipBatch,
   previousMorningReportDate,
   recipeImportDidNotFinish,
   describeAddSkipLine,
@@ -68,6 +70,55 @@ describe("morning report", () => {
         limit: 2,
       }),
     ).toEqual(["23227", "23230"]);
+  });
+
+  it("reads the add batch from the setting and keeps 3 when it is unusable", () => {
+    expect(readMorningZipBatch({ NODE_ENV: "test" })).toBe(3);
+    expect(
+      readMorningZipBatch({ NODE_ENV: "test", YUM4LESS_MORNING_ZIP_BATCH: "2" }),
+    ).toBe(2);
+    expect(
+      readMorningZipBatch({ NODE_ENV: "test", YUM4LESS_MORNING_ZIP_BATCH: "0" }),
+    ).toBe(3);
+    expect(
+      readMorningZipBatch({ NODE_ENV: "test", YUM4LESS_MORNING_ZIP_BATCH: "nope" }),
+    ).toBe(3);
+  });
+
+  it("takes one candidate from each active cluster before taking a second", () => {
+    const touching = new Map<string, readonly string[]>([
+      ["23060", ["23220", "23113", "23150"]],
+      ["23220", ["23060"]],
+      ["28269", ["28027", "28078", "28206", "28213", "28216", "28262"]],
+    ]);
+    const zipCodes = ["23113", "23150", "28027", "28078", "28206", "28213", "28216", "28262"];
+    expect(
+      pickMorningZipCandidates({
+        zipCodes,
+        activeZipCodes: new Set(["28269", "23060", "23220"]),
+        alreadyAdded: new Set<string>(),
+        limit: 3,
+      }),
+    ).toEqual(["23113", "23150", "28027"]);
+    expect(clusterActiveZipCodes({
+      activeZipCodes: ["28269", "23220", "23060"],
+      touchingByActiveZip: touching,
+    })).toEqual([["23060", "23220"], ["28269"]]);
+    expect(
+      pickMorningZipCandidates({
+        zipCodes,
+        activeZipCodes: new Set(["28269", "23060", "23220"]),
+        alreadyAdded: new Set<string>(),
+        limit: 3,
+        touchingByActiveZip: touching,
+      }),
+    ).toEqual(["23113", "28027", "23150"]);
+  });
+
+  it("keeps Friday 2026-10-30 and Sunday 2026-11-01 as add mornings", () => {
+    expect(isMorningZipAddDay("2026-10-30")).toBe(true);
+    expect(isMorningZipAddDay("2026-10-31")).toBe(false);
+    expect(isMorningZipAddDay("2026-11-01")).toBe(true);
   });
 
   it("treats a normal answer with no dinners as on the map only", () => {
