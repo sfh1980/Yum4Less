@@ -37,6 +37,39 @@ export async function readExternalCheck(reportDate: string): Promise<{
   return { codeTests: row.code_tests, siteCheck: row.site_check };
 }
 
+/** Newest outside check before this morning whose code tests and site check both arrived. */
+export async function readLatestExternalCheckBefore(reportDate: string): Promise<{
+  checkDate: string;
+  codeTests: MorningCheckState;
+  siteCheck: MorningCheckState;
+} | null> {
+  const result = await getDbPool().query<{
+    check_date: Date | string;
+    code_tests: MorningCheckState;
+    site_check: MorningCheckState;
+  }>(
+    `
+      select check_date, code_tests, site_check
+      from morning_external_checks
+      where check_date < $1::date
+        and code_tests <> 'not_reported'
+        and site_check <> 'not_reported'
+      order by check_date desc
+      limit 1
+    `,
+    [reportDate],
+  );
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return {
+    checkDate: dateText(row.check_date),
+    codeTests: row.code_tests,
+    siteCheck: row.site_check,
+  };
+}
+
 export async function saveExternalCheck(input: {
   reportDate: string;
   codeTests: MorningCheckState;

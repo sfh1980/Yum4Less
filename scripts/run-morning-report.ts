@@ -16,6 +16,9 @@ import {
   isMorningZipAddDay,
   morningReportDate,
   morningWeekday,
+  datedOutsideCheckLine,
+  isBeforeOutsideCheckCutoff,
+  outsideCheckWhenLabel,
   outsideChecksAreReported,
   pickMorningZipCandidates,
   countConsecutiveRecipeImportMisses,
@@ -30,6 +33,7 @@ import {
   listAddedZipCodes,
   listZipsWaitingForTest,
   readExternalCheck,
+  readLatestExternalCheckBefore,
   readMorningReport,
   recordZipAdd,
   recordZipTest,
@@ -190,10 +194,45 @@ export async function runMorningReport(): Promise<void> {
   const recipeImportPriorMisses = recipeImportFailed
     ? await priorRecipeImportMisses(reportDate, recipeImportNeedsYouAfter).catch(() => 0)
     : 0;
+  const todayCodeTests = external?.codeTests ?? "not_reported";
+  const todaySiteCheck = external?.siteCheck ?? "not_reported";
+  const outsideMissing =
+    todayCodeTests === "not_reported" || todaySiteCheck === "not_reported";
+  const outsideCheckPending = outsideMissing && isBeforeOutsideCheckCutoff(new Date());
+  let codeTestsLine: string | undefined;
+  let siteCheckLine: string | undefined;
+  if (outsideCheckPending) {
+    const prior = await readLatestExternalCheckBefore(reportDate).catch((error) => {
+      if (isMissingMorningReportSchema(error)) {
+        throw error;
+      }
+      return null;
+    });
+    if (prior) {
+      const when = outsideCheckWhenLabel(reportDate, prior.checkDate);
+      if (todayCodeTests === "not_reported") {
+        codeTestsLine = datedOutsideCheckLine(
+          prior.codeTests === "passed" ? "Code tests passed." : "Code tests failed.",
+          when,
+        );
+      }
+      if (todaySiteCheck === "not_reported") {
+        siteCheckLine = datedOutsideCheckLine(
+          prior.siteCheck === "passed"
+            ? "The site answered from outside."
+            : "The site did not answer from outside.",
+          when,
+        );
+      }
+    }
+  }
   let note = composeMorningReport({
     weekday,
-    codeTests: external?.codeTests ?? "not_reported",
-    siteCheck: external?.siteCheck ?? "not_reported",
+    codeTests: todayCodeTests,
+    siteCheck: todaySiteCheck,
+    outsideCheckPending,
+    ...(codeTestsLine ? { codeTestsLine } : {}),
+    ...(siteCheckLine ? { siteCheckLine } : {}),
     lastNightOk,
     pricesFresh,
     addDay,
@@ -212,10 +251,7 @@ export async function runMorningReport(): Promise<void> {
     ...(cloudflare ? { cloudflare } : {}),
   });
 
-  const checksReported = outsideChecksAreReported(
-    external?.codeTests ?? "not_reported",
-    external?.siteCheck ?? "not_reported",
-  );
+  const checksReported = outsideChecksAreReported(todayCodeTests, todaySiteCheck);
   if (discordConfigured && checksReported) {
     const posted = await postMorningDiscord(note.body).catch(() => ({ ok: false }));
     if (!posted.ok) {

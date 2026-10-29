@@ -8,6 +8,8 @@ import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 
 export const MORNING_ZIP_BATCH = 3;
 export const MORNING_REPORT_TIME_ZONE = "America/New_York";
+export const OUTSIDE_CHECK_CUTOFF_ENV = "YUM4LESS_OUTSIDE_CHECK_CUTOFF";
+export const OUTSIDE_CHECK_CUTOFF_DEFAULT = "13:00";
 
 export const LIVE_SMOKE_PIN = {
   latitude: 37.6085,
@@ -344,6 +346,13 @@ export type MorningReportInput = {
   recipeImportPriorMisses?: number;
   /** Consecutive misses before Needs you. Defaults to 3. */
   recipeImportNeedsYouAfter?: number;
+  /**
+   * Today's outside check is not in yet, and the cutoff has not passed.
+   * The note may show the last known result. That does not set Needs you.
+   */
+  outsideCheckPending?: boolean;
+  codeTestsLine?: string;
+  siteCheckLine?: string;
 };
 
 export function composeMorningReport(input: MorningReportInput): {
@@ -351,8 +360,8 @@ export function composeMorningReport(input: MorningReportInput): {
   needsAttention: boolean;
 } {
   const lines: string[] = [`${input.weekday} morning`];
-  lines.push(codeLine(input.codeTests));
-  lines.push(siteLine(input.siteCheck));
+  lines.push(input.codeTestsLine ?? codeLine(input.codeTests));
+  lines.push(input.siteCheckLine ?? siteLine(input.siteCheck));
   lines.push(
     input.lastNightOk ? "Last night finished." : "Last night did not finish.",
   );
@@ -440,9 +449,11 @@ export function composeMorningReport(input: MorningReportInput): {
     lines.push(OSM_OVERPASS_DISABLED_MESSAGE);
   }
 
+  const outsideNeedsYou =
+    input.outsideCheckPending !== true &&
+    (input.codeTests !== "passed" || input.siteCheck !== "passed");
   const needsAttention =
-    input.codeTests !== "passed" ||
-    input.siteCheck !== "passed" ||
+    outsideNeedsYou ||
     !input.lastNightOk ||
     priceGapNeedsYou ||
     input.addSkipped === "last-night" ||
@@ -468,17 +479,66 @@ export function composeMissedMorningReport(weekday: string): {
   };
 }
 
-const CODE_LINES = new Set([
-  "Code tests passed.",
-  "Code tests failed.",
-  "Code tests were not reported.",
-]);
+const CODE_LINE =
+  /^Code tests (?:passed|failed|were not reported)(?: \([^)]+\))?\.$/;
+const SITE_LINE =
+  /^(?:The site answered from outside|The site did not answer from outside|The outside site check was not reported)(?: \([^)]+\))?\.$/;
 
-const SITE_LINES = new Set([
-  "The site answered from outside.",
-  "The site did not answer from outside.",
-  "The outside site check was not reported.",
-]);
+export type OutsideCheckCutoff = { hour: number; minute: number };
+
+/**
+ * Local time after which a still-missing outside check sets Needs you.
+ * Unset or unusable values use 13:00.
+ */
+export function readOutsideCheckCutoff(
+  env: NodeJS.ProcessEnv = process.env,
+): OutsideCheckCutoff {
+  const raw = env[OUTSIDE_CHECK_CUTOFF_ENV]?.trim() || OUTSIDE_CHECK_CUTOFF_DEFAULT;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(raw);
+  if (!match) {
+    return { hour: 13, minute: 0 };
+  }
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) {
+    return { hour: 13, minute: 0 };
+  }
+  return { hour, minute };
+}
+
+/** True until the cutoff minute in the morning-note time zone. The cutoff minute itself is not before. */
+export function isBeforeOutsideCheckCutoff(
+  now: Date,
+  cutoff: OutsideCheckCutoff = readOutsideCheckCutoff(),
+  timeZone = MORNING_REPORT_TIME_ZONE,
+): boolean {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return false;
+  }
+  return hour < cutoff.hour || (hour === cutoff.hour && minute < cutoff.minute);
+}
+
+export function outsideCheckWhenLabel(reportDate: string, priorDate: string): string {
+  if (priorDate === previousMorningReportDate(reportDate)) {
+    return "yesterday";
+  }
+  return priorDate;
+}
+
+export function datedOutsideCheckLine(line: string, when: string): string {
+  if (!when || !line.endsWith(".")) {
+    return line;
+  }
+  return `${line.slice(0, -1)} (${when}).`;
+}
 
 const DISCORD_MISSING_LINE = "Discord was not sent. The morning webhook is not set.";
 
@@ -509,11 +569,11 @@ export function applyOutsideResultToMorningNote(
   let replacedCode = false;
   let replacedSite = false;
   const next = lines.map((line) => {
-    if (!replacedCode && CODE_LINES.has(line)) {
+    if (!replacedCode && CODE_LINE.test(line)) {
       replacedCode = true;
       return codeLine(input.codeTests);
     }
-    if (!replacedSite && SITE_LINES.has(line)) {
+    if (!replacedSite && SITE_LINE.test(line)) {
       replacedSite = true;
       return siteLine(input.siteCheck);
     }
@@ -523,7 +583,7 @@ export function applyOutsideResultToMorningNote(
     next.splice(Math.min(1, next.length), 0, codeLine(input.codeTests));
   }
   if (!replacedSite) {
-    const codeIndex = next.findIndex((line) => CODE_LINES.has(line));
+    const codeIndex = next.findIndex((line) => CODE_LINE.test(line));
     next.splice(codeIndex + 1, 0, siteLine(input.siteCheck));
   }
   if (!input.discordConfigured) {
@@ -554,7 +614,7 @@ function otherMorningLineNeedsAttention(line: string): boolean {
     line.includes("could not be listed") ||
     line.endsWith("has no sale source.") ||
     RECIPE_IMPORT_STREAK_LINE.test(line) ||
-    line.includes("did not answer")
+    (line.includes("did not answer") && !SITE_LINE.test(line))
   );
 }
 

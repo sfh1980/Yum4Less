@@ -2,6 +2,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   applyOutsideResultToMorningNote,
+  datedOutsideCheckLine,
+  isBeforeOutsideCheckCutoff,
+  outsideCheckWhenLabel,
+  outsideChecksAreReported,
+  readOutsideCheckCutoff,
   chainPriceExceptionsInNote,
   composeMissedMorningReport,
   composeMorningReport,
@@ -51,6 +56,65 @@ describe("morning report", () => {
   it("uses the New York calendar date", () => {
     expect(morningReportDate(new Date("2026-10-12T03:30:00Z"))).toBe("2026-10-11");
     expect(morningReportDate(new Date("2026-10-12T16:00:00Z"))).toBe("2026-10-12");
+  });
+
+  it("shows the last outside result before the cutoff and waits to send Discord once", () => {
+    expect(readOutsideCheckCutoff({ NODE_ENV: "test" })).toEqual({ hour: 13, minute: 0 });
+    expect(
+      readOutsideCheckCutoff({ NODE_ENV: "test", YUM4LESS_OUTSIDE_CHECK_CUTOFF: "nope" }),
+    ).toEqual({ hour: 13, minute: 0 });
+    expect(isBeforeOutsideCheckCutoff(new Date("2026-10-29T16:59:00Z"))).toBe(true);
+    expect(isBeforeOutsideCheckCutoff(new Date("2026-10-29T17:00:00Z"))).toBe(false);
+    expect(outsideCheckWhenLabel("2026-10-29", "2026-10-28")).toBe("yesterday");
+    expect(outsideCheckWhenLabel("2026-10-29", "2026-10-27")).toBe("2026-10-27");
+
+    const pending = composeMorningReport({
+      ...quiet,
+      codeTests: "not_reported",
+      siteCheck: "not_reported",
+      outsideCheckPending: true,
+      codeTestsLine: datedOutsideCheckLine("Code tests passed.", "yesterday"),
+      siteCheckLine: datedOutsideCheckLine("The site answered from outside.", "yesterday"),
+      addSkipped: "not-add-day",
+    });
+    expect(pending.needsAttention).toBe(false);
+    expect(pending.body).toContain("Code tests passed (yesterday).");
+    expect(pending.body).toContain("The site answered from outside (yesterday).");
+    expect(pending.body).toContain("Nothing needs you.");
+    const pendingFailure = composeMorningReport({
+      ...quiet,
+      codeTests: "not_reported",
+      siteCheck: "not_reported",
+      outsideCheckPending: true,
+      codeTestsLine: datedOutsideCheckLine("Code tests failed.", "yesterday"),
+      siteCheckLine: datedOutsideCheckLine(
+        "The site did not answer from outside.",
+        "yesterday",
+      ),
+      addSkipped: "not-add-day",
+    });
+    expect(pendingFailure.needsAttention).toBe(false);
+    expect(outsideChecksAreReported("not_reported", "not_reported")).toBe(false);
+
+    const late = composeMorningReport({
+      ...quiet,
+      codeTests: "not_reported",
+      siteCheck: "not_reported",
+      addSkipped: "not-add-day",
+    });
+    expect(late.needsAttention).toBe(true);
+    expect(late.body).toContain("Code tests were not reported.");
+    expect(late.body.endsWith("Needs you.")).toBe(true);
+
+    const rewritten = applyOutsideResultToMorningNote(pending.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(rewritten.needsAttention).toBe(false);
+    expect(rewritten.body).toContain("Code tests passed.");
+    expect(rewritten.body).not.toContain("yesterday");
+    expect(outsideChecksAreReported("passed", "passed")).toBe(true);
   });
 
   it("adds ZIPs on even day numbers and skips the next day", () => {
