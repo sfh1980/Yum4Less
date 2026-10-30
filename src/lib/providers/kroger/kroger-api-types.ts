@@ -109,6 +109,7 @@ export type KrogerLocation = {
     latitude?: number;
     longitude?: number;
   };
+  departments?: Array<{ departmentId?: string | null }>;
 };
 
 export type KrogerLocationsResponse = {

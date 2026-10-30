@@ -18,6 +18,7 @@ import type {
   ProviderStoreSearchResult,
   StoreDiscoveryProviderClient,
 } from "@/lib/providers/provider-types";
+import { shouldSkipFuelLocation } from "@/lib/ingest/fuel-location";
 import {
   filterKrogerFamilyDiscoveredStores,
   resolveKrogerLocationSearchLimit,
@@ -260,6 +261,17 @@ function toProviderDiscoveredStore(
   const latitude = item.geolocation?.latitude;
   const longitude = item.geolocation?.longitude;
   const address = item.address;
+  const departmentIds = (item.departments ?? [])
+    .map((department) => department.departmentId ?? "")
+    .filter((id) => id.trim().length > 0);
+  if (
+    shouldSkipFuelLocation({
+      departmentIds,
+      name: item.name,
+    })
+  ) {
+    return undefined;
+  }
 
   if (
     typeof latitude !== "number" ||

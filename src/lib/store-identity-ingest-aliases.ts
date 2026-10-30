@@ -16,6 +16,8 @@ export type StoreIdentityAliasWriteStats = {
   aliasesSkipped: number;
   aliasConflicts: number;
   firstConflictStoreId: string | null;
+  aliasAttempts: number;
+  attemptedStoreIds: string[];
 };
 
 export function emptyAliasWriteStats(): StoreIdentityAliasWriteStats {
@@ -24,7 +26,27 @@ export function emptyAliasWriteStats(): StoreIdentityAliasWriteStats {
     aliasesSkipped: 0,
     aliasConflicts: 0,
     firstConflictStoreId: null,
+    aliasAttempts: 0,
+    attemptedStoreIds: [],
   };
+}
+
+function unionAttemptedStoreIds(
+  left: readonly string[],
+  right: readonly string[],
+): string[] {
+  return [...new Set([...left, ...right])];
+}
+
+export function recordAliasAttempt(
+  stats: StoreIdentityAliasWriteStats,
+  storeId: string,
+): void {
+  stats.aliasAttempts += 1;
+  const id = storeId.trim();
+  if (id && !stats.attemptedStoreIds.includes(id)) {
+    stats.attemptedStoreIds.push(id);
+  }
 }
 
 export function mergeAliasWriteStats(
@@ -36,6 +58,11 @@ export function mergeAliasWriteStats(
       aliasesSkipped: acc.aliasesSkipped + part.aliasesSkipped,
       aliasConflicts: acc.aliasConflicts + part.aliasConflicts,
       firstConflictStoreId: acc.firstConflictStoreId ?? part.firstConflictStoreId,
+      aliasAttempts: acc.aliasAttempts + part.aliasAttempts,
+      attemptedStoreIds: unionAttemptedStoreIds(
+        acc.attemptedStoreIds,
+        part.attemptedStoreIds,
+      ),
     }),
     emptyAliasWriteStats(),
   );
@@ -55,11 +82,16 @@ export function rememberAliasConflict(
 export function formatSelfAliasConflictLine(
   stats: StoreIdentityAliasWriteStats,
 ): string | null {
-  if (stats.aliasConflicts <= 0) {
+  if (stats.aliasAttempts <= 0 && stats.aliasConflicts <= 0) {
     return null;
   }
+  const distinct = new Set(stats.attemptedStoreIds).size;
+  const base = `store-identity aliases: attempts ${stats.aliasAttempts}; distinct ids ${distinct}`;
+  if (stats.aliasConflicts <= 0) {
+    return base;
+  }
   const firstId = stats.firstConflictStoreId ?? "unknown";
-  return `store-identity self-alias conflicts: ${stats.aliasConflicts}; first id ${firstId}`;
+  return `${base}; conflicts ${stats.aliasConflicts}; first id ${firstId}`;
 }
 
 /** Aldi catalog / weekly-ad sources allowed to create OSM pointer cross-links. */
@@ -230,6 +262,14 @@ export async function ensureStoreSelfAlias(
   const stats = emptyAliasWriteStats();
   const sourceName = input.sourceName?.trim();
   if (!sourceName) {
+    stats.aliasesSkipped += 1;
+    return stats;
+  }
+  recordAliasAttempt(stats, input.storeId);
+  const storeRow = await pool.query(`select 1 from stores where id = $1`, [
+    input.storeId,
+  ]);
+  if ((storeRow.rowCount ?? 0) === 0) {
     stats.aliasesSkipped += 1;
     return stats;
   }
@@ -560,6 +600,11 @@ export function accumulateAliasWriteStats(
   target.aliasesEnsured += part.aliasesEnsured;
   target.aliasesSkipped += part.aliasesSkipped;
   target.aliasConflicts += part.aliasConflicts;
+  target.aliasAttempts += part.aliasAttempts;
+  target.attemptedStoreIds = unionAttemptedStoreIds(
+    target.attemptedStoreIds,
+    part.attemptedStoreIds,
+  );
   if (!target.firstConflictStoreId && part.firstConflictStoreId) {
     target.firstConflictStoreId = part.firstConflictStoreId;
   }

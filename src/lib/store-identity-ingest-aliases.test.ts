@@ -20,7 +20,7 @@ describe("store-identity ingest alias policy (Slice 5c)", () => {
     rememberAliasConflict(first, "kroger-09700467");
     const merged = mergeAliasWriteStats(emptyAliasWriteStats(), first);
     expect(formatSelfAliasConflictLine(merged)).toBe(
-      "store-identity self-alias conflicts: 2; first id kroger-09700466",
+      "store-identity aliases: attempts 0; distinct ids 0; conflicts 2; first id kroger-09700466",
     );
     expect(formatSelfAliasConflictLine(emptyAliasWriteStats())).toBeNull();
   });

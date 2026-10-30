@@ -503,7 +503,8 @@ export async function upsertCatalogStores(
               blankToNull(store.postalCode),
             ],
       );
-      upserted += result.rowCount ?? 0;
+      const matchedRows = result.rowCount ?? 0;
+      upserted += matchedRows;
 
       // Keep in-memory collocated snapshot current for subsequent inserts in this batch.
       const snapshotIndex = existingCollocated.findIndex((row) => row.id === writeId);
@@ -521,33 +522,35 @@ export async function upsertCatalogStores(
         existingCollocated.push(snapshotRow);
       }
 
-      // Slice 5c: self-alias (+ allowlisted Aldi→OSM pointer). Uses writeId after
-      // collocated redirect so Mechanicsville slug gets the alias, not aldi-{zip}.
-      accumulateAliasWriteStats(
-        aliasStats,
-        await ensureCatalogStoreIdentityAliases(
-          {
-            storeId: writeId,
-            sourceName: writeSourceName,
-            sourceStoreId: store.sourceStoreId,
-            name: store.name,
-            kind: store.kind,
-            city: store.city,
-            state: store.state,
-            latitude: store.latitude,
-            longitude: store.longitude,
-          },
-          pool,
-          { logSummary: false },
-        ),
-      );
+      // Alias only when the insert or update matched a row.
+      if (matchedRows > 0) {
+        accumulateAliasWriteStats(
+          aliasStats,
+          await ensureCatalogStoreIdentityAliases(
+            {
+              storeId: writeId,
+              sourceName: writeSourceName,
+              sourceStoreId: store.sourceStoreId,
+              name: store.name,
+              kind: store.kind,
+              city: store.city,
+              state: store.state,
+              latitude: store.latitude,
+              longitude: store.longitude,
+            },
+            pool,
+            { logSummary: false },
+          ),
+        );
+      }
     }
 
     if (
       !options?.aliasStats &&
       (aliasStats.aliasesEnsured > 0 ||
         aliasStats.aliasesSkipped > 0 ||
-        aliasStats.aliasConflicts > 0)
+        aliasStats.aliasConflicts > 0 ||
+        aliasStats.aliasAttempts > 0)
     ) {
       console.log(
         JSON.stringify({
@@ -1179,6 +1182,9 @@ async function updateIngestedRankedStoreCoordinates(
       [storeId],
     );
     const currentRow = currentResult.rows[0];
+    if (!currentRow) {
+      return 0;
+    }
 
     let latitude = catalog.latitude;
     let longitude = catalog.longitude;
@@ -1249,9 +1255,11 @@ async function updateIngestedRankedStoreCoordinates(
       ],
     );
 
-    // Slice 5c: always ensure aliases after Aldi/Kroger refresh attempts so the
-    // Mechanicsville collocated path (no upsertCatalogStores) still writes
-    // self-alias + allowlisted OSM pointer when source_store_id is set.
+    const matchedRows = result.rowCount ?? 0;
+    if (matchedRows === 0) {
+      return 0;
+    }
+
     const ensured = await ensureCatalogStoreIdentityAliases(
       {
         storeId,
@@ -1272,7 +1280,8 @@ async function updateIngestedRankedStoreCoordinates(
     } else if (
       ensured.aliasesEnsured > 0 ||
       ensured.aliasesSkipped > 0 ||
-      ensured.aliasConflicts > 0
+      ensured.aliasConflicts > 0 ||
+      ensured.aliasAttempts > 0
     ) {
       console.log(
         JSON.stringify({
@@ -1286,7 +1295,7 @@ async function updateIngestedRankedStoreCoordinates(
       );
     }
 
-    return result.rowCount ?? 0;
+    return matchedRows;
   } catch (error) {
     logServerError("store-catalog-sync-ingest-refresh", error);
     return 0;

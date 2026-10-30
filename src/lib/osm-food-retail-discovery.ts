@@ -1,4 +1,5 @@
 import { fixtureOsmFoodRetailStores23111 } from "@/lib/fixtures/osm-food-retail.fixtures";
+import { shouldSkipFuelLocation } from "@/lib/ingest/fuel-location";
 import { logServerError } from "@/lib/server-log";
 
 export type OsmDiscoveredFoodRetailStore = {
@@ -474,6 +475,15 @@ export function parseOverpassElements(payload: OverpassResponse): OsmDiscoveredF
 
     const name = resolveOsmFoodRetailDisplayName(tags);
     const shopTag = resolveOsmShopTag(tags);
+    if (
+      shouldSkipFuelLocation({
+        osmShop: tags.shop,
+        osmAmenity: tags.amenity,
+        name,
+      })
+    ) {
+      continue;
+    }
 
     if (!name || !shopTag || !shouldKeepOsmFoodRetailShop(shopTag, name)) {
       continue;

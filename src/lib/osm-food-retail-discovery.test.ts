@@ -109,6 +109,35 @@ describe("osm food retail discovery", () => {
     expect(isAllowedGroceryOsmShopTag("variety_store")).toBe(false);
   });
 
+  it("drops fuel places and keeps a supermarket whose name mentions fuel", () => {
+    const stores = parseOverpassElements({
+      elements: [
+        {
+          type: "node",
+          id: 810001,
+          lat: 37.6,
+          lon: -77.35,
+          tags: { name: "Shell", amenity: "fueling_station" },
+        },
+        {
+          type: "node",
+          id: 810002,
+          lat: 37.61,
+          lon: -77.35,
+          tags: { name: "Kroger Fuel Center", shop: "gas_station" },
+        },
+        {
+          type: "node",
+          id: 810003,
+          lat: 37.62,
+          lon: -77.35,
+          tags: { name: "Kroger Fuel Center", shop: "supermarket" },
+        },
+      ],
+    });
+    expect(stores.map((store) => store.osmId)).toEqual([810003]);
+  });
+
   it("parseOverpassElements drops non-grocery shop tags like department_store and variety_store", () => {
     const stores = parseOverpassElements({
       elements: [

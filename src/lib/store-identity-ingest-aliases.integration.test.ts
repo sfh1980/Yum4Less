@@ -18,6 +18,7 @@ import { upsertCatalogStores } from "@/lib/store-catalog-sync";
 
 /** OSM ids must match isOsmStorePointerTargetId; avoid Mechanicsville production id. */
 const IDS = {
+  missing: "kroger-si5c-missing",
   osm: "osm-node-9001112221",
   osmNear: "osm-node-9001112222",
   aldi: "aldi-si5c-catalog",
@@ -79,6 +80,20 @@ async function insertStore(input: {
 describe("store-identity ingest aliases (Slice 5c integration)", () => {
   afterEach(async () => {
     await cleanup();
+  });
+
+  it("self-alias: a missing store is a skip, not a conflict", async () => {
+    const stats = await ensureStoreSelfAlias({
+      storeId: "kroger-si5c-missing",
+      sourceName: "kroger-official-api",
+      sourceStoreId: "02900992",
+      name: "Missing",
+    });
+    expect(stats.aliasesEnsured).toBe(0);
+    expect(stats.aliasesSkipped).toBe(1);
+    expect(stats.aliasConflicts).toBe(0);
+    expect(stats.aliasAttempts).toBe(1);
+    expect(stats.attemptedStoreIds).toEqual(["kroger-si5c-missing"]);
   });
 
   it("self-alias: store upsert creates/maintains own confirmed self-alias", async () => {
