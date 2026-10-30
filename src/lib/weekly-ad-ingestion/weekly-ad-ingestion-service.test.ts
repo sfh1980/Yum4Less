@@ -4,6 +4,7 @@ import { createAldiWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/ald
 import {
   getWeeklyAdIngestionClients,
   runWeeklyAdIngestionForStores,
+  type WeeklyAdIngestFlyerCluster,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
 import * as weeklyAdFlyerHash from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import * as weeklyAdOfferSync from "@/lib/weekly-ad-ingestion/weekly-ad-offer-sync";
@@ -251,6 +252,66 @@ describe("weekly ad ingestion service", () => {
 
     purgeSpy.mockRestore();
     hashSpy.mockRestore();
+    syncSpy.mockRestore();
+  });
+
+  it("prices the 40 in-cluster stores and skips a store admitted only by another cluster", async () => {
+    const purgeSpy = vi
+      .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")
+      .mockResolvedValue(0);
+    const syncSpy = vi
+      .spyOn(weeklyAdOfferSync, "syncWeeklyAdOffersToPriceObservations")
+      .mockResolvedValue({
+        chain: "aldi",
+        storeId: "priced-store-01",
+        syncedCount: 1,
+        skippedCount: 0,
+        failedCount: 0,
+        retrievalMode: "cached",
+        message: "synced",
+      });
+    const clusterZips = ["23005", "23111", "23220", "23224"] as const;
+    const pricedStores = Array.from({ length: 40 }, (_, index) => {
+      const id = `priced-store-${String(index + 1).padStart(2, "0")}`;
+      return { id, name: `Aldi ${id}`, chain: "aldi" as const };
+    });
+    const outsider = {
+      id: "other-cluster-store",
+      name: "Aldi other cluster",
+      chain: "aldi" as const,
+    };
+    const admittingZipCodesByStoreId = new Map<string, readonly string[]>(
+      pricedStores.map((store, index) => [store.id, [clusterZips[index % clusterZips.length]!]]),
+    );
+    admittingZipCodesByStoreId.set("priced-store-40", ["23005", "28269"]);
+    admittingZipCodesByStoreId.set(outsider.id, ["28269"]);
+    const flyerCluster: WeeklyAdIngestFlyerCluster = {
+      activeZipCodes: [...clusterZips, "28269"],
+      touchingByActiveZip: new Map<string, readonly string[]>([
+        ["23005", ["23111"]],
+        ["23111", ["23220"]],
+        ["23220", ["23224"]],
+        ["23224", []],
+        ["28269", []],
+      ]),
+      admittingZipCodesByStoreId,
+    };
+
+    await runWeeklyAdIngestionForStores({
+      nearbyStores: [...pricedStores, outsider],
+      zipCode: "23005",
+      persistToDatabase: true,
+      flyerCluster,
+    });
+
+    const syncedStoreIds = syncSpy.mock.calls.map(
+      (call) => call[0]?.result.offers[0]?.storeId,
+    );
+    expect(syncedStoreIds).toHaveLength(40);
+    expect(syncedStoreIds).not.toContain("other-cluster-store");
+    expect(syncedStoreIds).toEqual(expect.arrayContaining(pricedStores.map((store) => store.id)));
+
+    purgeSpy.mockRestore();
     syncSpy.mockRestore();
   });
 

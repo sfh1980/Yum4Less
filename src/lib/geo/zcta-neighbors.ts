@@ -153,6 +153,49 @@ async function fetchTouchingZctas(input: {
   }
 }
 
+/**
+ * Saved neighbor lists only. A missing row or an empty list is no edges
+ * from that ZIP. This does not call Census. A thrown read is a failure,
+ * not an empty list, so the caller can keep today's fan-out.
+ */
+export async function loadCachedTouchingZips(
+  zipCodes: readonly string[],
+): Promise<
+  | { ok: true; touchingByZip: Map<string, readonly string[]> }
+  | { ok: false; error: string }
+> {
+  const active = [...new Set(zipCodes.map((zipCode) => zipCode.trim()))].filter((zipCode) =>
+    ZIP5.test(zipCode),
+  );
+  const touchingByZip = new Map<string, readonly string[]>(
+    active.map((zipCode) => [zipCode, []]),
+  );
+  if (!process.env.DATABASE_URL || active.length === 0) {
+    return { ok: true, touchingByZip };
+  }
+
+  try {
+    const result = await getDbPool().query<{
+      zip_code: string;
+      touching_zips: string[] | null;
+    }>(
+      `
+        select zip_code, touching_zips
+        from zip_geocode_cache
+        where zip_code = any($1::text[])
+      `,
+      [active],
+    );
+    for (const row of result.rows) {
+      touchingByZip.set(row.zip_code, usableTouchingZipList(row.touching_zips) ?? []);
+    }
+    return { ok: true, touchingByZip };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: message };
+  }
+}
+
 async function readCachedTouchingZips(zipCode: string): Promise<string[] | null> {
   if (!process.env.DATABASE_URL) {
     return null;

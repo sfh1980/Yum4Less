@@ -42,6 +42,16 @@ import {
   getWeeklyAdIngestionStatusSummaries,
   syncWeeklyAdOffersToPriceObservations,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-offer-sync";
+import {
+  flyerZipClusterMemberSet,
+  storeSharesFlyerZipCluster,
+} from "@/lib/geo/active-zip-clusters";
+
+export type WeeklyAdIngestFlyerCluster = {
+  activeZipCodes: readonly string[];
+  touchingByActiveZip: ReadonlyMap<string, readonly string[]>;
+  admittingZipCodesByStoreId: ReadonlyMap<string, readonly string[]>;
+};
 
 export { WEEKLY_AD_CHAINS, isWeeklyAdChain };
 
@@ -79,6 +89,12 @@ export async function runWeeklyAdIngestionForStores(input: {
   nearbyStores: Pick<NearbyStoreSummary, "id" | "name" | "chain">[];
   zipCode: string;
   persistToDatabase?: boolean;
+  /**
+   * When set, a store receives this flyer's prices only if one ZIP that
+   * admitted it is in the same connected cluster as zipCode. Omit it and
+   * every nearby store is priced, which is what the existing tests cover.
+   */
+  flyerCluster?: WeeklyAdIngestFlyerCluster;
 }): Promise<{
   results: WeeklyAdIngestionResult[];
   syncSummaries: WeeklyAdOfferSyncSummary[];
@@ -100,8 +116,15 @@ export async function runWeeklyAdIngestionForStores(input: {
     await purgeStaleRankedPriceObservations();
   }
 
-  const krogerStores = input.nearbyStores.filter((store) => store.chain === "kroger");
-  const nonKrogerStores = input.nearbyStores.filter((store) => store.chain !== "kroger");
+  const nearbyStores = storesPricedFromFlyerCluster(input.nearbyStores, input.flyerCluster, zipCode);
+  if (input.flyerCluster && nearbyStores.length !== input.nearbyStores.length) {
+    console.info(
+      `[weekly-ad] flyer ZIP ${zipCode} cluster keeps ${nearbyStores.length} store(s); skipped ${input.nearbyStores.length - nearbyStores.length} outside the cluster.`,
+    );
+  }
+
+  const krogerStores = nearbyStores.filter((store) => store.chain === "kroger");
+  const nonKrogerStores = nearbyStores.filter((store) => store.chain !== "kroger");
 
   if (krogerStores.length > 0) {
     const krogerClient = getWeeklyAdIngestionClient("kroger");
@@ -176,7 +199,7 @@ export async function runWeeklyAdIngestionForStores(input: {
   if (input.persistToDatabase && !isFixtureIngestMode()) {
     await tryDiscoveredChainFlyers({
       zipCode,
-      stores: input.nearbyStores,
+      stores: nearbyStores,
       trackedIngredientIds,
     });
     try {
@@ -198,6 +221,27 @@ export async function getWeeklyAdIngestionMarketSummaries(input: {
   storeIds: string[];
 }) {
   return getWeeklyAdIngestionStatusSummaries(input);
+}
+
+function storesPricedFromFlyerCluster<T extends { id: string }>(
+  stores: readonly T[],
+  flyerCluster: WeeklyAdIngestFlyerCluster | undefined,
+  fetchedZipCode: string,
+): T[] {
+  if (!flyerCluster) {
+    return [...stores];
+  }
+  const members = flyerZipClusterMemberSet({
+    flyerZipCode: fetchedZipCode,
+    activeZipCodes: flyerCluster.activeZipCodes,
+    touchingByActiveZip: flyerCluster.touchingByActiveZip,
+  });
+  return stores.filter((store) =>
+    storeSharesFlyerZipCluster({
+      admittingZipCodes: flyerCluster.admittingZipCodesByStoreId.get(store.id) ?? [],
+      flyerCluster: members,
+    }),
+  );
 }
 
 /** One chain hash, read before any store write, then one persist decision per store. */

@@ -1,3 +1,6 @@
+import { weeklyAdTouchingZipFailureMessage } from "@/lib/geo/active-zip-clusters";
+import { loadCachedTouchingZips } from "@/lib/geo/zcta-neighbors";
+import { failIngestJobByKind } from "@/lib/ingest-jobs";
 import { rememberIngestZipGeocode } from "@/lib/zip-geocode-cache";
 import { resolveLocationInput } from "@/lib/location-resolution";
 import { getMarketDataSnapshot } from "@/lib/market-repository";
@@ -13,6 +16,7 @@ import {
 import {
   isWeeklyAdChain,
   runWeeklyAdIngestionForStores,
+  type WeeklyAdIngestFlyerCluster,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-service";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { enforceFixtureIngestDatabasePolicy } from "@/lib/fixture-ingest-policy";
@@ -54,7 +58,12 @@ async function main() {
 
   const admittedById = new Map<
     string,
-    { id: string; name: string; chain: (typeof weeklyAdCandidates)[number]["chain"] }
+    {
+      id: string;
+      name: string;
+      chain: (typeof weeklyAdCandidates)[number]["chain"];
+      admittingZipCodes: Set<string>;
+    }
   >();
   let flyerZipCode: string | undefined;
 
@@ -96,18 +105,26 @@ async function main() {
     );
 
     for (const store of nearbyStores) {
-      if (!admittedById.has(store.id)) {
-        admittedById.set(store.id, {
-          id: store.id,
-          name: store.name,
-          chain: store.chain,
-        });
+      const existing = admittedById.get(store.id);
+      if (existing) {
+        existing.admittingZipCodes.add(zipCode);
+        continue;
       }
+      admittedById.set(store.id, {
+        id: store.id,
+        name: store.name,
+        chain: store.chain,
+        admittingZipCodes: new Set([zipCode]),
+      });
     }
     flyerZipCode ??= zipCode;
   }
 
-  const nearbyStores = [...admittedById.values()];
+  const nearbyStores = [...admittedById.values()].map(({ id, name, chain }) => ({
+    id,
+    name,
+    chain,
+  }));
   if (nearbyStores.length === 0 || !flyerZipCode) {
     console.warn(
       "No weekly-ad chain stores in catalog inside the ingest fence. Run map catalog or seed stores first.",
@@ -116,10 +133,15 @@ async function main() {
     console.log(
       `Fetching each weekly-ad banner once, then fanning out to ${nearbyStores.length} admitted store(s) (ZIP ${flyerZipCode}).`,
     );
+    const flyerCluster = await flyerClusterForFetchedZip({
+      activeZipCodes: zipCodes,
+      admittedById,
+    });
     const { results, syncSummaries } = await runWeeklyAdIngestionForStores({
       nearbyStores,
       zipCode: flyerZipCode,
       persistToDatabase: true,
+      flyerCluster,
     });
     allResults.push(...results);
     allSyncSummaries.push(...syncSummaries);
@@ -195,6 +217,31 @@ async function main() {
       "\nNo offers parsed. For a deterministic local run, use: npm run ingest:weekly-ads:fixture",
     );
   }
+}
+
+async function flyerClusterForFetchedZip(input: {
+  activeZipCodes: readonly string[];
+  admittedById: ReadonlyMap<string, { admittingZipCodes: ReadonlySet<string> }>;
+}): Promise<WeeklyAdIngestFlyerCluster> {
+  const cached = await loadCachedTouchingZips(input.activeZipCodes);
+  if (!cached.ok) {
+    const message = weeklyAdTouchingZipFailureMessage(cached.error);
+    await failIngestJobByKind({ kind: "weekly-ad", error: message }).catch((error) => {
+      console.error(error instanceof Error ? error.message : error);
+    });
+    throw new Error(message);
+  }
+
+  const admittingZipCodesByStoreId = new Map<string, readonly string[]>();
+  for (const [storeId, store] of input.admittedById) {
+    admittingZipCodesByStoreId.set(storeId, [...store.admittingZipCodes]);
+  }
+
+  return {
+    activeZipCodes: input.activeZipCodes,
+    touchingByActiveZip: cached.touchingByZip,
+    admittingZipCodesByStoreId,
+  };
 }
 
 main().catch((error) => {

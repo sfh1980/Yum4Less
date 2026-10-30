@@ -135,3 +135,28 @@ export async function markNonFatalIngestJob(input: {
   );
   return result.rowCount ?? 0;
 }
+
+/**
+ * The weekly-ad step stopped before any flyer write. A queued row becomes
+ * failed so the morning note says last night did not finish, with this sentence.
+ */
+export async function failIngestJobByKind(input: {
+  kind: IngestJobKind;
+  error: string;
+  runDate?: string;
+}): Promise<number> {
+  const runDate = input.runDate ?? utcRunDate();
+  const result = await getDbPool().query(
+    `
+      update ingest_jobs
+      set status = 'failed',
+          finished_at = now(),
+          last_error = $3
+      where kind = $1
+        and run_date = $2::date
+        and status in ('queued', 'running')
+    `,
+    [input.kind, runDate, input.error],
+  );
+  return result.rowCount ?? 0;
+}
