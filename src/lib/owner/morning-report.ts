@@ -564,6 +564,7 @@ export function applyOutsideResultToMorningNote(
       (line) =>
         line !== DISCORD_MISSING_LINE &&
         line !== "Discord did not accept the note." &&
+        !/^The outside check was still missing after \d{2}:\d{2}\.$/.test(line) &&
         !/^(?:Nothing needs you|Needs you)\.$/.test(line),
     );
   let replacedCode = false;
@@ -596,6 +597,48 @@ export function applyOutsideResultToMorningNote(
     next.some((line) => otherMorningLineNeedsAttention(line));
   next.push(needsAttention ? "Needs you." : "Nothing needs you.");
   return { body: next.join("\n"), needsAttention };
+}
+
+export function outsideCheckStillMissingLine(cutoff: OutsideCheckCutoff): string {
+  const hour = String(cutoff.hour).padStart(2, "0");
+  const minute = String(cutoff.minute).padStart(2, "0");
+  return `The outside check was still missing after ${hour}:${minute}.`;
+}
+
+/**
+ * After the cutoff, a still-missing outside result rewrites today's note and
+ * asks for one Discord alert. An arrived result, a time before the cutoff,
+ * or a note that already has the missing line does nothing.
+ */
+export function planOutsideCheckFollowUp(input: {
+  now: Date;
+  cutoff?: OutsideCheckCutoff;
+  external: { codeTests: MorningCheckState; siteCheck: MorningCheckState } | null;
+  noteBody: string | null;
+  discordConfigured: boolean;
+}):
+  | { action: "none"; reason: "before-cutoff" | "arrived" | "already-sent" }
+  | { action: "alert"; body: string; needsAttention: true } {
+  const cutoff = input.cutoff ?? readOutsideCheckCutoff();
+  if (isBeforeOutsideCheckCutoff(input.now, cutoff)) {
+    return { action: "none", reason: "before-cutoff" };
+  }
+  const codeTests = input.external?.codeTests ?? "not_reported";
+  const siteCheck = input.external?.siteCheck ?? "not_reported";
+  if (outsideChecksAreReported(codeTests, siteCheck)) {
+    return { action: "none", reason: "arrived" };
+  }
+  const marker = outsideCheckStillMissingLine(cutoff);
+  if (input.noteBody?.includes(marker)) {
+    return { action: "none", reason: "already-sent" };
+  }
+  const rewritten = applyOutsideResultToMorningNote(input.noteBody ?? "Morning note", {
+    codeTests,
+    siteCheck,
+    discordConfigured: input.discordConfigured,
+  });
+  const withMarker = appendMorningIssue(rewritten, marker);
+  return { action: "alert", body: withMarker.body, needsAttention: true };
 }
 
 function otherMorningLineNeedsAttention(line: string): boolean {

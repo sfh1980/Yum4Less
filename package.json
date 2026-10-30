@@ -47,6 +47,7 @@
     "check:ranked-price-freshness": "tsx scripts/check-ranked-price-freshness.ts",
     "morning:report": "tsx scripts/run-morning-report.ts",
     "morning:deadman": "tsx scripts/run-morning-deadman.ts",
+    "morning:outside-check": "tsx scripts/run-outside-check-follow-up.ts",
     "smoke:live-site": "tsx scripts/smoke-live-site.ts",
     "setup:local": "node scripts/setup-local.mjs",
     "db:up": "docker compose up -d db",

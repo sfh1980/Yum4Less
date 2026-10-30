@@ -4,8 +4,10 @@ import {
   applyOutsideResultToMorningNote,
   datedOutsideCheckLine,
   isBeforeOutsideCheckCutoff,
+  outsideCheckStillMissingLine,
   outsideCheckWhenLabel,
   outsideChecksAreReported,
+  planOutsideCheckFollowUp,
   readOutsideCheckCutoff,
   chainPriceExceptionsInNote,
   composeMissedMorningReport,
@@ -115,6 +117,73 @@ describe("morning report", () => {
     expect(rewritten.body).toContain("Code tests passed.");
     expect(rewritten.body).not.toContain("yesterday");
     expect(outsideChecksAreReported("passed", "passed")).toBe(true);
+  });
+
+  it("rewrites a missing outside check after the cutoff and sends one alert", () => {
+    const pending = composeMorningReport({
+      ...quiet,
+      codeTests: "not_reported",
+      siteCheck: "not_reported",
+      outsideCheckPending: true,
+      codeTestsLine: datedOutsideCheckLine("Code tests passed.", "yesterday"),
+      siteCheckLine: datedOutsideCheckLine("The site answered from outside.", "yesterday"),
+      addSkipped: "not-add-day",
+    });
+    const beforeCutoff = planOutsideCheckFollowUp({
+      now: new Date("2026-10-29T16:59:00Z"),
+      external: null,
+      noteBody: pending.body,
+      discordConfigured: true,
+    });
+    expect(beforeCutoff).toEqual({ action: "none", reason: "before-cutoff" });
+
+    const arrived = planOutsideCheckFollowUp({
+      now: new Date("2026-10-29T17:15:00Z"),
+      external: { codeTests: "passed", siteCheck: "passed" },
+      noteBody: pending.body,
+      discordConfigured: true,
+    });
+    expect(arrived).toEqual({ action: "none", reason: "arrived" });
+
+    const late = planOutsideCheckFollowUp({
+      now: new Date("2026-10-29T17:15:00Z"),
+      external: null,
+      noteBody: pending.body,
+      discordConfigured: true,
+    });
+    expect(late.action).toBe("alert");
+    if (late.action !== "alert") {
+      return;
+    }
+    expect(late.body).toContain("Code tests were not reported.");
+    expect(late.body).toContain("The outside site check was not reported.");
+    expect(late.body).toContain(outsideCheckStillMissingLine({ hour: 13, minute: 0 }));
+    expect(late.body.endsWith("Needs you.")).toBe(true);
+    expect(late.needsAttention).toBe(true);
+
+    const second = planOutsideCheckFollowUp({
+      now: new Date("2026-10-29T17:15:00Z"),
+      external: null,
+      noteBody: late.body,
+      discordConfigured: true,
+    });
+    expect(second).toEqual({ action: "none", reason: "already-sent" });
+
+    const arrivedLater = applyOutsideResultToMorningNote(late.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(arrivedLater.body).not.toContain("still missing");
+    expect(arrivedLater.body).toContain("Code tests passed.");
+    expect(arrivedLater.needsAttention).toBe(false);
+  });
+
+  it("schedules the outside-check follow-up at 1:15pm New York", () => {
+    const crontab = readFileSync("docker/ingest/crontab", "utf8");
+    expect(crontab).toContain(
+      "15 13 * * * root . /etc/yum4less/ingest.env && cd /app && YUM4LESS_MORNING_REPORT=1 /usr/local/bin/npm run morning:outside-check",
+    );
   });
 
   it("adds ZIPs on even day numbers and skips the next day", () => {
