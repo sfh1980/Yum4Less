@@ -66,6 +66,38 @@ describe("chain rollout policy", () => {
     })).toBe("whole-foods");
   });
 
+  it("does not treat a generic fragment or a bare bj as a chain name", () => {
+    expect(inferStoreChainFromName("River City Market")).toBe("unknown");
+    expect(inferStoreChainFromName("City Market")).toBe("unknown");
+    expect(inferStoreChainFromName("Metro Market")).toBe("unknown");
+    expect(inferStoreChainFromName("Pay Less Super Market")).toBe("unknown");
+    expect(inferStoreChainFromName("object")).toBe("unknown");
+    expect(inferStoreChainFromName("bj fuel")).toBe("unknown");
+    expect(inferStoreChainFromName("BJ's Wholesale")).toBe("bjs");
+    expect(inferStoreChainFromName("BJs Wholesale")).toBe("bjs");
+    expect(inferStoreChainFromName("Harris Teeter")).toBe("kroger");
+    expect(inferStoreChainFromName("King Soopers")).toBe("kroger");
+    expect(
+      inferStoreChainFromName("City Market", { osmBrand: "City Market" }),
+    ).toBe("kroger");
+    expect(
+      inferStoreChainFromName("City Market", { krogerLocationId: "01400999" }),
+    ).toBe("kroger");
+    expect(
+      inferStoreChainFromName("River City Market", { osmBrand: "River City Market" }),
+    ).toBe("unknown");
+    expect(
+      inferStoreChainFromName("River City Market", { krogerLocationId: "01400999" }),
+    ).toBe("unknown");
+    expect(inferStoreChainFromName("bj fuel", { osmBrand: "BJ" })).toBe("bjs");
+    expect(inferStoreChainFromName("bj fuel", { bjsRetailerId: "100" })).toBe("bjs");
+    expect(inferShopperBannerDisplayName("River City Market")).toBeUndefined();
+    expect(inferShopperBannerDisplayName("Harris Teeter")).toBe("Harris Teeter");
+    expect(
+      inferShopperBannerDisplayName("City Market", { osmBrand: "City Market" }),
+    ).toBe("City Market");
+  });
+
   it("shows Kroger-family storefronts as their banner, not the family", () => {
     expect(inferShopperBannerDisplayName("Harris Teeter")).toBe("Harris Teeter");
     expect(inferShopperBannerDisplayName("Ralphs")).toBe("Ralphs");

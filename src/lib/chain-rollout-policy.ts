@@ -83,6 +83,69 @@ const KROGER_FAMILY_NAME_MARKERS = KROGER_FAMILY_BANNERS.map(
   (banner) => banner.fragment,
 );
 
+/**
+ * These fragments also appear inside unrelated store names
+ * ("River City Market"). A display name is not enough.
+ * A leading banner name still matches when an official Kroger location id
+ * or a separate OSM brand tag is present.
+ */
+const GENERIC_KROGER_NAME_FRAGMENTS = ["city market", "metro market", "pay less"] as const;
+
+const DISTINCTIVE_KROGER_NAME_MARKERS = KROGER_FAMILY_NAME_MARKERS.filter(
+  (marker) =>
+    !(GENERIC_KROGER_NAME_FRAGMENTS as readonly string[]).includes(marker),
+);
+
+export type StoreChainNameEvidence = {
+  /** Official Kroger-family location id. An OSM node id does not count. */
+  krogerLocationId?: string | null;
+  /** Official BJ's location id. A bare "bj" in a name is not enough without this or an OSM brand. */
+  bjsRetailerId?: string | null;
+  /** OSM `brand` tag kept apart from the display name. */
+  osmBrand?: string | null;
+};
+
+function isGenericKrogerNameFragment(fragment: string): boolean {
+  return (GENERIC_KROGER_NAME_FRAGMENTS as readonly string[]).includes(fragment);
+}
+
+/** "City Market" and "City Market #12" match. "River City Market" does not. */
+function startsWithNameFragment(value: string, fragment: string): boolean {
+  if (!value.startsWith(fragment)) {
+    return false;
+  }
+  const next = value.charAt(fragment.length);
+  return next === "" || !/[a-z0-9]/.test(next);
+}
+
+function hasDistinctiveBjsName(normalized: string): boolean {
+  return normalized.includes("bj's") || /(?:^|[^a-z])bjs(?:[^a-z]|$)/.test(normalized);
+}
+
+/** The two letters "bj" as their own token, not "bj's" or "bjs", and not "object". */
+function hasBareBjToken(normalized: string): boolean {
+  if (hasDistinctiveBjsName(normalized)) {
+    return false;
+  }
+  return /(?:^|[^a-z])bj(?:[^a-z]|$)/.test(normalized);
+}
+
+function brandIndicatesKroger(brand: string): boolean {
+  if (!brand) {
+    return false;
+  }
+  if (DISTINCTIVE_KROGER_NAME_MARKERS.some((marker) => brand.includes(marker))) {
+    return true;
+  }
+  return GENERIC_KROGER_NAME_FRAGMENTS.some((marker) =>
+    startsWithNameFragment(brand, marker),
+  );
+}
+
+function brandIndicatesBjs(brand: string): boolean {
+  return hasDistinctiveBjsName(brand) || hasBareBjToken(brand);
+}
+
 export const COORDINATE_SANITY_EXCEPTIONS: Record<string, string> = {
   // Add store ids here only after a human has verified the deliberate offset.
   "osm-node-3103220732":
@@ -122,20 +185,34 @@ export function getCanonicalShopperChainDisplayName(
 }
 
 /** Banner shoppers should see. Harris Teeter stays Harris Teeter, not Kroger. */
-export function inferShopperBannerDisplayName(storeName: string): string | undefined {
+export function inferShopperBannerDisplayName(
+  storeName: string,
+  evidence?: StoreChainNameEvidence,
+): string | undefined {
   const normalized = storeName.trim().toLowerCase();
-  if (!normalized) {
+  const brand = evidence?.osmBrand?.trim().toLowerCase() ?? "";
+  if (!normalized && !brand) {
     return undefined;
   }
 
+  const krogerLocationId = evidence?.krogerLocationId?.trim() ?? "";
   const familyMatch = [...KROGER_FAMILY_BANNERS]
     .sort((left, right) => right.fragment.length - left.fragment.length)
-    .find((banner) => normalized.includes(banner.fragment));
+    .find((banner) => {
+      if (isGenericKrogerNameFragment(banner.fragment)) {
+        const nameLeads = startsWithNameFragment(normalized, banner.fragment);
+        const brandLeads = startsWithNameFragment(brand, banner.fragment);
+        return brandLeads || (krogerLocationId.length > 0 && nameLeads);
+      }
+      return normalized.includes(banner.fragment) || brand.includes(banner.fragment);
+    });
   if (familyMatch) {
     return familyMatch.label;
   }
 
-  return getCanonicalShopperChainDisplayName(inferStoreChainFromName(storeName));
+  return getCanonicalShopperChainDisplayName(
+    inferStoreChainFromName(storeName, evidence),
+  );
 }
 
 export function isPublixCatalogSourceName(
@@ -147,10 +224,27 @@ export function isPublixCatalogSourceName(
   );
 }
 
-export function inferStoreChainFromName(storeName: string): StoreChain {
+export function inferStoreChainFromName(
+  storeName: string,
+  evidence?: StoreChainNameEvidence,
+): StoreChain {
   const normalized = storeName.trim().toLowerCase();
+  const brand = evidence?.osmBrand?.trim().toLowerCase() ?? "";
+  const krogerLocationId = evidence?.krogerLocationId?.trim() ?? "";
+  const bjsRetailerId = evidence?.bjsRetailerId?.trim() ?? "";
 
-  if (KROGER_FAMILY_NAME_MARKERS.some((marker) => normalized.includes(marker))) {
+  if (DISTINCTIVE_KROGER_NAME_MARKERS.some((marker) => normalized.includes(marker))) {
+    return "kroger";
+  }
+  if (brandIndicatesKroger(brand)) {
+    return "kroger";
+  }
+  if (
+    krogerLocationId &&
+    GENERIC_KROGER_NAME_FRAGMENTS.some((marker) =>
+      startsWithNameFragment(normalized, marker),
+    )
+  ) {
     return "kroger";
   }
   if (normalized.includes("publix")) {
@@ -162,7 +256,10 @@ export function inferStoreChainFromName(storeName: string): StoreChain {
   if (normalized.includes("aldi")) {
     return "aldi";
   }
-  if (normalized.includes("bj")) {
+  if (hasDistinctiveBjsName(normalized) || brandIndicatesBjs(brand)) {
+    return "bjs";
+  }
+  if (hasBareBjToken(normalized) && bjsRetailerId) {
     return "bjs";
   }
   if (normalized.includes("food lion")) {
@@ -193,6 +290,9 @@ export type CatalogStoreChainInput = {
   sourceName?: string | null;
   /** DB row alias — accepted for catalog-sync call sites. */
   source_name?: string | null;
+  osmBrand?: string | null;
+  krogerLocationId?: string | null;
+  bjsRetailerId?: string | null;
 };
 
 function readCatalogSourceName(
@@ -283,7 +383,11 @@ export function inferStoreChainFromCatalog(store: CatalogStoreChainInput): Store
     return fromId;
   }
 
-  return inferStoreChainFromName(store.name);
+  return inferStoreChainFromName(store.name, {
+    osmBrand: store.osmBrand,
+    krogerLocationId: store.krogerLocationId,
+    bjsRetailerId: store.bjsRetailerId,
+  });
 }
 
 export function getCoordinateSanityPromotionRequirement(
