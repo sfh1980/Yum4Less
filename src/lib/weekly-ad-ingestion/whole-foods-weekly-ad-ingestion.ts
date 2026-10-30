@@ -10,6 +10,7 @@ import {
   formatWholeFoodsFlyerDateLog,
   parseWholeFoodsWeeklyAd,
   summarizeWholeFoodsFlyerDates,
+  wholeFoodsFlyerExtendsDateOnlyEnd,
 } from "@/lib/weekly-ad-ingestion/parse-whole-foods-weekly-ad";
 import { persistWholeFoodsSourceStoreBinding } from "@/lib/whole-foods-catalog-sync";
 import {
@@ -110,6 +111,11 @@ async function ingestWholeFoodsWeeklyAd(
         endDates: flyerDates.endDates,
       }),
     );
+    if (wholeFoodsFlyerExtendsDateOnlyEnd(promotions)) {
+      console.info(
+        `[whole-foods] date-only sale end extended by one day for store ${locatorStore.storeId}`,
+      );
+    }
     const rawOffers = parseWholeFoodsWeeklyAd({ promotions });
 
     if (rawOffers.length === 0) {

@@ -66,3 +66,6 @@ tsconfig.tsbuildinfo
 # USDA SNAP retailer dumps and local Overpass probe artifacts (set YUM4LESS_SNAP_CSV_PATH locally)
 Historical SNAP Retailer Locator Data*.csv
 .tmp-overpass-*.json
+
+# Laptop rehearsal lock. One successful rehearsal per local day.
+.rehearsal-lock/

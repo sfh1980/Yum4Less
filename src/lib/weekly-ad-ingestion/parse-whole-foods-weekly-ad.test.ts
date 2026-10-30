@@ -45,7 +45,7 @@ describe("parseWholeFoodsWeeklyAd", () => {
     );
   });
 
-  it("stores an end date and leaves valid_through empty when only a start date exists", () => {
+  it("extends a shared whole-hour end and leaves valid_through empty when only a start exists", () => {
     const withEnd = parseWholeFoodsWeeklyAd({
       promotions: [
         {
@@ -56,7 +56,7 @@ describe("parseWholeFoodsWeeklyAd", () => {
         },
       ],
     });
-    expect(withEnd[0]?.validThrough).toBe("2026-10-28T04:00:00Z");
+    expect(withEnd[0]?.validThrough).toBe("2026-10-29T04:00:00Z");
 
     const startOnly = parseWholeFoodsWeeklyAd({
       promotions: [
@@ -68,6 +68,43 @@ describe("parseWholeFoodsWeeklyAd", () => {
       ],
     });
     expect(startOnly[0]?.validThrough).toBeUndefined();
+  });
+
+  it("extends a shared whole-hour end by one day and leaves a lone end unchanged", () => {
+    const paired = parseWholeFoodsWeeklyAd({
+      promotions: [
+        {
+          productName: "Organic Hass Avocados",
+          salePrice: "$1.99 ea",
+          startDate: "2026-10-28T05:00:00Z",
+          endDate: "2026-11-03T05:00:00Z",
+        },
+      ],
+    });
+    expect(paired[0]?.validThrough).toBe("2026-11-04T05:00:00Z");
+
+    const daylight = parseWholeFoodsWeeklyAd({
+      promotions: [
+        {
+          productName: "Organic Hass Avocados",
+          salePrice: "$1.99 ea",
+          startDate: "2026-10-21T05:00:00Z",
+          endDate: "2026-10-27T05:00:00Z",
+        },
+      ],
+    });
+    expect(daylight[0]?.validThrough).toBe("2026-10-28T05:00:00Z");
+
+    const endOnly = parseWholeFoodsWeeklyAd({
+      promotions: [
+        {
+          productName: "Organic Hass Avocados",
+          salePrice: "$1.99 ea",
+          endDate: "2026-11-03T05:00:00Z",
+        },
+      ],
+    });
+    expect(endOnly[0]?.validThrough).toBe("2026-11-03T05:00:00Z");
   });
 
   it("summarizes flyer start and end dates without treating the start as the end", () => {

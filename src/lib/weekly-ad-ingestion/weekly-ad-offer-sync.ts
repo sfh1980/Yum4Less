@@ -86,6 +86,10 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
   const everyStoreCovered =
     targetStoreIds.length > 0 &&
     targetStoreIds.every((storeId) => coveredStoreIds.has(storeId));
+  const validThroughBySourceRecordId = latestValidThroughBySourceRecord(
+    offersToPersist,
+    sourceRecordIdFor,
+  );
   if (
     shouldSkipUnchangedFlyerPersist({
       previousHash,
@@ -97,6 +101,7 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
       storeIds: targetStoreIds,
       sourceName,
       sourceRecordIds: offersToPersist.map(sourceRecordIdFor),
+      validThroughBySourceRecordId,
     });
     return {
       ...baseSummary,
@@ -117,6 +122,7 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
       sourceRecordIds: offersToPersist
         .filter((offer) => coveredStoreIds.has(offer.storeId))
         .map(sourceRecordIdFor),
+      validThroughBySourceRecordId,
     });
   }
 
@@ -266,6 +272,22 @@ function selectBestWeeklyAdOffersPerIngredient(offers: WeeklyAdOffer[]): WeeklyA
   }
 
   return [...bestByIngredient.values()];
+}
+
+function latestValidThroughBySourceRecord(
+  offers: WeeklyAdOffer[],
+  sourceRecordIdFor: (offer: WeeklyAdOffer) => string,
+): Map<string, Date | null> {
+  const byRecord = new Map<string, Date | null>();
+  for (const offer of offers) {
+    const sourceRecordId = sourceRecordIdFor(offer);
+    const next = parseOptionalObservationTimestamp(offer.validThrough) ?? null;
+    const previous = byRecord.get(sourceRecordId);
+    if (previous === undefined || (next && (!previous || next.getTime() > previous.getTime()))) {
+      byRecord.set(sourceRecordId, next);
+    }
+  }
+  return byRecord;
 }
 
 function parseOptionalObservationTimestamp(value: string | undefined) {

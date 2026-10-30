@@ -131,17 +131,25 @@ export function shouldSkipUnchangedFlyerPersist(input: {
 }
 
 /**
- * The unchanged-hash skip does not rewrite rows. Ranked reads still require
+ * The unchanged-hash skip does not rewrite prices. Ranked reads still require
  * last_verified_at or observed_at inside 24 hours, so bump last_verified_at
- * on the rows this flyer already wrote. observed_at stays. A row past
- * valid_through is left alone. A row whose observed_at is older than
- * YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS is left alone so a stuck source
- * stops looking fresh.
+ * on the rows this flyer already wrote. observed_at stays.
+ *
+ * A later parsed end raises valid_through (greatest). A missing or earlier
+ * end does not clear or shorten it. A row already past valid_through is left
+ * alone. The weekly-ad step purges those rows before this refresh, so a
+ * correction has to run while the stored end is still in the future. For
+ * Whole Foods rows stored as 2026-11-03T05:00:00Z, that is the Monday
+ * 2026-11-02 3:00am Eastern night. Tuesday's purge deletes them first.
+ *
+ * A row whose observed_at is older than YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS
+ * is left alone so a stuck source stops looking fresh.
  */
 export async function refreshUnchangedWeeklyAdVerification(input: {
   storeIds: readonly string[];
   sourceName: string;
   sourceRecordIds: readonly string[];
+  validThroughBySourceRecordId?: ReadonlyMap<string, Date | null>;
 }): Promise<number> {
   const storeIds = [...new Set(input.storeIds.filter(Boolean))];
   const sourceRecordIds = [...new Set(input.sourceRecordIds.filter(Boolean))];
@@ -150,18 +158,29 @@ export async function refreshUnchangedWeeklyAdVerification(input: {
   }
 
   const maxUnverifiedDays = readWeeklyAdMaxUnverifiedDays();
+  const validThroughValues = sourceRecordIds.map((sourceRecordId) => {
+    const value = input.validThroughBySourceRecordId?.get(sourceRecordId);
+    return value ? value.toISOString() : null;
+  });
   const result = await getDbPool().query(
     `
-      update price_observations
-      set last_verified_at = now()
-      where store_id = any($1::text[])
-        and source_name = $2
-        and source_record_id = any($3::text[])
-        and in_stock
-        and (valid_through is null or valid_through >= now())
-        and observed_at >= now() - ($4::int * interval '1 day')
+      update price_observations as po
+      set
+        last_verified_at = now(),
+        valid_through = case
+          when v.valid_through is null then po.valid_through
+          when po.valid_through is null then v.valid_through::timestamptz
+          else greatest(po.valid_through, v.valid_through::timestamptz)
+        end
+      from unnest($3::text[], $5::text[]) as v(source_record_id, valid_through)
+      where po.store_id = any($1::text[])
+        and po.source_name = $2
+        and po.source_record_id = v.source_record_id
+        and po.in_stock
+        and (po.valid_through is null or po.valid_through >= now())
+        and po.observed_at >= now() - ($4::int * interval '1 day')
     `,
-    [storeIds, input.sourceName, sourceRecordIds, maxUnverifiedDays],
+    [storeIds, input.sourceName, sourceRecordIds, maxUnverifiedDays, validThroughValues],
   );
   return result.rowCount ?? 0;
 }

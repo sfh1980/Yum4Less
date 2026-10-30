@@ -176,8 +176,58 @@ describe("whole foods weekly ad ingestion", () => {
     expect(result.offers.some((offer) => /avocado/i.test(offer.productName))).toBe(
       true,
     );
+    expect(result.offers.find((offer) => /avocado/i.test(offer.productName))?.validThrough).toBe(
+      "2026-09-22T05:00:00Z",
+    );
     expect(
       result.offers.some((offer) => /household cleaner/i.test(offer.productName)),
     ).toBe(false);
+  });
+
+  it("extends a shared whole-hour end and ignores the store pin", async () => {
+    delete process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
+    const client = createWholeFoodsWeeklyAdIngestionClient({
+      resolveStoreForZip: async () => ({
+        storeId: "10631",
+        locationName: "Lincoln Park",
+        city: "Chicago",
+        state: "IL",
+        latitude: 41.8781,
+        longitude: -87.6298,
+      }),
+      persistBinding: async () => ({
+        updatedPin: true,
+        upsertedCatalog: true,
+      }),
+      fetchSalesFlyerHtml: async ({ storeId }) => ({
+        url: `https://www.wholefoodsmarket.com/sales-flyer?store-id=${storeId}`,
+        html: `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+          props: {
+            pageProps: {
+              promotions: [
+                {
+                  productName: "Organic Hass Avocados",
+                  salePrice: "4 for $5",
+                  startDate: "2026-09-16T05:00:00Z",
+                  endDate: "2026-09-22T05:00:00Z",
+                },
+              ],
+            },
+          },
+        })}</script>`,
+      }),
+    });
+
+    const result = await client.ingestWeeklyAd({
+      chain: "whole-foods",
+      storeId: "osm-way-2",
+      storeName: "Whole Foods Market",
+      zipCode: "60614",
+      trackedIngredientIds: ["avocado"],
+    });
+
+    expect(result.offers.find((offer) => /avocado/i.test(offer.productName))?.validThrough).toBe(
+      "2026-09-23T05:00:00Z",
+    );
   });
 });

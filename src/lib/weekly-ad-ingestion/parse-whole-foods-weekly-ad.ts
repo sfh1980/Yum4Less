@@ -1,3 +1,4 @@
+import { extendDateOnlySaleEnd } from "@/lib/weekly-ad-ingestion/date-only-sale-end";
 import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 const DIRECTIONAL_LABEL = "Directional — Whole Foods weekly sales flyer";
@@ -31,6 +32,23 @@ export function summarizeWholeFoodsFlyerDates(promotions: unknown): {
     }
   }
   return { startDates: [...startDates], endDates: [...endDates] };
+}
+
+/** True when at least one promotion's stored end is one day past the raw end. */
+export function wholeFoodsFlyerExtendsDateOnlyEnd(promotions: unknown): boolean {
+  if (!Array.isArray(promotions)) {
+    return false;
+  }
+  return promotions.some((entry) => {
+    const record = asRecord(entry);
+    if (!record) {
+      return false;
+    }
+    const start = readString(record.startDate);
+    const end = readString(record.endDate) ?? readString(record.validThrough);
+    const extended = extendDateOnlySaleEnd({ start, end });
+    return typeof end === "string" && extended !== end;
+  });
 }
 
 export function formatWholeFoodsFlyerDateLog(input: {
@@ -166,8 +184,12 @@ function normalizePromotion(entry: unknown): WeeklyAdRawOffer | null {
 
   // A start date is when the flyer began, not when it ends. Storing it
   // makes valid_through already past, and the later purge deletes the rows.
+  // A start and end that share one whole-hour clock time are date-only:
+  // the stored end is one calendar day later.
+  const rawStart = readString(record.startDate);
+  const rawEnd = readString(record.endDate) ?? readString(record.validThrough);
   const validThrough =
-    readString(record.endDate) ?? readString(record.validThrough);
+    extendDateOnlySaleEnd({ start: rawStart, end: rawEnd }) ?? undefined;
 
   const saleLabelParts = [parsed.saleLabel];
   if (

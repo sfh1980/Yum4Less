@@ -131,6 +131,7 @@ function flyerOffer(input: {
   productName: string;
   price: number;
   observedAt?: string;
+  validThrough?: string;
 }): WeeklyAdOffer {
   return {
     chain: "kroger",
@@ -143,6 +144,7 @@ function flyerOffer(input: {
     observedAt: input.observedAt ?? "2026-10-26T07:00:00.000Z",
     confidenceScore: 0.9,
     matchConfidence: 0.9,
+    ...(input.validThrough ? { validThrough: input.validThrough } : {}),
   };
 }
 
@@ -199,9 +201,10 @@ async function readFlyerRows(sourceName: string) {
     price: string;
     observed_at: Date;
     last_verified_at: Date;
+    valid_through: Date | null;
   }>(
     `
-      select id::text, ingredient_id, price::text, observed_at, last_verified_at
+      select id::text, ingredient_id, price::text, observed_at, last_verified_at, valid_through
       from price_observations
       where store_id = $1 and source_name = $2
       order by ingredient_id
@@ -293,6 +296,55 @@ describe("unchanged weekly-ad flyer hash", () => {
     expect(Date.now() - weekly.last_verified_at.getTime()).toBeLessThan(5 * 60 * 1000);
     expect(sameInstant(official.observed_at, observedAt)).toBe(true);
     expect(sameInstant(official.last_verified_at, observedAt)).toBe(true);
+  });
+
+  it("raises valid_through on an unchanged flyer and does not shorten it", async () => {
+    const observedAt = new Date(Date.now() - 20 * 60 * 60 * 1000);
+    const shortEnd = new Date("2026-11-03T05:00:00Z");
+    const longerStoredEnd = new Date("2026-11-05T05:00:00Z");
+    const raisedOffer = flyerOffer({
+      ingredientId: "chicken-thighs",
+      productName: "Chicken thighs",
+      price: 5.99,
+      validThrough: "2026-11-04T05:00:00Z",
+    });
+    const shorterOffer = flyerOffer({
+      ingredientId: "broccoli",
+      productName: "Broccoli",
+      price: 1.99,
+      validThrough: "2026-11-04T05:00:00Z",
+    });
+    await rememberWeeklyAdFlyerHash({
+      chain: "kroger",
+      contentHash: weeklyAdFlyerContentHash([raisedOffer, shorterOffer]),
+      offerCount: 2,
+    });
+    await insertFlyerRow({
+      ingredientId: "chicken-thighs",
+      productName: "Chicken thighs",
+      price: 5.99,
+      observedAt,
+      validThrough: shortEnd,
+    });
+    await insertFlyerRow({
+      ingredientId: "broccoli",
+      productName: "Broccoli",
+      price: 1.99,
+      observedAt,
+      validThrough: longerStoredEnd,
+    });
+
+    const summary = await syncWeeklyAdOffersToPriceObservations({
+      result: flyerResult([raisedOffer, shorterOffer]),
+    });
+
+    expect(summary.message).toContain("skipped PostgreSQL rewrite");
+    const rows = await readFlyerRows(WEEKLY_AD_SOURCE);
+    const chicken = rows.find((row) => row.ingredient_id === "chicken-thighs");
+    const broccoli = rows.find((row) => row.ingredient_id === "broccoli");
+    expect(chicken?.valid_through?.toISOString()).toBe("2026-11-04T05:00:00.000Z");
+    expect(broccoli?.valid_through?.toISOString()).toBe("2026-11-05T05:00:00.000Z");
+    expect(sameInstant(chicken!.observed_at, observedAt)).toBe(true);
   });
 
   it("does not refresh a row past valid_through", async () => {
