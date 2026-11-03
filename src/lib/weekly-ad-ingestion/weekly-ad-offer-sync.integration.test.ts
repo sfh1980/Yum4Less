@@ -300,19 +300,23 @@ describe("unchanged weekly-ad flyer hash", () => {
 
   it("raises valid_through on an unchanged flyer and does not shorten it", async () => {
     const observedAt = new Date(Date.now() - 20 * 60 * 60 * 1000);
-    const shortEnd = new Date("2026-11-03T05:00:00Z");
-    const longerStoredEnd = new Date("2026-11-05T05:00:00Z");
+    const shortEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const raisedEnd = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    const longerStoredEnd = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    shortEnd.setUTCMilliseconds(0);
+    raisedEnd.setUTCMilliseconds(0);
+    longerStoredEnd.setUTCMilliseconds(0);
     const raisedOffer = flyerOffer({
       ingredientId: "chicken-thighs",
       productName: "Chicken thighs",
       price: 5.99,
-      validThrough: "2026-11-04T05:00:00Z",
+      validThrough: raisedEnd.toISOString(),
     });
     const shorterOffer = flyerOffer({
       ingredientId: "broccoli",
       productName: "Broccoli",
       price: 1.99,
-      validThrough: "2026-11-04T05:00:00Z",
+      validThrough: raisedEnd.toISOString(),
     });
     await rememberWeeklyAdFlyerHash({
       chain: "kroger",
@@ -342,8 +346,8 @@ describe("unchanged weekly-ad flyer hash", () => {
     const rows = await readFlyerRows(WEEKLY_AD_SOURCE);
     const chicken = rows.find((row) => row.ingredient_id === "chicken-thighs");
     const broccoli = rows.find((row) => row.ingredient_id === "broccoli");
-    expect(chicken?.valid_through?.toISOString()).toBe("2026-11-04T05:00:00.000Z");
-    expect(broccoli?.valid_through?.toISOString()).toBe("2026-11-05T05:00:00.000Z");
+    expect(chicken?.valid_through?.toISOString()).toBe(raisedEnd.toISOString());
+    expect(broccoli?.valid_through?.toISOString()).toBe(longerStoredEnd.toISOString());
     expect(sameInstant(chicken!.observed_at, observedAt)).toBe(true);
   });
 
