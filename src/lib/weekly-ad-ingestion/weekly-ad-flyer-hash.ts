@@ -44,6 +44,42 @@ export async function readWeeklyAdFlyerHash(
   }
 }
 
+export async function readWeeklyAdFlyerOfferCount(
+  chain: string,
+): Promise<number | null> {
+  if (!flyerHashDbEnabled()) {
+    return null;
+  }
+  try {
+    const result = await getDbPool().query<{ offer_count: number | string }>(
+      `select offer_count from weekly_ad_flyer_hashes where chain = $1`,
+      [chain],
+    );
+    const raw = result.rows[0]?.offer_count;
+    if (raw === undefined || raw === null) {
+      return null;
+    }
+    const count = Number(raw);
+    return Number.isFinite(count) ? count : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Keep the stored offer_count when the new count is under half of it.
+ * An absent or zero memory takes the new count.
+ */
+export function offerCountToRemember(
+  previous: number | null,
+  incoming: number,
+): number {
+  if (previous !== null && previous > 0 && incoming * 2 < previous) {
+    return previous;
+  }
+  return incoming;
+}
+
 export async function rememberWeeklyAdFlyerHash(input: {
   chain: string;
   contentHash: string;
@@ -53,6 +89,8 @@ export async function rememberWeeklyAdFlyerHash(input: {
     return;
   }
   try {
+    const previous = await readWeeklyAdFlyerOfferCount(input.chain);
+    const offerCount = offerCountToRemember(previous, input.offerCount);
     await getDbPool().query(
       `
         insert into weekly_ad_flyer_hashes (chain, content_hash, offer_count, recorded_at)
@@ -62,7 +100,7 @@ export async function rememberWeeklyAdFlyerHash(input: {
           offer_count = excluded.offer_count,
           recorded_at = now()
       `,
-      [input.chain, input.contentHash, input.offerCount],
+      [input.chain, input.contentHash, offerCount],
     );
   } catch (error) {
     logServerError("weekly-ad-flyer-hash.remember", error);

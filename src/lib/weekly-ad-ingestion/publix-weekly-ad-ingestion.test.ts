@@ -78,6 +78,12 @@ describe("publix weekly ad ingestion", () => {
       trackedIngredientIds: ["chicken-breast", "broccoli", "parmesan"],
     });
 
+    expect(publixFetcher.fetchPublixWeeklyAdPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        zipCode: "23111",
+        rememberedOfferCount: null,
+      }),
+    );
     expect(result.status).toBe("live");
     expect(result.offers.filter((offer) => offer.ingredientId === "chicken-breast")).toHaveLength(1);
     expect(result.offers.filter((offer) => offer.ingredientId === "parmesan")).toHaveLength(1);

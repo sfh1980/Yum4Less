@@ -2,6 +2,7 @@ import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chai
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { fetchPublixWeeklyAdPage } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-fetcher";
+import { readWeeklyAdFlyerOfferCount } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import { buildPublixWeeklyAdUrl } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-url";
 import { resolvePublixStoreForZip } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-store";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
@@ -58,9 +59,12 @@ async function ingestPublixWeeklyAd(
 
   try {
     const storeContext = await resolvePublixStoreForZip(input.zipCode);
+    const rememberedOfferCount = await readWeeklyAdFlyerOfferCount("publix");
     const pageFetch = await fetchPublixWeeklyAdPage({
       url: sourceUrl,
       storeCookie: storeContext.storeCookie,
+      rememberedOfferCount,
+      zipCode: input.zipCode,
     });
     const rawOffers = parsePublixWeeklyAd({
       html: pageFetch.html,

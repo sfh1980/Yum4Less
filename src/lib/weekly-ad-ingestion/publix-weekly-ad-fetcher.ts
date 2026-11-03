@@ -1,4 +1,13 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { getWeeklyAdBrowserContextOptions } from "@/lib/weekly-ad-ingestion/weekly-ad-browser-profile";
+import {
+  buildPublixThinCaptureMeta,
+  decidePublixCardPoll,
+  PUBLIX_CARD_POLL_MS,
+  publixCardCountIsThin,
+  readPublixCardMaxWaitMs,
+} from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 import {
   serializePublixStoreCookie,
 } from "@/lib/providers/publix/publix-services-api-client";
@@ -39,6 +48,7 @@ export type PublixWeeklyAdFetchResult = {
   storeCookie?: PublixStoreCookie;
   visitedUrls?: string[];
   savingsCardCount?: number;
+  gotoStatus?: number | null;
 };
 
 export type PublixWeeklyAdFetcherDeps = {
@@ -48,18 +58,24 @@ export type PublixWeeklyAdFetcherDeps = {
     waitSelector: string;
     timeoutMs: number;
     storeCookie?: PublixStoreCookie;
+    rememberedOfferCount?: number | null;
+    zipCode?: string;
+    maxWaitMs?: number;
   }) => Promise<{
     html: string;
     networkJsonBodies: string[];
     waitSelectorMatched: boolean;
     visitedUrls?: string[];
     savingsCardCount?: number;
+    gotoStatus?: number | null;
   }>;
 };
 
 export async function fetchPublixWeeklyAdPage(input: {
   url: string;
   storeCookie?: PublixStoreCookie;
+  rememberedOfferCount?: number | null;
+  zipCode?: string;
   deps?: PublixWeeklyAdFetcherDeps;
 }): Promise<PublixWeeklyAdFetchResult> {
   const fetchHttp = input.deps?.fetchHttpHtml ?? fetchPublixWeeklyAdHtmlOverHttp;
@@ -74,6 +90,9 @@ export async function fetchPublixWeeklyAdPage(input: {
           waitSelector: PUBLIX_WAIT_SELECTOR,
           timeoutMs: PUBLIX_BROWSER_FETCH_TIMEOUT_MS,
           storeCookie: input.storeCookie,
+          rememberedOfferCount: input.rememberedOfferCount ?? null,
+          zipCode: input.zipCode,
+          maxWaitMs: readPublixCardMaxWaitMs(),
         }),
       PUBLIX_BROWSER_RETRY_COUNT,
     );
@@ -86,6 +105,7 @@ export async function fetchPublixWeeklyAdPage(input: {
       storeCookie: input.storeCookie,
       visitedUrls: browserResult.visitedUrls,
       savingsCardCount: browserResult.savingsCardCount,
+      gotoStatus: browserResult.gotoStatus,
     };
   }
 
@@ -117,12 +137,16 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
   waitSelector: string;
   timeoutMs: number;
   storeCookie?: PublixStoreCookie;
+  rememberedOfferCount?: number | null;
+  zipCode?: string;
+  maxWaitMs?: number;
 }): Promise<{
   html: string;
   networkJsonBodies: string[];
   waitSelectorMatched: boolean;
   visitedUrls: string[];
   savingsCardCount: number;
+  gotoStatus: number | null;
 }> {
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
@@ -152,10 +176,11 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
     });
 
     const visitedUrls: string[] = [];
-    await page.goto(input.url, {
+    const firstGoto = await page.goto(input.url, {
       waitUntil: "domcontentloaded",
       timeout: input.timeoutMs,
     });
+    let gotoStatus = firstGoto?.status() ?? null;
     visitedUrls.push(page.url());
 
     const acceptCookies = page.locator("#onetrust-accept-btn-handler").first();
@@ -174,19 +199,55 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
     }
 
     await page.waitForTimeout(2_000);
-    await ensurePublixSavingsCardsLoaded(page, input.timeoutMs);
+    await scrollPageForLazyContent(page);
 
     await explorePublixWeeklyAdCategories(page, input.url, visitedUrls, input.timeoutMs);
-    const savingsCardCount = await ensurePublixSavingsCardsLoaded(page, input.timeoutMs);
+    const rememberedOfferCount = input.rememberedOfferCount ?? null;
+    const maxWaitMs = input.maxWaitMs ?? readPublixCardMaxWaitMs();
+    let savingsCardCount = await settlePublixSavingsCardCount(page, {
+      timeoutMs: input.timeoutMs,
+      rememberedOfferCount,
+      maxWaitMs,
+    });
+
+    if (publixCardCountIsThin(savingsCardCount, rememberedOfferCount)) {
+      const retryGoto = await page.goto(input.url, {
+        waitUntil: "domcontentloaded",
+        timeout: input.timeoutMs,
+      });
+      gotoStatus = retryGoto?.status() ?? gotoStatus;
+      if (!visitedUrls.includes(page.url())) {
+        visitedUrls.push(page.url());
+      }
+      await scrollPageForLazyContent(page);
+      savingsCardCount = await settlePublixSavingsCardCount(page, {
+        timeoutMs: input.timeoutMs,
+        rememberedOfferCount,
+        maxWaitMs,
+      });
+    }
+
+    const html = await page.content();
+    if (publixCardCountIsThin(savingsCardCount, rememberedOfferCount)) {
+      savePublixThinCapture({
+        html,
+        url: input.url,
+        zipCode: input.zipCode,
+        gotoStatus,
+        extractedCount: savingsCardCount,
+        rememberedOfferCount,
+      });
+    }
 
     await appendEmbeddedWeeklyAdJson(page, networkJsonBodies);
 
     return {
-      html: await page.content(),
+      html,
       networkJsonBodies,
       waitSelectorMatched,
       visitedUrls,
       savingsCardCount,
+      gotoStatus,
     };
   } finally {
     await browser.close();
@@ -211,22 +272,73 @@ async function countPublixSavingsCards(page: import("playwright").Page) {
   return page.locator(PUBLIX_SAVINGS_CARD_SELECTOR).count();
 }
 
-async function ensurePublixSavingsCardsLoaded(
+async function settlePublixSavingsCardCount(
   page: import("playwright").Page,
-  timeoutMs: number,
+  input: {
+    timeoutMs: number;
+    rememberedOfferCount: number | null;
+    maxWaitMs: number;
+  },
 ) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await waitForPublixSavingsCards(page, timeoutMs);
-    await scrollPageForLazyContent(page);
-    await page.waitForTimeout(attempt === 0 ? 2_000 : 4_000);
+  await waitForPublixSavingsCards(page, input.timeoutMs);
+  const started = Date.now();
+  let previousCount: number | null = null;
+  let samples = 0;
+  let count = 0;
 
-    const cardCount = await countPublixSavingsCards(page);
-    if (cardCount > 0) {
-      return cardCount;
+  while (true) {
+    count = await countPublixSavingsCards(page);
+    samples += 1;
+    const decision = decidePublixCardPoll({
+      previousCount,
+      count,
+      rememberedOfferCount: input.rememberedOfferCount,
+      elapsedMs: Date.now() - started,
+      maxWaitMs: input.maxWaitMs,
+      samples,
+    });
+    if (decision !== "continue") {
+      return count;
     }
+    previousCount = count;
+    await page.waitForTimeout(PUBLIX_CARD_POLL_MS);
   }
+}
 
-  return await countPublixSavingsCards(page);
+function savePublixThinCapture(input: {
+  html: string;
+  url: string;
+  zipCode?: string;
+  gotoStatus: number | null;
+  extractedCount: number;
+  rememberedOfferCount: number | null;
+}) {
+  const capturedAt = new Date().toISOString();
+  const captureDir = join(
+    process.cwd(),
+    "captures",
+    "weekly-ad",
+    "publix-thin",
+    capturedAt.replaceAll(":", "-"),
+  );
+  mkdirSync(captureDir, { recursive: true });
+  writeFileSync(join(captureDir, "page.html"), input.html, "utf8");
+  writeFileSync(
+    join(captureDir, "meta.json"),
+    JSON.stringify(
+      buildPublixThinCaptureMeta({
+        url: input.url,
+        zipCode: input.zipCode,
+        gotoStatus: input.gotoStatus,
+        extractedCount: input.extractedCount,
+        rememberedOfferCount: input.rememberedOfferCount,
+        capturedAt,
+      }),
+      null,
+      2,
+    ),
+    "utf8",
+  );
 }
 
 async function explorePublixWeeklyAdCategories(
