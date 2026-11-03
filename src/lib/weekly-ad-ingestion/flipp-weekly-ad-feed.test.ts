@@ -54,7 +54,7 @@ describe("flipp-weekly-ad-feed", () => {
       expect.objectContaining({
         productName: "Boneless Strip Steaks",
         price: 9.99,
-        saleLabel: expect.stringContaining("syndicated feed"),
+        saleLabel: "Kroger · /lb With Card & Digital Coupon · -3.00 /LB",
       }),
       expect.objectContaining({
         productName: "Strawberries",

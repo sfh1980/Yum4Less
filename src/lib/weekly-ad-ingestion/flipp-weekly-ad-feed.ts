@@ -340,7 +340,6 @@ function normalizeFlippWeeklyAdItem(item: FlippWeeklyAdItem): WeeklyAdRawOffer |
   }
 
   const saleLabelParts = [
-    "Directional — weekly ad syndicated feed",
     item.merchant_name?.trim(),
     buildFlippPriceContext(item),
     item.sale_story?.trim(),

@@ -40,7 +40,7 @@ describe("buildMealPriceSourceSummary", () => {
     });
 
     expect(result.summary).toBe(
-      "Saved sale prices at Kroger Mechanicsville — not live checkout; confirm in store.",
+      "Ad price for your area at Kroger Mechanicsville - confirm in store.",
     );
     expect(result.detail).toContain("saved sale prices");
     expect(result.summary).not.toMatch(/postgres|provenance|api|seed/i);
@@ -64,7 +64,25 @@ describe("buildMealPriceSourceSummary", () => {
       market: baseMarket,
     });
 
-    expect(result.summary).toMatch(/^Limited saved sale prices/);
+    expect(result.summary).toBe(
+      "Limited coverage — ad price for your area at Kroger Mechanicsville - confirm in store.",
+    );
+  });
+
+  it("uses the shelf sentence for a store price", () => {
+    const result = buildMealPriceSourceSummary({
+      meal: baseMeal,
+      market: {
+        ...baseMarket,
+        providerCoverageRollup: buildTestProviderCoverageRollup({
+          rankedPricingSource: "official-api-cache",
+        }),
+      },
+    });
+
+    expect(result.summary).toBe(
+      "Store price at Kroger Mechanicsville - confirm at the shelf.",
+    );
   });
 
   it("uses multi-store phrasing when the plan spans stores", () => {
@@ -86,8 +104,8 @@ describe("buildMealPriceSourceSummary", () => {
       market: baseMarket,
     });
 
-    expect(result.summary).toContain(
-      "at Kroger Mechanicsville and Publix Midlothian",
+    expect(result.summary).toBe(
+      "Ad price for your area at Kroger Mechanicsville and Publix Midlothian - confirm in store.",
     );
   });
 

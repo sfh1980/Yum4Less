@@ -13,7 +13,7 @@ import {
 import { readKrogerItemPrices } from "@/lib/providers/kroger/kroger-api-types";
 import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
-/** Distinct from Flipp's "Directional — weekly ad syndicated feed" partner-feed label. */
+/** Distinct from the shopper ad-price sentence saved on weekly-ad rows. */
 export const KROGER_WEEKLY_AD_API_PARTIAL_FILL_SALE_LABEL =
   "Partial — tracked-ingredient product API fill (not weekly ad discovery)";
 

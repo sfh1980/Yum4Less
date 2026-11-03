@@ -89,14 +89,14 @@ function buildRankedSourceCopy(
   switch (rankedPricingSource) {
     case "weekly-ad-cache":
       return {
-        summary: `Saved sale prices ${storePhrase} — not live checkout; confirm in store.`,
+        summary: `Ad price for your area ${storePhrase} - confirm in store.`,
         detail:
           "This total combines saved sale prices from nearby stores you selected. Sale prices change often and are not the same as live checkout — verify price, package size, and deals before you buy.",
       };
     case "official-api-cache":
     case "online-cache":
       return {
-        summary: `Recently checked online store prices ${storePhrase} — not live checkout; confirm at the shelf.`,
+        summary: `Store price ${storePhrase} - confirm at the shelf.`,
         detail:
           "This total uses recently checked online store prices. Shelf labels and checkout systems can still change before you shop — verify the exact product and deal before you rely on this estimate.",
       };
@@ -150,12 +150,16 @@ function formatStorePhrase(
 }
 
 function ensureDirectionalWording(summary: string) {
-  if (/estimate only|limited saved/i.test(summary)) {
+  if (/estimate only|limited saved|limited coverage/i.test(summary)) {
     return summary;
   }
 
   if (/^Saved /i.test(summary)) {
     return summary.replace(/^Saved /i, "Limited saved ");
+  }
+
+  if (/^(?:Ad price for your area |Store price )/i.test(summary)) {
+    return `Limited coverage — ${summary.charAt(0).toLowerCase()}${summary.slice(1)}`;
   }
 
   return summary;
