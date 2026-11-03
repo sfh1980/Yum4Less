@@ -14,6 +14,7 @@ import {
   composeMorningReport,
   isDiscordWebhookUrl,
   isMorningZipAddDay,
+  morningZipAddsEnabled,
   morningReportDate,
   morningWeekday,
   datedOutsideCheckLine,
@@ -21,6 +22,7 @@ import {
   outsideCheckWhenLabel,
   outsideChecksAreReported,
   pickMorningZipCandidates,
+  type MorningZipAddSkip,
   countConsecutiveRecipeImportMisses,
   previousMorningReportDate,
   RECIPE_IMPORT_DID_NOT_FINISH,
@@ -114,10 +116,12 @@ export async function runMorningReport(): Promise<void> {
   const addDay = isMorningZipAddDay(reportDate);
   const addedZipCodes: string[] = [];
   const addErrors: string[] = [];
-  let addSkipped: "not-add-day" | "last-night" | "none-left" | null = null;
+  let addSkipped: MorningZipAddSkip = null;
   let nearbyLeft = false;
 
-  if (!addDay) {
+  if (!morningZipAddsEnabled()) {
+    addSkipped = "paused";
+  } else if (!addDay) {
     addSkipped = "not-add-day";
   } else if (!lastNightOk) {
     addSkipped = "last-night";

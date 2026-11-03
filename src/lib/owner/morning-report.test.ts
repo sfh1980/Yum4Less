@@ -13,6 +13,7 @@ import {
   composeMissedMorningReport,
   composeMorningReport,
   countConsecutiveRecipeImportMisses,
+  morningZipAddsEnabled,
   describeRecipeImport,
   isDiscordWebhookUrl,
   isMorningZipAddDay,
@@ -61,12 +62,12 @@ describe("morning report", () => {
   });
 
   it("shows the last outside result before the cutoff and waits to send Discord once", () => {
-    expect(readOutsideCheckCutoff({ NODE_ENV: "test" })).toEqual({ hour: 13, minute: 0 });
+    expect(readOutsideCheckCutoff({ NODE_ENV: "test" })).toEqual({ hour: 16, minute: 0 });
     expect(
       readOutsideCheckCutoff({ NODE_ENV: "test", YUM4LESS_OUTSIDE_CHECK_CUTOFF: "nope" }),
-    ).toEqual({ hour: 13, minute: 0 });
-    expect(isBeforeOutsideCheckCutoff(new Date("2026-10-29T16:59:00Z"))).toBe(true);
-    expect(isBeforeOutsideCheckCutoff(new Date("2026-10-29T17:00:00Z"))).toBe(false);
+    ).toEqual({ hour: 16, minute: 0 });
+    expect(isBeforeOutsideCheckCutoff(new Date("2026-10-29T19:59:00Z"))).toBe(true);
+    expect(isBeforeOutsideCheckCutoff(new Date("2026-10-29T20:00:00Z"))).toBe(false);
     expect(outsideCheckWhenLabel("2026-10-29", "2026-10-28")).toBe("yesterday");
     expect(outsideCheckWhenLabel("2026-10-29", "2026-10-27")).toBe("2026-10-27");
 
@@ -130,7 +131,7 @@ describe("morning report", () => {
       addSkipped: "not-add-day",
     });
     const beforeCutoff = planOutsideCheckFollowUp({
-      now: new Date("2026-10-29T16:59:00Z"),
+      now: new Date("2026-10-29T19:59:00Z"),
       external: null,
       noteBody: pending.body,
       discordConfigured: true,
@@ -138,7 +139,7 @@ describe("morning report", () => {
     expect(beforeCutoff).toEqual({ action: "none", reason: "before-cutoff" });
 
     const arrived = planOutsideCheckFollowUp({
-      now: new Date("2026-10-29T17:15:00Z"),
+      now: new Date("2026-10-29T20:15:00Z"),
       external: { codeTests: "passed", siteCheck: "passed" },
       noteBody: pending.body,
       discordConfigured: true,
@@ -146,7 +147,7 @@ describe("morning report", () => {
     expect(arrived).toEqual({ action: "none", reason: "arrived" });
 
     const late = planOutsideCheckFollowUp({
-      now: new Date("2026-10-29T17:15:00Z"),
+      now: new Date("2026-10-29T20:15:00Z"),
       external: null,
       noteBody: pending.body,
       discordConfigured: true,
@@ -157,12 +158,12 @@ describe("morning report", () => {
     }
     expect(late.body).toContain("Code tests were not reported.");
     expect(late.body).toContain("The outside site check was not reported.");
-    expect(late.body).toContain(outsideCheckStillMissingLine({ hour: 13, minute: 0 }));
+    expect(late.body).toContain(outsideCheckStillMissingLine({ hour: 16, minute: 0 }));
     expect(late.body.endsWith("Needs you.")).toBe(true);
     expect(late.needsAttention).toBe(true);
 
     const second = planOutsideCheckFollowUp({
-      now: new Date("2026-10-29T17:15:00Z"),
+      now: new Date("2026-10-29T20:15:00Z"),
       external: null,
       noteBody: late.body,
       discordConfigured: true,
@@ -179,11 +180,39 @@ describe("morning report", () => {
     expect(arrivedLater.needsAttention).toBe(false);
   });
 
-  it("schedules the outside-check follow-up at 1:15pm New York", () => {
+  it("schedules the outside-check follow-up at 4:15pm New York", () => {
     const crontab = readFileSync("docker/ingest/crontab", "utf8");
     expect(crontab).toContain(
-      "15 13 * * * root . /etc/yum4less/ingest.env && cd /app && YUM4LESS_MORNING_REPORT=1 /usr/local/bin/npm run morning:outside-check",
+      "15 16 * * * root . /etc/yum4less/ingest.env && cd /app && YUM4LESS_MORNING_REPORT=1 /usr/local/bin/npm run morning:outside-check",
     );
+  });
+
+  it("pauses morning ZIP adds only when the switch is 0", () => {
+    expect(morningZipAddsEnabled({ NODE_ENV: "test" })).toBe(true);
+    expect(morningZipAddsEnabled({ NODE_ENV: "test", YUM4LESS_MORNING_ZIP_ADDS: "1" })).toBe(
+      true,
+    );
+    expect(morningZipAddsEnabled({ NODE_ENV: "test", YUM4LESS_MORNING_ZIP_ADDS: "0" })).toBe(
+      false,
+    );
+
+    const paused = composeMorningReport({
+      ...quiet,
+      addDay: true,
+      addSkipped: "paused",
+    });
+    expect(paused.body).toContain("Adds are paused.");
+    expect(paused.body).not.toContain("No new areas today.");
+    expect(paused.body).not.toContain("Added ");
+    expect(paused.needsAttention).toBe(false);
+    expect(
+      describeAddSkipLine({
+        addDay: true,
+        addedCount: 0,
+        addSkipped: "paused",
+        addErrors: [],
+      }),
+    ).toBeNull();
   });
 
   it("adds ZIPs on even day numbers and skips the next day", () => {

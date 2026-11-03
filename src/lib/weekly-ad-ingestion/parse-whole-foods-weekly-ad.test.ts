@@ -107,6 +107,31 @@ describe("parseWholeFoodsWeeklyAd", () => {
     expect(endOnly[0]?.validThrough).toBe("2026-11-03T05:00:00Z");
   });
 
+  it("extends each promotion range on its own", () => {
+    const offers = parseWholeFoodsWeeklyAd({
+      promotions: [
+        {
+          productName: "Organic Hass Avocados",
+          salePrice: "$1.99 ea",
+          startDate: "2026-10-28T05:00:00Z",
+          endDate: "2026-11-03T05:00:00Z",
+        },
+        {
+          productName: "Organic Bananas",
+          salePrice: "$0.49/lb",
+          startDate: "2026-10-30T05:00:00Z",
+          endDate: "2026-11-01T05:00:00Z",
+        },
+      ],
+    });
+    expect(offers.find((offer) => /avocado/i.test(offer.productName))?.validThrough).toBe(
+      "2026-11-04T05:00:00Z",
+    );
+    expect(offers.find((offer) => /banana/i.test(offer.productName))?.validThrough).toBe(
+      "2026-11-02T05:00:00Z",
+    );
+  });
+
   it("summarizes flyer start and end dates without treating the start as the end", () => {
     const dates = summarizeWholeFoodsFlyerDates([
       {

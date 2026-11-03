@@ -9,7 +9,8 @@ import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 export const MORNING_ZIP_BATCH = 3;
 export const MORNING_REPORT_TIME_ZONE = "America/New_York";
 export const OUTSIDE_CHECK_CUTOFF_ENV = "YUM4LESS_OUTSIDE_CHECK_CUTOFF";
-export const OUTSIDE_CHECK_CUTOFF_DEFAULT = "13:00";
+export const OUTSIDE_CHECK_CUTOFF_DEFAULT = "16:00";
+export const MORNING_ZIP_ADDS_ENV = "YUM4LESS_MORNING_ZIP_ADDS";
 
 export const LIVE_SMOKE_PIN = {
   latitude: 37.6085,
@@ -31,7 +32,15 @@ export type MorningZipAddSkip =
   | "not-add-day"
   | "last-night"
   | "none-left"
+  | "paused"
   | null;
+
+/** Unset keeps morning ZIP adds on. The string 0 pauses them. */
+export function morningZipAddsEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env[MORNING_ZIP_ADDS_ENV]?.trim() !== "0";
+}
 
 const ZIP5 = /^\d{5}$/;
 
@@ -242,7 +251,12 @@ export function describeAddSkipLine(input: {
   addSkipped: MorningZipAddSkip;
   addErrors: readonly string[];
 }): string | null {
-  if (!input.addDay || input.addedCount > 0 || input.addSkipped === "not-add-day") {
+  if (
+    !input.addDay ||
+    input.addedCount > 0 ||
+    input.addSkipped === "not-add-day" ||
+    input.addSkipped === "paused"
+  ) {
     return null;
   }
   if (input.addSkipped === "last-night") {
@@ -396,6 +410,8 @@ export function composeMorningReport(input: MorningReportInput): {
     lines.push(
       `Added ${count} ${count === 1 ? "area" : "areas"}. They will be checked after tonight.`,
     );
+  } else if (input.addSkipped === "paused") {
+    lines.push("Adds are paused.");
   } else if (input.addSkipped === "none-left") {
     lines.push("No surrounding areas are left to add.");
   } else if (input.addSkipped === "last-night") {
@@ -488,7 +504,7 @@ export type OutsideCheckCutoff = { hour: number; minute: number };
 
 /**
  * Local time after which a still-missing outside check sets Needs you.
- * Unset or unusable values use 13:00.
+ * Unset or unusable values use 16:00.
  */
 export function readOutsideCheckCutoff(
   env: NodeJS.ProcessEnv = process.env,
@@ -496,12 +512,12 @@ export function readOutsideCheckCutoff(
   const raw = env[OUTSIDE_CHECK_CUTOFF_ENV]?.trim() || OUTSIDE_CHECK_CUTOFF_DEFAULT;
   const match = /^(\d{1,2}):(\d{2})$/.exec(raw);
   if (!match) {
-    return { hour: 13, minute: 0 };
+    return { hour: 16, minute: 0 };
   }
   const hour = Number(match[1]);
   const minute = Number(match[2]);
   if (hour > 23 || minute > 59) {
-    return { hour: 13, minute: 0 };
+    return { hour: 16, minute: 0 };
   }
   return { hour, minute };
 }
