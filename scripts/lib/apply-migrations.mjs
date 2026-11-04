@@ -339,6 +339,11 @@ export function migrationEffectPresent(version, db) {
           ),
         ) === 0
       );
+    case "042":
+      return (
+        db.columnExists("price_observations", "valid_from") &&
+        db.columnExists("weekly_ad_flyer_hashes", "raw_card_count")
+      );
     default:
       return false;
   }
