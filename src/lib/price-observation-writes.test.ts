@@ -16,7 +16,9 @@ import {
 import { KROGER_OFFICIAL_PRICE_SOURCE } from "@/lib/price-source-policy";
 import { resetRankedPriceWindowSqlForTests } from "@/lib/ranked-price-cache-policy";
 
-function queryWithValidFromColumn(query: ReturnType<typeof vi.fn>) {
+function queryWithValidFromColumn(
+  query: (sql: string, params?: unknown) => Promise<unknown>,
+) {
   return vi.fn(async (sql: string, params?: unknown) => {
     if (typeof sql === "string" && sql.includes("information_schema.columns")) {
       return { rows: [{ present: true }] };
