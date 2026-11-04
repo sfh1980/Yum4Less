@@ -25,6 +25,10 @@ import {
   shouldFailWeeklyAdIngestExit,
 } from "@/lib/ingest/ingest-script-exit-policy";
 import { loadChainMembership } from "@/lib/chain-membership-repository";
+import {
+  flippFlyerDocumentLogEnabled,
+  logFlippFlyerDocumentPreview,
+} from "@/lib/weekly-ad-ingestion/flipp-flyer-document-preview";
 
 loadEnvLocal();
 
@@ -45,6 +49,15 @@ async function main() {
   }
 
   const zipCodes = await resolveScheduledIngestZipCodes();
+  if (flippFlyerDocumentLogEnabled()) {
+    try {
+      await logFlippFlyerDocumentPreview({ zipCodes });
+    } catch (error) {
+      console.warn(
+        `[flipp-document] preview failed: ${error instanceof Error ? error.message : "unknown error"}. Weekly-ad ingest continues.`,
+      );
+    }
+  }
   const { snapshot } = await getMarketDataSnapshot();
 
   const weeklyAdCandidates = buildWeeklyAdIngestStoreCandidates(snapshot.stores);

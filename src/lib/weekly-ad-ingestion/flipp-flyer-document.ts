@@ -232,6 +232,7 @@ export async function fetchFlippFlyerDocument(input: {
   fetchImpl?: typeof fetch;
 }): Promise<{
   offers: FlippFlyerDocumentOffer[];
+  itemCount: number;
   classification: FlippFlyerDocumentClassification;
 }> {
   const fetchImpl = input.fetchImpl ?? fetch;
@@ -253,6 +254,7 @@ export async function fetchFlippFlyerDocument(input: {
   const document = (await response.json()) as FlippFlyerDocument;
   return {
     offers: parseFlippFlyerDocument(document),
+    itemCount: document.items?.length ?? 0,
     classification: classifyFlippFlyerDocument({
       document,
       categories: input.categories,
