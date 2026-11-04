@@ -43,6 +43,7 @@
     "owner:reject-pending-junk-reviews": "tsx scripts/reject-pending-junk-reviews.ts",
     "owner:resolve-pending-reviews": "tsx scripts/resolve-pending-ingredient-reviews.ts",
     "ingest:weekly-ads:browser": "node scripts/run-weekly-ad-ingest.mjs --browser",
+    "ingest:weekly-ads:retry": "node scripts/run-weekly-ad-ingest.mjs --retry-stale",
     "ingest:themealdb:from-sales": "node scripts/run-themealdb-import.mjs",
     "check:ranked-price-freshness": "tsx scripts/check-ranked-price-freshness.ts",
     "morning:report": "tsx scripts/run-morning-report.ts",

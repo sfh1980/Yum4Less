@@ -95,6 +95,8 @@ export async function runWeeklyAdIngestionForStores(input: {
    * every nearby store is priced, which is what the existing tests cover.
    */
   flyerCluster?: WeeklyAdIngestFlyerCluster;
+  /** When set, the opening purge deletes only this source_name. */
+  purgeSourceName?: string;
 }): Promise<{
   results: WeeklyAdIngestionResult[];
   syncSummaries: WeeklyAdOfferSyncSummary[];
@@ -113,7 +115,9 @@ export async function runWeeklyAdIngestionForStores(input: {
 
   if (input.persistToDatabase) {
     enforceFixtureIngestDatabasePolicy();
-    await purgeStaleRankedPriceObservations();
+    await purgeStaleRankedPriceObservations(
+      input.purgeSourceName ? { sourceName: input.purgeSourceName } : undefined,
+    );
   }
 
   const nearbyStores = storesPricedFromFlyerCluster(input.nearbyStores, input.flyerCluster, zipCode);

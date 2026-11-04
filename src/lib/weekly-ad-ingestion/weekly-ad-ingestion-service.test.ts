@@ -177,6 +177,39 @@ describe("weekly ad ingestion service", () => {
     syncSpy.mockRestore();
   });
 
+  it("limits the opening purge to the named source", async () => {
+    const purgeSpy = vi
+      .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")
+      .mockResolvedValue(0);
+    const syncSpy = vi
+      .spyOn(weeklyAdOfferSync, "syncWeeklyAdOffersToPriceObservations")
+      .mockResolvedValue({
+        chain: "whole-foods",
+        storeId: "whole-foods-10257",
+        syncedCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        retrievalMode: "cached",
+        message: "synced",
+      });
+
+    await runWeeklyAdIngestionForStores({
+      nearbyStores: [
+        { id: "whole-foods-10257", name: "Whole Foods", chain: "whole-foods" },
+        { id: "aldi-mechanicsville", name: "ALDI", chain: "aldi" },
+      ],
+      zipCode: "23111",
+      persistToDatabase: true,
+      purgeSourceName: "whole-foods-weekly-ad-scrape",
+    });
+
+    expect(purgeSpy).toHaveBeenCalledWith({
+      sourceName: "whole-foods-weekly-ad-scrape",
+    });
+    purgeSpy.mockRestore();
+    syncSpy.mockRestore();
+  });
+
   it("fans out one Publix weekly-ad ingest to every Publix store id when persisting", async () => {
     const purgeSpy = vi
       .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")

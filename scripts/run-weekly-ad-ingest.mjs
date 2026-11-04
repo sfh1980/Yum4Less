@@ -27,7 +27,11 @@ if (ensure.status !== 0) {
   process.exit(ensure.status ?? 1);
 }
 
-const ingest = spawnNpx(["tsx", "scripts/ingest-weekly-ads.ts"], {
+const forwarded = process.argv
+  .slice(2)
+  .filter((arg) => arg !== "--fixture" && arg !== "--browser");
+
+const ingest = spawnNpx(["tsx", "scripts/ingest-weekly-ads.ts", ...forwarded], {
   env: process.env,
 });
 
