@@ -93,6 +93,7 @@ export function matchWeeklyAdOffers(input: {
       productName: rawOffer.productName,
       price: rawOffer.price,
       saleLabel: rawOffer.saleLabel,
+      validFrom: rawOffer.validFrom,
       validThrough: rawOffer.validThrough,
       sourceUrl: input.sourceUrl,
       observedAt: input.observedAt,

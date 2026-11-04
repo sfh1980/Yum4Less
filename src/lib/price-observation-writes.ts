@@ -82,6 +82,7 @@ export type PriceObservationInsert = {
   sourceRecordId: string;
   confidenceScore: number;
   notes: string;
+  validFrom?: Date;
   validThrough?: Date;
 };
 
@@ -111,9 +112,10 @@ async function insertPriceObservationOnQueryable(
         notes,
         last_verified_at,
         source_kind,
-        valid_through
+        valid_through,
+        valid_from
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     `,
     [
       input.storeId,
@@ -130,6 +132,7 @@ async function insertPriceObservationOnQueryable(
       (input.lastVerifiedAt ?? input.observedAt).toISOString(),
       getRankedPriceSourceKind(input.sourceName),
       input.validThrough?.toISOString() ?? null,
+      input.validFrom?.toISOString() ?? null,
     ],
   );
 }
@@ -335,6 +338,7 @@ export async function insertPriceObservationIfChanged(
         storeId: input.storeId,
         ingredientId: input.ingredientId,
         keepId: current.id,
+        futureOnly: priceObservationValidFromIsFuture(input.validFrom),
       });
       return "skipped-unchanged";
     }
@@ -355,6 +359,7 @@ async function replaceRankedPriceObservationTransactionally(
     await deleteRankedPriceObservationsForStoreIngredientOnQueryable(client, {
       storeId: input.storeId,
       ingredientId: input.ingredientId,
+      futureOnly: priceObservationValidFromIsFuture(input.validFrom),
     });
     await insertPriceObservationOnQueryable(client, input);
     await client.query("commit");
@@ -366,10 +371,16 @@ async function replaceRankedPriceObservationTransactionally(
   }
 }
 
+function priceObservationValidFromIsFuture(validFrom: Date | undefined): boolean {
+  return Boolean(validFrom && validFrom.getTime() > Date.now());
+}
+
 export async function deleteRankedPriceObservationsForStoreIngredient(input: {
   storeId: string;
   ingredientId: string;
   keepId?: number;
+  /** When true, delete only rows whose start is still in the future. */
+  futureOnly?: boolean;
 }) {
   await deleteRankedPriceObservationsForStoreIngredientOnQueryable(getDbPool(), input);
 }
@@ -380,6 +391,7 @@ async function deleteRankedPriceObservationsForStoreIngredientOnQueryable(
     storeId: string;
     ingredientId: string;
     keepId?: number;
+    futureOnly?: boolean;
   },
 ) {
   await queryable.query(
@@ -389,8 +401,14 @@ async function deleteRankedPriceObservationsForStoreIngredientOnQueryable(
         and ingredient_id = $2
         and (${RANKED_PRICE_SOURCE_SQL_FILTER})
         and ($3::bigint is null or id <> $3)
+        and (
+          case
+            when $4::boolean then valid_from > now()
+            else valid_from is null or valid_from <= now()
+          end
+        )
     `,
-    [input.storeId, input.ingredientId, input.keepId ?? null],
+    [input.storeId, input.ingredientId, input.keepId ?? null, input.futureOnly === true],
   );
 }
 

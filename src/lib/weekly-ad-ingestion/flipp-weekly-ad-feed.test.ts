@@ -32,6 +32,7 @@ describe("flipp-weekly-ad-feed", () => {
         original_price: 12.99,
         post_price_text: "/lb With Card & Digital Coupon",
         sale_story: "-3.00 /LB",
+        valid_from: "2026-05-20T04:00:00+00:00",
         valid_to: "2026-05-27T03:59:59+00:00",
         merchant_name: "Kroger",
       },
@@ -54,6 +55,7 @@ describe("flipp-weekly-ad-feed", () => {
       expect.objectContaining({
         productName: "Boneless Strip Steaks",
         price: 9.99,
+        validFrom: "2026-05-20T04:00:00+00:00",
         saleLabel: "Kroger · /lb With Card & Digital Coupon · -3.00 /LB",
       }),
       expect.objectContaining({

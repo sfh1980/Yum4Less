@@ -13,6 +13,7 @@ export type FlippWeeklyAdItem = {
   pre_price_text?: string | null;
   post_price_text?: string | null;
   sale_story?: string | null;
+  valid_from?: string | null;
   valid_to?: string | null;
   merchant_name?: string;
   _L1?: string | null;
@@ -349,6 +350,7 @@ function normalizeFlippWeeklyAdItem(item: FlippWeeklyAdItem): WeeklyAdRawOffer |
     productName,
     price,
     saleLabel: saleLabelParts.join(" · "),
+    validFrom: item.valid_from?.trim() || undefined,
     validThrough: item.valid_to?.trim() || undefined,
   };
 }

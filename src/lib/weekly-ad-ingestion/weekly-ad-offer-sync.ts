@@ -223,6 +223,7 @@ async function persistWeeklyAdOffer(
       sourceRecordId,
       confidenceScore: offer.matchConfidence ?? offer.confidenceScore,
       notes: buildWeeklyAdObservationNotes(offer, result),
+      validFrom: parseOptionalObservationTimestamp(offer.validFrom),
       validThrough: parseOptionalObservationTimestamp(offer.validThrough),
     });
 
@@ -248,31 +249,61 @@ async function persistWeeklyAdOffer(
   }
 }
 
-function selectBestWeeklyAdOffersPerIngredient(offers: WeeklyAdOffer[]): WeeklyAdOffer[] {
-  const bestByIngredient = new Map<string, WeeklyAdOffer>();
+function offerValidFromIsFuture(offer: WeeklyAdOffer, now: Date): boolean {
+  const validFrom = parseOptionalObservationTimestamp(offer.validFrom);
+  return Boolean(validFrom && validFrom.getTime() > now.getTime());
+}
+
+function offerBeats(next: WeeklyAdOffer, current: WeeklyAdOffer): boolean {
+  const currentConfidence = current.matchConfidence ?? current.confidenceScore;
+  const nextConfidence = next.matchConfidence ?? next.confidenceScore;
+  return (
+    nextConfidence > currentConfidence ||
+    (nextConfidence === currentConfidence && next.price < current.price)
+  );
+}
+
+/**
+ * One current offer per ingredient. A future offer is kept beside it only
+ * when that future offer is cheaper. An ingredient with only a future offer
+ * keeps that offer so it can surface once its start date arrives.
+ */
+export function selectBestWeeklyAdOffersPerIngredient(
+  offers: WeeklyAdOffer[],
+  now: Date = new Date(),
+): WeeklyAdOffer[] {
+  const currentByIngredient = new Map<string, WeeklyAdOffer>();
+  const futureByIngredient = new Map<string, WeeklyAdOffer>();
 
   for (const offer of offers) {
     if (!offer.ingredientId) {
       continue;
     }
-
-    const current = bestByIngredient.get(offer.ingredientId);
-    if (!current) {
-      bestByIngredient.set(offer.ingredientId, offer);
-      continue;
-    }
-
-    const currentConfidence = current.matchConfidence ?? current.confidenceScore;
-    const nextConfidence = offer.matchConfidence ?? offer.confidenceScore;
-    if (
-      nextConfidence > currentConfidence ||
-      (nextConfidence === currentConfidence && offer.price < current.price)
-    ) {
-      bestByIngredient.set(offer.ingredientId, offer);
+    const bucket = offerValidFromIsFuture(offer, now)
+      ? futureByIngredient
+      : currentByIngredient;
+    const current = bucket.get(offer.ingredientId);
+    if (!current || offerBeats(offer, current)) {
+      bucket.set(offer.ingredientId, offer);
     }
   }
 
-  return [...bestByIngredient.values()];
+  const selected: WeeklyAdOffer[] = [];
+  const ingredientIds = new Set([
+    ...currentByIngredient.keys(),
+    ...futureByIngredient.keys(),
+  ]);
+  for (const ingredientId of ingredientIds) {
+    const current = currentByIngredient.get(ingredientId);
+    const future = futureByIngredient.get(ingredientId);
+    if (current) {
+      selected.push(current);
+    }
+    if (future && (!current || future.price < current.price)) {
+      selected.push(future);
+    }
+  }
+  return selected;
 }
 
 function latestValidThroughBySourceRecord(
