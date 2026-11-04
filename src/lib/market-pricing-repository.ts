@@ -7,12 +7,13 @@ import {
 } from "@/lib/price-source-policy";
 import {
   RANKED_PRICE_CACHE_AGE_SQL_FILTER,
-  RANKED_PRICE_WINDOW_SQL_FILTER,
+  rankedPriceWindowSql,
 } from "@/lib/ranked-price-cache-policy";
 
 // Pricing-only reads: ranked price observations, freshness gates, and debug rows.
 
-const RANKED_PRICE_OBSERVATIONS_SQL = `
+function rankedPriceObservationsSql(windowSql: string): string {
+  return `
   select distinct on (store_id, ingredient_id)
     store_id,
     ingredient_id,
@@ -29,26 +30,29 @@ const RANKED_PRICE_OBSERVATIONS_SQL = `
     greatest(0, round(extract(epoch from (now() - observed_at)) / 86400))::int as freshness_days_ago
   from price_observations
   where (${RANKED_PRICE_SOURCE_SQL_FILTER})
-    and ${RANKED_PRICE_WINDOW_SQL_FILTER}
+    and ${windowSql}
     and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
   order by store_id, ingredient_id, source_tier asc, coalesce(last_verified_at, observed_at) desc, confidence_score desc nulls last, observed_at desc
 `;
+}
 
 export async function loadRankedPriceObservations(): Promise<CatalogPriceObservation[]> {
-  const pricesResult = await getDbPool().query<PriceObservationRow>(
-    RANKED_PRICE_OBSERVATIONS_SQL,
+  const pool = getDbPool();
+  const pricesResult = await pool.query<PriceObservationRow>(
+    rankedPriceObservationsSql(await rankedPriceWindowSql(pool)),
   );
   return pricesResult.rows.map(mapPriceObservationRow);
 }
 
 export async function countLivePriceObservationsForStore(storeId: string): Promise<number> {
-  const result = await getDbPool().query<{ count: string }>(
+  const pool = getDbPool();
+  const result = await pool.query<{ count: string }>(
     `
       select count(*)::text as count
       from price_observations
       where store_id = $1
         and (${RANKED_PRICE_SOURCE_SQL_FILTER})
-        and ${RANKED_PRICE_WINDOW_SQL_FILTER}
+        and ${await rankedPriceWindowSql(pool)}
         and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
     `,
     [storeId],
@@ -61,8 +65,9 @@ export async function countLivePriceObservationsForStore(storeId: string): Promi
 export async function getRankedPriceObservationsWithTimestamps(): Promise<
   PipelinePriceObservationRow[]
 > {
-  const result = await getDbPool().query<PipelinePriceObservationRow>(
-    RANKED_PRICE_OBSERVATIONS_SQL,
+  const pool = getDbPool();
+  const result = await pool.query<PipelinePriceObservationRow>(
+    rankedPriceObservationsSql(await rankedPriceWindowSql(pool)),
   );
   return result.rows;
 }

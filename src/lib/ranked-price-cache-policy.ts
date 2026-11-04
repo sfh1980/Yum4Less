@@ -1,3 +1,5 @@
+import type { Pool } from "pg";
+
 /** Ranked price reads and provider snapshot caches share a 24-hour discipline. */
 export const RANKED_PRICE_CACHE_TTL_HOURS = 24;
 
@@ -15,6 +17,45 @@ export const RANKED_PRICE_CACHE_AGE_SQL_FILTER = `coalesce(last_verified_at, obs
  */
 export const RANKED_PRICE_WINDOW_SQL_FILTER =
   "(valid_through is null or valid_through >= now()) and (valid_from is null or valid_from <= now())";
+
+/** Used when migration 042 has not added valid_from yet. Does not name that column. */
+export const RANKED_PRICE_THROUGH_ONLY_SQL_FILTER =
+  "(valid_through is null or valid_through >= now())";
+
+let cachedRankedPriceWindowSql: string | null = null;
+
+export function resetRankedPriceWindowSqlForTests(): void {
+  cachedRankedPriceWindowSql = null;
+}
+
+/**
+ * Ranked reads name valid_from only after 042 has applied.
+ * A missing column is not cached, so the next read picks it up after migrate
+ * without waiting for the app process to restart.
+ */
+export async function rankedPriceWindowSql(pool: Pick<Pool, "query">): Promise<string> {
+  if (cachedRankedPriceWindowSql === RANKED_PRICE_WINDOW_SQL_FILTER) {
+    return cachedRankedPriceWindowSql;
+  }
+  try {
+    const result = await pool.query<{ present?: boolean }>(
+      `select exists (
+         select 1
+         from information_schema.columns
+         where table_schema = 'public'
+           and table_name = 'price_observations'
+           and column_name = 'valid_from'
+       ) as present`,
+    );
+    if (result.rows[0]?.present === true) {
+      cachedRankedPriceWindowSql = RANKED_PRICE_WINDOW_SQL_FILTER;
+      return cachedRankedPriceWindowSql;
+    }
+  } catch {
+    return RANKED_PRICE_THROUGH_ONLY_SQL_FILTER;
+  }
+  return RANKED_PRICE_THROUGH_ONLY_SQL_FILTER;
+}
 
 export type ProviderDataReadMode = "cache-only" | "live-allowed";
 

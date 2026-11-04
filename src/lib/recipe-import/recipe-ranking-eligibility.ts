@@ -2,7 +2,7 @@ import { getDbPool } from "@/lib/db";
 import type { CatalogPriceObservation, CatalogRecipeRecord } from "@/lib/market-catalog-types";
 import {
   RANKED_PRICE_CACHE_AGE_SQL_FILTER,
-  RANKED_PRICE_WINDOW_SQL_FILTER,
+  rankedPriceWindowSql,
 } from "@/lib/ranked-price-cache-policy";
 import type { NearbyStoreSummary } from "@/lib/recommendation-service";
 import {
@@ -87,13 +87,14 @@ export function filterRecipesForRanking(input: {
 /** Read-only helper for scripts/tests — not used on hot API paths. */
 export async function getSaleIngredientIdsForRanking(): Promise<Set<string>> {
   const pool = getDbPool();
+  const windowSql = await rankedPriceWindowSql(pool);
   const result = await pool.query<{ ingredient_id: string }>(
     `
       select distinct po.ingredient_id
       from price_observations po
       where po.source_name like '%-weekly-ad-scrape'
         and po.sale_label is not null
-        and ${RANKED_PRICE_WINDOW_SQL_FILTER}
+        and ${windowSql}
         and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
     `,
   );

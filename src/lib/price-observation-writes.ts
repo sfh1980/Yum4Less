@@ -16,7 +16,7 @@ import {
 } from "@/lib/price-source-policy";
 import {
   RANKED_PRICE_CACHE_AGE_SQL_FILTER,
-  RANKED_PRICE_WINDOW_SQL_FILTER,
+  rankedPriceWindowSql,
 } from "@/lib/ranked-price-cache-policy";
 import { USDA_SNAP_CONTEXT_SOURCE } from "@/lib/map-context-types";
 
@@ -244,7 +244,7 @@ export async function getCurrentRankedPriceObservationForStoreIngredient(input: 
       where store_id = $1
         and ingredient_id = $2
         and (${RANKED_PRICE_SOURCE_SQL_FILTER})
-        and ${RANKED_PRICE_WINDOW_SQL_FILTER}
+        and ${await rankedPriceWindowSql(pool)}
         and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
       order by ${RANKED_PRICE_SOURCE_TIER_SQL} asc,
         coalesce(last_verified_at, observed_at) desc,

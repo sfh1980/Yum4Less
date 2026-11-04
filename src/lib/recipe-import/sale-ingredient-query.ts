@@ -2,7 +2,7 @@ import { getDbPool } from "@/lib/db";
 import { MIN_WEEKLY_AD_MATCH_CONFIDENCE } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-matching";
 import {
   RANKED_PRICE_CACHE_AGE_SQL_FILTER,
-  RANKED_PRICE_WINDOW_SQL_FILTER,
+  rankedPriceWindowSql,
 } from "@/lib/ranked-price-cache-policy";
 
 export type OnSaleIngredientRow = {
@@ -15,6 +15,7 @@ export type OnSaleIngredientRow = {
  */
 export async function getOnSaleCatalogIngredientIds(): Promise<OnSaleIngredientRow[]> {
   const pool = getDbPool();
+  const windowSql = await rankedPriceWindowSql(pool);
   const result = await pool.query<{ ingredient_id: string; name: string }>(
     `
       select distinct on (po.ingredient_id)
@@ -24,7 +25,7 @@ export async function getOnSaleCatalogIngredientIds(): Promise<OnSaleIngredientR
       join ingredients i on i.id = po.ingredient_id
       where po.source_name like '%-weekly-ad-scrape'
         and po.sale_label is not null
-        and ${RANKED_PRICE_WINDOW_SQL_FILTER}
+        and ${windowSql}
         and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
         and coalesce(po.confidence_score, 0) >= $1
       order by po.ingredient_id, po.observed_at desc
