@@ -143,7 +143,6 @@ describe("price observation change-aware sync", () => {
       "kroger-mechanicsville",
       "chicken-thighs",
       1,
-      false,
     ]);
   });
 
@@ -185,7 +184,6 @@ describe("price observation change-aware sync", () => {
       "kroger-mechanicsville",
       "chicken-thighs",
       null,
-      false,
     ]);
     expect(query.mock.calls[3]?.[0]).toContain("insert into price_observations");
     expect(query.mock.calls[4]?.[0]).toBe("commit");
