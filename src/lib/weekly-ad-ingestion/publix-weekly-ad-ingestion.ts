@@ -2,7 +2,7 @@ import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chai
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { fetchPublixWeeklyAdPage } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-fetcher";
-import { readWeeklyAdFlyerOfferCount } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
+import { readWeeklyAdFlyerRawCardCount } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import { buildPublixWeeklyAdUrl } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-url";
 import { resolvePublixStoreForZip } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-store";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
@@ -59,11 +59,11 @@ async function ingestPublixWeeklyAd(
 
   try {
     const storeContext = await resolvePublixStoreForZip(input.zipCode);
-    const rememberedOfferCount = await readWeeklyAdFlyerOfferCount("publix");
+    const rememberedCardCount = await readWeeklyAdFlyerRawCardCount("publix");
     const pageFetch = await fetchPublixWeeklyAdPage({
       url: sourceUrl,
       storeCookie: storeContext.storeCookie,
-      rememberedOfferCount,
+      rememberedOfferCount: rememberedCardCount,
       zipCode: input.zipCode,
     });
     const rawOffers = parsePublixWeeklyAd({
@@ -92,6 +92,7 @@ async function ingestPublixWeeklyAd(
         configured: true,
         fallbackUsed: pageFetch.method === "browser",
         offers: [],
+        rawCardCount: pageFetch.savingsCardCount,
         message: storeContext.storeCookie
           ? `${label} loaded ${storeContext.storeName ?? "a nearby Publix store"} via ${pageFetch.method} (${pageFetch.attempts} attempt(s), ${pageFetch.networkJsonBodies.length} network payload(s)), but Yum4Less could not extract offer rows yet. Set YUM4LESS_WEEKLY_AD_CAPTURE=1 to save HTML/network artifacts for parser work.`
           : `${label} could not resolve a nearby Publix store for ZIP ${input.zipCode}. Store selection is required before weekly-ad offers can load.`,
@@ -132,6 +133,7 @@ async function ingestPublixWeeklyAd(
       configured: true,
       fallbackUsed: pageFetch.method === "browser",
       offers,
+      rawCardCount: pageFetch.savingsCardCount,
       message: `Parsed Publix weekly-ad run for ${storeContext.storeName ?? input.storeName} via ${pageFetch.method} extracted ${rawOffers.length} scrape offer(s); ${matchedCount} matched tracked dinner ingredients.${supplementalNote}`,
       fetchedAt,
       termsNote,

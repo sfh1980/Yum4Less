@@ -44,6 +44,28 @@ export async function readWeeklyAdFlyerHash(
   }
 }
 
+export async function readWeeklyAdFlyerRawCardCount(
+  chain: string,
+): Promise<number | null> {
+  if (!flyerHashDbEnabled()) {
+    return null;
+  }
+  try {
+    const result = await getDbPool().query<{ raw_card_count: number | string | null }>(
+      `select raw_card_count from weekly_ad_flyer_hashes where chain = $1`,
+      [chain],
+    );
+    const raw = result.rows[0]?.raw_card_count;
+    if (raw === undefined || raw === null) {
+      return null;
+    }
+    const count = Number(raw);
+    return Number.isFinite(count) ? count : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function readWeeklyAdFlyerOfferCount(
   chain: string,
 ): Promise<number | null> {
@@ -84,6 +106,7 @@ export async function rememberWeeklyAdFlyerHash(input: {
   chain: string;
   contentHash: string;
   offerCount: number;
+  rawCardCount?: number;
 }): Promise<void> {
   if (!flyerHashDbEnabled()) {
     return;
@@ -91,16 +114,26 @@ export async function rememberWeeklyAdFlyerHash(input: {
   try {
     const previous = await readWeeklyAdFlyerOfferCount(input.chain);
     const offerCount = offerCountToRemember(previous, input.offerCount);
+    const rawCardCount =
+      input.rawCardCount === undefined
+        ? null
+        : offerCountToRemember(
+            await readWeeklyAdFlyerRawCardCount(input.chain),
+            input.rawCardCount,
+          );
     await getDbPool().query(
       `
-        insert into weekly_ad_flyer_hashes (chain, content_hash, offer_count, recorded_at)
-        values ($1, $2, $3, now())
+        insert into weekly_ad_flyer_hashes (
+          chain, content_hash, offer_count, raw_card_count, recorded_at
+        )
+        values ($1, $2, $3, $4, now())
         on conflict (chain) do update set
           content_hash = excluded.content_hash,
           offer_count = excluded.offer_count,
+          raw_card_count = coalesce(excluded.raw_card_count, weekly_ad_flyer_hashes.raw_card_count),
           recorded_at = now()
       `,
-      [input.chain, input.contentHash, offerCount],
+      [input.chain, input.contentHash, offerCount, rawCardCount],
     );
   } catch (error) {
     logServerError("weekly-ad-flyer-hash.remember", error);

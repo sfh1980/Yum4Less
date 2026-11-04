@@ -4,6 +4,7 @@ import { getWeeklyAdBrowserContextOptions } from "@/lib/weekly-ad-ingestion/week
 import {
   buildPublixThinCaptureMeta,
   decidePublixCardPoll,
+  nextPublixEqualPositiveSamples,
   PUBLIX_CARD_POLL_MS,
   publixCardCountIsThin,
   readPublixCardMaxWaitMs,
@@ -284,11 +285,17 @@ async function settlePublixSavingsCardCount(
   const started = Date.now();
   let previousCount: number | null = null;
   let samples = 0;
+  let equalPositiveSamples = 0;
   let count = 0;
 
   while (true) {
     count = await countPublixSavingsCards(page);
     samples += 1;
+    equalPositiveSamples = nextPublixEqualPositiveSamples({
+      previousCount,
+      count,
+      equalPositiveSamples,
+    });
     const decision = decidePublixCardPoll({
       previousCount,
       count,
@@ -296,6 +303,7 @@ async function settlePublixSavingsCardCount(
       elapsedMs: Date.now() - started,
       maxWaitMs: input.maxWaitMs,
       samples,
+      equalPositiveSamples,
     });
     if (decision !== "continue") {
       return count;

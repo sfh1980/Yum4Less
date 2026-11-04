@@ -1,12 +1,13 @@
 /**
  * Publix savings-card settle rules.
  * The browser used to return on the first non-zero card count.
- * A count is enough when it is unchanged across one short poll, or when it
- * reaches at least half of the remembered flyer offer_count.
+ * A count is enough when the same positive count has been seen three times,
+ * or when it reaches at least half of the remembered raw card count.
  * A count under that half is thin. A thin count does not replace the memory.
  */
 
 export const PUBLIX_CARD_POLL_MS = 1_000;
+export const PUBLIX_CARD_STABLE_POLLS = 3;
 export const PUBLIX_CARD_MAX_WAIT_MS_DEFAULT = 20_000;
 export const PUBLIX_CARD_MAX_WAIT_MS_MIN = 1_000;
 export const PUBLIX_CARD_MAX_WAIT_MS_MAX = 60_000;
@@ -48,10 +49,22 @@ export function publixCardCountReachesHalf(
   return count * 2 >= rememberedOfferCount;
 }
 
+/** How many polls in a row have shown this same positive count, including this one. */
+export function nextPublixEqualPositiveSamples(input: {
+  previousCount: number | null;
+  count: number;
+  equalPositiveSamples: number;
+}): number {
+  if (input.count > 0 && input.count === input.previousCount) {
+    return input.equalPositiveSamples + 1;
+  }
+  return input.count > 0 ? 1 : 0;
+}
+
 /**
- * Stop when the count reached half the memory, when a positive count is
- * unchanged from the previous sample, or when the max wait has elapsed.
- * The first positive sample is not a stop. A stuck zero keeps waiting.
+ * Stop when the count reached half the memory, when the same positive count
+ * has been seen three times, or when the max wait has elapsed.
+ * One unchanged poll is not a stop. A stuck zero keeps waiting.
  */
 export function decidePublixCardPoll(input: {
   previousCount: number | null;
@@ -60,16 +73,12 @@ export function decidePublixCardPoll(input: {
   elapsedMs: number;
   maxWaitMs: number;
   samples: number;
+  equalPositiveSamples: number;
 }): "continue" | PublixCardPollStop {
   if (publixCardCountReachesHalf(input.count, input.rememberedOfferCount)) {
     return "half";
   }
-  if (
-    input.samples >= 2 &&
-    input.previousCount !== null &&
-    input.previousCount === input.count &&
-    input.count > 0
-  ) {
+  if (input.equalPositiveSamples >= PUBLIX_CARD_STABLE_POLLS && input.count > 0) {
     return "stable";
   }
   if (input.elapsedMs >= input.maxWaitMs) {

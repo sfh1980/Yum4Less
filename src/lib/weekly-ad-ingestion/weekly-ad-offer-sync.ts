@@ -166,6 +166,7 @@ export async function syncWeeklyAdOffersToPriceObservations(input: {
     chain: input.result.chain,
     contentHash,
     offerCount: syncedCount,
+    rawCardCount: input.result.rawCardCount,
   });
 
   const writtenStoreId = offersToWrite.find((offer) => offer.storeId)?.storeId ?? storeId;

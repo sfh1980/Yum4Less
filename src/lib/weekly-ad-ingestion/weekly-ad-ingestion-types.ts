@@ -52,6 +52,8 @@ export type WeeklyAdIngestionResult = {
   configured: boolean;
   fallbackUsed: boolean;
   offers: WeeklyAdOffer[];
+  /** Publix savings-card count for this fetch. Other chains leave it unset. */
+  rawCardCount?: number;
   message: string;
   fetchedAt: string;
   termsNote: string;

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPublixThinCaptureMeta,
   decidePublixCardPoll,
+  nextPublixEqualPositiveSamples,
   publixCardCountIsThin,
   readPublixCardMaxWaitMs,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
@@ -20,11 +21,12 @@ describe("Publix savings-card settle", () => {
         elapsedMs: 0,
         maxWaitMs: 20_000,
         samples: 1,
+        equalPositiveSamples: 1,
       }),
     ).toBe("continue");
   });
 
-  it("stops when a positive count is unchanged across one poll", () => {
+  it("keeps waiting after one unchanged poll and stops on the third equal positive poll", () => {
     expect(
       decidePublixCardPoll({
         previousCount: 2,
@@ -33,6 +35,18 @@ describe("Publix savings-card settle", () => {
         elapsedMs: 1_000,
         maxWaitMs: 20_000,
         samples: 2,
+        equalPositiveSamples: 2,
+      }),
+    ).toBe("continue");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 2,
+        count: 2,
+        rememberedOfferCount: remembered,
+        elapsedMs: 2_000,
+        maxWaitMs: 20_000,
+        samples: 3,
+        equalPositiveSamples: 3,
       }),
     ).toBe("stable");
   });
@@ -46,6 +60,7 @@ describe("Publix savings-card settle", () => {
         elapsedMs: 2_000,
         maxWaitMs: 20_000,
         samples: 3,
+        equalPositiveSamples: 1,
       }),
     ).toBe("continue");
   });
@@ -59,6 +74,7 @@ describe("Publix savings-card settle", () => {
         elapsedMs: 0,
         maxWaitMs: 20_000,
         samples: 1,
+        equalPositiveSamples: 1,
       }),
     ).toBe("half");
   });
@@ -72,6 +88,7 @@ describe("Publix savings-card settle", () => {
         elapsedMs: 1_000,
         maxWaitMs: 20_000,
         samples: 2,
+        equalPositiveSamples: 0,
       }),
     ).toBe("continue");
   });
@@ -85,8 +102,40 @@ describe("Publix savings-card settle", () => {
         elapsedMs: 20_000,
         maxWaitMs: 20_000,
         samples: 4,
+        equalPositiveSamples: 1,
       }),
     ).toBe("max-wait");
+  });
+
+  it("counts three equal positive polls and resets when the count changes", () => {
+    expect(
+      nextPublixEqualPositiveSamples({
+        previousCount: null,
+        count: 2,
+        equalPositiveSamples: 0,
+      }),
+    ).toBe(1);
+    expect(
+      nextPublixEqualPositiveSamples({
+        previousCount: 2,
+        count: 2,
+        equalPositiveSamples: 1,
+      }),
+    ).toBe(2);
+    expect(
+      nextPublixEqualPositiveSamples({
+        previousCount: 2,
+        count: 40,
+        equalPositiveSamples: 2,
+      }),
+    ).toBe(1);
+    expect(
+      nextPublixEqualPositiveSamples({
+        previousCount: 0,
+        count: 0,
+        equalPositiveSamples: 0,
+      }),
+    ).toBe(0);
   });
 
   it("marks a count under half the memory as thin and leaves an unknown memory alone", () => {

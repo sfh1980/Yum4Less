@@ -5,6 +5,10 @@ import {
   deletePriceObservationsForStore,
   purgeStaleRankedPriceObservations,
 } from "@/lib/price-observation-writes";
+import {
+  readWeeklyAdFlyerRawCardCount,
+  rememberWeeklyAdFlyerHash,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 
 const STORE_ID = "kroger-mechanicsville";
 
@@ -48,5 +52,42 @@ describe("valid_from ranked read", () => {
       "valid-from-open",
     ]);
     expect(await countLivePriceObservationsForStore(STORE_ID)).toBe(1);
+  });
+});
+
+describe("Publix raw card count", () => {
+  const originalFlyerHash = process.env.YUM4LESS_FLYER_HASH;
+
+  afterEach(async () => {
+    await getDbPool().query(`delete from weekly_ad_flyer_hashes where chain = 'publix'`);
+    if (originalFlyerHash === undefined) {
+      delete process.env.YUM4LESS_FLYER_HASH;
+    } else {
+      process.env.YUM4LESS_FLYER_HASH = originalFlyerHash;
+    }
+    await resetDbPoolForTests();
+  });
+
+  it("keeps the raw card count when a later night is thin", async () => {
+    process.env.YUM4LESS_FLYER_HASH = "1";
+    await getDbPool().query(`delete from weekly_ad_flyer_hashes where chain = 'publix'`);
+    await rememberWeeklyAdFlyerHash({
+      chain: "publix",
+      contentHash: "healthy",
+      offerCount: 132,
+      rawCardCount: 581,
+    });
+    await rememberWeeklyAdFlyerHash({
+      chain: "publix",
+      contentHash: "thin",
+      offerCount: 26,
+      rawCardCount: 2,
+    });
+
+    expect(await readWeeklyAdFlyerRawCardCount("publix")).toBe(581);
+    const row = await getDbPool().query<{ offer_count: number }>(
+      `select offer_count from weekly_ad_flyer_hashes where chain = 'publix'`,
+    );
+    expect(Number(row.rows[0]?.offer_count)).toBe(132);
   });
 });
