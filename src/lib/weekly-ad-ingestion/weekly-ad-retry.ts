@@ -1,6 +1,7 @@
 /**
  * Daytime retry for chains that have no fresh ranked rows.
- * Not installed. One chain per run. Does not write an ingest_jobs row.
+ * Installed in docker/ingest/crontab. One chain per run. Does not write an ingest_jobs row.
+ * A run that cannot take the weekly-ad lock skips and does not count an attempt.
  *
  * Container TZ is America/New_York. This does not replace the 3:00am run.
  *

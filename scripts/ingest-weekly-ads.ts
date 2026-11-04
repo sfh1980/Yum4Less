@@ -47,6 +47,7 @@ import {
   weeklyAdRetryDate,
   type WeeklyAdRetryState,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-retry";
+import { acquireWeeklyAdIngestLock } from "@/lib/weekly-ad-ingestion/weekly-ad-ingest-lock";
 
 loadEnvLocal();
 
@@ -61,6 +62,18 @@ async function main() {
       "postgresql://postgres:postgres@localhost:5433/yum4less_dev";
   }
 
+  const ingestLock = await acquireWeeklyAdIngestLock({
+    connectionString: process.env.DATABASE_URL,
+    wait: !retryStale,
+  });
+  if (!ingestLock.acquired) {
+    console.log(
+      "[weekly-ad-retry] skipped; a weekly-ad ingest is already running.",
+    );
+    process.exit(0);
+  }
+
+  try {
   enforceFixtureIngestDatabasePolicy();
 
   const membership = await loadChainMembership();
@@ -278,6 +291,9 @@ async function main() {
     console.log(
       "\nNo offers parsed. For a deterministic local run, use: npm run ingest:weekly-ads:fixture",
     );
+  }
+  } finally {
+    await ingestLock.release();
   }
 }
 
