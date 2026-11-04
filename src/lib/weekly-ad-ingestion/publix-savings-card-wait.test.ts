@@ -6,6 +6,7 @@ import {
   readPublixCardMaxWaitMs,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 import { offerCountToRemember } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
+import { buildTestProcessEnv } from "@/lib/test-only/process-env-test-helpers";
 
 const remembered = 588;
 
@@ -95,13 +96,17 @@ describe("Publix savings-card settle", () => {
   });
 
   it("reads the maximum wait setting and falls back when it is unset", () => {
-    expect(readPublixCardMaxWaitMs({ YUM4LESS_PUBLIX_CARD_MAX_WAIT_MS: "15000" })).toBe(
-      15_000,
-    );
-    expect(readPublixCardMaxWaitMs({})).toBe(20_000);
-    expect(readPublixCardMaxWaitMs({ YUM4LESS_PUBLIX_CARD_MAX_WAIT_MS: "50" })).toBe(
-      20_000,
-    );
+    expect(
+      readPublixCardMaxWaitMs(
+        buildTestProcessEnv({ YUM4LESS_PUBLIX_CARD_MAX_WAIT_MS: "15000" }),
+      ),
+    ).toBe(15_000);
+    expect(readPublixCardMaxWaitMs(buildTestProcessEnv())).toBe(20_000);
+    expect(
+      readPublixCardMaxWaitMs(
+        buildTestProcessEnv({ YUM4LESS_PUBLIX_CARD_MAX_WAIT_MS: "50" }),
+      ),
+    ).toBe(20_000);
   });
 });
 
