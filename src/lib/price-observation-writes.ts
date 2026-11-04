@@ -408,18 +408,41 @@ export async function deletePriceObservationsForStore(storeId: string) {
   await pool.query(`delete from price_observations where store_id = $1`, [storeId]);
 }
 
-/** Remove ranked sale rows outside the cache window or past valid_through. */
-export async function purgeStaleRankedPriceObservations(): Promise<number> {
+const PURGE_SOURCE_NAME = /^[\w.-]+$/;
+
+/** A single-chain run passes one source. A full run passes none and purges every ranked source. */
+export function rankedPricePurgeSourceName(sourceName?: string): string | null {
+  const trimmed = sourceName?.trim() ?? "";
+  if (!trimmed) {
+    return null;
+  }
+  if (!PURGE_SOURCE_NAME.test(trimmed)) {
+    throw new Error(`Purge source name is not usable: ${trimmed}`);
+  }
+  return trimmed;
+}
+
+/**
+ * Remove ranked sale rows outside the cache window or past valid_through.
+ * `sourceName` limits the delete to that source, so a one-chain run cannot
+ * remove another chain's rows.
+ */
+export async function purgeStaleRankedPriceObservations(input?: {
+  sourceName?: string;
+}): Promise<number> {
   const pool = getDbPool();
+  const sourceName = rankedPricePurgeSourceName(input?.sourceName);
   const result = await pool.query(
     `
       delete from price_observations
       where (${RANKED_PRICE_SOURCE_SQL_FILTER})
+        and ($1::text is null or source_name = $1)
         and (
           not (${RANKED_PRICE_CACHE_AGE_SQL_FILTER})
           or not (${CURRENT_PRICE_OBSERVATION_SQL_FILTER})
         )
     `,
+    [sourceName],
   );
 
   return result.rowCount ?? 0;
