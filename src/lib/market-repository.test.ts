@@ -193,6 +193,9 @@ describe("getMarketDataSnapshot", () => {
       expect.stringContaining("valid_through is null or valid_through >= now()"),
     );
     expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining("valid_from is null or valid_from <= now()"),
+    );
+    expect(queryMock).toHaveBeenCalledWith(
       expect.stringContaining(
         "coalesce(last_verified_at, observed_at) >= now() - interval '24 hours'",
       ),

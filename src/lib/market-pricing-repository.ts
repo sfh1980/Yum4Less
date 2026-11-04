@@ -5,12 +5,12 @@ import {
   RANKED_PRICE_SOURCE_SQL_FILTER,
   RANKED_PRICE_SOURCE_TIER_SQL,
 } from "@/lib/price-source-policy";
-import { RANKED_PRICE_CACHE_AGE_SQL_FILTER } from "@/lib/ranked-price-cache-policy";
+import {
+  RANKED_PRICE_CACHE_AGE_SQL_FILTER,
+  RANKED_PRICE_WINDOW_SQL_FILTER,
+} from "@/lib/ranked-price-cache-policy";
 
 // Pricing-only reads: ranked price observations, freshness gates, and debug rows.
-
-const CURRENT_PRICE_OBSERVATION_SQL_FILTER =
-  "(valid_through is null or valid_through >= now())";
 
 const RANKED_PRICE_OBSERVATIONS_SQL = `
   select distinct on (store_id, ingredient_id)
@@ -29,7 +29,7 @@ const RANKED_PRICE_OBSERVATIONS_SQL = `
     greatest(0, round(extract(epoch from (now() - observed_at)) / 86400))::int as freshness_days_ago
   from price_observations
   where (${RANKED_PRICE_SOURCE_SQL_FILTER})
-    and ${CURRENT_PRICE_OBSERVATION_SQL_FILTER}
+    and ${RANKED_PRICE_WINDOW_SQL_FILTER}
     and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
   order by store_id, ingredient_id, source_tier asc, coalesce(last_verified_at, observed_at) desc, confidence_score desc nulls last, observed_at desc
 `;
@@ -48,7 +48,7 @@ export async function countLivePriceObservationsForStore(storeId: string): Promi
       from price_observations
       where store_id = $1
         and (${RANKED_PRICE_SOURCE_SQL_FILTER})
-        and ${CURRENT_PRICE_OBSERVATION_SQL_FILTER}
+        and ${RANKED_PRICE_WINDOW_SQL_FILTER}
         and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
     `,
     [storeId],
