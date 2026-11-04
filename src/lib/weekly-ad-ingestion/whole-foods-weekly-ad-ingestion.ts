@@ -8,10 +8,13 @@ import {
 import {
   extractPromotionsFromHtml,
   formatWholeFoodsFlyerDateLog,
+  formatWholeFoodsFlyerEndedLog,
   parseWholeFoodsWeeklyAd,
   summarizeWholeFoodsFlyerDates,
   wholeFoodsFlyerExtendsDateOnlyEnd,
+  wholeFoodsOfferAlreadyEnded,
 } from "@/lib/weekly-ad-ingestion/parse-whole-foods-weekly-ad";
+import { recordWeeklyAdPriceMissReason } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import { persistWholeFoodsSourceStoreBinding } from "@/lib/whole-foods-catalog-sync";
 import {
   buildWholeFoodsSalesFlyerUrl,
@@ -30,6 +33,8 @@ export type WholeFoodsWeeklyAdIngestionDeps = {
   resolveStoreForZip?: typeof resolveWholeFoodsStoreForZip;
   fetchSalesFlyerHtml?: typeof fetchWholeFoodsSalesFlyerHtml;
   persistBinding?: typeof persistWholeFoodsSourceStoreBinding;
+  /** Clock for the already-ended check. Production uses the real clock. */
+  now?: () => Date;
 };
 
 export function createWholeFoodsWeeklyAdIngestionClient(
@@ -81,6 +86,10 @@ async function ingestWholeFoodsWeeklyAd(
       console.info(
         `[whole-foods] no rows: no closest store for ZIP ${input.zipCode}`,
       );
+      await recordWeeklyAdPriceMissReason({
+        chain: "whole-foods",
+        reason: "no-store",
+      });
       return {
         chain: "whole-foods",
         label,
@@ -120,11 +129,55 @@ async function ingestWholeFoodsWeeklyAd(
       );
     }
     const rawOffers = parseWholeFoodsWeeklyAd({ promotions });
+    const now = deps?.now?.() ?? new Date();
+    const currentOffers = rawOffers.filter(
+      (offer) => !wholeFoodsOfferAlreadyEnded(offer.validThrough, now),
+    );
+    const endedOffers = rawOffers.filter((offer) =>
+      wholeFoodsOfferAlreadyEnded(offer.validThrough, now),
+    );
 
-    if (rawOffers.length === 0) {
+    if (rawOffers.length > 0 && currentOffers.length === 0) {
+      const endedAt = [...endedOffers]
+        .map((offer) => offer.validThrough)
+        .filter((value): value is string => Boolean(value))
+        .sort()
+        .at(-1) ?? "unknown";
+      console.info(
+        formatWholeFoodsFlyerEndedLog({
+          storeId: locatorStore.storeId,
+          endedAt,
+          startDates: flyerDates.startDates,
+          endDates: flyerDates.endDates,
+        }),
+      );
+      await recordWeeklyAdPriceMissReason({
+        chain: "whole-foods",
+        reason: "flyer-not-published",
+      });
+      return {
+        chain: "whole-foods",
+        label,
+        status: "live",
+        provenance: "weekly-ad-scrape",
+        retrievalMode: "live",
+        configured: true,
+        fallbackUsed: false,
+        offers: [],
+        message: `${label} read Whole Foods store ${locatorStore.storeId} (${locatorStore.locationName}) for ZIP ${input.zipCode}, but the flyer already ended ${endedAt}. Waiting for the new flyer. No rows were written.`,
+        fetchedAt,
+        termsNote,
+      };
+    }
+
+    if (currentOffers.length === 0) {
       console.info(
         `[whole-foods] no rows: no unit prices for store ${locatorStore.storeId}`,
       );
+      await recordWeeklyAdPriceMissReason({
+        chain: "whole-foods",
+        reason: "no-unit-prices",
+      });
       captureWeeklyAdArtifacts({
         chain: "whole-foods",
         zipCode: input.zipCode,
@@ -153,7 +206,7 @@ async function ingestWholeFoodsWeeklyAd(
       storeId: input.storeId,
       sourceUrl,
       observedAt: fetchedAt,
-      rawOffers,
+      rawOffers: currentOffers,
       ...weeklyAdMatchFieldsFromIngest(input),
     });
     const matchedCount = offers.filter((offer) => offer.ingredientId).length;
@@ -167,13 +220,17 @@ async function ingestWholeFoodsWeeklyAd(
       configured: true,
       fallbackUsed: false,
       offers,
-      message: `Parsed Whole Foods weekly-ad for store ${locatorStore.storeId} (${locatorStore.locationName}) for ZIP ${input.zipCode} via sales-flyer: ${rawOffers.length} unit-priced offer(s) for ${input.storeName}; ${matchedCount} matched tracked dinner ingredients. Dinner totals follow the same weekly-ad floors as other ranked banners.`,
+      message: `Parsed Whole Foods weekly-ad for store ${locatorStore.storeId} (${locatorStore.locationName}) for ZIP ${input.zipCode} via sales-flyer: ${currentOffers.length} unit-priced offer(s) for ${input.storeName}; ${matchedCount} matched tracked dinner ingredients. Dinner totals follow the same weekly-ad floors as other ranked banners.`,
       fetchedAt,
       termsNote,
     };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "unknown error";
     console.info(`[whole-foods] no rows: fetch failed: ${reason}`);
+    await recordWeeklyAdPriceMissReason({
+      chain: "whole-foods",
+      reason: "fetch-failed",
+    });
     captureWeeklyAdArtifacts({
       chain: "whole-foods",
       zipCode: input.zipCode,

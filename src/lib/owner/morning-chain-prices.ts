@@ -18,6 +18,7 @@ export type MorningChainRegistryRow = {
   displayName: string;
   saleSource: boolean;
   sortOrder: number;
+  priceMissReason?: string | null;
 };
 
 /** Map a ranked price source onto a chain and whether the row is official or a flyer. */
@@ -58,13 +59,19 @@ export function assembleMorningChainPriceFacts(input: {
         left.sortOrder - right.sortOrder ||
         left.displayName.localeCompare(right.displayName),
     )
-    .map((row) => ({
-      displayName: row.displayName.trim(),
-      admittedStore: input.admittedChainIds.has(row.chainId),
-      saleSource: row.saleSource,
-      freshOfficialCount: freshOfficial.get(row.chainId) ?? 0,
-      freshFlyerCount: freshFlyer.get(row.chainId) ?? 0,
-    }));
+    .map((row) => {
+      const fact: MorningChainPriceFact = {
+        displayName: row.displayName.trim(),
+        admittedStore: input.admittedChainIds.has(row.chainId),
+        saleSource: row.saleSource,
+        freshOfficialCount: freshOfficial.get(row.chainId) ?? 0,
+        freshFlyerCount: freshFlyer.get(row.chainId) ?? 0,
+      };
+      if (row.priceMissReason) {
+        fact.priceMissReason = row.priceMissReason;
+      }
+      return fact;
+    });
 }
 
 export async function loadMorningChainPriceFacts(input: {
@@ -85,16 +92,45 @@ export async function loadMorningChainPriceFacts(input: {
   );
   const freshness = await queryRankedPriceFreshness(pool);
   const admittedChainIds = await listAdmittedChainIds(input.activeZipCodes);
+  const missReasons = await loadPriceMissReasons(pool);
   return assembleMorningChainPriceFacts({
     registry: registryResult.rows.map((row) => ({
       chainId: row.chain_id,
       displayName: row.display_name,
       saleSource: row.sale_discovery_strategy.trim().toLowerCase() !== "none",
       sortOrder: row.sort_order,
+      priceMissReason: missReasons.get(row.chain_id) ?? null,
     })),
     admittedChainIds,
     freshBySource: freshness.bySource,
   });
+}
+
+/**
+ * Last miss reason per chain. A database that has not applied 043 yet
+ * returns an empty map so the note still uses the generic sentence.
+ */
+async function loadPriceMissReasons(
+  pool: ReturnType<typeof getDbPool>,
+): Promise<Map<string, string>> {
+  try {
+    const result = await pool.query<{ chain: string; price_miss_reason: string }>(
+      `
+        select chain, price_miss_reason
+        from weekly_ad_flyer_hashes
+        where price_miss_reason is not null
+          and btrim(price_miss_reason) <> ''
+      `,
+    );
+    return new Map(
+      result.rows
+        .filter((row) => row.chain && row.price_miss_reason)
+        .map((row) => [row.chain, row.price_miss_reason.trim()]),
+    );
+  } catch (error) {
+    logServerError("morning-report.price-miss-reason", error);
+    return new Map();
+  }
 }
 
 /**

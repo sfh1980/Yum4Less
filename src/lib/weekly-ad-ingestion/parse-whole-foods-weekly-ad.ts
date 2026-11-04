@@ -61,6 +61,29 @@ export function formatWholeFoodsFlyerDateLog(input: {
   return `[whole-foods] parsed flyer dates for store ${input.storeId} start=${start} end=${end}`;
 }
 
+/** True when the stored end is already before `now`. A missing end is not ended. */
+export function wholeFoodsOfferAlreadyEnded(
+  validThrough: string | undefined,
+  now: Date,
+): boolean {
+  if (!validThrough) {
+    return false;
+  }
+  const at = Date.parse(validThrough);
+  return Number.isFinite(at) && at < now.getTime();
+}
+
+export function formatWholeFoodsFlyerEndedLog(input: {
+  storeId: string;
+  endedAt: string;
+  startDates: readonly string[];
+  endDates: readonly string[];
+}): string {
+  const start = input.startDates.length > 0 ? input.startDates.join(", ") : "none";
+  const end = input.endDates.length > 0 ? input.endDates.join(", ") : "none";
+  return `[whole-foods] flyer ended ${input.endedAt}; waiting for the new flyer (store ${input.storeId}, start=${start}, end=${end})`;
+}
+
 export function parseWholeFoodsWeeklyAd(input: {
   html?: string;
   promotions?: unknown;

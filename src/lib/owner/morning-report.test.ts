@@ -583,6 +583,39 @@ describe("morning report", () => {
     expect(kept.needsAttention).toBe(true);
     expect(kept.body.endsWith("Needs you.")).toBe(true);
 
+    const unpublished = [
+      priceChain({
+        displayName: "Whole Foods",
+        freshFlyerCount: 0,
+        priceMissReason: "flyer-not-published",
+      }),
+      priceChain({ displayName: "Food Lion" }),
+    ];
+    const firstUnpublished = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: unpublished,
+      priorChainPriceExceptions: [],
+    });
+    expect(firstUnpublished.needsAttention).toBe(false);
+    expect(firstUnpublished.body).toContain("Whole Foods flyer not yet published.");
+    expect(firstUnpublished.body).not.toContain("Whole Foods has no prices");
+    expect(firstUnpublished.body).toContain("Nothing needs you.");
+
+    const secondUnpublished = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: unpublished,
+      priorChainPriceExceptions: chainPriceExceptionsInNote(firstUnpublished.body),
+    });
+    expect(chainPriceExceptionsInNote(firstUnpublished.body)).toEqual(["Whole Foods"]);
+    expect(secondUnpublished.needsAttention).toBe(true);
+    expect(secondUnpublished.body).toContain("Whole Foods flyer not yet published.");
+    expect(secondUnpublished.body).toContain(
+      "1 of 2 chains is missing prices from the last day again.",
+    );
+    expect(secondUnpublished.body.endsWith("Needs you.")).toBe(true);
+
     const stillInformation = applyOutsideResultToMorningNote(first.body, {
       codeTests: "passed",
       siteCheck: "passed",

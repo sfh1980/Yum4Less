@@ -135,6 +135,7 @@ describe("whole foods weekly ad ingestion", () => {
         longitude: -73.99,
       }),
       persistBinding,
+      now: () => new Date("2026-09-01T12:00:00.000Z"),
       fetchSalesFlyerHtml: async ({ storeId }) => ({
         url: `https://www.wholefoodsmarket.com/sales-flyer?store-id=${storeId}`,
         html: `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
@@ -199,6 +200,7 @@ describe("whole foods weekly ad ingestion", () => {
         updatedPin: true,
         upsertedCatalog: true,
       }),
+      now: () => new Date("2026-09-01T12:00:00.000Z"),
       fetchSalesFlyerHtml: async ({ storeId }) => ({
         url: `https://www.wholefoodsmarket.com/sales-flyer?store-id=${storeId}`,
         html: `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
@@ -315,5 +317,102 @@ describe("whole foods weekly ad ingestion", () => {
     expect(lines.some((line) => line.includes("parsed flyer dates"))).toBe(true);
     expect(lines.join("\n")).toContain("no rows: no unit prices for store 10257");
     info.mockRestore();
+  });
+
+  it("does not write a flyer whose extended end is already past", async () => {
+    delete process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const client = createWholeFoodsWeeklyAdIngestionClient({
+      resolveStoreForZip: async () => ({
+        storeId: "10257",
+        locationName: "Short Pump",
+        city: "Richmond",
+        state: "VA",
+      }),
+      persistBinding: async () => ({ updatedPin: false, upsertedCatalog: false }),
+      now: () => new Date("2026-11-04T08:00:00.000Z"),
+      fetchSalesFlyerHtml: async ({ storeId }) => ({
+        url: `https://www.wholefoodsmarket.com/sales-flyer?store-id=${storeId}`,
+        html: `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+          props: {
+            pageProps: {
+              promotions: [
+                {
+                  productName: "Organic Hass Avocados",
+                  salePrice: "4 for $5",
+                  startDate: "2026-10-28T05:00:00Z",
+                  endDate: "2026-11-03T05:00:00Z",
+                },
+              ],
+            },
+          },
+        })}</script>`,
+      }),
+    });
+
+    const result = await client.ingestWeeklyAd({
+      chain: "whole-foods",
+      storeId: "whole-foods-10257",
+      storeName: "Whole Foods Market",
+      zipCode: "23005",
+      trackedIngredientIds: ["avocado"],
+    });
+
+    const lines = info.mock.calls.map((call) => String(call[0]));
+    expect(result.offers).toEqual([]);
+    expect(result.status).toBe("live");
+    expect(lines.join("\n")).toContain(
+      "[whole-foods] flyer ended 2026-11-04T05:00:00Z; waiting for the new flyer (store 10257, start=2026-10-28T05:00:00Z, end=2026-11-03T05:00:00Z)",
+    );
+    expect(lines.join("\n")).toContain("parsed flyer dates");
+    expect(lines.join("\n")).not.toContain("no rows: no unit prices");
+    info.mockRestore();
+  });
+
+  it("keeps a current offer and drops one that already ended", async () => {
+    delete process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
+    const client = createWholeFoodsWeeklyAdIngestionClient({
+      resolveStoreForZip: async () => ({
+        storeId: "10257",
+        locationName: "Short Pump",
+        city: "Richmond",
+        state: "VA",
+      }),
+      persistBinding: async () => ({ updatedPin: false, upsertedCatalog: false }),
+      now: () => new Date("2026-11-04T08:00:00.000Z"),
+      fetchSalesFlyerHtml: async () => ({
+        url: "https://www.wholefoodsmarket.com/sales-flyer?store-id=10257",
+        html: `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+          props: {
+            pageProps: {
+              promotions: [
+                {
+                  productName: "Organic Hass Avocados",
+                  salePrice: "$1.50",
+                  startDate: "2026-10-28T05:00:00Z",
+                  endDate: "2026-11-03T05:00:00Z",
+                },
+                {
+                  productName: "Organic Chicken Breast",
+                  salePrice: "4 for $5",
+                  endDate: "2026-11-10T15:00:00Z",
+                },
+              ],
+            },
+          },
+        })}</script>`,
+      }),
+    });
+
+    const result = await client.ingestWeeklyAd({
+      chain: "whole-foods",
+      storeId: "whole-foods-10257",
+      storeName: "Whole Foods Market",
+      zipCode: "23005",
+      trackedIngredientIds: ["avocado", "chicken-breast"],
+    });
+
+    expect(result.offers.some((offer) => /avocado/i.test(offer.productName))).toBe(false);
+    expect(result.offers.some((offer) => /chicken/i.test(offer.productName))).toBe(true);
   });
 });

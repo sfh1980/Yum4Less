@@ -166,9 +166,12 @@ export type MorningChainPriceFact = {
   saleSource: boolean;
   freshOfficialCount: number;
   freshFlyerCount: number;
+  /** Last weekly-ad miss, from weekly_ad_flyer_hashes.price_miss_reason. */
+  priceMissReason?: string | null;
 };
 
-const CHAIN_PRICE_EXCEPTION_LINE = /^(.+) has no prices from the last day\.$/;
+const CHAIN_PRICE_EXCEPTION_LINE =
+  /^(.+?) (?:has no prices from the last day|flyer not yet published|store was not found|flyer fetch failed|flyer had no unit prices)\.$/;
 const CHAIN_PRICE_REPEAT_LINE =
   /^\d+ of \d+ chains? (?:is|are) missing prices from the last day again\.$/;
 
@@ -272,6 +275,26 @@ export function describeAddSkipLine(input: {
   return null;
 }
 
+/** The per-chain sentence. A stored miss reason replaces the generic "has no prices" line. */
+export function chainPriceExceptionSentence(chain: {
+  displayName: string;
+  priceMissReason?: string | null;
+}): string {
+  const name = chain.displayName.trim();
+  switch (chain.priceMissReason) {
+    case "flyer-not-published":
+      return `${name} flyer not yet published.`;
+    case "no-store":
+      return `${name} store was not found.`;
+    case "fetch-failed":
+      return `${name} flyer fetch failed.`;
+    case "no-unit-prices":
+      return `${name} flyer had no unit prices.`;
+    default:
+      return `${name} has no prices from the last day.`;
+  }
+}
+
 export function chainPriceExceptionsInNote(body: string): string[] {
   return body.split("\n").flatMap((line) => {
     const match = CHAIN_PRICE_EXCEPTION_LINE.exec(line.trim());
@@ -295,9 +318,10 @@ export function describeMorningChainPrices(input: {
     return { lines: [], needsAttention: false, exceptionNames: [], counted: 0 };
   }
 
-  const exceptionNames = counted
-    .filter((chain) => chain.freshOfficialCount + chain.freshFlyerCount <= 0)
-    .map((chain) => chain.displayName.trim());
+  const exceptions = counted.filter(
+    (chain) => chain.freshOfficialCount + chain.freshFlyerCount <= 0,
+  );
+  const exceptionNames = exceptions.map((chain) => chain.displayName.trim());
   const prior = input.priorExceptionNames;
   const repeated = prior
     ? exceptionNames.filter((name) => prior.includes(name))
@@ -321,7 +345,7 @@ export function describeMorningChainPrices(input: {
   const again = repeated.length > 0 ? " again" : "";
   return {
     lines: [
-      ...exceptionNames.map((name) => `${name} has no prices from the last day.`),
+      ...exceptions.map((chain) => chainPriceExceptionSentence(chain)),
       `${missing} of ${total} ${total === 1 ? "chain" : "chains"} ${verb} missing prices from the last day${again}.`,
     ],
     needsAttention: repeated.length > 0,

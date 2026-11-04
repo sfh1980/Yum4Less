@@ -102,6 +102,41 @@ export function offerCountToRemember(
   return incoming;
 }
 
+export type WeeklyAdPriceMissReason =
+  | "flyer-not-published"
+  | "no-store"
+  | "fetch-failed"
+  | "no-unit-prices";
+
+/**
+ * Why the last weekly-ad pass wrote no current rows for this chain.
+ * A later remember() clears it. Does not replace content_hash or offer_count.
+ */
+export async function recordWeeklyAdPriceMissReason(input: {
+  chain: string;
+  reason: WeeklyAdPriceMissReason;
+}): Promise<void> {
+  if (!flyerHashDbEnabled()) {
+    return;
+  }
+  try {
+    await getDbPool().query(
+      `
+        insert into weekly_ad_flyer_hashes (
+          chain, content_hash, offer_count, price_miss_reason, recorded_at
+        )
+        values ($1, '', 0, $2, now())
+        on conflict (chain) do update set
+          price_miss_reason = excluded.price_miss_reason,
+          recorded_at = now()
+      `,
+      [input.chain, input.reason],
+    );
+  } catch (error) {
+    logServerError("weekly-ad-flyer-hash.price-miss", error);
+  }
+}
+
 export async function rememberWeeklyAdFlyerHash(input: {
   chain: string;
   contentHash: string;
@@ -131,6 +166,7 @@ export async function rememberWeeklyAdFlyerHash(input: {
           content_hash = excluded.content_hash,
           offer_count = excluded.offer_count,
           raw_card_count = coalesce(excluded.raw_card_count, weekly_ad_flyer_hashes.raw_card_count),
+          price_miss_reason = null,
           recorded_at = now()
       `,
       [input.chain, input.contentHash, offerCount, rawCardCount],
