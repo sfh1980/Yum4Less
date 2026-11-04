@@ -14,6 +14,16 @@ import {
   shouldPreserveStoreLocationProvenance,
 } from "@/lib/price-observation-writes";
 import { KROGER_OFFICIAL_PRICE_SOURCE } from "@/lib/price-source-policy";
+import { resetRankedPriceWindowSqlForTests } from "@/lib/ranked-price-cache-policy";
+
+function queryWithValidFromColumn(query: ReturnType<typeof vi.fn>) {
+  return vi.fn(async (sql: string, params?: unknown) => {
+    if (typeof sql === "string" && sql.includes("information_schema.columns")) {
+      return { rows: [{ present: true }] };
+    }
+    return query(sql, params);
+  });
+}
 
 describe("shouldPreserveStoreLocationProvenance", () => {
   it("preserves live OSM, fixture OSM, and locator provenance sources", () => {
@@ -58,6 +68,7 @@ describe("price observation change-aware sync", () => {
   }
 
   beforeEach(() => {
+    resetRankedPriceWindowSqlForTests();
     getDbPool.mockReset();
   });
 
@@ -108,7 +119,7 @@ describe("price observation change-aware sync", () => {
         ],
       })
       .mockResolvedValue({ rowCount: 1 });
-    mockDbPool(query);
+    mockDbPool(queryWithValidFromColumn(query));
 
     const outcome = await insertPriceObservationIfChanged({
       storeId: "kroger-mechanicsville",
@@ -132,6 +143,7 @@ describe("price observation change-aware sync", () => {
       "kroger-mechanicsville",
       "chicken-thighs",
       1,
+      false,
     ]);
   });
 
@@ -153,7 +165,7 @@ describe("price observation change-aware sync", () => {
         ],
       })
       .mockResolvedValue({ rowCount: 1 });
-    mockDbPool(query);
+    mockDbPool(queryWithValidFromColumn(query));
 
     const outcome = await insertPriceObservationIfChanged({
       storeId: "kroger-mechanicsville",
@@ -173,6 +185,7 @@ describe("price observation change-aware sync", () => {
       "kroger-mechanicsville",
       "chicken-thighs",
       null,
+      false,
     ]);
     expect(query.mock.calls[3]?.[0]).toContain("insert into price_observations");
     expect(query.mock.calls[4]?.[0]).toBe("commit");
@@ -180,6 +193,9 @@ describe("price observation change-aware sync", () => {
 
   it("rolls back the delete when insert fails inside the replace transaction", async () => {
     const query = vi.fn(async (sql: string) => {
+      if (sql.includes("information_schema.columns")) {
+        return { rows: [{ present: true }] };
+      }
       if (sql.includes("select")) {
         return {
           rows: [
@@ -207,7 +223,7 @@ describe("price observation change-aware sync", () => {
 
       return { rowCount: 0 };
     });
-    const client = mockDbPool(query);
+    const client = mockDbPool(queryWithValidFromColumn(query));
 
     await expect(
       insertPriceObservationIfChanged({
@@ -244,7 +260,7 @@ describe("price observation change-aware sync", () => {
         },
       ],
     });
-    getDbPool.mockReturnValue({ query });
+    getDbPool.mockReturnValue({ query: queryWithValidFromColumn(query) });
 
     const outcome = await insertPriceObservationIfChanged({
       storeId: "kroger-mechanicsville",

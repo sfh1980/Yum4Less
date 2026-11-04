@@ -13,10 +13,19 @@ import {
   getMarketPricingContext,
   getRecipeCatalog,
 } from "@/lib/market-repository";
+import { resetRankedPriceWindowSqlForTests } from "@/lib/ranked-price-cache-policy";
 import * as serverLog from "@/lib/server-log";
+
+function answerValidFromProbe(sql: string): { rows: Array<{ present: boolean }> } | null {
+  if (sql.includes("information_schema.columns")) {
+    return { rows: [{ present: true }] };
+  }
+  return null;
+}
 
 describe("getMarketDataSnapshot", () => {
   beforeEach(() => {
+    resetRankedPriceWindowSqlForTests();
     getDbPool.mockReset();
   });
 
@@ -59,6 +68,10 @@ describe("getMarketDataSnapshot", () => {
   it("maps database query results into the normalized market snapshot", async () => {
     getDbPool.mockReturnValue({
       query: vi.fn().mockImplementation((sql: string) => {
+        const probe = answerValidFromProbe(sql);
+        if (probe) {
+          return Promise.resolve(probe);
+        }
         if (sql.includes("from stores")) {
           return Promise.resolve({
             rows: [
@@ -205,6 +218,7 @@ describe("getMarketDataSnapshot", () => {
 
 describe("getMarketPricingContext", () => {
   beforeEach(() => {
+    resetRankedPriceWindowSqlForTests();
     getDbPool.mockReset();
   });
 
@@ -228,22 +242,27 @@ describe("getMarketPricingContext", () => {
 
   it("loads stores and ranked price observations without recipes", async () => {
     getDbPool.mockReturnValue({
-      query: vi
-        .fn()
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: "kroger-1",
-              name: "Kroger Mechanicsville",
-              kind: "grocery",
-              city: "Mechanicsville",
-              state: "VA",
-              latitude: "37.6085",
-              longitude: "-77.3321",
-            },
-          ],
-        })
-        .mockResolvedValueOnce({
+      query: vi.fn().mockImplementation((sql: string) => {
+        const probe = answerValidFromProbe(sql);
+        if (probe) {
+          return Promise.resolve(probe);
+        }
+        if (sql.includes("from stores")) {
+          return Promise.resolve({
+            rows: [
+              {
+                id: "kroger-1",
+                name: "Kroger Mechanicsville",
+                kind: "grocery",
+                city: "Mechanicsville",
+                state: "VA",
+                latitude: "37.6085",
+                longitude: "-77.3321",
+              },
+            ],
+          });
+        }
+        return Promise.resolve({
           rows: [
             {
               store_id: "kroger-1",
@@ -260,7 +279,8 @@ describe("getMarketPricingContext", () => {
               freshness_days_ago: 1,
             },
           ],
-        }),
+        });
+      }),
     });
 
     const result = await getMarketPricingContext();
@@ -268,7 +288,9 @@ describe("getMarketPricingContext", () => {
     expect(result.source).toBe("database");
     expect(result.stores).toHaveLength(1);
     expect(result.priceObservations).toHaveLength(1);
-    expect(getDbPool().query).toHaveBeenCalledTimes(2);
+    expect(getDbPool().query).toHaveBeenCalledWith(
+      expect.stringContaining("valid_from is null or valid_from <= now()"),
+    );
   });
 });
 
