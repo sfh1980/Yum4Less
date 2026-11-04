@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createWholeFoodsWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/whole-foods-weekly-ad-ingestion";
 import {
   readWholeFoodsStoreIdFromPayload,
@@ -229,5 +229,91 @@ describe("whole foods weekly ad ingestion", () => {
     expect(result.offers.find((offer) => /avocado/i.test(offer.productName))?.validThrough).toBe(
       "2026-09-23T05:00:00Z",
     );
+  });
+
+  it("logs a missing store without a parsed-dates line", async () => {
+    delete process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const client = createWholeFoodsWeeklyAdIngestionClient({
+      resolveStoreForZip: async () => undefined,
+    });
+
+    const result = await client.ingestWeeklyAd({
+      chain: "whole-foods",
+      storeId: "whole-foods-1",
+      storeName: "Whole Foods Market",
+      zipCode: "23005",
+      trackedIngredientIds: ["avocado"],
+    });
+
+    const lines = info.mock.calls.map((call) => String(call[0]));
+    expect(result.offers).toEqual([]);
+    expect(result.status).toBe("error");
+    expect(lines.join("\n")).toContain("no rows: no closest store for ZIP 23005");
+    expect(lines.join("\n")).not.toContain("parsed flyer dates");
+    info.mockRestore();
+  });
+
+  it("logs a fetch failure without a parsed-dates line", async () => {
+    delete process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const client = createWholeFoodsWeeklyAdIngestionClient({
+      resolveStoreForZip: async () => ({
+        storeId: "10257",
+        locationName: "Short Pump",
+        city: "Richmond",
+        state: "VA",
+      }),
+      persistBinding: async () => ({ updatedPin: false, upsertedCatalog: false }),
+      fetchSalesFlyerHtml: async () => {
+        throw new Error("browser closed");
+      },
+    });
+
+    const result = await client.ingestWeeklyAd({
+      chain: "whole-foods",
+      storeId: "whole-foods-10257",
+      storeName: "Whole Foods Market",
+      zipCode: "23005",
+      trackedIngredientIds: ["avocado"],
+    });
+
+    const lines = info.mock.calls.map((call) => String(call[0]));
+    expect(result.offers).toEqual([]);
+    expect(lines.join("\n")).toContain("no rows: fetch failed: browser closed");
+    expect(lines.join("\n")).not.toContain("parsed flyer dates");
+    info.mockRestore();
+  });
+
+  it("logs no unit prices after the parsed-dates line when the flyer has none", async () => {
+    delete process.env.YUM4LESS_WEEKLY_AD_FIXTURE;
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const client = createWholeFoodsWeeklyAdIngestionClient({
+      resolveStoreForZip: async () => ({
+        storeId: "10257",
+        locationName: "Short Pump",
+        city: "Richmond",
+        state: "VA",
+      }),
+      persistBinding: async () => ({ updatedPin: false, upsertedCatalog: false }),
+      fetchSalesFlyerHtml: async () => ({
+        url: "https://www.wholefoodsmarket.com/sales-flyer?store-id=10257",
+        html: "<html>no flyer</html>",
+      }),
+    });
+
+    const result = await client.ingestWeeklyAd({
+      chain: "whole-foods",
+      storeId: "whole-foods-10257",
+      storeName: "Whole Foods Market",
+      zipCode: "23005",
+      trackedIngredientIds: ["avocado"],
+    });
+
+    const lines = info.mock.calls.map((call) => String(call[0]));
+    expect(result.offers).toEqual([]);
+    expect(lines.some((line) => line.includes("parsed flyer dates"))).toBe(true);
+    expect(lines.join("\n")).toContain("no rows: no unit prices for store 10257");
+    info.mockRestore();
   });
 });

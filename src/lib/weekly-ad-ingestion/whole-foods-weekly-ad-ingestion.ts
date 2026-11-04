@@ -78,6 +78,9 @@ async function ingestWholeFoodsWeeklyAd(
   try {
     const locatorStore = await resolveStore(input.zipCode);
     if (!locatorStore) {
+      console.info(
+        `[whole-foods] no rows: no closest store for ZIP ${input.zipCode}`,
+      );
       return {
         chain: "whole-foods",
         label,
@@ -119,6 +122,9 @@ async function ingestWholeFoodsWeeklyAd(
     const rawOffers = parseWholeFoodsWeeklyAd({ promotions });
 
     if (rawOffers.length === 0) {
+      console.info(
+        `[whole-foods] no rows: no unit prices for store ${locatorStore.storeId}`,
+      );
       captureWeeklyAdArtifacts({
         chain: "whole-foods",
         zipCode: input.zipCode,
@@ -166,6 +172,8 @@ async function ingestWholeFoodsWeeklyAd(
       termsNote,
     };
   } catch (error) {
+    const reason = error instanceof Error ? error.message : "unknown error";
+    console.info(`[whole-foods] no rows: fetch failed: ${reason}`);
     captureWeeklyAdArtifacts({
       chain: "whole-foods",
       zipCode: input.zipCode,

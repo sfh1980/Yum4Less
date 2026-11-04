@@ -125,6 +125,11 @@ async function main() {
     name,
     chain,
   }));
+  if (!nearbyStores.some((store) => store.chain === "whole-foods")) {
+    console.info(
+      "[whole-foods] no rows: no admitted store, so the flyer was not fetched",
+    );
+  }
   if (nearbyStores.length === 0 || !flyerZipCode) {
     console.warn(
       "No weekly-ad chain stores in catalog inside the ingest fence. Run map catalog or seed stores first.",
