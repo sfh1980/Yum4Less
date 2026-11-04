@@ -136,6 +136,50 @@ describe("flipp-weekly-ad-feed", () => {
     ]);
   });
 
+  it("keeps every flyer on sale now and skips a flyer that has not started", () => {
+    const now = new Date("2026-11-03T19:55:00-05:00");
+    const selected = selectFlyersForWeeklyAdPersist(
+      [
+        {
+          id: 1,
+          merchant: "Kroger",
+          name: "Common",
+          categories: ["Groceries"],
+          valid_from: "2026-10-28T00:00:00-04:00",
+          valid_to: "2026-11-03T23:59:59-05:00",
+        },
+        {
+          id: 2,
+          merchant: "Kroger",
+          name: "Regional",
+          categories: ["Groceries"],
+          valid_from: "2026-10-28T00:00:00-04:00",
+          valid_to: "2026-11-03T23:59:59-05:00",
+        },
+        {
+          id: 3,
+          merchant: "Kroger",
+          name: "Next week",
+          categories: ["Groceries"],
+          valid_from: "2026-11-04T00:00:00-05:00",
+          valid_to: "2026-11-10T23:59:59-05:00",
+          available_from: "2026-11-03T00:00:00-05:00",
+        },
+        {
+          id: 4,
+          merchant: "Kroger",
+          name: "Last week",
+          categories: ["Groceries"],
+          valid_from: "2026-10-21T00:00:00-04:00",
+          valid_to: "2026-10-27T23:59:59-04:00",
+        },
+      ],
+      now,
+    );
+
+    expect(selected.map((flyer) => flyer.id)).toEqual([1, 2]);
+  });
+
   it("keeps untagged grocery-chain flyers when no grocery category exists", () => {
     const selected = selectFlyersForWeeklyAdPersist([
       { id: 10, merchant: "ALDI", name: "ALDI Weekly Ad" },

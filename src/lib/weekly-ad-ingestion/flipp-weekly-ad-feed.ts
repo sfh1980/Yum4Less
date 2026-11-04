@@ -28,6 +28,10 @@ export type FlippFlyerSummary = {
   name?: string;
   categories?: string[];
   categories_csv?: string;
+  valid_from?: string;
+  valid_to?: string;
+  available_from?: string;
+  available_to?: string;
 };
 
 export type FlippFlyersResponse = {
@@ -122,7 +126,21 @@ export async function fetchFlippWeeklyAdOffersForMerchantFlyers(input: {
   const merchantFlyers = flyers.filter(
     (flyer) => flyer.merchant?.toLowerCase() === input.merchantName.toLowerCase(),
   );
-  const selectedFlyers = selectFlyersForWeeklyAdPersist(merchantFlyers);
+  const now = new Date();
+  const selectedFlyers = selectFlyersForWeeklyAdPersist(merchantFlyers, now);
+  const skippedNotYetValid = merchantFlyers
+    .filter(
+      (flyer) =>
+        typeof flyer.id === "number" &&
+        flyerValidFromIsAfter(flyer, now) &&
+        !selectedFlyers.some((selected) => selected.id === flyer.id),
+    )
+    .map((flyer) => flyer.id);
+  console.log(
+    `[weekly-ad] Flipp ${input.merchantName} ZIP ${input.zipCode} current flyer ids: ${
+      selectedFlyers.map((flyer) => flyer.id).join(", ") || "(none)"
+    }; skipped not-yet-valid: ${skippedNotYetValid.join(", ") || "(none)"}`,
+  );
 
   const merged: WeeklyAdRawOffer[] = [];
   for (const flyer of selectedFlyers) {
@@ -179,16 +197,50 @@ export function flyerLooksLikeNonGroceryDepartment(flyer: FlippFlyerSummary) {
   return NON_GROCERY_FLYER_DEPARTMENT.test(flyerCategoryTokens(flyer).join(" "));
 }
 
+function flyerInstant(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+/** A listed flyer whose valid_from is still in the future is next week's ad. */
+export function flyerValidFromIsAfter(flyer: FlippFlyerSummary, now: Date): boolean {
+  const from = flyerInstant(flyer.valid_from);
+  return from !== null && from > now.getTime();
+}
+
+/**
+ * Keep a flyer when its sale window contains now.
+ * Missing dates stay eligible. A later valid_from is not fetched yet.
+ * Every flyer that is on sale now stays; overlapping current flyers are not collapsed.
+ */
+export function flyerIsOnSaleNow(flyer: FlippFlyerSummary, now: Date): boolean {
+  const at = now.getTime();
+  const from = flyerInstant(flyer.valid_from);
+  const to = flyerInstant(flyer.valid_to);
+  if (from !== null && from > at) {
+    return false;
+  }
+  if (to !== null && to < at) {
+    return false;
+  }
+  return true;
+}
+
 /** Grocery flyers when tagged; otherwise drop explicit merch departments. All chains. */
 export function selectFlyersForWeeklyAdPersist(
   merchantFlyers: FlippFlyerSummary[],
+  now: Date = new Date(),
 ): FlippFlyerSummary[] {
   const withIds = merchantFlyers.filter((flyer) => typeof flyer.id === "number");
   const groceryFlyers = withIds.filter((flyer) => flyerIncludesGroceryCategory(flyer));
-  if (groceryFlyers.length > 0) {
-    return groceryFlyers;
-  }
-  return withIds.filter((flyer) => !flyerLooksLikeNonGroceryDepartment(flyer));
+  const pool =
+    groceryFlyers.length > 0
+      ? groceryFlyers
+      : withIds.filter((flyer) => !flyerLooksLikeNonGroceryDepartment(flyer));
+  return pool.filter((flyer) => flyerIsOnSaleNow(flyer, now));
 }
 
 export async function fetchFlippWeeklyAdOffersForSearchTerms(input: {
