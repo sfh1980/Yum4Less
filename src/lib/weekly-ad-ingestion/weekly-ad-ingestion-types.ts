@@ -26,6 +26,7 @@ export type WeeklyAdRawOffer = {
   productName: string;
   price: number;
   saleLabel?: string;
+  validFrom?: string;
   validThrough?: string;
 };
 
@@ -36,6 +37,7 @@ export type WeeklyAdOffer = {
   productName: string;
   price: number;
   saleLabel?: string;
+  validFrom?: string;
   validThrough?: string;
   sourceUrl: string;
   observedAt: string;
