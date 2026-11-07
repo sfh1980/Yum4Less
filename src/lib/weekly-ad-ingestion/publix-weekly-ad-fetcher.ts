@@ -5,9 +5,14 @@ import {
   buildPublixThinCaptureMeta,
   decidePublixCardPoll,
   nextPublixEqualPositiveSamples,
+  parsePublixCategoryResultCounts,
   PUBLIX_CARD_POLL_MS,
-  publixCardCountIsThin,
+  publixListedCardTarget,
+  publixPageIsThin,
+  publixResponseStatusForCapture,
+  publixResponseStatusIsRelevant,
   readPublixCardMaxWaitMs,
+  type PublixResponseStatus,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 import {
   serializePublixStoreCookie,
@@ -49,6 +54,8 @@ export type PublixWeeklyAdFetchResult = {
   storeCookie?: PublixStoreCookie;
   visitedUrls?: string[];
   savingsCardCount?: number;
+  seenCardCount?: number;
+  expectedCardCount?: number | null;
   gotoStatus?: number | null;
 };
 
@@ -68,6 +75,8 @@ export type PublixWeeklyAdFetcherDeps = {
     waitSelectorMatched: boolean;
     visitedUrls?: string[];
     savingsCardCount?: number;
+    seenCardCount?: number;
+    expectedCardCount?: number | null;
     gotoStatus?: number | null;
   }>;
 };
@@ -106,6 +115,8 @@ export async function fetchPublixWeeklyAdPage(input: {
       storeCookie: input.storeCookie,
       visitedUrls: browserResult.visitedUrls,
       savingsCardCount: browserResult.savingsCardCount,
+      seenCardCount: browserResult.seenCardCount,
+      expectedCardCount: browserResult.expectedCardCount,
       gotoStatus: browserResult.gotoStatus,
     };
   }
@@ -147,11 +158,14 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
   waitSelectorMatched: boolean;
   visitedUrls: string[];
   savingsCardCount: number;
+  seenCardCount: number;
+  expectedCardCount: number | null;
   gotoStatus: number | null;
 }> {
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
   const networkJsonBodies: string[] = [];
+  const responseStatuses: PublixResponseStatus[] = [];
 
   try {
     const context = await browser.newContext(getWeeklyAdBrowserContextOptions());
@@ -170,6 +184,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
     const page = await context.newPage();
     page.setDefaultTimeout(input.timeoutMs);
 
+    attachPublixResponseStatuses(page, responseStatuses);
     attachWeeklyAdNetworkCapture(page, networkJsonBodies, PUBLIX_NETWORK_URL_PATTERN, {
       allowGraphqlUrl: true,
       allowServicesDomain: true,
@@ -205,13 +220,19 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
     await explorePublixWeeklyAdCategories(page, input.url, visitedUrls, input.timeoutMs);
     const rememberedOfferCount = input.rememberedOfferCount ?? null;
     const maxWaitMs = input.maxWaitMs ?? readPublixCardMaxWaitMs();
-    let savingsCardCount = await settlePublixSavingsCardCount(page, {
+    let settled = await settlePublixSavingsCardCount(page, {
       timeoutMs: input.timeoutMs,
       rememberedOfferCount,
       maxWaitMs,
     });
 
-    if (publixCardCountIsThin(savingsCardCount, rememberedOfferCount)) {
+    if (
+      publixPageIsThin({
+        seenCount: settled.seenCount,
+        expectedCount: settled.expectedCount,
+        rememberedOfferCount,
+      })
+    ) {
       const retryGoto = await page.goto(input.url, {
         waitUntil: "domcontentloaded",
         timeout: input.timeoutMs,
@@ -221,22 +242,31 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
         visitedUrls.push(page.url());
       }
       await scrollPageForLazyContent(page);
-      savingsCardCount = await settlePublixSavingsCardCount(page, {
+      settled = await settlePublixSavingsCardCount(page, {
         timeoutMs: input.timeoutMs,
         rememberedOfferCount,
         maxWaitMs,
       });
     }
 
+    const savingsCardCount = settled.seenCount;
     const html = await page.content();
-    if (publixCardCountIsThin(savingsCardCount, rememberedOfferCount)) {
+    if (
+      publixPageIsThin({
+        seenCount: settled.seenCount,
+        expectedCount: settled.expectedCount,
+        rememberedOfferCount,
+      })
+    ) {
       savePublixThinCapture({
         html,
         url: input.url,
         zipCode: input.zipCode,
         gotoStatus,
-        extractedCount: savingsCardCount,
+        extractedCount: settled.seenCount,
         rememberedOfferCount,
+        expectedCardCount: settled.expectedCount,
+        responses: responseStatuses,
       });
     }
 
@@ -248,6 +278,8 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
       waitSelectorMatched,
       visitedUrls,
       savingsCardCount,
+      seenCardCount: settled.seenCount,
+      expectedCardCount: settled.expectedCount,
       gotoStatus,
     };
   } finally {
@@ -269,10 +301,6 @@ async function waitForPublixSavingsCards(
   }
 }
 
-async function countPublixSavingsCards(page: import("playwright").Page) {
-  return page.locator(PUBLIX_SAVINGS_CARD_SELECTOR).count();
-}
-
 async function settlePublixSavingsCardCount(
   page: import("playwright").Page,
   input: {
@@ -280,25 +308,37 @@ async function settlePublixSavingsCardCount(
     rememberedOfferCount: number | null;
     maxWaitMs: number;
   },
-) {
+): Promise<{ seenCount: number; expectedCount: number | null }> {
   await waitForPublixSavingsCards(page, input.timeoutMs);
   const started = Date.now();
+  const distinct = new Set<string>();
   let previousCount: number | null = null;
   let samples = 0;
   let equalPositiveSamples = 0;
-  let count = 0;
+  let seenCount = 0;
+  let expectedCount: number | null = null;
 
   while (true) {
-    count = await countPublixSavingsCards(page);
+    const listing = await readPublixCardListing(page);
+    for (const key of listing.keys) {
+      distinct.add(key);
+    }
+    seenCount = Math.max(listing.mounted, distinct.size);
+    const listed = publixListedCardTarget(parsePublixCategoryResultCounts(listing.listingHtml));
+    if (listed !== null) {
+      expectedCount = listed;
+    }
     samples += 1;
     equalPositiveSamples = nextPublixEqualPositiveSamples({
       previousCount,
-      count,
+      count: seenCount,
       equalPositiveSamples,
     });
     const decision = decidePublixCardPoll({
       previousCount,
-      count,
+      count: seenCount,
+      seenCount,
+      expectedCount,
       rememberedOfferCount: input.rememberedOfferCount,
       elapsedMs: Date.now() - started,
       maxWaitMs: input.maxWaitMs,
@@ -306,11 +346,72 @@ async function settlePublixSavingsCardCount(
       equalPositiveSamples,
     });
     if (decision !== "continue") {
-      return count;
+      return { seenCount, expectedCount };
     }
-    previousCount = count;
+    previousCount = seenCount;
+    await scrollPublixCardList(page);
     await page.waitForTimeout(PUBLIX_CARD_POLL_MS);
   }
+}
+
+async function readPublixCardListing(page: import("playwright").Page): Promise<{
+  mounted: number;
+  keys: string[];
+  listingHtml: string;
+}> {
+  return page.evaluate(() => {
+    const cards = Array.from(
+      document.querySelectorAll('[data-qa-automation="listed-savings-card"]'),
+    );
+    const keys = cards
+      .map((card) => {
+        const coded = card.querySelector("[data-item-code]")?.getAttribute("data-item-code")?.trim();
+        if (coded) {
+          return coded;
+        }
+        return card.querySelector('[data-qa-automation="prod-title"]')?.textContent?.trim() ?? "";
+      })
+      .filter((key) => key.length > 0);
+    const listingHtml = Array.from(document.querySelectorAll("[data-weekly-ad-category-id]"))
+      .map((section) => section.outerHTML)
+      .join("\n");
+    return { mounted: cards.length, keys, listingHtml };
+  });
+}
+
+/** One viewport of the virtual list. The window scrolls when the container does not. */
+async function scrollPublixCardList(page: import("playwright").Page) {
+  await page.evaluate(() => {
+    const container = document.querySelector("[class*='virtual-container']");
+    const step = Math.max(window.innerHeight, 400);
+    if (container instanceof HTMLElement) {
+      const style = window.getComputedStyle(container);
+      const scrollsItself =
+        /(auto|scroll)/.test(style.overflowY) &&
+        container.scrollHeight > container.clientHeight + 20;
+      if (scrollsItself) {
+        container.scrollTop = Math.min(container.scrollTop + step, container.scrollHeight);
+      }
+    }
+    window.scrollBy(0, step);
+  });
+}
+
+function attachPublixResponseStatuses(
+  page: import("playwright").Page,
+  statuses: PublixResponseStatus[],
+) {
+  page.on("response", (response) => {
+    const url = response.url();
+    if (!publixResponseStatusIsRelevant(url) || statuses.length >= 40) {
+      return;
+    }
+    const next = publixResponseStatusForCapture({ status: response.status(), url });
+    if (statuses.some((item) => item.status === next.status && item.url === next.url)) {
+      return;
+    }
+    statuses.push(next);
+  });
 }
 
 function savePublixThinCapture(input: {
@@ -320,6 +421,8 @@ function savePublixThinCapture(input: {
   gotoStatus: number | null;
   extractedCount: number;
   rememberedOfferCount: number | null;
+  expectedCardCount: number | null;
+  responses: readonly PublixResponseStatus[];
 }) {
   const capturedAt = new Date().toISOString();
   const captureDir = join(
@@ -340,6 +443,8 @@ function savePublixThinCapture(input: {
         gotoStatus: input.gotoStatus,
         extractedCount: input.extractedCount,
         rememberedOfferCount: input.rememberedOfferCount,
+        expectedCardCount: input.expectedCardCount,
+        responses: input.responses,
         capturedAt,
       }),
       null,

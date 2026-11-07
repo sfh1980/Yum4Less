@@ -3,7 +3,12 @@ import {
   buildPublixThinCaptureMeta,
   decidePublixCardPoll,
   nextPublixEqualPositiveSamples,
+  parsePublixCategoryResultCounts,
   publixCardCountIsThin,
+  publixListedCardTarget,
+  publixPageIsThin,
+  publixResponseStatusForCapture,
+  publixResponseStatusIsRelevant,
   readPublixCardMaxWaitMs,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 import { offerCountToRemember } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
@@ -207,7 +212,120 @@ describe("thin Publix capture", () => {
       gotoStatus: 200,
       extractedCount: 2,
       rememberedOfferCount: 588,
+      expectedCardCount: null,
       capturedAt: "2026-11-03T22:00:00.000Z",
+      responses: [],
     });
+  });
+
+  it("keeps a promotion status and URL and drops the body and a token query", () => {
+    expect(publixResponseStatusIsRelevant("https://services.publix.com/v1/graphql")).toBe(true);
+    expect(publixResponseStatusIsRelevant("https://www.google-analytics.com/collect")).toBe(false);
+    expect(
+      publixResponseStatusForCapture({
+        status: 200,
+        url: "https://services.publix.com/api/promotions?store=1591&access_token=secret",
+      }),
+    ).toEqual({
+      status: 200,
+      url: "https://services.publix.com/api/promotions?store=1591",
+    });
+    expect(
+      buildPublixThinCaptureMeta({
+        url: "https://www.publix.com/savings/weekly-ad/view-all",
+        gotoStatus: 200,
+        extractedCount: 5,
+        rememberedOfferCount: 133,
+        expectedCardCount: 221,
+        capturedAt: "2026-11-07T08:04:21.956Z",
+        responses: [
+          { status: 403, url: "https://services.publix.com/api/promotions" },
+        ],
+      }).responses,
+    ).toEqual([{ status: 403, url: "https://services.publix.com/api/promotions" }]);
+  });
+});
+
+describe("printed Publix result count", () => {
+  const excerpt = `
+    <div class="WeeklyAdCardGrids_weekly-ad-card-grids__virtual-container__amLR7">
+      <div id="bogo-grid" data-testid="category-section-bogo" data-weekly-ad-category-id="bogo">
+        <h2 id="bogo-heading">BOGO</h2>
+        <div><span class="PText_p-text__MArMe">221 results</span></div>
+      </div>
+    </div>`;
+
+  it("reads the category result count from a shortened heading", () => {
+    expect(parsePublixCategoryResultCounts(excerpt)).toEqual([
+      { categoryId: "bogo", count: 221 },
+    ]);
+    expect(publixListedCardTarget(parsePublixCategoryResultCounts(excerpt))).toBe(221);
+  });
+
+  it("waits for the printed count and does not stop on a stable short list", () => {
+    expect(
+      decidePublixCardPoll({
+        previousCount: 5,
+        count: 5,
+        seenCount: 5,
+        expectedCount: 221,
+        rememberedOfferCount: 133,
+        elapsedMs: 3_000,
+        maxWaitMs: 20_000,
+        samples: 4,
+        equalPositiveSamples: 4,
+      }),
+    ).toBe("continue");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 220,
+        count: 221,
+        seenCount: 221,
+        expectedCount: 221,
+        rememberedOfferCount: 133,
+        elapsedMs: 4_000,
+        maxWaitMs: 20_000,
+        samples: 5,
+        equalPositiveSamples: 1,
+      }),
+    ).toBe("listed");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 5,
+        count: 5,
+        seenCount: 5,
+        expectedCount: 221,
+        rememberedOfferCount: 133,
+        elapsedMs: 20_000,
+        maxWaitMs: 20_000,
+        samples: 20,
+        equalPositiveSamples: 16,
+      }),
+    ).toBe("max-wait");
+  });
+
+  it("treats five mounted cards as thin when the page says 221 results", () => {
+    expect(
+      publixPageIsThin({
+        seenCount: 5,
+        expectedCount: 221,
+        rememberedOfferCount: 133,
+      }),
+    ).toBe(true);
+    expect(
+      publixPageIsThin({
+        seenCount: 221,
+        expectedCount: 221,
+        rememberedOfferCount: 133,
+      }),
+    ).toBe(false);
+    expect(
+      publixPageIsThin({
+        seenCount: 80,
+        expectedCount: null,
+        rememberedOfferCount: null,
+        minCards: 50,
+      }),
+    ).toBe(false);
   });
 });

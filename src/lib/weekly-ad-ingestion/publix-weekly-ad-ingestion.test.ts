@@ -147,7 +147,9 @@ describe("publix weekly ad ingestion", () => {
       networkJsonBodies: [],
       waitSelectorMatched: true,
       attempts: 1,
-      savingsCardCount: 5,
+      savingsCardCount: 80,
+      seenCardCount: 80,
+      expectedCardCount: 221,
     });
     vi.spyOn(publixParser, "parsePublixWeeklyAd").mockReturnValue([
       { productName: "Perdue Boneless Skinless Chicken Breasts", price: 3.99 },

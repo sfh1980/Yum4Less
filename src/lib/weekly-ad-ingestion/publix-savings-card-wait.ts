@@ -1,11 +1,18 @@
 /**
  * Publix savings-card settle rules.
  * The browser used to return on the first non-zero card count.
- * A count is enough when it reaches at least half of the remembered raw card count,
- * or when the same positive count has been seen three times and that count is not thin.
- * A thin count keeps waiting until the max wait. A thin count does not replace the memory.
+ * When the page prints "221 results" under a category heading, that number is
+ * the count to reach. A stable handful of cards is not enough while the
+ * mounted count is still under it. The wait then runs until the mounted or
+ * distinct cards reach that count, or the max wait elapses.
+ * With no printed count, a count is enough when it reaches at least half of
+ * the remembered raw card count, or when the same positive count has been
+ * seen three times and that count is not thin.
+ * A thin count keeps waiting until the max wait. A thin count does not
+ * replace the memory.
  *
- * Thin means under half of a positive remembered count, or under
+ * Thin means under the printed result count when the page has one. Otherwise
+ * under half of a positive remembered count, or under
  * YUM4LESS_PUBLIX_THIN_MIN_CARDS (default 50) when nothing is remembered.
  */
 
@@ -16,7 +23,19 @@ export const PUBLIX_CARD_MAX_WAIT_MS_MIN = 1_000;
 export const PUBLIX_CARD_MAX_WAIT_MS_MAX = 60_000;
 export const PUBLIX_THIN_MIN_CARDS_DEFAULT = 50;
 
-export type PublixCardPollStop = "stable" | "half" | "max-wait";
+export type PublixCardPollStop = "stable" | "half" | "listed" | "max-wait";
+
+export type PublixCategoryResultCount = {
+  categoryId: string;
+  count: number;
+};
+
+export type PublixResponseStatus = {
+  status: number;
+  url: string;
+};
+
+const SECRET_QUERY_KEY = /^(token|access_token|id_token|sig|signature|key|api_key|apikey)$/i;
 
 export function readPublixCardMaxWaitMs(
   env: NodeJS.ProcessEnv = process.env,
@@ -80,9 +99,104 @@ export function nextPublixEqualPositiveSamples(input: {
 }
 
 /**
- * Stop when the count reached half the memory, when the same positive count
- * has been seen three times and is not thin, or when the max wait has elapsed.
- * A stable thin count keeps waiting. One unchanged poll is not a stop.
+ * A category heading and the "N results" text that follows it.
+ * The live page puts both inside the element that carries
+ * data-weekly-ad-category-id. A heading-only excerpt still counts.
+ */
+export function parsePublixCategoryResultCounts(html: string): PublixCategoryResultCount[] {
+  const counts: PublixCategoryResultCount[] = [];
+  const seen = new Set<string>();
+  const sectionPattern =
+    /data-weekly-ad-category-id=["']([^"']+)["'][\s\S]{0,900}?(\d{1,5})\s+results\b/gi;
+  const headingPattern =
+    /<h2\b[^>]*>\s*([^<]{1,40}?)\s*<\/h2>[\s\S]{0,500}?(\d{1,5})\s+results\b/gi;
+
+  for (const match of html.matchAll(sectionPattern)) {
+    pushPublixCategoryResultCount(counts, seen, match[1], match[2]);
+  }
+  if (counts.length > 0) {
+    return counts;
+  }
+  for (const match of html.matchAll(headingPattern)) {
+    pushPublixCategoryResultCount(counts, seen, match[1], match[2]);
+  }
+  return counts;
+}
+
+function pushPublixCategoryResultCount(
+  counts: PublixCategoryResultCount[],
+  seen: Set<string>,
+  rawId: string | undefined,
+  rawCount: string | undefined,
+) {
+  const categoryId = rawId?.trim().toLowerCase() ?? "";
+  const count = Number(rawCount);
+  if (!categoryId || !Number.isInteger(count) || count <= 0 || seen.has(categoryId)) {
+    return;
+  }
+  seen.add(categoryId);
+  counts.push({ categoryId, count });
+}
+
+/** Sum of the printed category counts. Null when the page did not print one. */
+export function publixListedCardTarget(
+  counts: readonly PublixCategoryResultCount[],
+): number | null {
+  if (counts.length === 0) {
+    return null;
+  }
+  const total = counts.reduce((sum, item) => sum + item.count, 0);
+  return total > 0 ? total : null;
+}
+
+/**
+ * Under the printed result count when the page has one.
+ * Otherwise the remembered-count rule.
+ */
+export function publixPageIsThin(input: {
+  seenCount: number;
+  expectedCount?: number | null;
+  rememberedOfferCount: number | null;
+  minCards?: number;
+}): boolean {
+  if (typeof input.expectedCount === "number" && input.expectedCount > 0) {
+    return input.seenCount < input.expectedCount;
+  }
+  return publixCardCountIsThin(
+    input.seenCount,
+    input.rememberedOfferCount,
+    input.minCards,
+  );
+}
+
+/** Promotions and Publix JSON calls. Status and URL only; the body stays out. */
+export function publixResponseStatusIsRelevant(url: string): boolean {
+  return /graphql|promotion|savings|services\.publix\.com|weekly-ad/i.test(url);
+}
+
+export function publixResponseStatusForCapture(input: {
+  status: number;
+  url: string;
+}): PublixResponseStatus {
+  try {
+    const parsed = new URL(input.url);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (SECRET_QUERY_KEY.test(key)) {
+        parsed.searchParams.delete(key);
+      }
+    }
+    return { status: input.status, url: parsed.toString() };
+  } catch {
+    return { status: input.status, url: input.url.split("?")[0] ?? input.url };
+  }
+}
+
+/**
+ * Stop when the mounted cards reach the printed result count.
+ * Otherwise stop when the count reached half the memory, when the same
+ * positive count has been seen three times and is not thin, or when the
+ * max wait has elapsed. A printed count ignores the early half and stable
+ * stops. A stable thin count keeps waiting. One unchanged poll is not a stop.
  * A stuck zero keeps waiting.
  */
 export function decidePublixCardPoll(input: {
@@ -94,7 +208,19 @@ export function decidePublixCardPoll(input: {
   samples: number;
   equalPositiveSamples: number;
   minCards?: number;
+  expectedCount?: number | null;
+  seenCount?: number;
 }): "continue" | PublixCardPollStop {
+  const seen = input.seenCount ?? input.count;
+  if (typeof input.expectedCount === "number" && input.expectedCount > 0) {
+    if (seen >= input.expectedCount) {
+      return "listed";
+    }
+    if (input.elapsedMs >= input.maxWaitMs) {
+      return "max-wait";
+    }
+    return "continue";
+  }
   if (publixCardCountReachesHalf(input.count, input.rememberedOfferCount)) {
     return "half";
   }
@@ -123,6 +249,8 @@ export function buildPublixThinCaptureMeta(input: {
   extractedCount: number;
   rememberedOfferCount: number | null;
   capturedAt: string;
+  expectedCardCount?: number | null;
+  responses?: readonly PublixResponseStatus[];
 }) {
   return {
     url: input.url,
@@ -130,6 +258,8 @@ export function buildPublixThinCaptureMeta(input: {
     gotoStatus: input.gotoStatus,
     extractedCount: input.extractedCount,
     rememberedOfferCount: input.rememberedOfferCount,
+    expectedCardCount: input.expectedCardCount ?? null,
     capturedAt: input.capturedAt,
+    responses: [...(input.responses ?? [])],
   };
 }

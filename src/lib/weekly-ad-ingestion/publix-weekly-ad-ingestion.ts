@@ -2,7 +2,7 @@ import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chai
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { fetchPublixWeeklyAdPage } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-fetcher";
-import { publixCardCountIsThin } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
+import { publixPageIsThin } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 import { loadPublixFlippFlyerOffers } from "@/lib/weekly-ad-ingestion/publix-flipp-flyer-fallback";
 import { readWeeklyAdFlyerRawCardCount } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import { buildPublixWeeklyAdUrl } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-url";
@@ -72,9 +72,14 @@ async function ingestPublixWeeklyAd(
       html: pageFetch.html,
       networkJsonBodies: pageFetch.networkJsonBodies,
     });
+    const seenCardCount = pageFetch.seenCardCount ?? pageFetch.savingsCardCount;
     const scrapeIsThin =
-      typeof pageFetch.savingsCardCount === "number" &&
-      publixCardCountIsThin(pageFetch.savingsCardCount, rememberedCardCount);
+      typeof seenCardCount === "number" &&
+      publixPageIsThin({
+        seenCount: seenCardCount,
+        expectedCount: pageFetch.expectedCardCount,
+        rememberedOfferCount: rememberedCardCount,
+      });
 
     if (rawOffers.length === 0) {
       captureWeeklyAdArtifacts({
