@@ -10,6 +10,8 @@ import {
   planOutsideCheckFollowUp,
   readOutsideCheckCutoff,
   chainPriceExceptionsInNote,
+  coverageBaselineInNote,
+  coverageDropNamesInNote,
   composeMissedMorningReport,
   composeMorningReport,
   countConsecutiveRecipeImportMisses,
@@ -23,6 +25,7 @@ import {
   pickMorningZipCandidates,
   previousMorningReportDate,
   recipeImportDidNotFinish,
+  rowsPerStoreInNote,
   describeAddSkipLine,
   type MorningChainPriceFact,
 } from "@/lib/owner/morning-report";
@@ -623,6 +626,70 @@ describe("morning report", () => {
     });
     expect(stillInformation.needsAttention).toBe(false);
     expect(previousMorningReportDate("2026-10-27")).toBe("2026-10-26");
+  });
+
+  it("says when rows per store fall under half, and Needs you on the second morning", () => {
+    const chains = [
+      priceChain({ displayName: "Aldi", freshFlyerCount: 440, rowsPerStore: 40 }),
+      priceChain({
+        displayName: "Publix",
+        freshFlyerCount: 264,
+        rowsPerStore: 24,
+        priceMissReason: "thin-page",
+      }),
+    ];
+    const first = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: [],
+      previousRowsPerStore: { Aldi: 40, Publix: 132 },
+      priorCoverageDropNames: [],
+    });
+    expect(first.needsAttention).toBe(false);
+    expect(first.body).toContain("All 2 chains have prices from the last day.");
+    expect(first.body).toContain("Publix has 24 rows per store, down from 132.");
+    expect(first.body).toContain("Publix weekly ad page was thin.");
+    expect(first.body).toContain("Rows per store: Aldi 40, Publix 24.");
+    expect(first.body).not.toContain("Price rows per store are down again.");
+    expect(first.body).toContain("Nothing needs you.");
+    expect(rowsPerStoreInNote(first.body)).toEqual({ Aldi: 40, Publix: 24 });
+    expect(coverageDropNamesInNote(first.body)).toEqual(["Publix"]);
+
+    const second = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: [],
+      previousRowsPerStore: coverageBaselineInNote(first.body),
+      priorCoverageDropNames: coverageDropNamesInNote(first.body),
+    });
+    expect(coverageBaselineInNote(first.body)?.Publix).toBe(132);
+    expect(second.needsAttention).toBe(true);
+    expect(second.body).toContain("Publix has 24 rows per store, down from 132.");
+    expect(second.body).toContain("Price rows per store are down again.");
+    expect(second.body.endsWith("Needs you.")).toBe(true);
+
+    const kept = applyOutsideResultToMorningNote(second.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(kept.needsAttention).toBe(true);
+    expect(kept.body).toContain("Publix has 24 rows per store, down from 132.");
+
+    const held = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({ displayName: "Publix", freshFlyerCount: 880, rowsPerStore: 80 }),
+      ],
+      priorChainPriceExceptions: [],
+      previousRowsPerStore: { Publix: 132 },
+      priorCoverageDropNames: [],
+    });
+    expect(held.body).not.toContain("down from");
+    expect(held.needsAttention).toBe(false);
   });
 
   it("accepts only a Discord webhook URL", () => {

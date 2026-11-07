@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPublixWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-ingestion";
 import * as flippResolver from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
+import * as publixFlyerFallback from "@/lib/weekly-ad-ingestion/publix-flipp-flyer-fallback";
 import * as publixFetcher from "@/lib/weekly-ad-ingestion/publix-weekly-ad-fetcher";
 import * as publixParser from "@/lib/weekly-ad-ingestion/parse-publix-weekly-ad";
 import * as publixStore from "@/lib/weekly-ad-ingestion/publix-weekly-ad-store";
@@ -127,5 +128,74 @@ describe("publix weekly ad ingestion", () => {
     expect(result.status).toBe("live");
     expect(result.offers.filter((offer) => offer.ingredientId === "broccoli")).toHaveLength(1);
     expect(result.message).toContain("Flipp supplemental lookup was unavailable");
+  });
+
+  it("fills a thin scrape from the Flipp flyer and keeps the scrape price for a shared ingredient", async () => {
+    vi.spyOn(publixStore, "resolvePublixStoreForZip").mockResolvedValue({
+      storeCookie: {
+        StoreName: "Virginia Center",
+        StoreNumber: 1591,
+        Option: "ACFHLNOTY",
+        ShortStoreName: "Virginia Center",
+      },
+      storeKey: "1591",
+      storeName: "Virginia Center",
+    });
+    vi.spyOn(publixFetcher, "fetchPublixWeeklyAdPage").mockResolvedValue({
+      html: "<html></html>",
+      method: "browser",
+      networkJsonBodies: [],
+      waitSelectorMatched: true,
+      attempts: 1,
+      savingsCardCount: 5,
+    });
+    vi.spyOn(publixParser, "parsePublixWeeklyAd").mockReturnValue([
+      { productName: "Perdue Boneless Skinless Chicken Breasts", price: 3.99 },
+    ]);
+    const searchSpy = vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain");
+    vi.spyOn(publixFlyerFallback, "loadPublixFlippFlyerOffers").mockResolvedValue({
+      offers: [
+        {
+          productName: "Publix Boneless Skinless Chicken Breasts",
+          price: 2.49,
+          saleLabel: "Flipp flyer",
+          validFrom: "2026-11-05T00:00:00-05:00",
+          validThrough: "2026-11-11T23:59:59-05:00",
+        },
+        {
+          productName: "Kraft Parmesan Cheese",
+          price: 4.29,
+          saleLabel: "Flipp flyer",
+          validFrom: "2026-11-05T00:00:00-05:00",
+          validThrough: "2026-11-11T23:59:59-05:00",
+        },
+      ],
+      flyerId: 22,
+      itemCount: 348,
+    });
+
+    const client = createPublixWeeklyAdIngestionClient();
+    const result = await client.ingestWeeklyAd({
+      chain: "publix",
+      storeId: "publix-1591",
+      storeName: "Virginia Center",
+      zipCode: "23005",
+      trackedIngredientIds: ["chicken-breast", "parmesan"],
+    });
+
+    expect(searchSpy).not.toHaveBeenCalled();
+    expect(result.thinPage).toBe(true);
+    expect(result.offers.filter((offer) => offer.ingredientId === "chicken-breast")).toEqual([
+      expect.objectContaining({ price: 3.99 }),
+    ]);
+    expect(result.offers.filter((offer) => offer.ingredientId === "parmesan")).toEqual([
+      expect.objectContaining({
+        price: 4.29,
+        saleLabel: "Flipp flyer",
+        validFrom: "2026-11-05T00:00:00-05:00",
+        validThrough: "2026-11-11T23:59:59-05:00",
+      }),
+    ]);
+    expect(result.message).toContain("Flipp flyer ingredient match");
   });
 });

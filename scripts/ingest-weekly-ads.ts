@@ -48,6 +48,7 @@ import {
   type WeeklyAdRetryState,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-retry";
 import { acquireWeeklyAdIngestLock } from "@/lib/weekly-ad-ingestion/weekly-ad-ingest-lock";
+import { readWeeklyAdThinPageChains } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 
 loadEnvLocal();
 
@@ -182,7 +183,7 @@ async function main() {
     const choice = await chooseStaleWeeklyAdChain(admittedStores);
     if (!choice || !flyerZipCode) {
       console.log(
-        "[weekly-ad-retry] no chain with no fresh rows is under today's limit.",
+        "[weekly-ad-retry] no chain with no fresh rows or a thin page is under today's limit.",
       );
       process.exit(0);
     }
@@ -328,6 +329,7 @@ async function chooseStaleWeeklyAdChain(
     }
   }
   const freshness = await queryRankedPriceFreshness(pool);
+  const thinPages = await readWeeklyAdThinPageChains();
   const fresh = new Map<string, number>();
   for (const row of freshness.bySource) {
     const parsed = priceSourceFreshnessKind(row.sourceName);
@@ -342,6 +344,7 @@ async function chooseStaleWeeklyAdChain(
     candidates: ordered.map((chainId) => ({
       chainId,
       freshCount: fresh.get(chainId) ?? 0,
+      thinPage: thinPages.has(chainId),
     })),
     attemptsToday: state.counts,
     maxPerDay: readWeeklyAdRetryMaxPerDay(process.env),

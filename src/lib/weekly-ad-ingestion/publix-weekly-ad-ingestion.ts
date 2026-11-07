@@ -2,6 +2,8 @@ import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chai
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
 import { fetchPublixWeeklyAdPage } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-fetcher";
+import { publixCardCountIsThin } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
+import { loadPublixFlippFlyerOffers } from "@/lib/weekly-ad-ingestion/publix-flipp-flyer-fallback";
 import { readWeeklyAdFlyerRawCardCount } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import { buildPublixWeeklyAdUrl } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-url";
 import { resolvePublixStoreForZip } from "@/lib/weekly-ad-ingestion/publix-weekly-ad-store";
@@ -70,6 +72,9 @@ async function ingestPublixWeeklyAd(
       html: pageFetch.html,
       networkJsonBodies: pageFetch.networkJsonBodies,
     });
+    const scrapeIsThin =
+      typeof pageFetch.savingsCardCount === "number" &&
+      publixCardCountIsThin(pageFetch.savingsCardCount, rememberedCardCount);
 
     if (rawOffers.length === 0) {
       captureWeeklyAdArtifacts({
@@ -82,7 +87,9 @@ async function ingestPublixWeeklyAd(
           ? `No Publix weekly-ad offers parsed for store ${storeContext.storeName ?? storeContext.storeKey ?? "unknown"}.`
           : `No Publix store cookie resolved for ZIP ${input.zipCode}.`,
       });
+    }
 
+    if (rawOffers.length === 0 && !scrapeIsThin) {
       return {
         chain: "publix",
         label,
@@ -93,6 +100,7 @@ async function ingestPublixWeeklyAd(
         fallbackUsed: pageFetch.method === "browser",
         offers: [],
         rawCardCount: pageFetch.savingsCardCount,
+        thinPage: false,
         message: storeContext.storeCookie
           ? `${label} loaded ${storeContext.storeName ?? "a nearby Publix store"} via ${pageFetch.method} (${pageFetch.attempts} attempt(s), ${pageFetch.networkJsonBodies.length} network payload(s)), but Yum4Less could not extract offer rows yet. Set YUM4LESS_WEEKLY_AD_CAPTURE=1 to save HTML/network artifacts for parser work.`
           : `${label} could not resolve a nearby Publix store for ZIP ${input.zipCode}. Store selection is required before weekly-ad offers can load.`,
@@ -114,15 +122,36 @@ async function ingestPublixWeeklyAd(
       fetchedAt,
       sourceUrl,
       scrapeOffers,
+      scrapeIsThin,
     });
     const offers = [...scrapeOffers, ...supplementalResult.offers];
     const matchedCount = offers.filter((offer) => offer.ingredientId).length;
     const supplementalNote =
       supplementalResult.offers.length > 0
-        ? ` Added ${supplementalResult.offers.length} Flipp supplemental ingredient match(es) not already covered by scrape.`
+        ? scrapeIsThin
+          ? ` Added ${supplementalResult.offers.length} Flipp flyer ingredient match(es) not already covered by the scrape.`
+          : ` Added ${supplementalResult.offers.length} Flipp supplemental ingredient match(es) not already covered by scrape.`
         : supplementalResult.message
           ? ` ${supplementalResult.message}`
           : "";
+
+    if (offers.length === 0) {
+      return {
+        chain: "publix",
+        label,
+        status: "error",
+        provenance: "weekly-ad-scrape",
+        retrievalMode: "live",
+        configured: true,
+        fallbackUsed: true,
+        offers: [],
+        rawCardCount: pageFetch.savingsCardCount,
+        thinPage: scrapeIsThin,
+        message: `${label} parsed no scrape offers.${supplementalNote}`,
+        fetchedAt,
+        termsNote,
+      };
+    }
 
     return {
       chain: "publix",
@@ -134,6 +163,7 @@ async function ingestPublixWeeklyAd(
       fallbackUsed: pageFetch.method === "browser",
       offers,
       rawCardCount: pageFetch.savingsCardCount,
+      thinPage: scrapeIsThin,
       message: `Parsed Publix weekly-ad run for ${storeContext.storeName ?? input.storeName} via ${pageFetch.method} extracted ${rawOffers.length} scrape offer(s); ${matchedCount} matched tracked dinner ingredients.${supplementalNote}`,
       fetchedAt,
       termsNote,
@@ -171,7 +201,11 @@ async function resolvePublixFlippSupplementalOffers(input: {
   fetchedAt: string;
   sourceUrl: string;
   scrapeOffers: WeeklyAdOffer[];
+  scrapeIsThin: boolean;
 }): Promise<{ offers: WeeklyAdOffer[]; message?: string }> {
+  if (input.scrapeIsThin) {
+    return resolveThinPublixFlippFlyerOffers(input);
+  }
   try {
     const flippResult = await resolveFlippWeeklyAdOffersForChain({
       chain: "publix",
@@ -203,6 +237,46 @@ async function resolvePublixFlippSupplementalOffers(input: {
         error instanceof Error
           ? `Flipp supplemental lookup was unavailable (${error.message}); scrape results still loaded.`
           : "Flipp supplemental lookup was unavailable; scrape results still loaded.",
+    };
+  }
+}
+
+async function resolveThinPublixFlippFlyerOffers(input: {
+  input: WeeklyAdIngestionInput;
+  fetchedAt: string;
+  sourceUrl: string;
+  scrapeOffers: WeeklyAdOffer[];
+}): Promise<{ offers: WeeklyAdOffer[]; message?: string }> {
+  try {
+    const loaded = await loadPublixFlippFlyerOffers({
+      zipCode: input.input.zipCode,
+    });
+    if (loaded.offers.length === 0) {
+      return {
+        offers: [],
+        message:
+          loaded.message ??
+          "Publix Flipp flyer fallback returned no priced items.",
+      };
+    }
+    const flippOffers = matchWeeklyAdOffers({
+      chain: "publix",
+      storeId: input.input.storeId,
+      sourceUrl: `${input.sourceUrl}#flipp-flyer`,
+      observedAt: input.fetchedAt,
+      rawOffers: loaded.offers,
+      ...weeklyAdMatchFieldsFromIngest(input.input),
+    });
+    return {
+      offers: selectPublixSupplementalOffers(input.scrapeOffers, flippOffers),
+    };
+  } catch (error) {
+    return {
+      offers: [],
+      message:
+        error instanceof Error
+          ? `Publix Flipp flyer fallback was unavailable (${error.message}); scrape results still loaded.`
+          : "Publix Flipp flyer fallback was unavailable; scrape results still loaded.",
     };
   }
 }

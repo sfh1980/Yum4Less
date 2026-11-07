@@ -48,6 +48,29 @@ describe("weekly-ad retry picker", () => {
     ).toBeNull();
   });
 
+  it("retries a thin page even when that chain still has fresh rows", () => {
+    expect(
+      selectWeeklyAdRetryChain({
+        candidates: [
+          { chainId: "aldi", freshCount: 40 },
+          { chainId: "publix", freshCount: 24, thinPage: true },
+        ],
+        attemptsToday: {},
+        maxPerDay: 6,
+      }),
+    ).toBe("publix");
+    expect(
+      selectWeeklyAdRetryChain({
+        candidates: [
+          { chainId: "publix", freshCount: 24, thinPage: true },
+          { chainId: "whole-foods", freshCount: 0 },
+        ],
+        attemptsToday: { publix: 6 },
+        maxPerDay: 6,
+      }),
+    ).toBe("whole-foods");
+  });
+
   it("drops yesterday's counts", () => {
     const state = parseWeeklyAdRetryState(
       JSON.stringify({ date: "2026-11-10", counts: { "whole-foods": 6 } }),

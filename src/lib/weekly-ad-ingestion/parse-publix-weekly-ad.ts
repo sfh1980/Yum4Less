@@ -69,7 +69,7 @@ function normalizeListedSavingsCard(cardHtml: string): WeeklyAdRawOffer | null {
 
 function readListedSavingsCardTitle(cardHtml: string) {
   const titleMatch = cardHtml.match(
-    /data-qa-automation=["']prod-title["'][\s\S]*?class=["'][^"']*\btitle\b[^"']*["'][^>]*>\s*([\s\S]*?)\s*<\/span>/i,
+    /data-qa-automation=["']prod-title["'][\s\S]*?class=["'][^"']*title(?:__[A-Za-z0-9]+)?[^"']*["'][^>]*>\s*([\s\S]*?)\s*<\/span>/i,
   );
   if (titleMatch?.[1]) {
     return stripHtmlText(titleMatch[1]);
@@ -79,13 +79,25 @@ function readListedSavingsCardTitle(cardHtml: string) {
   return altMatch?.[1] ? stripHtmlText(altMatch[1]) : undefined;
 }
 
+/**
+ * Publix CSS modules prefix and hash the class (`PSavingsCard_additional-info__lOJgX`).
+ * `_` is a word character, so a word boundary on either side of the base name misses it.
+ */
+const HASHED_CLASS = String.raw`(?:__[A-Za-z0-9]+)?`;
+
 const LISTED_SAVINGS_SECTION_PATTERNS = {
-  "p-savings-badge__text":
-    /class=["'][^"']*\bp-savings-badge__text\b[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>/i,
-  "additional-info":
-    /class=["'][^"']*\badditional-info\b[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>/i,
-  "valid-dates":
-    /class=["'][^"']*\bvalid-dates\b[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>/i,
+  "p-savings-badge__text": new RegExp(
+    String.raw`class=["'][^"']*p-savings-badge__text${HASHED_CLASS}[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>`,
+    "i",
+  ),
+  "additional-info": new RegExp(
+    String.raw`class=["'][^"']*additional-info${HASHED_CLASS}[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>`,
+    "i",
+  ),
+  "valid-dates": new RegExp(
+    String.raw`class=["'][^"']*valid-dates${HASHED_CLASS}[^"']*["'][\s\S]*?>\s*([\s\S]*?)\s*<\/span>`,
+    "i",
+  ),
 } as const;
 
 function readListedSavingsCardSection(

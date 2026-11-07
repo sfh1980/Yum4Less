@@ -11,7 +11,10 @@ import { logMorningChainPriceFailure, loadMorningChainPriceFacts } from "@/lib/o
 import {
   appendMorningIssue,
   chainPriceExceptionsInNote,
+  coverageBaselineInNote,
+  coverageDropNamesInNote,
   composeMorningReport,
+  readMorningCoverageDropRatio,
   isDiscordWebhookUrl,
   isMorningZipAddDay,
   morningZipAddsEnabled,
@@ -178,6 +181,8 @@ export async function runMorningReport(): Promise<void> {
   );
   let chainPrices: MorningChainPriceFact[] | undefined;
   let priorChainPriceExceptions: string[] | null | undefined;
+  let previousRowsPerStore: Record<string, number> | null | undefined;
+  let priorCoverageDropNames: string[] | null | undefined;
   try {
     chainPrices = await loadMorningChainPriceFacts({
       activeZipCodes: active.map((market) => market.zipCode),
@@ -187,10 +192,16 @@ export async function runMorningReport(): Promise<void> {
     priorChainPriceExceptions = priorNote
       ? chainPriceExceptionsInNote(priorNote.body)
       : null;
+    previousRowsPerStore = priorNote ? coverageBaselineInNote(priorNote.body) : null;
+    priorCoverageDropNames = priorNote
+      ? coverageDropNamesInNote(priorNote.body)
+      : null;
   } catch (error) {
     logMorningChainPriceFailure(error);
     chainPrices = undefined;
     priorChainPriceExceptions = undefined;
+    previousRowsPerStore = undefined;
+    priorCoverageDropNames = undefined;
   }
   const cloudflare = await fetchCloudflareMorning();
   const recipeImportFailed = recipeImportDidNotFinish(nightJobs);
@@ -247,7 +258,15 @@ export async function runMorningReport(): Promise<void> {
     nearbyLeft,
     discordConfigured,
     chainsWithoutSaleSource,
-    ...(chainPrices ? { chainPrices, priorChainPriceExceptions } : {}),
+    ...(chainPrices
+      ? {
+          chainPrices,
+          priorChainPriceExceptions,
+          previousRowsPerStore,
+          priorCoverageDropNames,
+          coverageDropRatio: readMorningCoverageDropRatio(),
+        }
+      : {}),
     storeLookupTurnedOff: isOsmOverpassDisabled(),
     recipeImportFailed,
     recipeImportPriorMisses,

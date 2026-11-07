@@ -41,6 +41,7 @@ export function assembleMorningChainPriceFacts(input: {
   registry: readonly MorningChainRegistryRow[];
   admittedChainIds: ReadonlySet<string>;
   freshBySource: readonly { sourceName: string; freshCount: number }[];
+  admittedStoreCounts?: ReadonlyMap<string, number>;
 }): MorningChainPriceFact[] {
   const freshOfficial = new Map<string, number>();
   const freshFlyer = new Map<string, number>();
@@ -60,15 +61,21 @@ export function assembleMorningChainPriceFacts(input: {
         left.displayName.localeCompare(right.displayName),
     )
     .map((row) => {
+      const freshOfficialCount = freshOfficial.get(row.chainId) ?? 0;
+      const freshFlyerCount = freshFlyer.get(row.chainId) ?? 0;
       const fact: MorningChainPriceFact = {
         displayName: row.displayName.trim(),
         admittedStore: input.admittedChainIds.has(row.chainId),
         saleSource: row.saleSource,
-        freshOfficialCount: freshOfficial.get(row.chainId) ?? 0,
-        freshFlyerCount: freshFlyer.get(row.chainId) ?? 0,
+        freshOfficialCount,
+        freshFlyerCount,
       };
       if (row.priceMissReason) {
         fact.priceMissReason = row.priceMissReason;
+      }
+      const storeCount = input.admittedStoreCounts?.get(row.chainId) ?? 0;
+      if (storeCount > 0) {
+        fact.rowsPerStore = Math.round((freshOfficialCount + freshFlyerCount) / storeCount);
       }
       return fact;
     });
@@ -91,7 +98,7 @@ export async function loadMorningChainPriceFacts(input: {
     `,
   );
   const freshness = await queryRankedPriceFreshness(pool);
-  const admittedChainIds = await listAdmittedChainIds(input.activeZipCodes);
+  const admitted = await listAdmittedChains(input.activeZipCodes);
   const missReasons = await loadPriceMissReasons(pool);
   return assembleMorningChainPriceFacts({
     registry: registryResult.rows.map((row) => ({
@@ -101,7 +108,8 @@ export async function loadMorningChainPriceFacts(input: {
       sortOrder: row.sort_order,
       priceMissReason: missReasons.get(row.chain_id) ?? null,
     })),
-    admittedChainIds,
+    admittedChainIds: admitted.ids,
+    admittedStoreCounts: admitted.storeCounts,
     freshBySource: freshness.bySource,
   });
 }
@@ -137,10 +145,11 @@ async function loadPriceMissReasons(
  * Chains with a catalog store inside an active ZIP's ingest fence.
  * Same fence the weekly-ad night uses. This walk is separate from that script.
  */
-async function listAdmittedChainIds(
+async function listAdmittedChains(
   activeZipCodes: readonly string[],
-): Promise<Set<string>> {
-  const admitted = new Set<string>();
+): Promise<{ ids: Set<string>; storeCounts: Map<string, number> }> {
+  const ids = new Set<string>();
+  const storesByChain = new Map<string, Set<string>>();
   const stores = await loadCatalogStores();
   for (const zipCode of activeZipCodes) {
     const locationResult = await resolveLocationInput({ zipCode });
@@ -162,12 +171,20 @@ async function listAdmittedChainIds(
     );
     for (const store of nearby) {
       const chain = inferStoreChainFromCatalog(store);
-      if (isWeeklyAdChain(chain)) {
-        admitted.add(chain);
+      if (!isWeeklyAdChain(chain)) {
+        continue;
       }
+      ids.add(chain);
+      const seen = storesByChain.get(chain) ?? new Set<string>();
+      seen.add(store.id);
+      storesByChain.set(chain, seen);
     }
   }
-  return admitted;
+  const storeCounts = new Map<string, number>();
+  for (const [chain, seen] of storesByChain) {
+    storeCounts.set(chain, seen.size);
+  }
+  return { ids, storeCounts };
 }
 
 export function logMorningChainPriceFailure(error: unknown) {

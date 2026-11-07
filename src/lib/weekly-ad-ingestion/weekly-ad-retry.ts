@@ -16,6 +16,8 @@ export const WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT = 6;
 export type WeeklyAdRetryCandidate = {
   chainId: string;
   freshCount: number;
+  /** Latest parse was thin. Retried even when fresh rows remain. */
+  thinPage?: boolean;
 };
 
 export type WeeklyAdRetryState = {
@@ -72,8 +74,9 @@ export function parseWeeklyAdRetryState(raw: string, today: string): WeeklyAdRet
 }
 
 /**
- * First admitted chain, in the given order, that has no fresh rows and is
- * still under today's limit. A chain with fresh official or flyer rows is skipped.
+ * First admitted chain, in the given order, that still needs a retry and is
+ * under today's limit. A chain needs a retry when it has no fresh rows or its
+ * latest parse was thin. The six-attempt cap still applies.
  */
 export function selectWeeklyAdRetryChain(input: {
   candidates: readonly WeeklyAdRetryCandidate[];
@@ -81,7 +84,7 @@ export function selectWeeklyAdRetryChain(input: {
   maxPerDay: number;
 }): string | null {
   for (const candidate of input.candidates) {
-    if (candidate.freshCount > 0) {
+    if (candidate.freshCount > 0 && candidate.thinPage !== true) {
       continue;
     }
     const attempts = input.attemptsToday[candidate.chainId] ?? 0;

@@ -60,4 +60,21 @@ describe("morning chain price facts", () => {
       },
     ]);
   });
+
+  it("rounds fresh rows per admitted store", () => {
+    const facts = assembleMorningChainPriceFacts({
+      registry: [
+        {
+          chainId: "publix",
+          displayName: "Publix",
+          saleSource: true,
+          sortOrder: 30,
+        },
+      ],
+      admittedChainIds: new Set(["publix"]),
+      admittedStoreCounts: new Map([["publix", 11]]),
+      freshBySource: [{ sourceName: "publix-weekly-ad-scrape", freshCount: 264 }],
+    });
+    expect(facts[0]?.rowsPerStore).toBe(24);
+  });
 });
