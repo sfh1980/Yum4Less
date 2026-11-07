@@ -26,18 +26,7 @@ describe("Publix savings-card settle", () => {
     ).toBe("continue");
   });
 
-  it("keeps waiting after one unchanged poll and stops on the third equal positive poll", () => {
-    expect(
-      decidePublixCardPoll({
-        previousCount: 2,
-        count: 2,
-        rememberedOfferCount: remembered,
-        elapsedMs: 1_000,
-        maxWaitMs: 20_000,
-        samples: 2,
-        equalPositiveSamples: 2,
-      }),
-    ).toBe("continue");
+  it("keeps waiting on a stable thin count and stops a stable count that is not thin", () => {
     expect(
       decidePublixCardPoll({
         previousCount: 2,
@@ -47,6 +36,29 @@ describe("Publix savings-card settle", () => {
         maxWaitMs: 20_000,
         samples: 3,
         equalPositiveSamples: 3,
+      }),
+    ).toBe("continue");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 2,
+        count: 2,
+        rememberedOfferCount: remembered,
+        elapsedMs: 20_000,
+        maxWaitMs: 20_000,
+        samples: 4,
+        equalPositiveSamples: 4,
+      }),
+    ).toBe("max-wait");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 80,
+        count: 80,
+        rememberedOfferCount: null,
+        elapsedMs: 2_000,
+        maxWaitMs: 20_000,
+        samples: 3,
+        equalPositiveSamples: 3,
+        minCards: 50,
       }),
     ).toBe("stable");
   });
@@ -138,10 +150,12 @@ describe("Publix savings-card settle", () => {
     ).toBe(0);
   });
 
-  it("marks a count under half the memory as thin and leaves an unknown memory alone", () => {
-    expect(publixCardCountIsThin(2, remembered)).toBe(true);
-    expect(publixCardCountIsThin(294, remembered)).toBe(false);
-    expect(publixCardCountIsThin(2, null)).toBe(false);
+  it("marks a count under half the memory as thin, and a small count with no memory as thin", () => {
+    expect(publixCardCountIsThin(2, remembered, 50)).toBe(true);
+    expect(publixCardCountIsThin(294, remembered, 50)).toBe(false);
+    expect(publixCardCountIsThin(5, null, 50)).toBe(true);
+    expect(publixCardCountIsThin(50, null, 50)).toBe(false);
+    expect(publixCardCountIsThin(5, 133, 50)).toBe(true);
   });
 
   it("reads the maximum wait setting and falls back when it is unset", () => {

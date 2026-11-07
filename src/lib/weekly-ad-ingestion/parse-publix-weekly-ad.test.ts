@@ -17,6 +17,33 @@ describe("parsePublixWeeklyAd", () => {
     expect(offers.some((offer) => offer.productName.includes("Broccoli"))).toBe(true);
   });
 
+  it("parses a hashed savings card from the thin Publix page", () => {
+    // Shortened from publix-thin/2026-11-07T08-04-21.956Z/page.html.
+    // The full capture stays untracked. CSS module classes keep the hash suffix.
+    const card = `
+      <div data-qa-automation="listed-savings-card">
+        <div data-qa-automation="prod-title">
+          <span class="PCard_title__Cw18N">Publix Boneless Skinless Chicken Breasts</span>
+        </div>
+        <button aria-label="Publix Boneless Skinless Chicken Breasts">
+          <img alt="Publix Boneless Skinless Chicken Breasts" fetchpriority="auto" />
+        </button>
+        <div class="PSavingsBadge_p-savings-badge__text__veUB0"><span>buy 1 get 1 free</span></div>
+        <span class="PSavingsCard_additional-info__lOJgX">save up to $5.39 lb</span>
+        <span class="PSavingsCard_valid-dates__pso_7">Valid 11/4 - 11/10</span>
+      </div>
+    `;
+
+    expect(parsePublixWeeklyAd({ html: card, networkJsonBodies: [] })).toEqual([
+      expect.objectContaining({
+        productName: "Publix Boneless Skinless Chicken Breasts",
+        price: 5.39,
+        saleLabel: expect.stringContaining("BOGO"),
+        validThrough: "Valid 11/4 - 11/10",
+      }),
+    ]);
+  });
+
   it("parses live-style listed savings cards from HTML", () => {
     const meatCard = `
       <div data-qa-automation="listed-savings-card" data-item-code="-2023504479">

@@ -66,6 +66,25 @@ export async function readWeeklyAdFlyerRawCardCount(
   }
 }
 
+/** Chains whose latest parse was recorded as a thin page. */
+export async function readWeeklyAdThinPageChains(): Promise<Set<string>> {
+  if (!flyerHashDbEnabled()) {
+    return new Set();
+  }
+  try {
+    const result = await getDbPool().query<{ chain: string }>(
+      `
+        select chain
+        from weekly_ad_flyer_hashes
+        where price_miss_reason = 'thin-page'
+      `,
+    );
+    return new Set(result.rows.map((row) => row.chain).filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
 export async function readWeeklyAdFlyerOfferCount(
   chain: string,
 ): Promise<number | null> {
@@ -106,7 +125,8 @@ export type WeeklyAdPriceMissReason =
   | "flyer-not-published"
   | "no-store"
   | "fetch-failed"
-  | "no-unit-prices";
+  | "no-unit-prices"
+  | "thin-page";
 
 /**
  * Why the last weekly-ad pass wrote no current rows for this chain.

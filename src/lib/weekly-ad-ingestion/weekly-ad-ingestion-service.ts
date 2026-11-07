@@ -37,7 +37,10 @@ import { tryDiscoveredChainFlyers } from "@/lib/weekly-ad-ingestion/discovered-c
 import { rejectPendingReviewsMatchingJunk } from "@/lib/owner/ingredient-review-repository";
 import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
 import { logServerError } from "@/lib/server-log";
-import { readWeeklyAdFlyerHash } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
+import {
+  readWeeklyAdFlyerHash,
+  recordWeeklyAdPriceMissReason,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import {
   getWeeklyAdIngestionStatusSummaries,
   syncWeeklyAdOffersToPriceObservations,
@@ -159,6 +162,12 @@ export async function runWeeklyAdIngestionForStores(input: {
           })),
         );
       }
+      if (input.persistToDatabase && result.thinPage) {
+        await recordWeeklyAdPriceMissReason({
+          chain: "kroger",
+          reason: "thin-page",
+        });
+      }
     }
   }
 
@@ -197,6 +206,12 @@ export async function runWeeklyAdIngestionForStores(input: {
           stores: chainStores,
         })),
       );
+    }
+    if (input.persistToDatabase && result.thinPage) {
+      await recordWeeklyAdPriceMissReason({
+        chain,
+        reason: "thin-page",
+      });
     }
   }
 

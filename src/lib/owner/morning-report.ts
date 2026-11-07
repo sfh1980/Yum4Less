@@ -168,10 +168,16 @@ export type MorningChainPriceFact = {
   freshFlyerCount: number;
   /** Last weekly-ad miss, from weekly_ad_flyer_hashes.price_miss_reason. */
   priceMissReason?: string | null;
+  /** Fresh rows divided by admitted stores, rounded. Absent when the store count is unknown. */
+  rowsPerStore?: number;
 };
 
 const CHAIN_PRICE_EXCEPTION_LINE =
-  /^(.+?) (?:has no prices from the last day|flyer not yet published|store was not found|flyer fetch failed|flyer had no unit prices)\.$/;
+  /^(.+?) (?:has no prices from the last day|flyer not yet published|store was not found|flyer fetch failed|flyer had no unit prices|weekly ad page was thin)\.$/;
+const COVERAGE_DROP_LINE = /^(.+) has (\d+) rows per store, down from (\d+)\.$/;
+const ROWS_PER_STORE_LINE = /^Rows per store: (.+)\.$/;
+export const MORNING_COVERAGE_DROP_RATIO_DEFAULT = 0.5;
+const COVERAGE_DROP_AGAIN_LINE = "Price rows per store are down again.";
 const CHAIN_PRICE_REPEAT_LINE =
   /^\d+ of \d+ chains? (?:is|are) missing prices from the last day again\.$/;
 
@@ -290,9 +296,84 @@ export function chainPriceExceptionSentence(chain: {
       return `${name} flyer fetch failed.`;
     case "no-unit-prices":
       return `${name} flyer had no unit prices.`;
+    case "thin-page":
+      return `${name} weekly ad page was thin.`;
     default:
       return `${name} has no prices from the last day.`;
   }
+}
+
+export function readMorningCoverageDropRatio(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const raw = env.YUM4LESS_MORNING_COVERAGE_DROP_RATIO?.trim();
+  if (!raw) {
+    return MORNING_COVERAGE_DROP_RATIO_DEFAULT;
+  }
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed > 0 && parsed < 1) {
+    return parsed;
+  }
+  return MORNING_COVERAGE_DROP_RATIO_DEFAULT;
+}
+
+export function rowsPerStoreInNote(body: string): Record<string, number> | null {
+  const line = body
+    .split("\n")
+    .map((entry) => entry.trim())
+    .find((entry) => ROWS_PER_STORE_LINE.test(entry));
+  if (!line) {
+    return null;
+  }
+  const match = ROWS_PER_STORE_LINE.exec(line);
+  const counts: Record<string, number> = {};
+  for (const part of (match?.[1] ?? "").split(", ")) {
+    const item = /^(.*) (\d+)$/.exec(part.trim());
+    if (!item?.[1]) {
+      continue;
+    }
+    counts[item[1]] = Number(item[2]);
+  }
+  return counts;
+}
+
+/**
+ * Yesterday's comparison baseline. A down-from line keeps the higher count
+ * so a chain that stays low is still under half on the next morning.
+ */
+export function coverageBaselineInNote(body: string): Record<string, number> | null {
+  const census = rowsPerStoreInNote(body);
+  if (!census) {
+    return null;
+  }
+  const baseline = { ...census };
+  for (const line of body.split("\n")) {
+    const match = COVERAGE_DROP_LINE.exec(line.trim());
+    if (match?.[1]) {
+      baseline[match[1]] = Number(match[3]);
+    }
+  }
+  return baseline;
+}
+
+export function coverageDropNamesInNote(body: string): string[] {
+  return body.split("\n").flatMap((line) => {
+    const match = COVERAGE_DROP_LINE.exec(line.trim());
+    return match?.[1] ? [match[1]] : [];
+  });
+}
+
+function rowsPerStoreCensusLine(
+  chains: readonly { displayName: string; rowsPerStore?: number }[],
+): string | null {
+  const parts = chains
+    .filter((chain) => typeof chain.rowsPerStore === "number")
+    .map((chain) => ({ name: chain.displayName.trim(), rows: chain.rowsPerStore as number }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  if (parts.length === 0) {
+    return null;
+  }
+  return `Rows per store: ${parts.map((part) => `${part.name} ${part.rows}`).join(", ")}.`;
 }
 
 export function chainPriceExceptionsInNote(body: string): string[] {
@@ -305,6 +386,9 @@ export function chainPriceExceptionsInNote(body: string): string[] {
 export function describeMorningChainPrices(input: {
   chains: readonly MorningChainPriceFact[];
   priorExceptionNames: readonly string[] | null;
+  previousRowsPerStore?: Readonly<Record<string, number>> | null;
+  priorCoverageDropNames?: readonly string[] | null;
+  coverageDropRatio?: number;
 }): {
   lines: string[];
   needsAttention: boolean;
@@ -326,14 +410,53 @@ export function describeMorningChainPrices(input: {
   const repeated = prior
     ? exceptionNames.filter((name) => prior.includes(name))
     : [];
+  const ratio = input.coverageDropRatio ?? MORNING_COVERAGE_DROP_RATIO_DEFAULT;
+  const previousRows = input.previousRowsPerStore;
+  const drops = previousRows
+    ? counted.flatMap((chain) => {
+        const name = chain.displayName.trim();
+        const today = chain.rowsPerStore;
+        const previous = previousRows[name];
+        if (typeof today !== "number" || typeof previous !== "number" || previous <= 0) {
+          return [];
+        }
+        if (!(today < previous * ratio)) {
+          return [];
+        }
+        return [`${name} has ${today} rows per store, down from ${previous}.`];
+      })
+    : [];
+  const dropNames = drops.flatMap((line) => {
+    const match = COVERAGE_DROP_LINE.exec(line);
+    return match?.[1] ? [match[1]] : [];
+  });
+  const priorDrops = input.priorCoverageDropNames;
+  const repeatedDrops = priorDrops
+    ? dropNames.filter((name) => priorDrops.includes(name))
+    : [];
+  const thinWithRows = counted
+    .filter(
+      (chain) =>
+        chain.priceMissReason === "thin-page" &&
+        chain.freshOfficialCount + chain.freshFlyerCount > 0,
+    )
+    .map((chain) => `${chain.displayName.trim()} weekly ad page was thin.`);
+  const census = rowsPerStoreCensusLine(counted);
+  const extra = [
+    ...thinWithRows,
+    ...drops,
+    ...(repeatedDrops.length > 0 ? [COVERAGE_DROP_AGAIN_LINE] : []),
+    ...(census ? [census] : []),
+  ];
+  const dropNeedsYou = repeatedDrops.length > 0;
 
   if (exceptionNames.length === 0) {
     const count = counted.length;
     const noun = count === 1 ? "chain" : "chains";
     const verb = count === 1 ? "has" : "have";
     return {
-      lines: [`All ${count} ${noun} ${verb} prices from the last day.`],
-      needsAttention: false,
+      lines: [`All ${count} ${noun} ${verb} prices from the last day.`, ...extra],
+      needsAttention: dropNeedsYou,
       exceptionNames: [],
       counted: count,
     };
@@ -347,8 +470,9 @@ export function describeMorningChainPrices(input: {
     lines: [
       ...exceptions.map((chain) => chainPriceExceptionSentence(chain)),
       `${missing} of ${total} ${total === 1 ? "chain" : "chains"} ${verb} missing prices from the last day${again}.`,
+      ...extra,
     ],
-    needsAttention: repeated.length > 0,
+    needsAttention: repeated.length > 0 || dropNeedsYou,
     exceptionNames,
     counted: total,
   };
@@ -375,6 +499,12 @@ export type MorningReportInput = {
    * Null means that note does not exist.
    */
   priorChainPriceExceptions?: readonly string[] | null;
+  /** Rows per store parsed from the previous morning note. Null when that note has no census line. */
+  previousRowsPerStore?: Readonly<Record<string, number>> | null;
+  /** Chains whose previous note already had a down-from line. */
+  priorCoverageDropNames?: readonly string[] | null;
+  /** A chain is down when today's rows per store are under this fraction of yesterday. Default 0.5. */
+  coverageDropRatio?: number;
   cloudflare?: CloudflareMorningFacts;
   /** Night Overpass was skipped on purpose. Informational; does not set Needs you. */
   storeLookupTurnedOff?: boolean;
@@ -413,6 +543,9 @@ export function composeMorningReport(input: MorningReportInput): {
     ? describeMorningChainPrices({
         chains: input.chainPrices,
         priorExceptionNames: input.priorChainPriceExceptions ?? null,
+        previousRowsPerStore: input.previousRowsPerStore ?? null,
+        priorCoverageDropNames: input.priorCoverageDropNames ?? null,
+        coverageDropRatio: input.coverageDropRatio,
       })
     : null;
   const priceGapNeedsYou =
@@ -697,6 +830,7 @@ function otherMorningLineNeedsAttention(line: string): boolean {
     line.includes("could not be listed") ||
     line.endsWith("has no sale source.") ||
     RECIPE_IMPORT_STREAK_LINE.test(line) ||
+    line === COVERAGE_DROP_AGAIN_LINE ||
     (line.includes("did not answer") && !SITE_LINE.test(line))
   );
 }
