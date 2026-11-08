@@ -12,6 +12,8 @@
  */
 
 export const WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT = 6;
+/** Stop thin retries after this many identical thin results in one New York day. */
+export const WEEKLY_AD_THIN_IDENTICAL_LIMIT = 2;
 
 export type WeeklyAdRetryCandidate = {
   chainId: string;
@@ -20,9 +22,17 @@ export type WeeklyAdRetryCandidate = {
   thinPage?: boolean;
 };
 
+export type WeeklyAdRetryThinStamp = {
+  /** `${seenCards}:${parsedOffers}` from the last thin run. */
+  signature: string;
+  /** How many thin runs in a row shared that signature. */
+  identical: number;
+};
+
 export type WeeklyAdRetryState = {
   date: string;
   counts: Record<string, number>;
+  thinStamps: Record<string, WeeklyAdRetryThinStamp>;
 };
 
 export function readWeeklyAdRetryMaxPerDay(
@@ -52,12 +62,40 @@ export function weeklyAdRetryDate(now: Date): string {
 }
 
 export function emptyWeeklyAdRetryState(date: string): WeeklyAdRetryState {
-  return { date, counts: {} };
+  return { date, counts: {}, thinStamps: {} };
+}
+
+/** Identical means the same distinct-card count and the same parsed-offer count. */
+export function weeklyAdThinSignature(input: {
+  seenCards: number;
+  parsedOffers: number;
+}): string {
+  return `${input.seenCards}:${input.parsedOffers}`;
+}
+
+export function noteWeeklyAdThinResult(
+  state: WeeklyAdRetryState,
+  chainId: string,
+  signature: string,
+): WeeklyAdRetryState {
+  const previous = state.thinStamps[chainId];
+  const identical = previous?.signature === signature ? previous.identical + 1 : 1;
+  return {
+    ...state,
+    thinStamps: {
+      ...state.thinStamps,
+      [chainId]: { signature, identical },
+    },
+  };
 }
 
 export function parseWeeklyAdRetryState(raw: string, today: string): WeeklyAdRetryState {
   try {
-    const parsed = JSON.parse(raw) as { date?: unknown; counts?: unknown };
+    const parsed = JSON.parse(raw) as {
+      date?: unknown;
+      counts?: unknown;
+      thinStamps?: unknown;
+    };
     if (parsed.date !== today || !parsed.counts || typeof parsed.counts !== "object") {
       return emptyWeeklyAdRetryState(today);
     }
@@ -67,24 +105,56 @@ export function parseWeeklyAdRetryState(raw: string, today: string): WeeklyAdRet
         counts[chainId] = value;
       }
     }
-    return { date: today, counts };
+    return { date: today, counts, thinStamps: readThinStamps(parsed.thinStamps) };
   } catch {
     return emptyWeeklyAdRetryState(today);
   }
+}
+
+function readThinStamps(value: unknown): Record<string, WeeklyAdRetryThinStamp> {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+  const stamps: Record<string, WeeklyAdRetryThinStamp> = {};
+  for (const [chainId, stamp] of Object.entries(value)) {
+    if (!stamp || typeof stamp !== "object") {
+      continue;
+    }
+    const signature = (stamp as { signature?: unknown }).signature;
+    const identical = (stamp as { identical?: unknown }).identical;
+    if (typeof signature !== "string" || signature.length === 0) {
+      continue;
+    }
+    if (typeof identical !== "number" || !Number.isInteger(identical) || identical < 1) {
+      continue;
+    }
+    stamps[chainId] = { signature, identical };
+  }
+  return stamps;
 }
 
 /**
  * First admitted chain, in the given order, that still needs a retry and is
  * under today's limit. A chain needs a retry when it has no fresh rows or its
  * latest parse was thin. The six-attempt cap still applies.
+ * A thin chain is skipped after two identical thin results that day.
+ * A chain with no fresh rows and no thin stamp is still eligible.
  */
 export function selectWeeklyAdRetryChain(input: {
   candidates: readonly WeeklyAdRetryCandidate[];
   attemptsToday: Readonly<Record<string, number>>;
   maxPerDay: number;
+  thinStamps?: Readonly<Record<string, WeeklyAdRetryThinStamp>>;
 }): string | null {
   for (const candidate of input.candidates) {
     if (candidate.freshCount > 0 && candidate.thinPage !== true) {
+      continue;
+    }
+    const stamp = input.thinStamps?.[candidate.chainId];
+    if (
+      candidate.thinPage === true &&
+      (stamp?.identical ?? 0) >= WEEKLY_AD_THIN_IDENTICAL_LIMIT
+    ) {
       continue;
     }
     const attempts = input.attemptsToday[candidate.chainId] ?? 0;
@@ -106,5 +176,6 @@ export function bumpWeeklyAdRetryCount(
       ...state.counts,
       [chainId]: (state.counts[chainId] ?? 0) + 1,
     },
+    thinStamps: state.thinStamps,
   };
 }

@@ -17,6 +17,30 @@ export type MealPriceSourceSummary = {
   detail: string;
 };
 
+/** Shared weekly-ad sentence. Store name is the building the shopper selected. */
+export function adPriceForYourAreaAt(storeName: string): string {
+  const store = storeName.trim() || "this store";
+  return `Ad price for your area at ${store} - confirm in store.`;
+}
+
+/**
+ * Flipp fallback rows keep "Flipp flyer · …" in the database.
+ * Shoppers see the shared sentence instead of that source line.
+ */
+export function shopperVisibleSaleLabel(
+  saleLabel: string | null | undefined,
+  storeName: string,
+): string | null {
+  const trimmed = saleLabel?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (trimmed === "Flipp flyer" || trimmed.startsWith("Flipp flyer ·")) {
+    return adPriceForYourAreaAt(storeName);
+  }
+  return trimmed;
+}
+
 export function buildMealPriceSourceSummary(
   input: MealPriceSourceInput,
 ): MealPriceSourceSummary {

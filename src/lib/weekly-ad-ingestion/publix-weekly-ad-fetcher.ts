@@ -7,13 +7,17 @@ import {
   nextPublixEqualPositiveSamples,
   parsePublixCategoryResultCounts,
   PUBLIX_CARD_POLL_MS,
+  publixCollectedCardsDocument,
   publixListedCardTarget,
+  rememberPublixCardHtml,
   publixPageIsThin,
   publixResponseStatusForCapture,
   publixResponseStatusIsRelevant,
   readPublixCardMaxWaitMs,
+  readPublixCardScrollViewports,
   type PublixResponseStatus,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
+import { parsePublixWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-publix-weekly-ad";
 import {
   serializePublixStoreCookie,
 } from "@/lib/providers/publix/publix-services-api-client";
@@ -220,10 +224,14 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
     await explorePublixWeeklyAdCategories(page, input.url, visitedUrls, input.timeoutMs);
     const rememberedOfferCount = input.rememberedOfferCount ?? null;
     const maxWaitMs = input.maxWaitMs ?? readPublixCardMaxWaitMs();
+    const scrollViewports = readPublixCardScrollViewports();
+    const collectedCards = new Map<string, string>();
     let settled = await settlePublixSavingsCardCount(page, {
       timeoutMs: input.timeoutMs,
       rememberedOfferCount,
       maxWaitMs,
+      scrollViewports,
+      collectedCards,
     });
 
     if (
@@ -246,11 +254,22 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
         timeoutMs: input.timeoutMs,
         rememberedOfferCount,
         maxWaitMs,
+        scrollViewports,
+        collectedCards,
       });
     }
 
     const savingsCardCount = settled.seenCount;
-    const html = await page.content();
+    const pageHtml = await page.content();
+    const html =
+      collectedCards.size > 0
+        ? `${pageHtml}\n${publixCollectedCardsDocument(collectedCards.values())}`
+        : pageHtml;
+    await appendEmbeddedWeeklyAdJson(page, networkJsonBodies);
+    const parsedOfferCount = parsePublixWeeklyAd({
+      html,
+      networkJsonBodies,
+    }).length;
     if (
       publixPageIsThin({
         seenCount: settled.seenCount,
@@ -264,13 +283,12 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
         zipCode: input.zipCode,
         gotoStatus,
         extractedCount: settled.seenCount,
+        parsedOfferCount,
         rememberedOfferCount,
         expectedCardCount: settled.expectedCount,
         responses: responseStatuses,
       });
     }
-
-    await appendEmbeddedWeeklyAdJson(page, networkJsonBodies);
 
     return {
       html,
@@ -307,6 +325,8 @@ async function settlePublixSavingsCardCount(
     timeoutMs: number;
     rememberedOfferCount: number | null;
     maxWaitMs: number;
+    scrollViewports: number;
+    collectedCards: Map<string, string>;
   },
 ): Promise<{ seenCount: number; expectedCount: number | null }> {
   await waitForPublixSavingsCards(page, input.timeoutMs);
@@ -320,6 +340,7 @@ async function settlePublixSavingsCardCount(
 
   while (true) {
     const listing = await readPublixCardListing(page);
+    rememberPublixCardHtml(input.collectedCards, listing.cards);
     for (const key of listing.keys) {
       distinct.add(key);
     }
@@ -349,7 +370,7 @@ async function settlePublixSavingsCardCount(
       return { seenCount, expectedCount };
     }
     previousCount = seenCount;
-    await scrollPublixCardList(page);
+    await scrollPublixCardList(page, input.scrollViewports);
     await page.waitForTimeout(PUBLIX_CARD_POLL_MS);
   }
 }
@@ -358,32 +379,38 @@ async function readPublixCardListing(page: import("playwright").Page): Promise<{
   mounted: number;
   keys: string[];
   listingHtml: string;
+  cards: { key: string; html: string }[];
 }> {
   return page.evaluate(() => {
     const cards = Array.from(
       document.querySelectorAll('[data-qa-automation="listed-savings-card"]'),
     );
-    const keys = cards
-      .map((card) => {
-        const coded = card.querySelector("[data-item-code]")?.getAttribute("data-item-code")?.trim();
-        if (coded) {
-          return coded;
-        }
-        return card.querySelector('[data-qa-automation="prod-title"]')?.textContent?.trim() ?? "";
-      })
-      .filter((key) => key.length > 0);
+    const snapshots = cards.flatMap((card) => {
+      const coded = card.querySelector("[data-item-code]")?.getAttribute("data-item-code")?.trim();
+      const title = card.querySelector('[data-qa-automation="prod-title"]')?.textContent?.trim() ?? "";
+      const key = coded || title;
+      if (!key) {
+        return [];
+      }
+      return [{ key, html: card.outerHTML }];
+    });
     const listingHtml = Array.from(document.querySelectorAll("[data-weekly-ad-category-id]"))
       .map((section) => section.outerHTML)
       .join("\n");
-    return { mounted: cards.length, keys, listingHtml };
+    return {
+      mounted: cards.length,
+      keys: snapshots.map((card) => card.key),
+      cards: snapshots,
+      listingHtml,
+    };
   });
 }
 
-/** One viewport of the virtual list. The window scrolls when the container does not. */
-async function scrollPublixCardList(page: import("playwright").Page) {
-  await page.evaluate(() => {
+/** Several viewports of the virtual list. The window scrolls when the container does not. */
+async function scrollPublixCardList(page: import("playwright").Page, viewports: number) {
+  await page.evaluate((stepViewports: number) => {
     const container = document.querySelector("[class*='virtual-container']");
-    const step = Math.max(window.innerHeight, 400);
+    const step = Math.max(window.innerHeight, 400) * stepViewports;
     if (container instanceof HTMLElement) {
       const style = window.getComputedStyle(container);
       const scrollsItself =
@@ -394,7 +421,7 @@ async function scrollPublixCardList(page: import("playwright").Page) {
       }
     }
     window.scrollBy(0, step);
-  });
+  }, viewports);
 }
 
 function attachPublixResponseStatuses(
@@ -420,6 +447,7 @@ function savePublixThinCapture(input: {
   zipCode?: string;
   gotoStatus: number | null;
   extractedCount: number;
+  parsedOfferCount: number;
   rememberedOfferCount: number | null;
   expectedCardCount: number | null;
   responses: readonly PublixResponseStatus[];
@@ -442,6 +470,7 @@ function savePublixThinCapture(input: {
         zipCode: input.zipCode,
         gotoStatus: input.gotoStatus,
         extractedCount: input.extractedCount,
+        parsedOfferCount: input.parsedOfferCount,
         rememberedOfferCount: input.rememberedOfferCount,
         expectedCardCount: input.expectedCardCount,
         responses: input.responses,

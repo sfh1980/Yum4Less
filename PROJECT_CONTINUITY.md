@@ -4,6 +4,10 @@
 
 ---
 
+## Resume (as of 2026-11-08)
+
+**This slice (branch `fix/thin-streak-and-coverage-baseline`, not on yum4less.com until an image is published):** The Publix weekly-ad wait keeps card HTML that scrolls out of the virtual window and scrolls 3 viewports per poll. A thin chain sets Needs you on the second morning. `044` stores each morning's rows-per-store census; the comparison baseline is the highest value per chain over the last 7 mornings. Daytime retries stay capped per chain and stop after two identical thin results. Shoppers see "Ad price for your area at {store} - confirm in store." instead of `Flipp flyer · …`. The stored sale label and the flyer hash stay. `npm test` **1506/1506**. Integration **72/72** on `yum4less_test` for `044`. Build and e2e were not run. A pass is not more dinners.
+
 ## Resume (as of 2026-10-22)
 
 **Morning note:** One plain-language note each morning, same words in Discord and on `/owner` **This morning**. A late GitHub result rewrites that morning’s note and sends Discord once. That behavior is on yum4less.com. Clocks stay at 5:20am, 8:15am, and 9:15am. On an add morning the job turns on up to 3 ZIP codes whose Census outline touches a ZIP that is already on, in numeric order. The 8-mile circle stays the shopper picture. A new supermarket, grocery, or warehouse club is saved. Convenience, bakery, and specialty shops are skipped. A new chain name is remembered as map-only until the shared flyer feed returns a flyer. The night job is still the same six steps. A pass is not more dinners. Owner paste **2026-10-22:** `040` is applied (`applied_at` **2026-10-21 07:00:02Z**). Thursday’s add found no ZIP because Census “touches” had saved **15** empty neighbor lists. The repo now asks for intersecting outlines, ignores an empty saved list, and `041` clears those empty lists at the next 3am migrate. Not on yum4less.com until the ingest image is published and Watchtower pulls it. The ingest service can add one Cloudflare line once that image is pulled.
@@ -35,6 +39,8 @@
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **Thin Publix page, morning baseline, and daytime retry (2026-11-08, local):** The wait keeps each scrolled card and scrolls 3 viewports per poll (`YUM4LESS_PUBLIX_CARD_SCROLL_VIEWPORTS`, 1–5). The wait ceiling stays 60 seconds. A thin `meta.json` records `parsedOfferCount` beside the card count. The second thin morning says the page was thin again and sets Needs you. `044_morning_coverage_baseline.sql` adds `morning_reports.coverage_baseline`. The drop comparison uses the highest rows per store over the last 7 saved mornings. Daytime retries stay per chain (default 6) and skip a chain after two identical thin results (same card count and same parsed-offer count). Shoppers see the shared ad-price sentence for a `Flipp flyer` label; the database label is unchanged, so the flyer hash does not change. Not on yum4less.com. `044` applies only after an image that contains it is running. A pass is not more dinners.
 
 - **Neighbor lookup for add mornings (2026-10-22, local):** Census neighbor queries use intersects. An empty `touching_zips` list is treated as not fetched and is not saved. `041_clear_empty_touching_zips.sql` clears empty lists only. `npm test` **1373/1373**. Integration **54/54** on `yum4less_test`. Not on yum4less.com until the ingest image is published and Watchtower pulls it. The 3am job then applies `041`. A pass is not more dinners.
 
@@ -302,6 +308,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-08 — Thin Publix cards, morning baseline, and identical retry back-off
+
+**Theme:** Sunday's Publix page mounted 25 cards in the last window while the wait had counted 168. Six identical daytime retries then left no slot for a chain with no fresh rows. The first rows-per-store census was already the thin count.
+
+**Shipped:** Scrolled card HTML is kept and parsed with the last window. Each poll scrolls 3 viewports unless `YUM4LESS_PUBLIX_CARD_SCROLL_VIEWPORTS` says 1–5. The wait setting still cannot exceed 60 seconds. Thin captures record `parsedOfferCount` next to the card count, and the log names both. The second consecutive thin morning sets Needs you. `044` stores that morning's census; the comparison baseline is the highest rows per store per chain over the last 7 mornings. A thin chain is skipped after two identical results (`seenCards:parsedOffers`) in one New York day. The six-attempt cap stays per chain. Shopper meal, deals, and ingredient lines replace a `Flipp flyer` label with "Ad price for your area at {store} - confirm in store." The stored label is unchanged.
+
+**Limits:** Not on yum4less.com until this branch is published and Watchtower pulls it. `044` is not in `77fc0bf`. Do not migrate `044` until an image that contains that file is the one running. The saved Sunday pages do not contain the cards that scrolled away, so this does not promise a return to about 132 Publix rows per store. Build and e2e were not run. A pass is not more dinners.
+
+**Evidence:** `npm test` **1506/1506** pass (259 files). `npm run typecheck` exit 0. `npm run test:integration` **72/72** pass (20 files) on `yum4less_test`; the log applied `044_morning_coverage_baseline.sql`. Semgrep `p/typescript` and `p/secrets` on the changed files exited 0. `npm run build` and `npm run test:e2e:ci` were not run.
 
 ### 2026-10-22 — Surrounding ZIP lookup uses intersecting outlines
 
@@ -3478,6 +3494,10 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-08 | **A thin chain sets Needs you on the second morning.** The first morning stays informational (`X weekly ad page was thin.`). The next morning, if that chain is still thin, adds `thin again` and sets Needs you. Detection is the previous morning note. A parse that is not thin-page clears it. | **Active** |
+| 2026-11-08 | **The coverage baseline is the 7-morning high, stored on the morning row.** `morning_reports.coverage_baseline` keeps that morning's rows-per-store census. The drop comparison uses the highest value per chain over the last 7 saved mornings. One low morning does not replace a higher count still in the window. `044` applies only with an image that contains it. | **Active** |
+| 2026-11-08 | **Daytime retry cap stays per chain, and identical thin retries stop after two.** `YUM4LESS_WEEKLY_AD_RETRY_MAX_PER_DAY` defaults to 6 per chain per New York day. Identical means the same distinct-card count and the same parsed-offer count. A chain with no fresh rows and no thin stamp is still eligible. | **Active** |
+| 2026-11-08 | **Flipp fallback source text stays in the database.** Shoppers see "Ad price for your area at {store} - confirm in store." The flyer hash includes the stored `Flipp flyer · …` label, so the display change does not force a price rewrite. | **Active** |
 | 2026-10-20 | **Vite is pinned at 8.3.4 so the image can publish.** `vite` `8.0.16` failed the high audit through `launch-editor` (`8.0.0`–`8.1.5`). The pin is an override, same as `sharp`. The braces exception stays the only allowed unpatched high advisory. Do not `npm audit fix --force`. | **Active** |
 | 2026-10-20 | **New ZIP codes are surrounding Census outlines.** Every other even UTC day the morning job Activates up to 3 off ZIPs whose outline touches a ZIP that is already on, in numeric order. The 8-mile circle stays the shopper nearby picture. A supermarket, grocery, or warehouse club is saved once. Convenience, bakery, and specialty shops stay out. A new chain name is stored map-only. The shared flyer feed is tried before a custom scraper. Meals use a chain only after that flyer is saved and the existing sale floors pass. The night job stays six steps. A pass is not more dinners. | **Active** (narrows the ZIP-choice half of 2026-10-12) |
 | 2026-10-17 | **The morning note can include one Cloudflare line.** Ingest reads whether the `truenas-homelab` tunnel is connected and how many 500-level responses yum4less.com had yesterday. Errors or a down tunnel say **Needs you.** The token is read-only and stays on the ingest service. Raw logs are not stored. A pass is not more dinners. | **Active** |
@@ -3649,6 +3669,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (thin Publix harvest, morning baseline, retry back-off, shopper Flipp label) | 2026-11-08 | **1506/1506** pass (259 files) |
+| `npm run typecheck` (same slice) | 2026-11-08 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run test:integration` (migration `044`) | 2026-11-08 | **72/72** pass (20 files) on `yum4less_test`; applied `044_morning_coverage_baseline.sql` |
+| Semgrep CLI `p/typescript` + `p/secrets` (changed ingest, morning, and shopper-label files) | 2026-11-08 | **Exit 0** (1.165.0). `npm run build` and `npm run test:e2e:ci` were not run. |
 | `npm test` (intersecting ZIP neighbors) | 2026-10-22 | **1373/1373** pass (246 files) |
 | `npm run test:integration` (migration `041`) | 2026-10-22 | **54/54** pass (17 files) on `yum4less_test` |
 | `npm run audit:high` (vite 8.3.4) | 2026-10-20 | **Exit 0.** `GHSA-587h-7wmj-h5pm` cleared. Braces exception still present. |

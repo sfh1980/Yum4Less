@@ -5,6 +5,7 @@ import {
   formatShopperPriceWording,
   shopperPriceTierFromOfferFields,
 } from "@/lib/shopper-price-wording";
+import { shopperVisibleSaleLabel } from "@/lib/meal-price-source-copy";
 import { formatIngredientPriceAge } from "@/lib/sale-ingredient-offers";
 import type { MarketSearchState } from "@/components/meal-planner/types";
 
@@ -75,6 +76,10 @@ export function DealsPanel({
               freshnessHoursAgo: choice.freshnessHoursAgo,
             });
             const primaryOffer = choice.offers[0];
+            const visibleSaleLabel = shopperVisibleSaleLabel(
+              choice.saleLabel ?? primaryOffer?.saleLabel,
+              primaryOffer?.storeName ?? "",
+            );
             const priceTier = shopperPriceTierFromOfferFields({
               saleLabel: choice.saleLabel ?? primaryOffer?.saleLabel,
               freshnessDaysAgo: primaryOffer?.freshnessDaysAgo ?? 0,
@@ -96,7 +101,7 @@ export function DealsPanel({
                   </span>
                 </div>
                 <div className="deals-list-item-meta">
-                  {choice.saleLabel ? <span>{choice.saleLabel}</span> : null}
+                  {visibleSaleLabel ? <span>{visibleSaleLabel}</span> : null}
                   <span className="trust-pill">{choice.trustLabel}</span>
                   {priceAgeLabel ? (
                     <span className="badge-trust">{priceAgeLabel}</span>

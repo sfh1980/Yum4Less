@@ -23,6 +23,8 @@ secrets/
 
 # Local weekly-ad capture artifacts from failed live ingest runs
 captures/
+publix-thin/
+publix-thin-*/
 .playwright-mcp/
 playwright-report/
 test-results/

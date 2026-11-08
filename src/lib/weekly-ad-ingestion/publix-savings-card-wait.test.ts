@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPublixThinCaptureMeta,
+  PUBLIX_CARD_MAX_WAIT_MS_MAX,
   decidePublixCardPoll,
   nextPublixEqualPositiveSamples,
   parsePublixCategoryResultCounts,
   publixCardCountIsThin,
+  publixCardScrollStepPx,
+  publixCollectedCardsDocument,
   publixListedCardTarget,
   publixPageIsThin,
+  rememberPublixCardHtml,
   publixResponseStatusForCapture,
   publixResponseStatusIsRelevant,
   readPublixCardMaxWaitMs,
+  readPublixCardScrollViewports,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 import { offerCountToRemember } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import { buildTestProcessEnv } from "@/lib/test-only/process-env-test-helpers";
@@ -211,6 +216,7 @@ describe("thin Publix capture", () => {
       zipCode: "23111",
       gotoStatus: 200,
       extractedCount: 2,
+      parsedOfferCount: null,
       rememberedOfferCount: 588,
       expectedCardCount: null,
       capturedAt: "2026-11-03T22:00:00.000Z",
@@ -218,9 +224,50 @@ describe("thin Publix capture", () => {
     });
   });
 
+  it("writes the parsed-offer count beside the card count", () => {
+    expect(
+      buildPublixThinCaptureMeta({
+        url: "https://www.publix.com/savings/weekly-ad/view-all",
+        gotoStatus: 200,
+        extractedCount: 168,
+        parsedOfferCount: 16,
+        rememberedOfferCount: 168,
+        expectedCardCount: 220,
+        capturedAt: "2026-11-08T16:02:49.740Z",
+      }).parsedOfferCount,
+    ).toBe(16);
+  });
+
+  it("scrolls three viewports by default and keeps the wait at or under 60 seconds", () => {
+    expect(readPublixCardScrollViewports(buildTestProcessEnv())).toBe(3);
+    expect(
+      readPublixCardScrollViewports(
+        buildTestProcessEnv({ YUM4LESS_PUBLIX_CARD_SCROLL_VIEWPORTS: "2" }),
+      ),
+    ).toBe(2);
+    expect(
+      readPublixCardScrollViewports(
+        buildTestProcessEnv({ YUM4LESS_PUBLIX_CARD_SCROLL_VIEWPORTS: "9" }),
+      ),
+    ).toBe(3);
+    expect(publixCardScrollStepPx(720, 3)).toBe(2160);
+    expect(readPublixCardMaxWaitMs(buildTestProcessEnv())).toBeLessThanOrEqual(60_000);
+    expect(PUBLIX_CARD_MAX_WAIT_MS_MAX).toBe(60_000);
+  });
+
   it("keeps a promotion status and URL and drops the body and a token query", () => {
     expect(publixResponseStatusIsRelevant("https://services.publix.com/v1/graphql")).toBe(true);
+    expect(
+      publixResponseStatusIsRelevant(
+        "https://services.publix.com/api/v4/savings?page=1&pageSize=0",
+      ),
+    ).toBe(true);
     expect(publixResponseStatusIsRelevant("https://www.google-analytics.com/collect")).toBe(false);
+    expect(
+      publixResponseStatusIsRelevant(
+        "https://www.google.com/ccm/collect?dl=https%3A%2F%2Fwww.publix.com%2Fsavings%2Fweekly-ad",
+      ),
+    ).toBe(false);
     expect(
       publixResponseStatusForCapture({
         status: 200,
@@ -302,6 +349,22 @@ describe("printed Publix result count", () => {
         equalPositiveSamples: 16,
       }),
     ).toBe("max-wait");
+  });
+
+  it("keeps a card that scrolled out of the last window", () => {
+    const seen = new Map<string, string>();
+    rememberPublixCardHtml(seen, [
+      { key: "a", html: "<div data-qa-automation=\"listed-savings-card\">one</div>" },
+      { key: "b", html: "<div data-qa-automation=\"listed-savings-card\">two</div>" },
+    ]);
+    rememberPublixCardHtml(seen, [
+      { key: "b", html: "<div>replaced</div>" },
+      { key: "c", html: "<div data-qa-automation=\"listed-savings-card\">three</div>" },
+    ]);
+    expect([...seen.keys()]).toEqual(["a", "b", "c"]);
+    expect(seen.get("b")).toContain("two");
+    expect(publixCollectedCardsDocument(seen.values())).toContain("one");
+    expect(publixCollectedCardsDocument(seen.values())).toContain("three");
   });
 
   it("treats five mounted cards as thin when the page says 221 results", () => {

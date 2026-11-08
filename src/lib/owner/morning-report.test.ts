@@ -12,6 +12,9 @@ import {
   chainPriceExceptionsInNote,
   coverageBaselineInNote,
   coverageDropNamesInNote,
+  coverageHighBaseline,
+  formatRowsPerStoreCensus,
+  thinPageNamesInNote,
   composeMissedMorningReport,
   composeMorningReport,
   countConsecutiveRecipeImportMisses,
@@ -690,6 +693,86 @@ describe("morning report", () => {
     });
     expect(held.body).not.toContain("down from");
     expect(held.needsAttention).toBe(false);
+  });
+
+  it("sets Needs you on the second thin morning and clears it when the page is not thin", () => {
+    const thin = [
+      priceChain({
+        displayName: "Publix",
+        freshFlyerCount: 605,
+        rowsPerStore: 55,
+        priceMissReason: "thin-page",
+      }),
+    ];
+    const first = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: thin,
+      priorChainPriceExceptions: [],
+      priorThinPageNames: [],
+    });
+    expect(first.needsAttention).toBe(false);
+    expect(first.body).toContain("Publix weekly ad page was thin.");
+    expect(first.body).not.toContain("thin again");
+    expect(first.body).toContain("Nothing needs you.");
+
+    const second = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: thin,
+      priorChainPriceExceptions: [],
+      priorThinPageNames: thinPageNamesInNote(first.body),
+    });
+    expect(thinPageNamesInNote(first.body)).toEqual(["Publix"]);
+    expect(second.needsAttention).toBe(true);
+    expect(second.body).toContain("Publix weekly ad page was thin again.");
+    expect(second.body.endsWith("Needs you.")).toBe(true);
+
+    const kept = applyOutsideResultToMorningNote(second.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(kept.needsAttention).toBe(true);
+
+    const cleared = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({ displayName: "Publix", freshFlyerCount: 1452, rowsPerStore: 132 }),
+      ],
+      priorChainPriceExceptions: [],
+      priorThinPageNames: ["Publix"],
+    });
+    expect(cleared.body).not.toContain("weekly ad page was thin");
+    expect(cleared.needsAttention).toBe(false);
+    expect(cleared.body).toContain("Nothing needs you.");
+  });
+
+  it("round-trips a rows-per-store line, including a chain name that contains a comma", () => {
+    const counts = { Aldi: 41, "Food, Lion": 57, Publix: 55 };
+    const line = formatRowsPerStoreCensus(counts);
+    expect(line).toBe('Rows per store: Aldi 41, "Food, Lion" 57, Publix 55.');
+    expect(rowsPerStoreInNote(`${line}`)).toEqual(counts);
+    expect(coverageBaselineInNote(`All 3 chains have prices from the last day.\n${line}`)).toEqual(
+      counts,
+    );
+  });
+
+  it("keeps the highest rows per store from the last 7 mornings", () => {
+    const history: Record<string, number>[] = [
+      { Publix: 55, Aldi: 41 },
+      { Publix: 55 },
+      { Publix: 132, Aldi: 40 },
+      { Publix: 24 },
+      { Publix: 20 },
+      { Publix: 18 },
+      { Publix: 16 },
+      { Publix: 200 },
+    ];
+    expect(coverageHighBaseline(history)).toEqual({ Publix: 132, Aldi: 41 });
+    expect(coverageHighBaseline(history, 7)?.Publix).toBe(132);
+    expect(coverageHighBaseline([{ Publix: 55 }])?.Publix).toBe(55);
   });
 
   it("accepts only a Discord webhook URL", () => {

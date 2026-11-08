@@ -177,7 +177,10 @@ const CHAIN_PRICE_EXCEPTION_LINE =
 const COVERAGE_DROP_LINE = /^(.+) has (\d+) rows per store, down from (\d+)\.$/;
 const ROWS_PER_STORE_LINE = /^Rows per store: (.+)\.$/;
 export const MORNING_COVERAGE_DROP_RATIO_DEFAULT = 0.5;
+export const COVERAGE_BASELINE_MORNINGS = 7;
 const COVERAGE_DROP_AGAIN_LINE = "Price rows per store are down again.";
+const THIN_PAGE_LINE = /^(.+) weekly ad page was thin\.$/;
+const THIN_PAGE_AGAIN_LINE = /^(.+) weekly ad page was thin again\.$/;
 const CHAIN_PRICE_REPEAT_LINE =
   /^\d+ of \d+ chains? (?:is|are) missing prices from the last day again\.$/;
 
@@ -317,6 +320,81 @@ export function readMorningCoverageDropRatio(
   return MORNING_COVERAGE_DROP_RATIO_DEFAULT;
 }
 
+function quoteRowsPerStoreName(name: string): string {
+  if (!/[",]/.test(name)) {
+    return name;
+  }
+  return `"${name.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** The census line. A name that contains a comma is quoted so the reader can round-trip it. */
+export function formatRowsPerStoreCensus(
+  counts: Readonly<Record<string, number>>,
+): string | null {
+  const parts = Object.entries(counts)
+    .map(([name, rows]) => ({ name: name.trim(), rows }))
+    .filter((part) => part.name && Number.isFinite(part.rows))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  if (parts.length === 0) {
+    return null;
+  }
+  return `Rows per store: ${parts
+    .map((part) => `${quoteRowsPerStoreName(part.name)} ${part.rows}`)
+    .join(", ")}.`;
+}
+
+export function parseRowsPerStoreCensus(line: string): Record<string, number> | null {
+  const match = ROWS_PER_STORE_LINE.exec(line.trim());
+  if (!match?.[1]) {
+    return null;
+  }
+  const body = match[1];
+  const counts: Record<string, number> = {};
+  let index = 0;
+  while (index < body.length) {
+    while (body[index] === " " || body[index] === ",") {
+      index += 1;
+    }
+    if (index >= body.length) {
+      break;
+    }
+    let name: string;
+    if (body[index] === '"') {
+      index += 1;
+      let raw = "";
+      while (index < body.length && body[index] !== '"') {
+        if (body[index] === "\\" && index + 1 < body.length) {
+          raw += body[index + 1];
+          index += 2;
+          continue;
+        }
+        raw += body[index];
+        index += 1;
+      }
+      if (body[index] === '"') {
+        index += 1;
+      }
+      name = raw.trim();
+      const countMatch = /^ (\d+)/.exec(body.slice(index));
+      if (!name || !countMatch) {
+        break;
+      }
+      counts[name] = Number(countMatch[1]);
+      index += countMatch[0].length;
+      continue;
+    }
+    const nextComma = body.indexOf(", ", index);
+    const chunk = body.slice(index, nextComma === -1 ? undefined : nextComma);
+    const item = /^(.*) (\d+)$/.exec(chunk);
+    if (!item?.[1]) {
+      break;
+    }
+    counts[item[1]] = Number(item[2]);
+    index = nextComma === -1 ? body.length : nextComma + 2;
+  }
+  return Object.keys(counts).length > 0 ? counts : null;
+}
+
 export function rowsPerStoreInNote(body: string): Record<string, number> | null {
   const line = body
     .split("\n")
@@ -325,16 +403,40 @@ export function rowsPerStoreInNote(body: string): Record<string, number> | null 
   if (!line) {
     return null;
   }
-  const match = ROWS_PER_STORE_LINE.exec(line);
-  const counts: Record<string, number> = {};
-  for (const part of (match?.[1] ?? "").split(", ")) {
-    const item = /^(.*) (\d+)$/.exec(part.trim());
-    if (!item?.[1]) {
-      continue;
-    }
-    counts[item[1]] = Number(item[2]);
+  return parseRowsPerStoreCensus(line);
+}
+
+/**
+ * Highest rows per store for each chain in the newest saved mornings.
+ * One low morning does not replace a higher count still inside the window.
+ */
+export function coverageHighBaseline(
+  censusesNewestFirst: readonly (Readonly<Record<string, number>> | null | undefined)[],
+  mornings: number = COVERAGE_BASELINE_MORNINGS,
+): Record<string, number> | null {
+  const window = censusesNewestFirst
+    .slice(0, mornings)
+    .filter((census): census is Readonly<Record<string, number>> => Boolean(census));
+  if (window.length === 0) {
+    return null;
   }
-  return counts;
+  const baseline: Record<string, number> = {};
+  for (const census of window) {
+    for (const [name, rows] of Object.entries(census)) {
+      if (!name.trim() || !Number.isFinite(rows) || rows <= 0) {
+        continue;
+      }
+      baseline[name] = Math.max(baseline[name] ?? 0, rows);
+    }
+  }
+  return Object.keys(baseline).length > 0 ? baseline : null;
+}
+
+export function thinPageNamesInNote(body: string): string[] {
+  return body.split("\n").flatMap((line) => {
+    const match = THIN_PAGE_LINE.exec(line.trim());
+    return match?.[1] ? [match[1]] : [];
+  });
 }
 
 /**
@@ -366,14 +468,17 @@ export function coverageDropNamesInNote(body: string): string[] {
 function rowsPerStoreCensusLine(
   chains: readonly { displayName: string; rowsPerStore?: number }[],
 ): string | null {
-  const parts = chains
-    .filter((chain) => typeof chain.rowsPerStore === "number")
-    .map((chain) => ({ name: chain.displayName.trim(), rows: chain.rowsPerStore as number }))
-    .sort((left, right) => left.name.localeCompare(right.name));
-  if (parts.length === 0) {
-    return null;
+  const counts: Record<string, number> = {};
+  for (const chain of chains) {
+    if (typeof chain.rowsPerStore !== "number") {
+      continue;
+    }
+    const name = chain.displayName.trim();
+    if (name) {
+      counts[name] = chain.rowsPerStore;
+    }
   }
-  return `Rows per store: ${parts.map((part) => `${part.name} ${part.rows}`).join(", ")}.`;
+  return formatRowsPerStoreCensus(counts);
 }
 
 export function chainPriceExceptionsInNote(body: string): string[] {
@@ -388,6 +493,8 @@ export function describeMorningChainPrices(input: {
   priorExceptionNames: readonly string[] | null;
   previousRowsPerStore?: Readonly<Record<string, number>> | null;
   priorCoverageDropNames?: readonly string[] | null;
+  /** Chains whose previous note already said the weekly ad page was thin. */
+  priorThinPageNames?: readonly string[] | null;
   coverageDropRatio?: number;
 }): {
   lines: string[];
@@ -440,15 +547,21 @@ export function describeMorningChainPrices(input: {
         chain.priceMissReason === "thin-page" &&
         chain.freshOfficialCount + chain.freshFlyerCount > 0,
     )
-    .map((chain) => `${chain.displayName.trim()} weekly ad page was thin.`);
+    .map((chain) => chain.displayName.trim());
+  const priorThin = input.priorThinPageNames;
+  const repeatedThin = priorThin
+    ? thinWithRows.filter((name) => priorThin.includes(name))
+    : [];
   const census = rowsPerStoreCensusLine(counted);
   const extra = [
-    ...thinWithRows,
+    ...thinWithRows.map((name) => `${name} weekly ad page was thin.`),
+    ...repeatedThin.map((name) => `${name} weekly ad page was thin again.`),
     ...drops,
     ...(repeatedDrops.length > 0 ? [COVERAGE_DROP_AGAIN_LINE] : []),
     ...(census ? [census] : []),
   ];
   const dropNeedsYou = repeatedDrops.length > 0;
+  const thinNeedsYou = repeatedThin.length > 0;
 
   if (exceptionNames.length === 0) {
     const count = counted.length;
@@ -456,7 +569,7 @@ export function describeMorningChainPrices(input: {
     const verb = count === 1 ? "has" : "have";
     return {
       lines: [`All ${count} ${noun} ${verb} prices from the last day.`, ...extra],
-      needsAttention: dropNeedsYou,
+      needsAttention: dropNeedsYou || thinNeedsYou,
       exceptionNames: [],
       counted: count,
     };
@@ -472,7 +585,7 @@ export function describeMorningChainPrices(input: {
       `${missing} of ${total} ${total === 1 ? "chain" : "chains"} ${verb} missing prices from the last day${again}.`,
       ...extra,
     ],
-    needsAttention: repeated.length > 0 || dropNeedsYou,
+    needsAttention: repeated.length > 0 || dropNeedsYou || thinNeedsYou,
     exceptionNames,
     counted: total,
   };
@@ -503,6 +616,8 @@ export type MorningReportInput = {
   previousRowsPerStore?: Readonly<Record<string, number>> | null;
   /** Chains whose previous note already had a down-from line. */
   priorCoverageDropNames?: readonly string[] | null;
+  /** Chains whose previous note already said the weekly ad page was thin. */
+  priorThinPageNames?: readonly string[] | null;
   /** A chain is down when today's rows per store are under this fraction of yesterday. Default 0.5. */
   coverageDropRatio?: number;
   cloudflare?: CloudflareMorningFacts;
@@ -545,6 +660,7 @@ export function composeMorningReport(input: MorningReportInput): {
         priorExceptionNames: input.priorChainPriceExceptions ?? null,
         previousRowsPerStore: input.previousRowsPerStore ?? null,
         priorCoverageDropNames: input.priorCoverageDropNames ?? null,
+        priorThinPageNames: input.priorThinPageNames ?? null,
         coverageDropRatio: input.coverageDropRatio,
       })
     : null;
@@ -831,6 +947,7 @@ function otherMorningLineNeedsAttention(line: string): boolean {
     line.endsWith("has no sale source.") ||
     RECIPE_IMPORT_STREAK_LINE.test(line) ||
     line === COVERAGE_DROP_AGAIN_LINE ||
+    THIN_PAGE_AGAIN_LINE.test(line) ||
     (line.includes("did not answer") && !SITE_LINE.test(line))
   );
 }

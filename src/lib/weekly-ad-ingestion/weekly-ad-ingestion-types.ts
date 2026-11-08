@@ -56,6 +56,8 @@ export type WeeklyAdIngestionResult = {
   offers: WeeklyAdOffer[];
   /** Publix savings-card count for this fetch. Other chains leave it unset. */
   rawCardCount?: number;
+  /** Priced offers parsed from the page, before ingredient matching. */
+  scrapeOfferCount?: number;
   /**
    * The latest store-page parse was thin (under half the remembered card count,
    * or under the no-baseline minimum). A healthy parse leaves this false.

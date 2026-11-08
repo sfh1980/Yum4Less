@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 import type { SaleIngredientChoice } from "@/lib/sale-ingredient-offers";
+import { shopperVisibleSaleLabel } from "@/lib/meal-price-source-copy";
 import { formatIngredientPriceAge } from "@/lib/sale-ingredient-offers";
 import {
   formatShopperPriceWording,
@@ -256,6 +257,7 @@ function renderRow(
   const priceAgeLabel = formatIngredientPriceAge({
     freshnessHoursAgo: row.freshnessHoursAgo,
   });
+  const visibleSaleLabel = shopperVisibleSaleLabel(row.saleLabel, row.storeName);
   const priceLabel = formatShopperPriceWording(
     row.price,
     shopperPriceTierFromOfferFields({
@@ -293,7 +295,7 @@ function renderRow(
                 ? "Sale price — estimate only"
                 : "Online cache — estimated"}
             </span>
-            {row.saleLabel ? ` · ${row.saleLabel}` : ""}
+            {visibleSaleLabel ? ` · ${visibleSaleLabel}` : ""}
             {showStoreTag ? ` · ${row.storeName}` : ""}
           </span>
           {priceAgeLabel ? (

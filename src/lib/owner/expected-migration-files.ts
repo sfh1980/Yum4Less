@@ -48,4 +48,5 @@ export const EXPECTED_MIGRATION_FILENAMES = [
   "041_clear_empty_touching_zips.sql",
   "042_valid_from_and_raw_card_count.sql",
   "043_weekly_ad_price_miss_reason.sql",
+  "044_morning_coverage_baseline.sql",
 ] as const;

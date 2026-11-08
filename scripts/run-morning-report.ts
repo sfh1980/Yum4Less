@@ -12,9 +12,13 @@ import {
   appendMorningIssue,
   chainPriceExceptionsInNote,
   coverageBaselineInNote,
+  coverageHighBaseline,
+  COVERAGE_BASELINE_MORNINGS,
+  thinPageNamesInNote,
   coverageDropNamesInNote,
   composeMorningReport,
   readMorningCoverageDropRatio,
+  rowsPerStoreInNote,
   isDiscordWebhookUrl,
   isMorningZipAddDay,
   morningZipAddsEnabled,
@@ -40,6 +44,7 @@ import {
   readExternalCheck,
   readLatestExternalCheckBefore,
   readMorningReport,
+  readRecentCoverageBaselines,
   recordZipAdd,
   recordZipTest,
   saveMorningReport,
@@ -183,6 +188,7 @@ export async function runMorningReport(): Promise<void> {
   let priorChainPriceExceptions: string[] | null | undefined;
   let previousRowsPerStore: Record<string, number> | null | undefined;
   let priorCoverageDropNames: string[] | null | undefined;
+  let priorThinPageNames: string[] | null | undefined;
   try {
     chainPrices = await loadMorningChainPriceFacts({
       activeZipCodes: active.map((market) => market.zipCode),
@@ -192,16 +198,22 @@ export async function runMorningReport(): Promise<void> {
     priorChainPriceExceptions = priorNote
       ? chainPriceExceptionsInNote(priorNote.body)
       : null;
-    previousRowsPerStore = priorNote ? coverageBaselineInNote(priorNote.body) : null;
+    const storedBaseline = coverageHighBaseline(
+      await readRecentCoverageBaselines(reportDate, COVERAGE_BASELINE_MORNINGS),
+    );
+    previousRowsPerStore =
+      storedBaseline ?? (priorNote ? coverageBaselineInNote(priorNote.body) : null);
     priorCoverageDropNames = priorNote
       ? coverageDropNamesInNote(priorNote.body)
       : null;
+    priorThinPageNames = priorNote ? thinPageNamesInNote(priorNote.body) : null;
   } catch (error) {
     logMorningChainPriceFailure(error);
     chainPrices = undefined;
     priorChainPriceExceptions = undefined;
     previousRowsPerStore = undefined;
     priorCoverageDropNames = undefined;
+    priorThinPageNames = undefined;
   }
   const cloudflare = await fetchCloudflareMorning();
   const recipeImportFailed = recipeImportDidNotFinish(nightJobs);
@@ -264,6 +276,7 @@ export async function runMorningReport(): Promise<void> {
           priorChainPriceExceptions,
           previousRowsPerStore,
           priorCoverageDropNames,
+          priorThinPageNames,
           coverageDropRatio: readMorningCoverageDropRatio(),
         }
       : {}),
@@ -287,6 +300,7 @@ export async function runMorningReport(): Promise<void> {
     kind: "morning",
     body: note.body,
     needsAttention: note.needsAttention,
+    coverageBaseline: chainPrices ? rowsPerStoreInNote(note.body) : null,
   });
   console.log(note.body);
 }

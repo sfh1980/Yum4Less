@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parsePublixWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-publix-weekly-ad";
+import {
+  publixCollectedCardsDocument,
+  rememberPublixCardHtml,
+} from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 
 describe("parsePublixWeeklyAd", () => {
   it("parses fixture embedded JSON offers", () => {
@@ -41,6 +45,91 @@ describe("parsePublixWeeklyAd", () => {
         saleLabel: expect.stringContaining("BOGO"),
         validThrough: "Valid 11/4 - 11/10",
       }),
+    ]);
+  });
+
+  it("merges two scroll positions and does not double a card that stayed mounted", () => {
+    const top = `
+      <div data-qa-automation="listed-savings-card" data-item-code="top">
+        <div data-qa-automation="prod-title"><span class="PCard_title__Cw18N">Publix Chicken</span></div>
+        <span class="PSavingsCard_additional-info__lOJgX">save up to $3.00</span>
+      </div>`;
+    const stayed = `
+      <div data-qa-automation="listed-savings-card" data-item-code="stay">
+        <div data-qa-automation="prod-title"><span class="PCard_title__Cw18N">Thomas' Bagels</span></div>
+        <span class="PSavingsCard_additional-info__lOJgX">save up to $8.39</span>
+      </div>`;
+    const stayedAgain = stayed.replace("Thomas' Bagels", "Replaced Bagels");
+    const lower = `
+      <div data-qa-automation="listed-savings-card" data-item-code="lower">
+        <div data-qa-automation="prod-title"><span class="PCard_title__Cw18N">Green Beans</span></div>
+        <span class="PSavingsCard_additional-info__lOJgX">save up to $1.50</span>
+      </div>`;
+    const seen = new Map<string, string>();
+    rememberPublixCardHtml(seen, [
+      { key: "top", html: top },
+      { key: "stay", html: stayed },
+    ]);
+    rememberPublixCardHtml(seen, [
+      { key: "stay", html: stayedAgain },
+      { key: "lower", html: lower },
+    ]);
+    const finalWindowOnly = parsePublixWeeklyAd({
+      html: `${stayedAgain}\n${lower}`,
+      networkJsonBodies: [],
+    });
+    const harvested = parsePublixWeeklyAd({
+      html: publixCollectedCardsDocument(seen.values()),
+      networkJsonBodies: [],
+    });
+    expect(finalWindowOnly.map((offer) => offer.productName)).toEqual([
+      "Replaced Bagels",
+      "Green Beans",
+    ]);
+    expect(harvested.map((offer) => offer.productName)).toEqual([
+      "Publix Chicken",
+      "Thomas' Bagels",
+      "Green Beans",
+    ]);
+  });
+
+  it("parses a full static DOM the same way when those cards are also appended", () => {
+    const page = `
+      <div data-qa-automation="listed-savings-card" data-item-code="a">
+        <div data-qa-automation="prod-title"><span class="PCard_title__Cw18N">Publix Boneless Skinless Chicken Breasts</span></div>
+        <span class="PSavingsCard_additional-info__lOJgX">save up to $5.39 lb</span>
+      </div>
+      <div data-qa-automation="listed-savings-card" data-item-code="b">
+        <div data-qa-automation="prod-title"><span class="PCard_title__Cw18N">Thomas' Bagels</span></div>
+        <span class="PSavingsCard_additional-info__lOJgX">save up to $8.39</span>
+      </div>`;
+    const alone = parsePublixWeeklyAd({ html: page, networkJsonBodies: [] });
+    const withCopies = parsePublixWeeklyAd({
+      html: `${page}\n${publixCollectedCardsDocument([page])}`,
+      networkJsonBodies: [],
+    });
+    expect(withCopies).toEqual(alone);
+    expect(alone).toHaveLength(2);
+  });
+
+  it("parses cards collected while the virtual list scrolled", () => {
+    const chicken = `
+      <div data-qa-automation="listed-savings-card" data-item-code="a">
+        <div data-qa-automation="prod-title"><span class="PCard_title__Cw18N">Publix Boneless Skinless Chicken Breasts</span></div>
+        <span class="PSavingsCard_additional-info__lOJgX">save up to $5.39 lb</span>
+      </div>`;
+    const bagels = `
+      <div data-qa-automation="listed-savings-card" data-item-code="b">
+        <div data-qa-automation="prod-title"><span class="PCard_title__Cw18N">Thomas' Bagels</span></div>
+        <span class="PSavingsCard_additional-info__lOJgX">save up to $8.39</span>
+      </div>`;
+    const offers = parsePublixWeeklyAd({
+      html: publixCollectedCardsDocument([chicken, bagels]),
+      networkJsonBodies: [],
+    });
+    expect(offers.map((offer) => offer.productName)).toEqual([
+      "Publix Boneless Skinless Chicken Breasts",
+      "Thomas' Bagels",
     ]);
   });
 

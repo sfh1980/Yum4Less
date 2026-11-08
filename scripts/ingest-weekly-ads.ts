@@ -41,10 +41,12 @@ import {
 } from "@/lib/weekly-ad-ingestion/weekly-ad-only-chain";
 import {
   bumpWeeklyAdRetryCount,
+  noteWeeklyAdThinResult,
   parseWeeklyAdRetryState,
   readWeeklyAdRetryMaxPerDay,
   selectWeeklyAdRetryChain,
   weeklyAdRetryDate,
+  weeklyAdThinSignature,
   type WeeklyAdRetryState,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-retry";
 import { acquireWeeklyAdIngestLock } from "@/lib/weekly-ad-ingestion/weekly-ad-ingest-lock";
@@ -168,6 +170,7 @@ async function main() {
   }));
   let runStores = admittedStores;
   let purgeSourceName: string | undefined;
+  let retryChain: WeeklyAdChain | null = null;
   const singleChain = Boolean(requestedChain) || retryStale;
   if (requestedChain) {
     runStores = storesForWeeklyAdOnlyChain(admittedStores, requestedChain);
@@ -181,6 +184,7 @@ async function main() {
     );
   } else if (retryStale) {
     const choice = await chooseStaleWeeklyAdChain(admittedStores);
+    retryChain = choice;
     if (!choice || !flyerZipCode) {
       console.log(
         "[weekly-ad-retry] no chain with no fresh rows or a thin page is under today's limit.",
@@ -226,6 +230,27 @@ async function main() {
   for (const result of allResults) {
     console.log(`\n[${result.chain}] ${result.status} — ${result.message}`);
     console.log(`  offers: ${result.offers.length}, configured: ${result.configured}`);
+  }
+
+  if (retryChain) {
+    const retryResult = allResults.find((result) => result.chain === retryChain);
+    if (
+      retryResult?.thinPage === true &&
+      typeof retryResult.rawCardCount === "number" &&
+      typeof retryResult.scrapeOfferCount === "number"
+    ) {
+      const today = weeklyAdRetryDate(new Date());
+      writeWeeklyAdRetryState(
+        noteWeeklyAdThinResult(
+          readWeeklyAdRetryState(today),
+          retryChain,
+          weeklyAdThinSignature({
+            seenCards: retryResult.rawCardCount,
+            parsedOffers: retryResult.scrapeOfferCount,
+          }),
+        ),
+      );
+    }
   }
 
   for (const summary of allSyncSummaries) {
@@ -348,6 +373,7 @@ async function chooseStaleWeeklyAdChain(
     })),
     attemptsToday: state.counts,
     maxPerDay: readWeeklyAdRetryMaxPerDay(process.env),
+    thinStamps: state.thinStamps,
   });
   if (!choice || !isWeeklyAdChain(choice)) {
     return null;

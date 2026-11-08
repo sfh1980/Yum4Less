@@ -21,6 +21,9 @@ export const PUBLIX_CARD_STABLE_POLLS = 3;
 export const PUBLIX_CARD_MAX_WAIT_MS_DEFAULT = 20_000;
 export const PUBLIX_CARD_MAX_WAIT_MS_MIN = 1_000;
 export const PUBLIX_CARD_MAX_WAIT_MS_MAX = 60_000;
+export const PUBLIX_CARD_SCROLL_VIEWPORTS_DEFAULT = 3;
+export const PUBLIX_CARD_SCROLL_VIEWPORTS_MIN = 1;
+export const PUBLIX_CARD_SCROLL_VIEWPORTS_MAX = 5;
 export const PUBLIX_THIN_MIN_CARDS_DEFAULT = 50;
 
 export type PublixCardPollStop = "stable" | "half" | "listed" | "max-wait";
@@ -49,6 +52,31 @@ export function readPublixCardMaxWaitMs(
     return configured;
   }
   return PUBLIX_CARD_MAX_WAIT_MS_DEFAULT;
+}
+
+/** How many viewports each poll scrolls. Default 3. Out-of-range values use the default. */
+export function readPublixCardScrollViewports(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const configured = Number(env.YUM4LESS_PUBLIX_CARD_SCROLL_VIEWPORTS);
+  if (
+    Number.isInteger(configured) &&
+    configured >= PUBLIX_CARD_SCROLL_VIEWPORTS_MIN &&
+    configured <= PUBLIX_CARD_SCROLL_VIEWPORTS_MAX
+  ) {
+    return configured;
+  }
+  return PUBLIX_CARD_SCROLL_VIEWPORTS_DEFAULT;
+}
+
+/** Pixel step for one poll. The page uses this same formula with window.innerHeight. */
+export function publixCardScrollStepPx(viewportHeight: number, viewports: number): number {
+  const height = Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 400;
+  const steps =
+    Number.isInteger(viewports) && viewports >= 1
+      ? viewports
+      : PUBLIX_CARD_SCROLL_VIEWPORTS_DEFAULT;
+  return Math.max(height, 400) * steps;
 }
 
 export function readPublixThinMinCards(
@@ -138,6 +166,26 @@ function pushPublixCategoryResultCount(
   counts.push({ categoryId, count });
 }
 
+/** Keep the first HTML seen for each card. A later scroll that drops it does not erase it. */
+export function rememberPublixCardHtml(
+  seen: Map<string, string>,
+  cards: readonly { key: string; html: string }[],
+): void {
+  for (const card of cards) {
+    const key = card.key.trim();
+    const html = card.html.trim();
+    if (!key || !html || seen.has(key)) {
+      continue;
+    }
+    seen.set(key, html);
+  }
+}
+
+/** Append scrolled-away cards so the parser is not limited to the last virtual window. */
+export function publixCollectedCardsDocument(cards: Iterable<string>): string {
+  return `<div id="yum4less-collected-cards">${[...cards].join("\n")}</div>`;
+}
+
 /** Sum of the printed category counts. Null when the page did not print one. */
 export function publixListedCardTarget(
   counts: readonly PublixCategoryResultCount[],
@@ -169,9 +217,25 @@ export function publixPageIsThin(input: {
   );
 }
 
-/** Promotions and Publix JSON calls. Status and URL only; the body stays out. */
+/**
+ * Publix savings, promotion, and GraphQL calls.
+ * A tracking URL is not relevant just because its query contains the word savings.
+ * Status and URL only; the body stays out.
+ */
 export function publixResponseStatusIsRelevant(url: string): boolean {
-  return /graphql|promotion|savings|services\.publix\.com|weekly-ad/i.test(url);
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname;
+    if (parsed.hostname === "services.publix.com") {
+      return /savings|promotion|graphql/i.test(path);
+    }
+    if (parsed.hostname === "www.publix.com" || parsed.hostname.endsWith(".publix.com")) {
+      return /graphql|promotion/i.test(path) && !path.startsWith("/api/proxy");
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 export function publixResponseStatusForCapture(input: {
@@ -250,6 +314,7 @@ export function buildPublixThinCaptureMeta(input: {
   rememberedOfferCount: number | null;
   capturedAt: string;
   expectedCardCount?: number | null;
+  parsedOfferCount?: number | null;
   responses?: readonly PublixResponseStatus[];
 }) {
   return {
@@ -257,6 +322,7 @@ export function buildPublixThinCaptureMeta(input: {
     zipCode: input.zipCode ?? null,
     gotoStatus: input.gotoStatus,
     extractedCount: input.extractedCount,
+    parsedOfferCount: input.parsedOfferCount ?? null,
     rememberedOfferCount: input.rememberedOfferCount,
     expectedCardCount: input.expectedCardCount ?? null,
     capturedAt: input.capturedAt,

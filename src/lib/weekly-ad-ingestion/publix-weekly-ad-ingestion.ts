@@ -151,8 +151,9 @@ async function ingestPublixWeeklyAd(
         fallbackUsed: true,
         offers: [],
         rawCardCount: pageFetch.savingsCardCount,
+        scrapeOfferCount: rawOffers.length,
         thinPage: scrapeIsThin,
-        message: `${label} parsed no scrape offers.${supplementalNote}`,
+        message: `${label} parsed no scrape offers from ${seenCardCount ?? "an unknown number of"} card(s).${supplementalNote}`,
         fetchedAt,
         termsNote,
       };
@@ -168,8 +169,9 @@ async function ingestPublixWeeklyAd(
       fallbackUsed: pageFetch.method === "browser",
       offers,
       rawCardCount: pageFetch.savingsCardCount,
+      scrapeOfferCount: rawOffers.length,
       thinPage: scrapeIsThin,
-      message: `Parsed Publix weekly-ad run for ${storeContext.storeName ?? input.storeName} via ${pageFetch.method} extracted ${rawOffers.length} scrape offer(s); ${matchedCount} matched tracked dinner ingredients.${supplementalNote}`,
+      message: `Parsed Publix weekly-ad run for ${storeContext.storeName ?? input.storeName} via ${pageFetch.method} extracted ${rawOffers.length} scrape offer(s) from ${seenCardCount ?? "an unknown number of"} card(s); ${matchedCount} matched tracked dinner ingredients.${supplementalNote}`,
       fetchedAt,
       termsNote,
     };

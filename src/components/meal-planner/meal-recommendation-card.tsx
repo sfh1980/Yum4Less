@@ -15,7 +15,10 @@ import {
 import { formatMealPriceAgeFromShoppingPlan } from "@/lib/sale-ingredient-offers";
 import { FAQ_SLUG } from "@/lib/faq-articles";
 import { MEAL_CARD_SHOW_EXTENDED_CHROME } from "@/components/meal-planner/meal-card-chrome";
-import { buildMealPriceSourceSummary } from "@/lib/meal-price-source-copy";
+import {
+  buildMealPriceSourceSummary,
+  shopperVisibleSaleLabel,
+} from "@/lib/meal-price-source-copy";
 import { resolveNearbyStoreByName } from "@/lib/resolve-nearby-store-by-name";
 import type { NearbyStoreSummary } from "@/lib/recommendation-types";
 
@@ -250,7 +253,9 @@ export function MealRecommendationCard({
                   ),
                 )}{" "}
                 ({item.quantityNote})
-                {item.saleLabel ? ` · ${item.saleLabel}` : ""}
+                {shopperVisibleSaleLabel(item.saleLabel, item.storeName ?? "")
+                  ? ` · ${shopperVisibleSaleLabel(item.saleLabel, item.storeName ?? "")}`
+                  : ""}
                 <div>
                   <span className="sale-confidence-label">
                     {item.saleConfidence.label}

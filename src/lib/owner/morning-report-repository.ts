@@ -6,7 +6,23 @@ export type StoredMorningReport = {
   kind: "morning" | "missed";
   body: string;
   needsAttention: boolean;
+  /** That morning's rows per store. Null on rows written before migration 044. */
+  coverageBaseline?: Record<string, number> | null;
 };
+
+function coverageRecord(value: unknown): Record<string, number> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const counts: Record<string, number> = {};
+  for (const [name, raw] of Object.entries(value)) {
+    const rows = typeof raw === "number" ? raw : Number(raw);
+    if (name.trim() && Number.isFinite(rows)) {
+      counts[name] = rows;
+    }
+  }
+  return Object.keys(counts).length > 0 ? counts : null;
+}
 
 function dateText(value: Date | string): string {
   if (value instanceof Date) {
@@ -156,18 +172,50 @@ export async function saveMorningReport(input: {
   kind: "morning" | "missed";
   body: string;
   needsAttention: boolean;
+  coverageBaseline?: Record<string, number> | null;
 }): Promise<void> {
   await getDbPool().query(
     `
-      insert into morning_reports (report_date, kind, body, needs_attention)
-      values ($1::date, $2, $3, $4)
+      insert into morning_reports (
+        report_date, kind, body, needs_attention, coverage_baseline
+      )
+      values ($1::date, $2, $3, $4, $5::jsonb)
       on conflict (report_date, kind) do update
       set body = excluded.body,
           needs_attention = excluded.needs_attention,
+          coverage_baseline = coalesce(
+            excluded.coverage_baseline,
+            morning_reports.coverage_baseline
+          ),
           created_at = now()
     `,
-    [input.reportDate, input.kind, input.body, input.needsAttention],
+    [
+      input.reportDate,
+      input.kind,
+      input.body,
+      input.needsAttention,
+      input.coverageBaseline ? JSON.stringify(input.coverageBaseline) : null,
+    ],
   );
+}
+
+/** Newest morning censuses before this date. One low morning stays in the window beside a higher one. */
+export async function readRecentCoverageBaselines(
+  beforeDate: string,
+  mornings: number,
+): Promise<(Record<string, number> | null)[]> {
+  const result = await getDbPool().query<{ coverage_baseline: unknown }>(
+    `
+      select coverage_baseline
+      from morning_reports
+      where kind = 'morning'
+        and report_date < $1::date
+      order by report_date desc
+      limit $2
+    `,
+    [beforeDate, mornings],
+  );
+  return result.rows.map((row) => coverageRecord(row.coverage_baseline));
 }
 
 export async function readMorningReport(

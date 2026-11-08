@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  adPriceForYourAreaAt,
   buildMealPriceSourceSummary,
   buildResultsPanelPriceSourceLine,
+  shopperVisibleSaleLabel,
 } from "@/lib/meal-price-source-copy";
+import { weeklyAdFlyerContentHash } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import { buildTestProviderCoverageRollup } from "@/lib/test-fixtures/contract-fixtures";
 
 const baseMeal = {
@@ -139,5 +142,30 @@ describe("buildResultsPanelPriceSourceLine", () => {
     ).toBe(
       "Saved store prices are unavailable — meal totals below are estimates only.",
     );
+  });
+
+  it("shows the shared sentence for a Flipp fallback label and leaves the flyer hash on the stored label", () => {
+    const stored = "Flipp flyer · Publix";
+    const visible = shopperVisibleSaleLabel(stored, "Publix Virginia Center");
+    expect(visible).toBe(adPriceForYourAreaAt("Publix Virginia Center"));
+    expect(visible).toBe(
+      "Ad price for your area at Publix Virginia Center - confirm in store.",
+    );
+    expect(shopperVisibleSaleLabel("Flipp flyer · GreenWise", "Publix Midlothian")).toBe(
+      "Ad price for your area at Publix Midlothian - confirm in store.",
+    );
+    expect(
+      shopperVisibleSaleLabel(
+        "Directional — BOGO (save up to, not shelf price)",
+        "Publix Virginia Center",
+      ),
+    ).toBe("Directional — BOGO (save up to, not shelf price)");
+    const storedHash = weeklyAdFlyerContentHash([
+      { productName: "Chicken", price: 3, saleLabel: stored },
+    ]);
+    const visibleHash = weeklyAdFlyerContentHash([
+      { productName: "Chicken", price: 3, saleLabel: visible ?? "" },
+    ]);
+    expect(storedHash).not.toBe(visibleHash);
   });
 });
