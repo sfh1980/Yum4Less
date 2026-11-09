@@ -4,6 +4,7 @@ import {
   describeCloudflareMorning,
   parseTunnelState,
   parseZoneErrorCount,
+  readCloudflareErrorNeedsYou,
   readCloudflareMorningConfig,
 } from "@/lib/owner/cloudflare-morning";
 
@@ -104,13 +105,39 @@ describe("cloudflare morning", () => {
       lines: ["Cloudflare saw the site up. The tunnel is connected."],
       needsAttention: false,
     });
+    const one = describeCloudflareMorning({
+      checked: true,
+      tunnel: "connected",
+      errorCount: 1,
+    });
+    expect(one.lines).toEqual(["Cloudflare saw 1 error."]);
+    expect(one.needsAttention).toBe(false);
+    expect(one.lines.join(" ")).not.toContain("That is more than usual.");
+    const handful = describeCloudflareMorning({
+      checked: true,
+      tunnel: "connected",
+      errorCount: 12,
+    });
+    expect(handful).toEqual({
+      lines: ["Cloudflare saw 12 errors."],
+      needsAttention: false,
+    });
     expect(
       describeCloudflareMorning({
         checked: true,
         tunnel: "connected",
-        errorCount: 1,
-      }).lines,
-    ).toEqual(["Cloudflare saw 1 error."]);
+        errorCount: 25,
+      }),
+    ).toEqual({
+      lines: ["Cloudflare saw 25 errors.", "That is more than usual."],
+      needsAttention: true,
+    });
+    expect(
+      describeCloudflareMorning(
+        { checked: true, tunnel: "connected", errorCount: 12 },
+        10,
+      ).needsAttention,
+    ).toBe(true);
     expect(
       describeCloudflareMorning({
         checked: true,
@@ -121,8 +148,31 @@ describe("cloudflare morning", () => {
       lines: ["The tunnel was not connected.", "Cloudflare saw 4 errors."],
       needsAttention: true,
     });
-    expect(describeCloudflareMorning({ checked: false }).lines).toEqual([
-      "Cloudflare was not checked.",
-    ]);
+    expect(
+      describeCloudflareMorning({
+        checked: true,
+        tunnel: "degraded",
+        errorCount: 0,
+      }).needsAttention,
+    ).toBe(true);
+    const missed = describeCloudflareMorning({ checked: false });
+    expect(missed.lines).toEqual(["Cloudflare was not checked."]);
+    expect(missed.needsAttention).toBe(true);
+  });
+
+  it("defaults the error threshold to 25 and ignores a value that is not a whole number", () => {
+    expect(readCloudflareErrorNeedsYou({})).toBe(25);
+    expect(
+      readCloudflareErrorNeedsYou({ YUM4LESS_CLOUDFLARE_ERROR_NEEDS_YOU: "40" }),
+    ).toBe(40);
+    expect(
+      readCloudflareErrorNeedsYou({ YUM4LESS_CLOUDFLARE_ERROR_NEEDS_YOU: "0" }),
+    ).toBe(0);
+    expect(
+      readCloudflareErrorNeedsYou({ YUM4LESS_CLOUDFLARE_ERROR_NEEDS_YOU: "1.5" }),
+    ).toBe(25);
+    expect(
+      readCloudflareErrorNeedsYou({ YUM4LESS_CLOUDFLARE_ERROR_NEEDS_YOU: "no" }),
+    ).toBe(25);
   });
 });

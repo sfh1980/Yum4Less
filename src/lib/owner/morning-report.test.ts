@@ -343,17 +343,38 @@ describe("morning report", () => {
     const cloudflare = composeMorningReport({
       ...quiet,
       addSkipped: "not-add-day",
-      cloudflare: { checked: true, tunnel: "connected", errorCount: 4 },
+      cloudflare: { checked: true, tunnel: "connected", errorCount: 12 },
     });
-    expect(cloudflare.body).toContain("Cloudflare saw 4 errors.");
-    expect(cloudflare.needsAttention).toBe(true);
+    expect(cloudflare.body).toContain("Cloudflare saw 12 errors.");
+    expect(cloudflare.body).not.toContain("That is more than usual.");
+    expect(cloudflare.needsAttention).toBe(false);
+    expect(cloudflare.body.endsWith("Nothing needs you.")).toBe(true);
     const kept = applyOutsideResultToMorningNote(cloudflare.body, {
       codeTests: "passed",
       siteCheck: "passed",
       discordConfigured: true,
     });
-    expect(kept.body).toContain("Cloudflare saw 4 errors.");
-    expect(kept.needsAttention).toBe(true);
+    expect(kept.body).toContain("Cloudflare saw 12 errors.");
+    expect(kept.body).not.toContain("That is more than usual.");
+    expect(kept.needsAttention).toBe(false);
+    expect(kept.body.endsWith("Nothing needs you.")).toBe(true);
+
+    const outage = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      cloudflare: { checked: true, tunnel: "connected", errorCount: 40 },
+    });
+    expect(outage.body).toContain("Cloudflare saw 40 errors.");
+    expect(outage.body).toContain("That is more than usual.");
+    expect(outage.needsAttention).toBe(true);
+    const outageKept = applyOutsideResultToMorningNote(outage.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(outageKept.body).toContain("That is more than usual.");
+    expect(outageKept.needsAttention).toBe(true);
+    expect(outageKept.body.endsWith("Needs you.")).toBe(true);
     expect(composeMissedMorningReport("Tuesday").body).toContain(
       "The morning check did not run.",
     );

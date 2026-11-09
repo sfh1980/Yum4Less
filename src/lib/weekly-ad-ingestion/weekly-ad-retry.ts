@@ -20,6 +20,11 @@ export type WeeklyAdRetryCandidate = {
   freshCount: number;
   /** Latest parse was thin. Retried even when fresh rows remain. */
   thinPage?: boolean;
+  /**
+   * chain_registry.sort_order. Orders chains inside one group
+   * (no fresh rows, or only thin). Missing values keep the caller's order.
+   */
+  sortOrder?: number;
 };
 
 export type WeeklyAdRetryThinStamp = {
@@ -134,11 +139,11 @@ function readThinStamps(value: unknown): Record<string, WeeklyAdRetryThinStamp> 
 }
 
 /**
- * First admitted chain, in the given order, that still needs a retry and is
- * under today's limit. A chain needs a retry when it has no fresh rows or its
- * latest parse was thin. The six-attempt cap still applies.
- * A thin chain is skipped after two identical thin results that day.
- * A chain with no fresh rows and no thin stamp is still eligible.
+ * A chain with no fresh rows is always ahead of a chain that only has a thin
+ * page, whatever sort_order says. Inside each group the order is sort_order,
+ * then chain_id. The six-attempt cap still applies. A thin chain is skipped
+ * after two identical thin results that day. A chain with no fresh rows and
+ * no thin stamp is still eligible.
  */
 export function selectWeeklyAdRetryChain(input: {
   candidates: readonly WeeklyAdRetryCandidate[];
@@ -146,7 +151,7 @@ export function selectWeeklyAdRetryChain(input: {
   maxPerDay: number;
   thinStamps?: Readonly<Record<string, WeeklyAdRetryThinStamp>>;
 }): string | null {
-  for (const candidate of input.candidates) {
+  for (const candidate of orderWeeklyAdRetryCandidates(input.candidates)) {
     if (candidate.freshCount > 0 && candidate.thinPage !== true) {
       continue;
     }
@@ -164,6 +169,40 @@ export function selectWeeklyAdRetryChain(input: {
     return candidate.chainId;
   }
   return null;
+}
+
+/** Zero-fresh first. Within a group, sort_order then chain_id. */
+export function orderWeeklyAdRetryCandidates(
+  candidates: readonly WeeklyAdRetryCandidate[],
+): WeeklyAdRetryCandidate[] {
+  const indexed = candidates.map((candidate, index) => ({ candidate, index }));
+  const byRegistry = (
+    left: { candidate: WeeklyAdRetryCandidate; index: number },
+    right: { candidate: WeeklyAdRetryCandidate; index: number },
+  ) => {
+    const leftOrder = left.candidate.sortOrder;
+    const rightOrder = right.candidate.sortOrder;
+    const leftKnown = typeof leftOrder === "number";
+    const rightKnown = typeof rightOrder === "number";
+    if (leftKnown && rightKnown && leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+    if (leftKnown && rightKnown) {
+      const byId = left.candidate.chainId.localeCompare(right.candidate.chainId);
+      if (byId !== 0) {
+        return byId;
+      }
+    }
+    if (leftKnown !== rightKnown) {
+      return leftKnown ? -1 : 1;
+    }
+    return left.index - right.index;
+  };
+  const noFreshRows = indexed.filter((row) => row.candidate.freshCount === 0);
+  const onlyThin = indexed.filter((row) => row.candidate.freshCount !== 0);
+  noFreshRows.sort(byRegistry);
+  onlyThin.sort(byRegistry);
+  return [...noFreshRows, ...onlyThin].map((row) => row.candidate);
 }
 
 export function bumpWeeklyAdRetryCount(

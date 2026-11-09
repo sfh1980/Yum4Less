@@ -341,11 +341,13 @@ async function chooseStaleWeeklyAdChain(
     [chainIds],
   );
   const ordered: string[] = [];
+  const sortOrder = new Map<string, number>();
   const seen = new Set<string>();
   for (const row of orderResult.rows) {
     if (!seen.has(row.chain_id)) {
       seen.add(row.chain_id);
       ordered.push(row.chain_id);
+      sortOrder.set(row.chain_id, row.sort_order);
     }
   }
   for (const chainId of chainIds) {
@@ -370,6 +372,7 @@ async function chooseStaleWeeklyAdChain(
       chainId,
       freshCount: fresh.get(chainId) ?? 0,
       thinPage: thinPages.has(chainId),
+      sortOrder: sortOrder.get(chainId),
     })),
     attemptsToday: state.counts,
     maxPerDay: readWeeklyAdRetryMaxPerDay(process.env),

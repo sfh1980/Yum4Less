@@ -1,6 +1,7 @@
 /** Plain-language morning note. ZIP text stays on /owner and Discord, not in analytics. */
 
 import {
+  CLOUDFLARE_MORE_THAN_USUAL_LINE,
   describeCloudflareMorning,
   type CloudflareMorningFacts,
 } from "@/lib/owner/cloudflare-morning";
@@ -941,7 +942,7 @@ function otherMorningLineNeedsAttention(line: string): boolean {
     line === "Cloudflare was not checked." ||
     line === "The tunnel was not connected." ||
     line === "The tunnel was not fully connected." ||
-    /^Cloudflare saw \d+ errors?\.$/.test(line) ||
+    line === CLOUDFLARE_MORE_THAN_USUAL_LINE ||
     line.startsWith("Could not add ") ||
     line.includes("could not be listed") ||
     line.endsWith("has no sale source.") ||

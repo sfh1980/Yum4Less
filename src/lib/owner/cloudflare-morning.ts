@@ -3,6 +3,10 @@
 const HEX_32 = /^[a-f0-9]{32}$/i;
 
 export const DEFAULT_CLOUDFLARE_TUNNEL_NAME = "truenas-homelab";
+/** Edge 5xx at or above this count set Needs you. Unset uses 25. */
+export const CLOUDFLARE_ERROR_NEEDS_YOU_DEFAULT = 25;
+export const CLOUDFLARE_ERROR_NEEDS_YOU_ENV = "YUM4LESS_CLOUDFLARE_ERROR_NEEDS_YOU";
+export const CLOUDFLARE_MORE_THAN_USUAL_LINE = "That is more than usual.";
 
 export type CloudflareTunnelState = "connected" | "degraded" | "down";
 
@@ -33,6 +37,21 @@ export function readCloudflareMorningConfig(
     return null;
   }
   return { accountId, zoneId, token, tunnelName };
+}
+
+/** Whole number of edge 5xx that sets Needs you. Missing or invalid uses 25. Zero means any error. */
+export function readCloudflareErrorNeedsYou(
+  env: Record<string, string | undefined> = process.env,
+): number {
+  const raw = env[CLOUDFLARE_ERROR_NEEDS_YOU_ENV]?.trim();
+  if (!raw) {
+    return CLOUDFLARE_ERROR_NEEDS_YOU_DEFAULT;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return CLOUDFLARE_ERROR_NEEDS_YOU_DEFAULT;
+  }
+  return parsed;
 }
 
 /** UTC calendar day before `now`. Cloudflare's daily totals use that date. */
@@ -119,7 +138,10 @@ export function parseZoneErrorCount(body: unknown): number | null {
   return errors;
 }
 
-export function describeCloudflareMorning(facts: CloudflareMorningFacts): {
+export function describeCloudflareMorning(
+  facts: CloudflareMorningFacts,
+  errorNeedsYou: number = readCloudflareErrorNeedsYou(),
+): {
   lines: string[];
   needsAttention: boolean;
 } {
@@ -127,6 +149,7 @@ export function describeCloudflareMorning(facts: CloudflareMorningFacts): {
     return { lines: ["Cloudflare was not checked."], needsAttention: true };
   }
   const lines: string[] = [];
+  const tunnelNeedsYou = facts.tunnel !== "connected";
   if (facts.tunnel === "down") {
     lines.push("The tunnel was not connected.");
   } else if (facts.tunnel === "degraded") {
@@ -134,10 +157,13 @@ export function describeCloudflareMorning(facts: CloudflareMorningFacts): {
   } else if (facts.errorCount === 0) {
     lines.push("Cloudflare saw the site up. The tunnel is connected.");
   }
-  if (facts.errorCount > 0) {
-    const count = Math.floor(facts.errorCount);
+  const count = Math.floor(facts.errorCount);
+  const countNeedsYou = count > 0 && count >= errorNeedsYou;
+  if (count > 0) {
     lines.push(`Cloudflare saw ${count} ${count === 1 ? "error" : "errors"}.`);
   }
-  const needsAttention = facts.tunnel !== "connected" || facts.errorCount > 0;
-  return { lines, needsAttention };
+  if (countNeedsYou) {
+    lines.push(CLOUDFLARE_MORE_THAN_USUAL_LINE);
+  }
+  return { lines, needsAttention: tunnelNeedsYou || countNeedsYou };
 }
