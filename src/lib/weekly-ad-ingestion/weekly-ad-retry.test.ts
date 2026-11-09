@@ -5,6 +5,7 @@ import {
   parseWeeklyAdRetryState,
   readWeeklyAdRetryMaxPerDay,
   selectWeeklyAdRetryChain,
+  WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT,
   weeklyAdRetryDate,
   weeklyAdThinSignature,
   type WeeklyAdRetryState,
@@ -39,7 +40,7 @@ function wednesdaySlots(input: {
         },
       ],
       attemptsToday: state.counts,
-      maxPerDay: 6,
+      maxPerDay: WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT,
       thinStamps: state.thinStamps,
     });
     picks.push(choice);
@@ -58,10 +59,11 @@ function wednesdaySlots(input: {
 }
 
 describe("weekly-ad retry picker", () => {
-  it("uses the New York date and a default cap of 6", () => {
+  it("uses the New York date and a default cap of 7", () => {
     expect(weeklyAdRetryDate(new Date("2026-11-11T08:00:00.000Z"))).toBe("2026-11-11");
     expect(weeklyAdRetryDate(new Date("2026-11-11T04:30:00.000Z"))).toBe("2026-11-10");
-    expect(readWeeklyAdRetryMaxPerDay({})).toBe(6);
+    expect(readWeeklyAdRetryMaxPerDay({})).toBe(7);
+    expect(WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT).toBe(7);
     expect(readWeeklyAdRetryMaxPerDay({ YUM4LESS_WEEKLY_AD_RETRY_MAX_PER_DAY: "2" })).toBe(2);
     expect(() =>
       readWeeklyAdRetryMaxPerDay({ YUM4LESS_WEEKLY_AD_RETRY_MAX_PER_DAY: "0" }),
@@ -131,13 +133,13 @@ describe("weekly-ad retry picker", () => {
       { chainId: "walmart", freshCount: 6 },
       { chainId: "whole-foods", freshCount: 0 },
     ];
-    const attempts: Record<string, number> = { publix: 6 };
+    const attempts: Record<string, number> = { publix: WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT };
     const picks: Array<string | null> = [];
     for (let hour = 6; hour <= 12; hour += 1) {
       const choice = selectWeeklyAdRetryChain({
         candidates,
         attemptsToday: attempts,
-        maxPerDay: 6,
+        maxPerDay: WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT,
       });
       picks.push(choice);
       if (choice) {
@@ -151,10 +153,10 @@ describe("weekly-ad retry picker", () => {
       "whole-foods",
       "whole-foods",
       "whole-foods",
-      null,
+      "whole-foods",
     ]);
-    expect(attempts.publix).toBe(6);
-    expect(attempts["whole-foods"]).toBe(6);
+    expect(attempts.publix).toBe(7);
+    expect(attempts["whole-foods"]).toBe(7);
   });
 
   it("still stops a thin chain after two identical results once nothing has zero rows", () => {
@@ -260,7 +262,7 @@ describe("weekly-ad retry picker", () => {
     ).toBe("aldi");
   });
 
-  it("on Wednesday 2026-11-11 picks Whole Foods until its cap when Publix only repeats", () => {
+  it("on Wednesday 2026-11-11 lets Whole Foods use noon when Publix only repeats", () => {
     const picks = wednesdaySlots({
       signatureForHour: () => weeklyAdThinSignature({ seenCards: 173, parsedOffers: 13 }),
     });
@@ -271,11 +273,11 @@ describe("weekly-ad retry picker", () => {
       "whole-foods",
       "whole-foods",
       "whole-foods",
-      "publix",
+      "whole-foods",
     ]);
   });
 
-  it("on Wednesday still gives Whole Foods the morning when Publix's signature changes", () => {
+  it("on Wednesday still gives Whole Foods every slot when Publix's signature changes", () => {
     const picks = wednesdaySlots({
       signatureForHour: (hour) =>
         weeklyAdThinSignature({ seenCards: 170 + hour, parsedOffers: hour }),
@@ -287,13 +289,13 @@ describe("weekly-ad retry picker", () => {
       "whole-foods",
       "whole-foods",
       "whole-foods",
-      "publix",
+      "whole-foods",
     ]);
   });
 
-  it("on Wednesday skips Publix for the whole morning when Publix has already used its cap", () => {
+  it("on Wednesday still gives noon to Whole Foods when Publix has already used its cap", () => {
     const picks = wednesdaySlots({
-      publixAttempts: 6,
+      publixAttempts: WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT,
       signatureForHour: () => weeklyAdThinSignature({ seenCards: 173, parsedOffers: 13 }),
     });
     expect(picks).toEqual([
@@ -303,7 +305,7 @@ describe("weekly-ad retry picker", () => {
       "whole-foods",
       "whole-foods",
       "whole-foods",
-      null,
+      "whole-foods",
     ]);
   });
 

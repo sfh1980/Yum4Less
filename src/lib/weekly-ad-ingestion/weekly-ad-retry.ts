@@ -7,11 +7,12 @@
  *
  * 0 6-12 * * * root . /etc/yum4less/ingest.env && cd /app && /usr/local/bin/npm run ingest:weekly-ads:retry >> /var/log/yum4less/ingest.log 2>&1
  *
- * YUM4LESS_WEEKLY_AD_RETRY_MAX_PER_DAY defaults to 6 (the noon slot can still
- * pick a different chain after one chain has used its six).
+ * YUM4LESS_WEEKLY_AD_RETRY_MAX_PER_DAY defaults to 7, one try per slot from
+ * 6am through noon. A thin chain still stops after two identical results, so
+ * the noon slot is only reached by a chain that still has zero fresh rows.
  */
 
-export const WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT = 6;
+export const WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT = 7;
 /** Stop thin retries after this many identical thin results in one New York day. */
 export const WEEKLY_AD_THIN_IDENTICAL_LIMIT = 2;
 
