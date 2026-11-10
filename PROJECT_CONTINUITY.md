@@ -4,6 +4,12 @@
 
 ---
 
+## Resume (as of 2026-11-10)
+
+**This slice (branch `feat/publix-section-log-and-stop-rule`, local only, not pushed):** Each of the five Publix section pages logs one line: section, printed count, distinct cards, offers parsed from that section, polls, wait, and why the wait stopped. One summary line adds the totals plus the savings-call status, byte length, key names, array lengths, and `WeeklyAdLatestUpdatedDateTime`. No body, cookie, token, or query string. A log failure cannot fail the scrape. Those section cards are not merged into the stored page. The printed result count still stops the scroll. Set `YUM4LESS_PUBLIX_PRINTED_TOTAL_IS_FLOOR=1` to keep scrolling until the list bottom, three polls with no new distinct card, or the wait cap (`YUM4LESS_PUBLIX_CARD_MAX_WAIT_MS`, ceiling 60 seconds). Unset stays off. No migration. `npm test` **1513/1513**. Integration **72/72**. Build passed. E2e **37 passed**, 2 skipped. A pass is not more dinners.
+
+The Tuesday visible-row drop is the opening purge (verification older than 24 hours, or an ended `valid_through`) running before the write. A fetch that contains only a next-week offer keeps a current row. That keep is not in the purge. Not changed in this commit. `c054ba7` is on `origin/master`. This branch is not.
+
 ## Resume (as of 2026-11-09)
 
 **This slice (branch `fix/retry-order-and-cloudflare-threshold`, local only, not pushed):** A chain with zero fresh rows is retried before a chain that is only thin, whatever `sort_order` says. Inside each group the order stays `sort_order`, then `chain_id`. The per-chain cap defaults to 7, one try for each slot from 6am through noon. The identical-thin stop after two, the lock skip, and the per-chain purge stay. A thin chain still stops after two identical results, so the seventh slot is only for a chain that still has zero fresh rows. Cloudflare edge 5xx under 25 stay information (`Cloudflare saw N errors.`). At 25 or more the note adds `That is more than usual.` and sets Needs you. A down or degraded tunnel, or a check that did not run, still sets Needs you at any count. The 4:15 rewrite uses that second sentence, not the plain count. No new migration. `npm test` **1511/1511**. Integration **72/72**. Build passed. E2e **37 passed**, 2 skipped. A pass is not more dinners.
@@ -43,6 +49,8 @@
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **Publix section log and printed-total floor (2026-11-10, local):** Five section lines and one savings summary per Publix run. The printed count still stops the scroll unless `YUM4LESS_PUBLIX_PRINTED_TOTAL_IS_FLOOR=1`. Unset stays off. Section cards are not the stored harvest. No migration. Not pushed. A pass is not more dinners.
 
 - **Retry order and Cloudflare threshold (2026-11-09, local):** Zero fresh rows go before a thin-with-rows chain. `YUM4LESS_WEEKLY_AD_RETRY_MAX_PER_DAY` defaults to 7. `YUM4LESS_CLOUDFLARE_ERROR_NEEDS_YOU` defaults to 25. Under that, `Cloudflare saw N errors.` does not set Needs you. At or above it, the note adds `That is more than usual.` and does. The 4:15 rewrite follows that sentence. Not pushed. No new migration. A pass is not more dinners.
 
@@ -314,6 +322,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-10 — Publix section log, and a printed total that can be a floor
+
+**Theme:** Tuesday's Publix scrape logged 216 cards and 188 offers and was not marked thin. The five section pages were visited, and only the page left at the end was parsed. The printed count still stops that scroll.
+
+**Shipped:** One log line per section (`bogo`, `meat`, `produce`, `dairy`, `protein`): printed count, distinct cards, offers parsed from that section, polls, wait milliseconds, and the stop (`listed`, `bottom`, `stable`, `max-wait`, `half`). One summary line: those totals, the harvest card count, the harvest offer count, and the savings call's status, byte length, top-level key names, array lengths, and `WeeklyAdLatestUpdatedDateTime`. No response body, cookie, token, or query string. The log is inside try/catch. Section cards stay out of the stored HTML. `YUM4LESS_PUBLIX_PRINTED_TOTAL_IS_FLOOR=1` stops at the list bottom, or after three polls with no new distinct card (`PUBLIX_CARD_STABLE_POLLS`), or at the wait cap. Any other value, including unset, keeps today's stop at the printed count.
+
+**Limits:** Local branch `feat/publix-section-log-and-stop-rule`. Not on yum4less.com. Wednesday 3:00am still runs `c054ba7` once Watchtower has that image. No migration. This does not close the 34-ingredient Publix gap, the Tuesday visible-row drop, or the null Publix dates. A pass is not more dinners.
+
+**Evidence:** `npm test` **1513/1513** pass (259 files), `YUM4LESS_OSM_OVERPASS_DISABLED` cleared first. `npm run typecheck` exit 0. `npm run lint` exit 0. `npm run audit:high` exit 0. `npm run test:integration` **72/72** pass (20 files) on `yum4less_test`, Overpass off; no new migration. `npm run build` exit 0 (Next.js 15.5.28). `npm run test:e2e:ci` **37 passed**, 2 skipped, exit 0. The first attempt looked for Chromium in the sandbox cache and was stopped. The re-run used the installed Playwright browsers (`PLAYWRIGHT_BROWSERS_PATH`) and Overpass off. Semgrep `p/typescript` and `p/secrets` on `publix-savings-card-wait.ts`, `publix-savings-card-wait.test.ts`, and `publix-weekly-ad-fetcher.ts` exited 0 (0 findings, 351 rules). `.env.example` and `PROJECT_CONTINUITY.md` were not in that scan.
 
 ### 2026-11-09 — Zero-fresh retries first, and a Cloudflare error threshold
 
@@ -3510,6 +3528,8 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-10 | **Publix section logs do not change the stored harvest.** Each of the five section pages logs printed count, distinct cards, parsed offers, polls, wait, and stop reason. The summary adds savings-call status, byte length, key names, array lengths, and the update time. No body, cookie, token, or query string. A log failure cannot fail the scrape. Section cards are not merged into the page that is parsed for prices. | **Active** |
+| 2026-11-10 | **The printed Publix result count stays a stop unless the floor setting is exactly 1.** `YUM4LESS_PUBLIX_PRINTED_TOTAL_IS_FLOOR=1` stops at the list bottom, three polls with no new distinct card, or the wait cap (ceiling 60 seconds). Unset, or any other value, keeps the printed-count stop. A stuck zero still waits. | **Active** |
 | 2026-11-09 | **A chain with zero fresh rows is retried before a chain that is only thin.** `sort_order` then `chain_id` still order each group. The cap defaults to 7 per chain per New York day, matching the seven retry slots. A thin chain still stops after two identical results, so noon is only an extra try for a chain that still has zero rows. Two identical thin results still stop that chain, and a changed signature resets the count. A lock miss does not count. The purge stays limited to that chain's source. | **Active** (narrows the order half of 2026-11-08) |
 | 2026-11-09 | **A handful of Cloudflare edge 5xx does not set Needs you.** `YUM4LESS_CLOUDFLARE_ERROR_NEEDS_YOU` defaults to 25 for the previous UTC day. Under it, `Cloudflare saw N errors.` is information. At or above it, the note adds `That is more than usual.` and sets Needs you. The 4:15 rewrite uses that sentence, not the plain count. A tunnel that is down or degraded, or a check that did not run, still sets Needs you at any count. | **Active** (narrows the error half of 2026-10-17) |
 | 2026-11-08 | **A thin chain sets Needs you on the second morning.** The first morning stays informational (`X weekly ad page was thin.`). The next morning, if that chain is still thin, adds `thin again` and sets Needs you. Detection is the previous morning note. A parse that is not thin-page clears it. | **Active** |
@@ -3687,6 +3707,14 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (Publix section log, printed-total floor setting) | 2026-11-10 | **1513/1513** pass (259 files). `YUM4LESS_OSM_OVERPASS_DISABLED` cleared first. |
+| `npm run typecheck` (same slice) | 2026-11-10 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run lint` (same slice) | 2026-11-10 | **Pass** (exit 0) |
+| `npm run audit:high` (same slice) | 2026-11-10 | **Exit 0.** No high or critical advisories. |
+| `npm run test:integration` (same slice, no new migration) | 2026-11-10 | **72/72** pass (20 files) on `yum4less_test`. Overpass off. |
+| `npm run build` (same slice) | 2026-11-10 | **Pass** (Next.js 15.5.28, exit 0). |
+| `npm run test:e2e:ci` (same slice) | 2026-11-10 | **37 passed**, 2 skipped, exit 0. Installed Chromium via `PLAYWRIGHT_BROWSERS_PATH`. Overpass off. The first attempt looked in the sandbox cache and was stopped. |
+| Semgrep CLI `p/typescript` + `p/secrets` (Publix wait, its test, and the fetcher) | 2026-11-10 | **Exit 0.** 0 findings, 351 rules, 3 files. `.env.example` and `PROJECT_CONTINUITY.md` were not scanned. |
 | `npm test` (zero-fresh retry order, Cloudflare error threshold, retry cap default 7) | 2026-11-09 | **1511/1511** pass (259 files). `YUM4LESS_OSM_OVERPASS_DISABLED` cleared first. Re-run after the cap default moved to 7. |
 | `npm run typecheck` (same slice) | 2026-11-09 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same slice) | 2026-11-09 | **Pass** (exit 0) |

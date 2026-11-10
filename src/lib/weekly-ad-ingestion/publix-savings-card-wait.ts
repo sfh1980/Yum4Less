@@ -26,7 +26,7 @@ export const PUBLIX_CARD_SCROLL_VIEWPORTS_MIN = 1;
 export const PUBLIX_CARD_SCROLL_VIEWPORTS_MAX = 5;
 export const PUBLIX_THIN_MIN_CARDS_DEFAULT = 50;
 
-export type PublixCardPollStop = "stable" | "half" | "listed" | "max-wait";
+export type PublixCardPollStop = "stable" | "half" | "listed" | "max-wait" | "bottom";
 
 export type PublixCategoryResultCount = {
   categoryId: string;
@@ -55,6 +55,18 @@ export function readPublixCardMaxWaitMs(
 }
 
 /** How many viewports each poll scrolls. Default 3. Out-of-range values use the default. */
+/**
+ * Off unless set to exactly "1".
+ * On: the printed result count does not stop the scroll.
+ * The scroll stops at the bottom of the list, after three polls with no new
+ * distinct card, or at the capped wait.
+ */
+export function readPublixPrintedTotalIsFloor(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env.YUM4LESS_PUBLIX_PRINTED_TOTAL_IS_FLOOR?.trim() === "1";
+}
+
 export function readPublixCardScrollViewports(
   env: NodeJS.ProcessEnv = process.env,
 ): number {
@@ -274,8 +286,31 @@ export function decidePublixCardPoll(input: {
   minCards?: number;
   expectedCount?: number | null;
   seenCount?: number;
+  /** When true, reaching the printed count does not stop the scroll. */
+  printedTotalIsFloor?: boolean;
+  /** The virtual list or the page itself cannot scroll further. */
+  atBottom?: boolean;
+  /** Polls in a row with the same distinct-card count, including this one. */
+  distinctStablePolls?: number;
+  distinctCount?: number;
 }): "continue" | PublixCardPollStop {
   const seen = input.seenCount ?? input.count;
+  if (input.printedTotalIsFloor === true) {
+    if (input.atBottom === true) {
+      return "bottom";
+    }
+    const distinctCount = input.distinctCount ?? 0;
+    if (
+      distinctCount > 0 &&
+      (input.distinctStablePolls ?? 0) >= PUBLIX_CARD_STABLE_POLLS
+    ) {
+      return "stable";
+    }
+    if (input.elapsedMs >= input.maxWaitMs) {
+      return "max-wait";
+    }
+    return "continue";
+  }
   if (typeof input.expectedCount === "number" && input.expectedCount > 0) {
     if (seen >= input.expectedCount) {
       return "listed";
@@ -328,4 +363,113 @@ export function buildPublixThinCaptureMeta(input: {
     capturedAt: input.capturedAt,
     responses: [...(input.responses ?? [])],
   };
+}
+
+export type PublixSectionLog = {
+  section: string;
+  printed: number | null;
+  cards: number;
+  offers: number;
+  polls: number;
+  waitMs: number;
+  stop: string;
+};
+
+export type PublixSavingsCallSummary = {
+  status: number;
+  byteLength: number;
+  keys: string[];
+  arrayLengths: { name: string; length: number }[];
+  weeklyAdLatestUpdatedDateTime: string | null;
+};
+
+/** Keys, array lengths, and the update timestamp. Values other than that timestamp stay out. */
+export function summarizePublixSavingsBody(input: {
+  status: number;
+  body: string;
+}): PublixSavingsCallSummary {
+  const byteLength = Buffer.byteLength(input.body);
+  const keys: string[] = [];
+  const arrayLengths: { name: string; length: number }[] = [];
+  let weeklyAdLatestUpdatedDateTime: string | null = null;
+  try {
+    const parsed = JSON.parse(input.body) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const record = parsed as Record<string, unknown>;
+      for (const key of Object.keys(record).sort()) {
+        if (SECRET_QUERY_KEY.test(key)) {
+          continue;
+        }
+        keys.push(key);
+        const value = record[key];
+        if (Array.isArray(value)) {
+          arrayLengths.push({ name: key, length: value.length });
+        }
+      }
+      const updated = record.WeeklyAdLatestUpdatedDateTime;
+      if (
+        typeof updated === "string" &&
+        updated.length > 0 &&
+        updated.length <= 40 &&
+        !/[\r\n]/.test(updated)
+      ) {
+        weeklyAdLatestUpdatedDateTime = updated;
+      }
+    }
+  } catch {
+    // Status and byte length still describe the call.
+  }
+  return {
+    status: input.status,
+    byteLength,
+    keys,
+    arrayLengths,
+    weeklyAdLatestUpdatedDateTime,
+  };
+}
+
+export function formatPublixSectionLogLine(input: PublixSectionLog): string {
+  const printed = input.printed === null ? "none" : String(input.printed);
+  return `[publix] section=${input.section} printed=${printed} cards=${input.cards} offers=${input.offers} polls=${input.polls} waitMs=${input.waitMs} stop=${input.stop}`;
+}
+
+export function formatPublixHarvestSummaryLine(input: {
+  sections: number;
+  cards: number;
+  offers: number;
+  polls: number;
+  waitMs: number;
+  harvestCards: number | null;
+  harvestOffers: number | null;
+  savings: PublixSavingsCallSummary | null;
+}): string {
+  const savings = input.savings;
+  const savingsKeys = savings && savings.keys.length > 0 ? savings.keys.join(",") : "none";
+  const savingsArrays =
+    savings && savings.arrayLengths.length > 0
+      ? savings.arrayLengths.map((item) => `${item.name}:${item.length}`).join(",")
+      : "none";
+  return [
+    "[publix] summary",
+    `sections=${input.sections}`,
+    `sectionCards=${input.cards}`,
+    `sectionOffers=${input.offers}`,
+    `sectionPolls=${input.polls}`,
+    `sectionWaitMs=${input.waitMs}`,
+    `harvestCards=${input.harvestCards === null ? "none" : input.harvestCards}`,
+    `harvestOffers=${input.harvestOffers === null ? "none" : input.harvestOffers}`,
+    `savingsStatus=${savings ? savings.status : "none"}`,
+    `savingsBytes=${savings ? savings.byteLength : "none"}`,
+    `savingsKeys=${savingsKeys}`,
+    `savingsArrays=${savingsArrays}`,
+    `updated=${savings?.weeklyAdLatestUpdatedDateTime ?? "none"}`,
+  ].join(" ");
+}
+
+export function logPublixLine(line: string): void {
+  try {
+    console.info(line);
+  } catch {
+    // A log line must not fail the scrape.
+  }
 }

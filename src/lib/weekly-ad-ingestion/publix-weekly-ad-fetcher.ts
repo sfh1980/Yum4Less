@@ -4,6 +4,9 @@ import { getWeeklyAdBrowserContextOptions } from "@/lib/weekly-ad-ingestion/week
 import {
   buildPublixThinCaptureMeta,
   decidePublixCardPoll,
+  formatPublixHarvestSummaryLine,
+  formatPublixSectionLogLine,
+  logPublixLine,
   nextPublixEqualPositiveSamples,
   parsePublixCategoryResultCounts,
   PUBLIX_CARD_POLL_MS,
@@ -15,7 +18,11 @@ import {
   publixResponseStatusIsRelevant,
   readPublixCardMaxWaitMs,
   readPublixCardScrollViewports,
+  readPublixPrintedTotalIsFloor,
+  summarizePublixSavingsBody,
   type PublixResponseStatus,
+  type PublixSavingsCallSummary,
+  type PublixSectionLog,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 import { parsePublixWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-publix-weekly-ad";
 import {
@@ -221,16 +228,27 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
     await page.waitForTimeout(2_000);
     await scrollPageForLazyContent(page);
 
-    await explorePublixWeeklyAdCategories(page, input.url, visitedUrls, input.timeoutMs);
     const rememberedOfferCount = input.rememberedOfferCount ?? null;
     const maxWaitMs = input.maxWaitMs ?? readPublixCardMaxWaitMs();
     const scrollViewports = readPublixCardScrollViewports();
+    const printedTotalIsFloor = readPublixPrintedTotalIsFloor();
+    const savingsCalls: PublixSavingsCallSummary[] = [];
+    attachPublixSavingsCallSummary(page, savingsCalls);
     const collectedCards = new Map<string, string>();
+    const sectionLogs: PublixSectionLog[] = [];
+    await explorePublixWeeklyAdCategories(page, input.url, visitedUrls, input.timeoutMs, {
+      rememberedOfferCount,
+      maxWaitMs,
+      scrollViewports,
+      printedTotalIsFloor,
+      sectionLogs,
+    });
     let settled = await settlePublixSavingsCardCount(page, {
       timeoutMs: input.timeoutMs,
       rememberedOfferCount,
       maxWaitMs,
       scrollViewports,
+      printedTotalIsFloor,
       collectedCards,
     });
 
@@ -255,6 +273,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
         rememberedOfferCount,
         maxWaitMs,
         scrollViewports,
+        printedTotalIsFloor,
         collectedCards,
       });
     }
@@ -270,6 +289,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
       html,
       networkJsonBodies,
     }).length;
+    logPublixHarvestSummary(sectionLogs, settled.seenCount, parsedOfferCount, savingsCalls);
     if (
       publixPageIsThin({
         seenCount: settled.seenCount,
@@ -326,15 +346,24 @@ async function settlePublixSavingsCardCount(
     rememberedOfferCount: number | null;
     maxWaitMs: number;
     scrollViewports: number;
+    printedTotalIsFloor: boolean;
     collectedCards: Map<string, string>;
   },
-): Promise<{ seenCount: number; expectedCount: number | null }> {
+): Promise<{
+  seenCount: number;
+  expectedCount: number | null;
+  polls: number;
+  waitMs: number;
+  stop: string;
+}> {
   await waitForPublixSavingsCards(page, input.timeoutMs);
   const started = Date.now();
   const distinct = new Set<string>();
   let previousCount: number | null = null;
+  let previousDistinct: number | null = null;
   let samples = 0;
   let equalPositiveSamples = 0;
+  let distinctStablePolls = 0;
   let seenCount = 0;
   let expectedCount: number | null = null;
 
@@ -355,21 +384,32 @@ async function settlePublixSavingsCardCount(
       count: seenCount,
       equalPositiveSamples,
     });
+    distinctStablePolls = nextPublixEqualPositiveSamples({
+      previousCount: previousDistinct,
+      count: distinct.size,
+      equalPositiveSamples: distinctStablePolls,
+    });
+    const elapsedMs = Date.now() - started;
     const decision = decidePublixCardPoll({
       previousCount,
       count: seenCount,
       seenCount,
       expectedCount,
       rememberedOfferCount: input.rememberedOfferCount,
-      elapsedMs: Date.now() - started,
+      elapsedMs,
       maxWaitMs: input.maxWaitMs,
       samples,
       equalPositiveSamples,
+      printedTotalIsFloor: input.printedTotalIsFloor,
+      atBottom: listing.atBottom,
+      distinctStablePolls,
+      distinctCount: distinct.size,
     });
     if (decision !== "continue") {
-      return { seenCount, expectedCount };
+      return { seenCount, expectedCount, polls: samples, waitMs: elapsedMs, stop: decision };
     }
     previousCount = seenCount;
+    previousDistinct = distinct.size;
     await scrollPublixCardList(page, input.scrollViewports);
     await page.waitForTimeout(PUBLIX_CARD_POLL_MS);
   }
@@ -380,6 +420,7 @@ async function readPublixCardListing(page: import("playwright").Page): Promise<{
   keys: string[];
   listingHtml: string;
   cards: { key: string; html: string }[];
+  atBottom: boolean;
 }> {
   return page.evaluate(() => {
     const cards = Array.from(
@@ -397,11 +438,27 @@ async function readPublixCardListing(page: import("playwright").Page): Promise<{
     const listingHtml = Array.from(document.querySelectorAll("[data-weekly-ad-category-id]"))
       .map((section) => section.outerHTML)
       .join("\n");
+    const container = document.querySelector("[class*='virtual-container']");
+    let atBottom = false;
+    if (container instanceof HTMLElement) {
+      const style = window.getComputedStyle(container);
+      const scrollsItself =
+        /(auto|scroll)/.test(style.overflowY) &&
+        container.scrollHeight > container.clientHeight + 20;
+      if (scrollsItself) {
+        atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 8;
+      }
+    }
+    if (!atBottom) {
+      const scrolling = document.scrollingElement || document.documentElement;
+      atBottom = window.innerHeight + window.scrollY >= scrolling.scrollHeight - 8;
+    }
     return {
       mounted: cards.length,
       keys: snapshots.map((card) => card.key),
       cards: snapshots,
       listingHtml,
+      atBottom,
     };
   });
 }
@@ -422,6 +479,53 @@ async function scrollPublixCardList(page: import("playwright").Page, viewports: 
     }
     window.scrollBy(0, step);
   }, viewports);
+}
+
+function attachPublixSavingsCallSummary(
+  page: import("playwright").Page,
+  sink: PublixSavingsCallSummary[],
+) {
+  page.on("response", async (response) => {
+    try {
+      const parsed = new URL(response.url());
+      if (parsed.hostname !== "services.publix.com" || !/savings/i.test(parsed.pathname)) {
+        return;
+      }
+      const body = await response.text();
+      sink.push(summarizePublixSavingsBody({ status: response.status(), body }));
+    } catch {
+      // A savings summary must not fail the scrape.
+    }
+  });
+}
+
+function logPublixHarvestSummary(
+  sectionLogs: readonly PublixSectionLog[],
+  harvestCards: number,
+  harvestOffers: number,
+  savingsCalls: readonly PublixSavingsCallSummary[],
+) {
+  const totals = sectionLogs.reduce(
+    (sum, line) => ({
+      cards: sum.cards + line.cards,
+      offers: sum.offers + line.offers,
+      polls: sum.polls + line.polls,
+      waitMs: sum.waitMs + line.waitMs,
+    }),
+    { cards: 0, offers: 0, polls: 0, waitMs: 0 },
+  );
+  logPublixLine(
+    formatPublixHarvestSummaryLine({
+      sections: sectionLogs.length,
+      cards: totals.cards,
+      offers: totals.offers,
+      polls: totals.polls,
+      waitMs: totals.waitMs,
+      harvestCards,
+      harvestOffers,
+      savings: savingsCalls.at(-1) ?? null,
+    }),
+  );
 }
 
 function attachPublixResponseStatuses(
@@ -488,6 +592,13 @@ async function explorePublixWeeklyAdCategories(
   baseUrl: string,
   visitedUrls: string[],
   timeoutMs: number,
+  settle: {
+    rememberedOfferCount: number | null;
+    maxWaitMs: number;
+    scrollViewports: number;
+    printedTotalIsFloor: boolean;
+    sectionLogs: PublixSectionLog[];
+  },
 ) {
   const base = new URL(baseUrl);
   const categoryBase = `${base.origin}/savings/weekly-ad`;
@@ -505,10 +616,36 @@ async function explorePublixWeeklyAdCategories(
       });
       visitedUrls.push(page.url());
       await waitForPublixSavingsCards(page, timeoutMs);
-      await scrollPageForLazyContent(page);
-      await page.waitForTimeout(2_500);
+      const sectionCards = new Map<string, string>();
+      const measured = await settlePublixSavingsCardCount(page, {
+        timeoutMs,
+        rememberedOfferCount: settle.rememberedOfferCount,
+        maxWaitMs: settle.maxWaitMs,
+        scrollViewports: settle.scrollViewports,
+        printedTotalIsFloor: settle.printedTotalIsFloor,
+        collectedCards: sectionCards,
+      });
+      let offers = 0;
+      try {
+        offers = parsePublixWeeklyAd({
+          html: publixCollectedCardsDocument(sectionCards.values()),
+        }).length;
+      } catch {
+        offers = 0;
+      }
+      const line: PublixSectionLog = {
+        section: slug,
+        printed: measured.expectedCount,
+        cards: measured.seenCount,
+        offers,
+        polls: measured.polls,
+        waitMs: measured.waitMs,
+        stop: measured.stop,
+      };
+      settle.sectionLogs.push(line);
+      logPublixLine(formatPublixSectionLogLine(line));
     } catch {
-      // Try the next category if one slug fails.
+      logPublixLine(`[publix] section=${slug} log-skipped`);
     }
   }
 

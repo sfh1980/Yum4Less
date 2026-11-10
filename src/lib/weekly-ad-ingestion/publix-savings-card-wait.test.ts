@@ -15,6 +15,10 @@ import {
   publixResponseStatusIsRelevant,
   readPublixCardMaxWaitMs,
   readPublixCardScrollViewports,
+  readPublixPrintedTotalIsFloor,
+  summarizePublixSavingsBody,
+  formatPublixSectionLogLine,
+  formatPublixHarvestSummaryLine,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 import { offerCountToRemember } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
 import { buildTestProcessEnv } from "@/lib/test-only/process-env-test-helpers";
@@ -365,6 +369,161 @@ describe("printed Publix result count", () => {
     expect(seen.get("b")).toContain("two");
     expect(publixCollectedCardsDocument(seen.values())).toContain("one");
     expect(publixCollectedCardsDocument(seen.values())).toContain("three");
+  });
+
+  it("keeps scrolling past the printed count only when that setting is on", () => {
+    const top = `
+      <div data-weekly-ad-category-id="bogo"><span>4 results</span></div>
+      <div data-qa-automation="listed-savings-card" data-item-code="a"></div>`;
+    const both = `
+      ${top}
+      <div data-qa-automation="listed-savings-card" data-item-code="b"></div>`;
+    const keys = (html: string) =>
+      [...html.matchAll(/data-item-code="([^"]+)"/g)].map((match) => match[1] ?? "");
+    const printed = publixListedCardTarget(parsePublixCategoryResultCounts(top));
+    expect(printed).toBe(4);
+    expect(keys(top)).toEqual(["a"]);
+    expect(keys(both)).toEqual(["a", "b"]);
+    expect(readPublixPrintedTotalIsFloor(buildTestProcessEnv())).toBe(false);
+    expect(
+      readPublixPrintedTotalIsFloor(
+        buildTestProcessEnv({ YUM4LESS_PUBLIX_PRINTED_TOTAL_IS_FLOOR: "1" }),
+      ),
+    ).toBe(true);
+    expect(
+      decidePublixCardPoll({
+        previousCount: 1,
+        count: keys(both).length,
+        seenCount: keys(both).length,
+        expectedCount: printed,
+        rememberedOfferCount: null,
+        elapsedMs: 1_000,
+        maxWaitMs: 20_000,
+        samples: 2,
+        equalPositiveSamples: 1,
+        printedTotalIsFloor: false,
+        atBottom: true,
+        distinctStablePolls: 1,
+        distinctCount: keys(both).length,
+      }),
+    ).toBe("continue");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 1,
+        count: keys(both).length,
+        seenCount: keys(both).length,
+        expectedCount: printed,
+        rememberedOfferCount: null,
+        elapsedMs: 1_000,
+        maxWaitMs: 20_000,
+        samples: 2,
+        equalPositiveSamples: 1,
+        printedTotalIsFloor: true,
+        atBottom: false,
+        distinctStablePolls: 1,
+        distinctCount: keys(both).length,
+      }),
+    ).toBe("continue");
+    expect(
+      decidePublixCardPoll({
+        previousCount: keys(both).length,
+        count: keys(both).length,
+        seenCount: keys(both).length,
+        expectedCount: printed,
+        rememberedOfferCount: null,
+        elapsedMs: 2_000,
+        maxWaitMs: 20_000,
+        samples: 3,
+        equalPositiveSamples: 3,
+        printedTotalIsFloor: true,
+        atBottom: true,
+        distinctStablePolls: 1,
+        distinctCount: keys(both).length,
+      }),
+    ).toBe("bottom");
+    expect(
+      decidePublixCardPoll({
+        previousCount: keys(both).length,
+        count: keys(both).length,
+        seenCount: keys(both).length,
+        expectedCount: printed,
+        rememberedOfferCount: null,
+        elapsedMs: 3_000,
+        maxWaitMs: 20_000,
+        samples: 4,
+        equalPositiveSamples: 3,
+        printedTotalIsFloor: true,
+        atBottom: false,
+        distinctStablePolls: 3,
+        distinctCount: keys(both).length,
+      }),
+    ).toBe("stable");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 4,
+        count: 4,
+        seenCount: 4,
+        expectedCount: printed,
+        rememberedOfferCount: null,
+        elapsedMs: 4_000,
+        maxWaitMs: 20_000,
+        samples: 5,
+        equalPositiveSamples: 1,
+        printedTotalIsFloor: true,
+        atBottom: false,
+        distinctStablePolls: 1,
+        distinctCount: 4,
+      }),
+    ).toBe("continue");
+  });
+
+  it("logs a section line and a savings summary without the body or the query", () => {
+    const body = JSON.stringify({
+      IsPersonalizationEnabled: false,
+      WeeklyAdLatestUpdatedDateTime: "2026-11-10T04:00:00Z",
+      LanguageId: 1,
+      Savings: [],
+      access_token: "secret-token",
+    });
+    const savings = summarizePublixSavingsBody({ status: 200, body });
+    expect(savings.keys).toEqual([
+      "IsPersonalizationEnabled",
+      "LanguageId",
+      "Savings",
+      "WeeklyAdLatestUpdatedDateTime",
+    ]);
+    expect(savings.arrayLengths).toEqual([{ name: "Savings", length: 0 }]);
+    expect(savings.weeklyAdLatestUpdatedDateTime).toBe("2026-11-10T04:00:00Z");
+    expect(savings.byteLength).toBe(Buffer.byteLength(body));
+    const section = formatPublixSectionLogLine({
+      section: "bogo",
+      printed: 4,
+      cards: 2,
+      offers: 1,
+      polls: 3,
+      waitMs: 2000,
+      stop: "bottom",
+    });
+    const summary = formatPublixHarvestSummaryLine({
+      sections: 1,
+      cards: 2,
+      offers: 1,
+      polls: 3,
+      waitMs: 2000,
+      harvestCards: 216,
+      harvestOffers: 188,
+      savings,
+    });
+    expect(section).toBe(
+      "[publix] section=bogo printed=4 cards=2 offers=1 polls=3 waitMs=2000 stop=bottom",
+    );
+    expect(summary).toContain("savingsStatus=200");
+    expect(summary).toContain("savingsArrays=Savings:0");
+    expect(summary).toContain("updated=2026-11-10T04:00:00Z");
+    expect(summary).toContain("harvestCards=216");
+    expect(summary).not.toContain("secret-token");
+    expect(summary).not.toContain("pageSize");
+    expect(summary).not.toContain(body);
   });
 
   it("treats five mounted cards as thin when the page says 221 results", () => {
