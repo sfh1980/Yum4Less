@@ -7,13 +7,17 @@ const PUBLIX_VALID_RANGE =
 
 /**
  * "Valid 11/11 - 11/18" becomes a date-only start and an inclusive end.
- * The year comes from `now` (the run date). A range that crosses New Year
- * uses the following year for the end, or the previous year for the start
- * when the run date is already in the new year. The clock and offset are
- * local midnight in the process time zone, the same whole-hour shape
+ * The year is the one that puts the start nearest the run date, within
+ * about six months either side, whether or not the range crosses New Year.
+ * "Valid 1/2 - 1/8" read on Dec 30 is the next year. "Valid 12/26 - 12/31"
+ * read on Jan 2 is the previous year. The clock and offset are local
+ * midnight in the process time zone, the same whole-hour shape
  * `extendDateOnlySaleEnd` already extends by one calendar day.
- * Unparseable text returns no dates and does not throw.
+ * Unreadable text returns no dates and does not throw.
  */
+
+/** About six months. A start farther than this is not used. */
+export const PUBLIX_VALID_START_WINDOW_DAYS = 183;
 export function parsePublixCardValidRange(
   text: string | undefined,
   now: Date = new Date(),
@@ -70,20 +74,34 @@ function publixValidRangeYears(
   ) {
     return null;
   }
-  const year = now.getFullYear();
   const crosses =
     endMonth < startMonth || (endMonth === startMonth && endDay < startDay);
-  if (!crosses) {
-    return { startYear: year, endYear: year };
+  const runYear = now.getFullYear();
+  const runDay = calendarDayNumber(runYear, now.getMonth() + 1, now.getDate());
+  let best: { startYear: number; endYear: number } | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const startYear of [runYear - 1, runYear, runYear + 1]) {
+    const endYear = crosses ? startYear + 1 : startYear;
+    if (
+      !isRealCalendarDay(startYear, startMonth, startDay) ||
+      !isRealCalendarDay(endYear, endMonth, endDay)
+    ) {
+      continue;
+    }
+    const distance = Math.abs(calendarDayNumber(startYear, startMonth, startDay) - runDay);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = { startYear, endYear };
+    }
   }
-  const nowMonth = now.getMonth() + 1;
-  const nowDay = now.getDate();
-  const runIsAfterStart =
-    nowMonth > startMonth || (nowMonth === startMonth && nowDay >= startDay);
-  if (runIsAfterStart) {
-    return { startYear: year, endYear: year + 1 };
+  if (!best || bestDistance > PUBLIX_VALID_START_WINDOW_DAYS) {
+    return null;
   }
-  return { startYear: year - 1, endYear: year };
+  return best;
+}
+
+function calendarDayNumber(year: number, month: number, day: number): number {
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
 }
 
 function isRealCalendarDay(year: number, month: number, day: number): boolean {

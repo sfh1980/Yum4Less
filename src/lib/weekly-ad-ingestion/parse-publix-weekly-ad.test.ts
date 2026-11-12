@@ -58,6 +58,34 @@ describe("parsePublixWeeklyAd", () => {
     expect(fromJanuary.validFrom).toMatch(/^2026-12-30T00:00:00/);
     expect(fromJanuary.validThrough).toMatch(/^2027-01-06T00:00:00/);
 
+    const nextJanuary = parsePublixCardValidRange(
+      "Valid 1/2 - 1/8",
+      new Date("2026-12-30T17:00:00Z"),
+    );
+    expect(nextJanuary.validFrom).toMatch(/^2027-01-02T00:00:00/);
+    expect(nextJanuary.validThrough).toMatch(/^2027-01-09T00:00:00/);
+
+    const previousDecember = parsePublixCardValidRange(
+      "Valid 12/26 - 12/31",
+      new Date("2027-01-02T17:00:00Z"),
+    );
+    expect(previousDecember.validFrom).toMatch(/^2026-12-26T00:00:00/);
+    expect(previousDecember.validThrough).toMatch(/^2027-01-01T00:00:00/);
+
+    const crossingFromDecember = parsePublixCardValidRange(
+      "Valid 12/30 - 1/5",
+      new Date("2026-12-28T17:00:00Z"),
+    );
+    expect(crossingFromDecember.validFrom).toMatch(/^2026-12-30T00:00:00/);
+    expect(crossingFromDecember.validThrough).toMatch(/^2027-01-06T00:00:00/);
+
+    const crossingFromJanuary = parsePublixCardValidRange(
+      "Valid 12/30 - 1/5",
+      new Date("2027-01-03T17:00:00Z"),
+    );
+    expect(crossingFromJanuary.validFrom).toMatch(/^2026-12-30T00:00:00/);
+    expect(crossingFromJanuary.validThrough).toMatch(/^2027-01-06T00:00:00/);
+
     expect(parsePublixCardValidRange(undefined)).toEqual({});
     expect(parsePublixCardValidRange("on sale this week")).toEqual({});
     expect(parsePublixCardValidRange("Valid 2/30 - 2/31", new Date("2026-02-01T17:00:00Z"))).toEqual(
