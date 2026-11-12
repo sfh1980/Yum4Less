@@ -71,3 +71,8 @@ Historical SNAP Retailer Locator Data*.csv
 
 # Laptop rehearsal lock. One successful rehearsal per local day.
 .rehearsal-lock/
+
+# Local probe scratch under scripts/. The two tracked dot scripts stay visible.
+scripts/.*
+!scripts/.investigate-internal-catalog-chain-neutrality.ts
+!scripts/.verify-pantry-phase2-fix.ts
