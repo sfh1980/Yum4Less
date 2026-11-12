@@ -177,6 +177,9 @@ describe("whole foods weekly ad ingestion", () => {
     expect(result.offers.some((offer) => /avocado/i.test(offer.productName))).toBe(
       true,
     );
+    expect(result.offers.find((offer) => /avocado/i.test(offer.productName))?.validFrom).toBe(
+      undefined,
+    );
     expect(result.offers.find((offer) => /avocado/i.test(offer.productName))?.validThrough).toBe(
       "2026-09-22T05:00:00Z",
     );
@@ -228,6 +231,9 @@ describe("whole foods weekly ad ingestion", () => {
       trackedIngredientIds: ["avocado"],
     });
 
+    expect(result.offers.find((offer) => /avocado/i.test(offer.productName))?.validFrom).toBe(
+      "2026-09-16T05:00:00Z",
+    );
     expect(result.offers.find((offer) => /avocado/i.test(offer.productName))?.validThrough).toBe(
       "2026-09-23T05:00:00Z",
     );

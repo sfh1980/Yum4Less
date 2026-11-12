@@ -56,6 +56,7 @@ describe("parseWholeFoodsWeeklyAd", () => {
         },
       ],
     });
+    expect(withEnd[0]?.validFrom).toBe("2026-10-21T04:00:00Z");
     expect(withEnd[0]?.validThrough).toBe("2026-10-29T04:00:00Z");
 
     const startOnly = parseWholeFoodsWeeklyAd({
@@ -67,6 +68,7 @@ describe("parseWholeFoodsWeeklyAd", () => {
         },
       ],
     });
+    expect(startOnly[0]?.validFrom).toBe("2026-10-21T04:00:00Z");
     expect(startOnly[0]?.validThrough).toBeUndefined();
   });
 
@@ -81,6 +83,7 @@ describe("parseWholeFoodsWeeklyAd", () => {
         },
       ],
     });
+    expect(paired[0]?.validFrom).toBe("2026-10-28T05:00:00Z");
     expect(paired[0]?.validThrough).toBe("2026-11-04T05:00:00Z");
 
     const daylight = parseWholeFoodsWeeklyAd({
@@ -104,6 +107,7 @@ describe("parseWholeFoodsWeeklyAd", () => {
         },
       ],
     });
+    expect(endOnly[0]?.validFrom).toBeUndefined();
     expect(endOnly[0]?.validThrough).toBe("2026-11-03T05:00:00Z");
   });
 
@@ -124,8 +128,14 @@ describe("parseWholeFoodsWeeklyAd", () => {
         },
       ],
     });
+    expect(offers.find((offer) => /avocado/i.test(offer.productName))?.validFrom).toBe(
+      "2026-10-28T05:00:00Z",
+    );
     expect(offers.find((offer) => /avocado/i.test(offer.productName))?.validThrough).toBe(
       "2026-11-04T05:00:00Z",
+    );
+    expect(offers.find((offer) => /banana/i.test(offer.productName))?.validFrom).toBe(
+      "2026-10-30T05:00:00Z",
     );
     expect(offers.find((offer) => /banana/i.test(offer.productName))?.validThrough).toBe(
       "2026-11-02T05:00:00Z",

@@ -159,4 +159,45 @@ describe("syncWeeklyAdOffersToPriceObservations persist failures (H5)", () => {
     expect(summary.skippedCount).toBe(1);
     expect(insertPriceObservationIfChanged).not.toHaveBeenCalled();
   });
+
+  it("passes a future Whole Foods start through so it is stored beside a visible row", async () => {
+    insertPriceObservationIfChanged.mockResolvedValue("inserted");
+
+    const result: WeeklyAdIngestionResult = {
+      chain: "whole-foods",
+      label: "Whole Foods",
+      status: "live",
+      provenance: "weekly-ad-scrape",
+      retrievalMode: "live",
+      configured: true,
+      fallbackUsed: false,
+      message: "Live ingest",
+      fetchedAt: "2026-11-11T12:00:00.000Z",
+      termsNote: "Directional.",
+      offers: [
+        {
+          chain: "whole-foods",
+          storeId: "whole-foods-10257",
+          ingredientId: "avocado",
+          productName: "Organic Hass Avocados",
+          price: 1.25,
+          saleLabel: "4 for $5",
+          sourceUrl: "https://example.test/whole-foods",
+          observedAt: "2026-11-11T12:00:00.000Z",
+          confidenceScore: 0.9,
+          matchConfidence: 0.9,
+          validFrom: "2026-11-18T05:00:00Z",
+          validThrough: "2026-11-25T05:00:00Z",
+        },
+      ],
+    };
+
+    await syncWeeklyAdOffersToPriceObservations({ result });
+
+    expect(insertPriceObservationIfChanged).toHaveBeenCalledTimes(1);
+    expect(insertPriceObservationIfChanged.mock.calls[0]?.[0]).toMatchObject({
+      validFrom: new Date("2026-11-18T05:00:00Z"),
+      validThrough: new Date("2026-11-25T05:00:00Z"),
+    });
+  });
 });

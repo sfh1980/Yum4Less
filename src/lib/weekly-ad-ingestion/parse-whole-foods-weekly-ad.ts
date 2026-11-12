@@ -205,10 +205,11 @@ function normalizePromotion(entry: unknown): WeeklyAdRawOffer | null {
     return null;
   }
 
-  // A start date is when the flyer began, not when it ends. Storing it
-  // makes valid_through already past, and the later purge deletes the rows.
-  // A start and end that share one whole-hour clock time are date-only:
-  // the stored end is one calendar day later.
+  // A start date is when the flyer began. It is stored as valid_from, not as
+  // the end: putting the start in valid_through makes the row look finished
+  // and the later purge deletes it. A start and end that share one whole-hour
+  // clock time are date-only: the stored end is one calendar day later, and
+  // the start is kept as printed.
   const rawStart = readString(record.startDate);
   const rawEnd = readString(record.endDate) ?? readString(record.validThrough);
   const validThrough =
@@ -227,6 +228,7 @@ function normalizePromotion(entry: unknown): WeeklyAdRawOffer | null {
     productName: displayName,
     price: parsed.price,
     saleLabel: saleLabelParts.filter(Boolean).join(" · "),
+    validFrom: rawStart ?? undefined,
     validThrough,
   };
 }
