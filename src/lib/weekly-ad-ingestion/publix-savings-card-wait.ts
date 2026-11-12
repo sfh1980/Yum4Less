@@ -25,6 +25,8 @@ export const PUBLIX_CARD_SCROLL_VIEWPORTS_DEFAULT = 3;
 export const PUBLIX_CARD_SCROLL_VIEWPORTS_MIN = 1;
 export const PUBLIX_CARD_SCROLL_VIEWPORTS_MAX = 5;
 export const PUBLIX_THIN_MIN_CARDS_DEFAULT = 50;
+export const PUBLIX_HARVEST_MIN_SHARE_DEFAULT = 0.5;
+export const PUBLIX_FEED_MIN_SHARE_DEFAULT = 0.25;
 
 export type PublixCardPollStop = "stable" | "half" | "listed" | "max-wait" | "bottom";
 
@@ -68,14 +70,100 @@ export function readPublixPrintedTotalIsFloor(
 }
 
 /**
- * Off unless set to exactly "1".
- * On: cards from the main page and each section page share one map.
- * Off: only the final page is harvested, which is today's stored output.
+ * On unless set to exactly "0".
+ * Unset and "1" keep cards from the main page and each section page.
+ * "0" keeps only the final page.
  */
 export function readPublixMergeSectionCards(
   env: NodeJS.ProcessEnv | { YUM4LESS_PUBLIX_MERGE_SECTION_CARDS?: string } = process.env,
 ): boolean {
-  return env.YUM4LESS_PUBLIX_MERGE_SECTION_CARDS?.trim() === "1";
+  return env.YUM4LESS_PUBLIX_MERGE_SECTION_CARDS?.trim() !== "0";
+}
+
+export type PublixVirtualCardList = {
+  keys: readonly string[];
+  /** Index of the first card the virtual window has mounted. */
+  scrollIndex: number;
+  windowSize: number;
+};
+
+/** Last index a down-only scroll can sit on and still show a full window. */
+export function publixVirtualListMaxIndex(
+  list: Pick<PublixVirtualCardList, "keys" | "windowSize">,
+): number {
+  const windowSize = Math.max(1, list.windowSize);
+  return Math.max(0, list.keys.length - windowSize);
+}
+
+/** Cards mounted in the current window. A virtual list does not keep the rest. */
+export function publixMountedCardKeys(list: PublixVirtualCardList): string[] {
+  const windowSize = Math.max(1, list.windowSize);
+  const maxIndex = publixVirtualListMaxIndex({ keys: list.keys, windowSize });
+  const start = Math.max(0, Math.min(list.scrollIndex, maxIndex));
+  return list.keys.slice(start, start + windowSize);
+}
+
+/**
+ * Same direction as the browser helper: add to the scroll index, never subtract.
+ * Already at the bottom stays on the tail window.
+ */
+export function scrollPublixVirtualListDown(
+  list: PublixVirtualCardList,
+  stepCards: number,
+): PublixVirtualCardList {
+  const maxIndex = publixVirtualListMaxIndex(list);
+  const step = Number.isFinite(stepCards) && stepCards > 0 ? Math.floor(stepCards) : 1;
+  return {
+    ...list,
+    scrollIndex: Math.min(Math.max(0, list.scrollIndex) + step, maxIndex),
+  };
+}
+
+/** Top of the virtual list and of the window. The browser helper sets both scroll positions to 0. */
+export function resetPublixVirtualListToTop(list: PublixVirtualCardList): PublixVirtualCardList {
+  return { ...list, scrollIndex: 0 };
+}
+
+/**
+ * One settle: optional reset to the top, read the mounted window, then scroll
+ * down until the list cannot move. Down-only from the bottom keeps the tail.
+ */
+export function harvestPublixVirtualList(input: {
+  keys: readonly string[];
+  startIndex: number;
+  windowSize: number;
+  stepCards: number;
+  resetToTop: boolean;
+}): string[] {
+  let list: PublixVirtualCardList = {
+    keys: input.keys,
+    scrollIndex: input.startIndex,
+    windowSize: input.windowSize,
+  };
+  if (input.resetToTop) {
+    list = resetPublixVirtualListToTop(list);
+  }
+  const seen: string[] = [];
+  const seenSet = new Set<string>();
+  const maxIndex = publixVirtualListMaxIndex(list);
+  for (;;) {
+    for (const key of publixMountedCardKeys(list)) {
+      if (seenSet.has(key)) {
+        continue;
+      }
+      seenSet.add(key);
+      seen.push(key);
+    }
+    if (list.scrollIndex >= maxIndex) {
+      break;
+    }
+    const next = scrollPublixVirtualListDown(list, input.stepCards);
+    if (next.scrollIndex === list.scrollIndex) {
+      break;
+    }
+    list = next;
+  }
+  return seen;
 }
 
 export function readPublixCardScrollViewports(
@@ -149,27 +237,55 @@ export function nextPublixEqualPositiveSamples(input: {
   return input.count > 0 ? 1 : 0;
 }
 
+/** Letters and digits only, so "BOGO" and "bogo" name the same section. */
+export function normalizePublixSectionId(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
 /**
- * A category heading and the "N results" text that follows it.
- * The live page puts both inside the element that carries
- * data-weekly-ad-category-id. A heading-only excerpt still counts.
+ * Each heading owns the "N results" text before the next heading.
+ * A category id owns a count only when no other category id sits between
+ * them. A wrapper that contains another category does not take that category's
+ * number. Heading text wins when the page has headings.
  */
 export function parsePublixCategoryResultCounts(html: string): PublixCategoryResultCount[] {
+  const fromHeadings = publixCountsFromHeadings(html);
+  if (fromHeadings.length > 0) {
+    return fromHeadings;
+  }
+  return publixCountsFromCategoryIds(html);
+}
+
+function publixCountsFromHeadings(html: string): PublixCategoryResultCount[] {
   const counts: PublixCategoryResultCount[] = [];
   const seen = new Set<string>();
-  const sectionPattern =
-    /data-weekly-ad-category-id=["']([^"']+)["'][\s\S]{0,900}?(\d{1,5})\s+results\b/gi;
-  const headingPattern =
-    /<h2\b[^>]*>\s*([^<]{1,40}?)\s*<\/h2>[\s\S]{0,500}?(\d{1,5})\s+results\b/gi;
+  const headings = [...html.matchAll(/<h2\b[^>]*>\s*([^<]{1,80}?)\s*<\/h2>/gi)];
+  for (let index = 0; index < headings.length; index += 1) {
+    const name = headings[index]?.[1] ?? "";
+    const start = (headings[index]?.index ?? 0) + (headings[index]?.[0].length ?? 0);
+    const nextHeading = headings[index + 1]?.index ?? html.length;
+    const window = html.slice(start, Math.min(nextHeading, start + 500));
+    const countMatch = /(\d{1,5})\s+results\b/i.exec(window);
+    pushPublixCategoryResultCount(counts, seen, normalizePublixSectionId(name), countMatch?.[1]);
+  }
+  return counts;
+}
 
-  for (const match of html.matchAll(sectionPattern)) {
-    pushPublixCategoryResultCount(counts, seen, match[1], match[2]);
-  }
-  if (counts.length > 0) {
-    return counts;
-  }
-  for (const match of html.matchAll(headingPattern)) {
-    pushPublixCategoryResultCount(counts, seen, match[1], match[2]);
+function publixCountsFromCategoryIds(html: string): PublixCategoryResultCount[] {
+  const counts: PublixCategoryResultCount[] = [];
+  const seen = new Set<string>();
+  const ids = [...html.matchAll(/data-weekly-ad-category-id=["']([^"']+)["']/gi)];
+  for (let index = 0; index < ids.length; index += 1) {
+    const start = (ids[index]?.index ?? 0) + (ids[index]?.[0].length ?? 0);
+    const end = ids[index + 1]?.index ?? html.length;
+    const slice = html.slice(start, end).slice(0, 900);
+    const countMatch = /(\d{1,5})\s+results\b/i.exec(slice);
+    pushPublixCategoryResultCount(
+      counts,
+      seen,
+      normalizePublixSectionId(ids[index]?.[1] ?? ""),
+      countMatch?.[1],
+    );
   }
   return counts;
 }
@@ -190,8 +306,8 @@ function pushPublixCategoryResultCount(
 }
 
 /**
- * Setting off keeps only the final page, which is the harvest stored today.
- * Setting on unions the main page, each section that loaded, then the final page.
+ * "0" keeps only the final page.
+ * On (unset or "1") unions the main page, each section that loaded, then the final page.
  * A null section failed to load and adds nothing. The first HTML for a key wins.
  */
 export function collectPublixHarvestCards(input: {
@@ -236,15 +352,44 @@ export function publixCollectedCardsDocument(cards: Iterable<string>): string {
   return `<div id="yum4less-collected-cards">${[...cards].join("\n")}</div>`;
 }
 
-/** Sum of the printed category counts. Null when the page did not print one. */
+/**
+ * The printed count for the section on screen.
+ * A named section uses only that section. Any other count is ignored.
+ * With no section name, one printed count is used. Several counts mean the
+ * page cannot be told, so the result is null. Counts are not added together.
+ * A null result does not stop the scroll as "listed" and does not make the
+ * page look full.
+ */
 export function publixListedCardTarget(
   counts: readonly PublixCategoryResultCount[],
+  shownSection?: string | null,
 ): number | null {
-  if (counts.length === 0) {
-    return null;
+  const sectionId = shownSection ? normalizePublixSectionId(shownSection) : "";
+  if (sectionId) {
+    const matches = counts.filter((item) => item.categoryId === sectionId);
+    return matches.length === 1 ? matches[0].count : null;
   }
-  const total = counts.reduce((sum, item) => sum + item.count, 0);
-  return total > 0 ? total : null;
+  if (counts.length === 1) {
+    return counts[0].count;
+  }
+  return null;
+}
+
+/**
+ * A later reading can raise the printed target. It cannot lower it.
+ * A smaller number from another category must not make the page look full.
+ */
+export function nextPublixExpectedCount(
+  current: number | null,
+  listed: number | null,
+): number | null {
+  if (listed === null || listed <= 0) {
+    return current;
+  }
+  if (current === null) {
+    return listed;
+  }
+  return Math.max(current, listed);
 }
 
 /**
@@ -265,6 +410,82 @@ export function publixPageIsThin(input: {
     input.rememberedOfferCount,
     input.minCards,
   );
+}
+
+function readPublixShare(
+  raw: string | undefined,
+  fallback: number,
+): number {
+  if (!raw?.trim()) {
+    return fallback;
+  }
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed > 0 && parsed <= 1) {
+    return parsed;
+  }
+  return fallback;
+}
+
+/** Share of the largest section page the saved harvest must reach. Default 0.5. */
+export function readPublixHarvestMinShare(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  return readPublixShare(env.YUM4LESS_PUBLIX_HARVEST_MIN_SHARE, PUBLIX_HARVEST_MIN_SHARE_DEFAULT);
+}
+
+/** Share of a non-empty savings feed the saved harvest must reach. Default 0.25. */
+export function readPublixFeedMinShare(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  return readPublixShare(env.YUM4LESS_PUBLIX_FEED_MIN_SHARE, PUBLIX_FEED_MIN_SHARE_DEFAULT);
+}
+
+/** Length of the Savings array. Null when that array was not in the summary. */
+export function publixSavingsFeedItemCount(
+  summary: PublixSavingsCallSummary | null,
+): number | null {
+  if (!summary) {
+    return null;
+  }
+  const savings = summary.arrayLengths.find((item) => item.name === "Savings");
+  return savings ? savings.length : null;
+}
+
+/**
+ * Saved cards against the largest section page, then against a non-empty feed.
+ * An empty or missing feed skips the second check. The first failing check
+ * supplies the reason. Neither check changes the printed-count thin rule.
+ */
+export function assessPublixHarvest(input: {
+  harvestedCards: number;
+  sections: readonly { section: string; cards: number }[];
+  feedItemCount: number | null;
+  harvestMinShare?: number;
+  feedMinShare?: number;
+}): { thin: boolean; reason: string | null } {
+  const harvestMinShare = input.harvestMinShare ?? PUBLIX_HARVEST_MIN_SHARE_DEFAULT;
+  const feedMinShare = input.feedMinShare ?? PUBLIX_FEED_MIN_SHARE_DEFAULT;
+  const largest = input.sections.reduce<{ section: string; cards: number } | null>(
+    (best, row) => (!best || row.cards > best.cards ? row : best),
+    null,
+  );
+  if (largest && largest.cards > 0 && input.harvestedCards < largest.cards * harvestMinShare) {
+    return {
+      thin: true,
+      reason: `saved ${input.harvestedCards} cards but the ${largest.section} page showed ${largest.cards}`,
+    };
+  }
+  if (
+    input.feedItemCount !== null &&
+    input.feedItemCount > 0 &&
+    input.harvestedCards < input.feedItemCount * feedMinShare
+  ) {
+    return {
+      thin: true,
+      reason: `saved ${input.harvestedCards} cards but the savings feed listed ${input.feedItemCount}`,
+    };
+  }
+  return { thin: false, reason: null };
 }
 
 /**
@@ -506,7 +727,8 @@ export function formatPublixHarvestSummaryLine(input: {
 
 export function logPublixLine(line: string): void {
   try {
-    console.info(line);
+    const text = line.startsWith("[nightly] ") ? line : `[nightly] ${line}`;
+    console.info(text);
   } catch {
     // A log line must not fail the scrape.
   }

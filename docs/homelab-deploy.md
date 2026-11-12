@@ -153,6 +153,10 @@ Optional tuning (see `.env.example` for full list):
 - `YUM4LESS_MAP_CATALOG_RADIUS_MILES=12` — OSM / locator discovery radius
 - `YUM4LESS_MAP_SNAP_CONTEXT=1` — SNAP context pins (non-fatal ensure step)
 - `THEMEALDB_API_KEY=1` — dev/test key; replace for production Patreon key when applicable
+- `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS` — Publix section-page cards join the stored page. Unset is on. `0` keeps only the final page. `1` stays on. A box that already sets `1` does not change when this default ships.
+- `YUM4LESS_PUBLIX_HARVEST_MIN_SHARE` — thin when saved cards are under this share of the largest section page. Unset uses 0.5.
+- `YUM4LESS_PUBLIX_FEED_MIN_SHARE` — thin when saved cards are under this share of a non-empty savings feed. Unset uses 0.25. An empty feed skips the check.
+- `YUM4LESS_MORNING_DROP_ALERT_SHARE` — morning note flags a shopper-visible row drop, and a matched-ingredient drop, larger than this share of the previous morning. Unset uses 0.30. No line when yesterday's census is not marked.
 
 **App production (when you serve the UI from this box):**
 

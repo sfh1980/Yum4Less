@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parsePublixWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-publix-weekly-ad";
 import {
   collectPublixHarvestCards,
+  harvestPublixVirtualList,
   publixCollectedCardsDocument,
   readPublixMergeSectionCards,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
@@ -24,12 +25,18 @@ function names(cards: Iterable<string>): string[] {
   }).map((offer) => offer.productName);
 }
 
+function numbered(prefix: string, count: number): { key: string; html: string }[] {
+  return Array.from({ length: count }, (_, index) =>
+    card(`${prefix}-${index}`, `${prefix} ${index}`),
+  );
+}
+
 describe("Publix section card merge", () => {
-  it("leaves the setting off unless it is exactly 1", () => {
+  it("is on unless the setting is exactly 0", () => {
     expect(readPublixMergeSectionCards({ YUM4LESS_PUBLIX_MERGE_SECTION_CARDS: "1" })).toBe(
       true,
     );
-    expect(readPublixMergeSectionCards({})).toBe(false);
+    expect(readPublixMergeSectionCards({})).toBe(true);
     expect(readPublixMergeSectionCards({ YUM4LESS_PUBLIX_MERGE_SECTION_CARDS: "0" })).toBe(
       false,
     );
@@ -80,5 +87,51 @@ describe("Publix section card merge", () => {
       finalCards: [],
     });
     expect(names(merged.values())).toEqual(["Publix Chicken", "Broccoli Crowns"]);
+  });
+
+  it("harvests every card when the fake page starts scrolled to the bottom", () => {
+    const keys = Array.from({ length: 225 }, (_, index) => `card-${index}`);
+    const windowSize = 39;
+    const startIndex = keys.length - windowSize;
+    const fromTheBottom = harvestPublixVirtualList({
+      keys,
+      startIndex,
+      windowSize,
+      stepCards: 39,
+      resetToTop: false,
+    });
+    const reset = harvestPublixVirtualList({
+      keys,
+      startIndex,
+      windowSize,
+      stepCards: 39,
+      resetToTop: true,
+    });
+    expect(fromTheBottom).toHaveLength(39);
+    expect(reset).toEqual(keys);
+  });
+
+  it("does not keep a 39-card harvest when the 11-12 sections were larger", () => {
+    const bogo = numbered("bogo", 225);
+    const meat = numbered("meat", 145);
+    const produce = numbered("produce", 89);
+    const dairy = numbered("dairy", 37);
+    const protein = numbered("protein", 45);
+    const finalPage = bogo.slice(-39);
+    const merged = collectPublixHarvestCards({
+      mergeSectionCards: readPublixMergeSectionCards({}),
+      mainCards: [],
+      sectionCards: [bogo, meat, produce, dairy, protein],
+      finalCards: finalPage,
+    });
+    const onlyFinal = collectPublixHarvestCards({
+      mergeSectionCards: readPublixMergeSectionCards({ YUM4LESS_PUBLIX_MERGE_SECTION_CARDS: "0" }),
+      mainCards: [],
+      sectionCards: [bogo, meat, produce, dairy, protein],
+      finalCards: finalPage,
+    });
+    expect(merged.size).toBe(225 + 145 + 89 + 37 + 45);
+    expect(merged.size).not.toBe(39);
+    expect(onlyFinal.size).toBe(39);
   });
 });

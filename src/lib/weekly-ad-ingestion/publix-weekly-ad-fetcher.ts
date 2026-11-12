@@ -7,8 +7,13 @@ import {
   formatPublixHarvestSummaryLine,
   formatPublixSectionLogLine,
   logPublixLine,
+  assessPublixHarvest,
   nextPublixEqualPositiveSamples,
+  nextPublixExpectedCount,
   parsePublixCategoryResultCounts,
+  publixSavingsFeedItemCount,
+  readPublixFeedMinShare,
+  readPublixHarvestMinShare,
   PUBLIX_CARD_POLL_MS,
   publixCollectedCardsDocument,
   publixListedCardTarget,
@@ -75,6 +80,8 @@ export type PublixWeeklyAdFetchResult = {
   pageSeenCount?: number;
   expectedCardCount?: number | null;
   gotoStatus?: number | null;
+  /** Set when the saved harvest is thin against a section page or the savings feed. */
+  harvestThinReason?: string | null;
 };
 
 export type PublixWeeklyAdFetcherDeps = {
@@ -97,6 +104,7 @@ export type PublixWeeklyAdFetcherDeps = {
     expectedCardCount?: number | null;
     gotoStatus?: number | null;
     pageSeenCount?: number;
+    harvestThinReason?: string | null;
   }>;
 };
 
@@ -138,6 +146,7 @@ export async function fetchPublixWeeklyAdPage(input: {
       pageSeenCount: browserResult.pageSeenCount,
       expectedCardCount: browserResult.expectedCardCount,
       gotoStatus: browserResult.gotoStatus,
+      harvestThinReason: browserResult.harvestThinReason,
     };
   }
 
@@ -182,6 +191,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
   pageSeenCount?: number;
   expectedCardCount: number | null;
   gotoStatus: number | null;
+  harvestThinReason: string | null;
 }> {
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
@@ -315,8 +325,19 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
       html,
       networkJsonBodies,
     }).length;
+    const harvestSanity = assessPublixHarvest({
+      harvestedCards: distinctCardCount,
+      sections: sectionLogs.map((line) => ({ section: line.section, cards: line.cards })),
+      feedItemCount: publixSavingsFeedItemCount(savingsCalls.at(-1) ?? null),
+      harvestMinShare: readPublixHarvestMinShare(),
+      feedMinShare: readPublixFeedMinShare(),
+    });
+    if (harvestSanity.reason) {
+      logPublixLine(`[publix] harvest-thin ${harvestSanity.reason}`);
+    }
     logPublixHarvestSummary(sectionLogs, distinctCardCount, parsedOfferCount, savingsCalls);
     if (
+      harvestSanity.thin ||
       publixPageIsThin({
         seenCount: settled.seenCount,
         expectedCount: settled.expectedCount,
@@ -346,6 +367,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
       pageSeenCount: mergeSectionCards ? pageSeenCount : undefined,
       expectedCardCount: settled.expectedCount,
       gotoStatus,
+      harvestThinReason: harvestSanity.reason,
     };
   } finally {
     await browser.close();
@@ -375,6 +397,8 @@ async function settlePublixSavingsCardCount(
     scrollViewports: number;
     printedTotalIsFloor: boolean;
     collectedCards: Map<string, string>;
+    /** Slug of the section page. The main page, final page, and thin reload omit it. */
+    sectionId?: string | null;
   },
 ): Promise<{
   seenCount: number;
@@ -384,6 +408,11 @@ async function settlePublixSavingsCardCount(
   stop: string;
 }> {
   await waitForPublixSavingsCards(page, input.timeoutMs);
+  // Section settles and the category-link clicks leave the virtual list at
+  // the bottom. scrollPublixCardList only moves down, so a settle that starts
+  // there mounts the tail and never sees the cards above it.
+  await resetPublixCardListToTop(page);
+  await page.waitForTimeout(PUBLIX_CARD_POLL_MS);
   const started = Date.now();
   const distinct = new Set<string>();
   let previousCount: number | null = null;
@@ -401,10 +430,11 @@ async function settlePublixSavingsCardCount(
       distinct.add(key);
     }
     seenCount = Math.max(listing.mounted, distinct.size);
-    const listed = publixListedCardTarget(parsePublixCategoryResultCounts(listing.listingHtml));
-    if (listed !== null) {
-      expectedCount = listed;
-    }
+    const listed = publixListedCardTarget(
+      parsePublixCategoryResultCounts(listing.listingHtml),
+      input.sectionId,
+    );
+    expectedCount = nextPublixExpectedCount(expectedCount, listed);
     samples += 1;
     equalPositiveSamples = nextPublixEqualPositiveSamples({
       previousCount,
@@ -487,6 +517,17 @@ async function readPublixCardListing(page: import("playwright").Page): Promise<{
       listingHtml,
       atBottom,
     };
+  });
+}
+
+/** Top of the virtual container and the window. Same container selector as the down scroll. */
+async function resetPublixCardListToTop(page: import("playwright").Page) {
+  await page.evaluate(() => {
+    const container = document.querySelector("[class*='virtual-container']");
+    if (container instanceof HTMLElement) {
+      container.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
   });
 }
 
@@ -652,6 +693,7 @@ async function explorePublixWeeklyAdCategories(
         scrollViewports: settle.scrollViewports,
         printedTotalIsFloor: settle.printedTotalIsFloor,
         collectedCards: sectionCards,
+        sectionId: slug,
       });
       let offers = 0;
       try {
