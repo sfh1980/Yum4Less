@@ -278,4 +278,96 @@ describe("price observation change-aware sync", () => {
     expect(outcome).toBe("skipped-superseded");
     expect(query).toHaveBeenCalledTimes(1);
   });
+
+  it("does not hide an undated visible row when today's copy starts in the future", async () => {
+    const futureStart = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 8,
+            store_id: "publix-1626",
+            ingredient_id: "chicken-thighs",
+            price: "5.39",
+            sale_label: "Weekly ad special",
+            in_stock: true,
+            source_name: "publix-weekly-ad-scrape",
+            source_record_id: "publix-1626:chicken-thighs:Publix Chicken",
+          },
+        ],
+      })
+      .mockResolvedValue({ rowCount: 1 });
+    mockDbPool(queryWithValidFromColumn(query));
+
+    const outcome = await insertPriceObservationIfChanged({
+      storeId: "publix-1626",
+      ingredientId: "chicken-thighs",
+      price: 5.39,
+      saleLabel: "Weekly ad special",
+      observedAt: new Date(),
+      validFrom: futureStart,
+      validThrough: new Date(futureStart.getTime() + 7 * 24 * 60 * 60 * 1000),
+      sourceName: "publix-weekly-ad-scrape",
+      sourceRecordId: "publix-1626:chicken-thighs:Publix Chicken",
+      confidenceScore: 0.8,
+      notes: "dated today",
+    });
+
+    expect(outcome).toBe("skipped-unchanged");
+    const updateSql = String(query.mock.calls[1]?.[0]);
+    expect(updateSql).toContain("last_verified_at");
+    expect(updateSql).not.toContain("valid_from");
+    expect(query.mock.calls[2]?.[1]?.[3]).toBe(true);
+    expect(query.mock.calls.some((call) => String(call[0]).includes("insert into"))).toBe(
+      false,
+    );
+  });
+
+  it("stores a future start beside an undated row instead of replacing it", async () => {
+    const futureStart = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes("information_schema.columns")) {
+        return { rows: [{ present: true }] };
+      }
+      if (sql.includes("select")) {
+        return {
+          rows: [
+            {
+              id: 8,
+              store_id: "publix-1626",
+              ingredient_id: "chicken-thighs",
+              price: "4.00",
+              sale_label: "Weekly ad special",
+              in_stock: true,
+              source_name: "publix-weekly-ad-scrape",
+              source_record_id: "publix-1626:chicken-thighs:Publix Chicken",
+            },
+          ],
+        };
+      }
+      return { rowCount: 1 };
+    });
+    mockDbPool(queryWithValidFromColumn(query));
+
+    const outcome = await insertPriceObservationIfChanged({
+      storeId: "publix-1626",
+      ingredientId: "chicken-thighs",
+      price: 5.39,
+      saleLabel: "Weekly ad special",
+      observedAt: new Date(),
+      validFrom: futureStart,
+      sourceName: "publix-weekly-ad-scrape",
+      sourceRecordId: "publix-1626:chicken-thighs:Publix Chicken",
+      confidenceScore: 0.8,
+      notes: "new price starts later",
+    });
+
+    expect(outcome).toBe("inserted");
+    const deleteCall = (
+      query.mock.calls as unknown as [string, unknown[]?][]
+    ).find((call) => String(call[0]).includes("delete from price_observations"));
+    expect(deleteCall?.[1]?.[3]).toBe(true);
+    expect(String(deleteCall?.[0])).toContain("valid_from > now()");
+  });
 });

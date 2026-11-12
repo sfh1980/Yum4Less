@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parsePublixWeeklyAd } from "@/lib/weekly-ad-ingestion/parse-publix-weekly-ad";
+import {
+  parsePublixCardValidRange,
+  parsePublixWeeklyAd,
+} from "@/lib/weekly-ad-ingestion/parse-publix-weekly-ad";
 import {
   publixCollectedCardsDocument,
   rememberPublixCardHtml,
@@ -19,6 +22,47 @@ describe("parsePublixWeeklyAd", () => {
     expect(offers.length).toBeGreaterThanOrEqual(5);
     expect(offers.some((offer) => offer.productName.includes("Chicken Thighs"))).toBe(true);
     expect(offers.some((offer) => offer.productName.includes("Broccoli"))).toBe(true);
+    expect(offers.filter((offer) => offer.validFrom).length).toBe(0);
+  });
+
+  it("parses Valid month/day ranges, including a week that crosses New Year", () => {
+    const during = parsePublixCardValidRange("Valid 11/11 - 11/18", new Date("2026-11-11T17:00:00Z"));
+    expect(during.validFrom).toMatch(/^2026-11-11T00:00:00(?:Z|[+-]\d{2}:00)$/);
+    expect(during.validThrough).toMatch(/^2026-11-19T00:00:00(?:Z|[+-]\d{2}:00)$/);
+
+    const singleDigits = parsePublixCardValidRange(
+      "Valid 5/4-5/10",
+      new Date("2026-05-06T17:00:00Z"),
+    );
+    expect(singleDigits.validFrom).toMatch(/^2026-05-04T00:00:00/);
+    expect(singleDigits.validThrough).toMatch(/^2026-05-11T00:00:00/);
+
+    const spacedDash = parsePublixCardValidRange(
+      "Valid 11/11 – 11/18",
+      new Date("2026-11-11T17:00:00Z"),
+    );
+    expect(spacedDash.validFrom).toBe(during.validFrom);
+    expect(spacedDash.validThrough).toBe(during.validThrough);
+
+    const fromDecember = parsePublixCardValidRange(
+      "Valid 12/30 - 1/5",
+      new Date("2026-12-30T17:00:00Z"),
+    );
+    expect(fromDecember.validFrom).toMatch(/^2026-12-30T00:00:00/);
+    expect(fromDecember.validThrough).toMatch(/^2027-01-06T00:00:00/);
+
+    const fromJanuary = parsePublixCardValidRange(
+      "Valid 12/30 - 1/5",
+      new Date("2027-01-02T17:00:00Z"),
+    );
+    expect(fromJanuary.validFrom).toMatch(/^2026-12-30T00:00:00/);
+    expect(fromJanuary.validThrough).toMatch(/^2027-01-06T00:00:00/);
+
+    expect(parsePublixCardValidRange(undefined)).toEqual({});
+    expect(parsePublixCardValidRange("on sale this week")).toEqual({});
+    expect(parsePublixCardValidRange("Valid 2/30 - 2/31", new Date("2026-02-01T17:00:00Z"))).toEqual(
+      {},
+    );
   });
 
   it("parses a hashed savings card from the thin Publix page", () => {
@@ -38,14 +82,21 @@ describe("parsePublixWeeklyAd", () => {
       </div>
     `;
 
-    expect(parsePublixWeeklyAd({ html: card, networkJsonBodies: [] })).toEqual([
+    const parsed = parsePublixWeeklyAd({
+      html: card,
+      networkJsonBodies: [],
+      now: new Date("2026-11-07T15:00:00Z"),
+    });
+    expect(parsed).toEqual([
       expect.objectContaining({
         productName: "Publix Boneless Skinless Chicken Breasts",
         price: 5.39,
         saleLabel: expect.stringContaining("BOGO"),
-        validThrough: "Valid 11/4 - 11/10",
+        validFrom: expect.stringMatching(/^2026-11-04T00:00:00(?:Z|[+-]\d{2}:00)$/),
+        validThrough: expect.stringMatching(/^2026-11-11T00:00:00(?:Z|[+-]\d{2}:00)$/),
       }),
     ]);
+    expect(parsed[0]?.validFrom?.slice(19)).toBe(parsed[0]?.validThrough?.slice(19));
   });
 
   it("merges two scroll positions and does not double a card that stayed mounted", () => {

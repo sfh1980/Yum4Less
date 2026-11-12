@@ -1,5 +1,127 @@
+import { extendDateOnlySaleEnd } from "@/lib/weekly-ad-ingestion/date-only-sale-end";
 import { parseWeeklyAdHtml } from "@/lib/weekly-ad-ingestion/parse-weekly-ad-html";
 import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
+
+const PUBLIX_VALID_RANGE =
+  /valid\s+(\d{1,2})\s*\/\s*(\d{1,2})\s*[-–—]\s*(\d{1,2})\s*\/\s*(\d{1,2})/i;
+
+/**
+ * "Valid 11/11 - 11/18" becomes a date-only start and an inclusive end.
+ * The year comes from `now` (the run date). A range that crosses New Year
+ * uses the following year for the end, or the previous year for the start
+ * when the run date is already in the new year. The clock and offset are
+ * local midnight in the process time zone, the same whole-hour shape
+ * `extendDateOnlySaleEnd` already extends by one calendar day.
+ * Unparseable text returns no dates and does not throw.
+ */
+export function parsePublixCardValidRange(
+  text: string | undefined,
+  now: Date = new Date(),
+): { validFrom?: string; validThrough?: string } {
+  if (!text?.trim()) {
+    return {};
+  }
+  try {
+    const match = PUBLIX_VALID_RANGE.exec(text);
+    if (!match?.[1] || !match[2] || !match[3] || !match[4]) {
+      return {};
+    }
+    const startMonth = Number(match[1]);
+    const startDay = Number(match[2]);
+    const endMonth = Number(match[3]);
+    const endDay = Number(match[4]);
+    const years = publixValidRangeYears(now, startMonth, endMonth, endDay, startDay);
+    if (
+      !years ||
+      !isRealCalendarDay(years.startYear, startMonth, startDay) ||
+      !isRealCalendarDay(years.endYear, endMonth, endDay)
+    ) {
+      return {};
+    }
+    const validFrom = formatProcessDateOnlyInstant(years.startYear, startMonth, startDay, now);
+    const rawEnd = formatProcessDateOnlyInstant(years.endYear, endMonth, endDay, now);
+    if (!validFrom || !rawEnd) {
+      return {};
+    }
+    const validThrough = extendDateOnlySaleEnd({ start: validFrom, end: rawEnd });
+    if (typeof validThrough !== "string") {
+      return {};
+    }
+    return { validFrom, validThrough };
+  } catch {
+    return {};
+  }
+}
+
+function publixValidRangeYears(
+  now: Date,
+  startMonth: number,
+  endMonth: number,
+  endDay: number,
+  startDay: number,
+): { startYear: number; endYear: number } | null {
+  if (
+    startMonth < 1 ||
+    startMonth > 12 ||
+    endMonth < 1 ||
+    endMonth > 12 ||
+    startDay < 1 ||
+    endDay < 1
+  ) {
+    return null;
+  }
+  const year = now.getFullYear();
+  const crosses =
+    endMonth < startMonth || (endMonth === startMonth && endDay < startDay);
+  if (!crosses) {
+    return { startYear: year, endYear: year };
+  }
+  const nowMonth = now.getMonth() + 1;
+  const nowDay = now.getDate();
+  const runIsAfterStart =
+    nowMonth > startMonth || (nowMonth === startMonth && nowDay >= startDay);
+  if (runIsAfterStart) {
+    return { startYear: year, endYear: year + 1 };
+  }
+  return { startYear: year - 1, endYear: year };
+}
+
+function isRealCalendarDay(year: number, month: number, day: number): boolean {
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return (
+    probe.getUTCFullYear() === year &&
+    probe.getUTCMonth() === month - 1 &&
+    probe.getUTCDate() === day
+  );
+}
+
+/** Local midnight of that calendar day. Null when the offset is not a whole hour. */
+function formatProcessDateOnlyInstant(
+  year: number,
+  month: number,
+  day: number,
+  now: Date,
+): string | undefined {
+  const offsetMinutes = -now.getTimezoneOffset();
+  if (offsetMinutes % 60 !== 0) {
+    return undefined;
+  }
+  const monthText = String(month).padStart(2, "0");
+  const dayText = String(day).padStart(2, "0");
+  return `${year}-${monthText}-${dayText}T00:00:00${formatWholeHourOffset(offsetMinutes)}`;
+}
+
+function formatWholeHourOffset(offsetMinutes: number): string {
+  if (offsetMinutes === 0) {
+    return "Z";
+  }
+  const sign = offsetMinutes > 0 ? "+" : "-";
+  const hours = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2, "0");
+  return `${sign}${hours}:00`;
+}
 
 const NEXT_DATA_PATTERN =
   /<script[^>]*id=["']__NEXT_DATA__["'][^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i;
@@ -13,10 +135,12 @@ const LISTED_SAVINGS_CARD_PATTERN =
 export function parsePublixWeeklyAd(input: {
   html: string;
   networkJsonBodies?: string[];
+  now?: Date;
 }): WeeklyAdRawOffer[] {
   const offers: WeeklyAdRawOffer[] = [];
+  const now = input.now ?? new Date();
 
-  appendUniqueOffers(offers, parseListedSavingsCardOffers(input.html));
+  appendUniqueOffers(offers, parseListedSavingsCardOffers(input.html, now));
   appendUniqueOffers(offers, parseWeeklyAdHtml(input.html));
   appendUniqueOffers(offers, parseAriaLabelOffers(input.html));
   appendUniqueOffers(offers, parseNextDataOffers(input.html));
@@ -29,12 +153,12 @@ export function parsePublixWeeklyAd(input: {
   return offers;
 }
 
-function parseListedSavingsCardOffers(html: string): WeeklyAdRawOffer[] {
+function parseListedSavingsCardOffers(html: string, now: Date): WeeklyAdRawOffer[] {
   const offers: WeeklyAdRawOffer[] = [];
   let match = LISTED_SAVINGS_CARD_PATTERN.exec(html);
 
   while (match) {
-    const offer = normalizeListedSavingsCard(match[0]);
+    const offer = normalizeListedSavingsCard(match[0], now);
     if (offer) {
       appendUniqueOffers(offers, [offer]);
     }
@@ -44,7 +168,7 @@ function parseListedSavingsCardOffers(html: string): WeeklyAdRawOffer[] {
   return offers;
 }
 
-function normalizeListedSavingsCard(cardHtml: string): WeeklyAdRawOffer | null {
+function normalizeListedSavingsCard(cardHtml: string, now: Date): WeeklyAdRawOffer | null {
   const productName = readListedSavingsCardTitle(cardHtml);
   if (!productName || looksLikeNonProductLabel(productName)) {
     return null;
@@ -52,7 +176,10 @@ function normalizeListedSavingsCard(cardHtml: string): WeeklyAdRawOffer | null {
 
   const badgeText = readListedSavingsCardSection(cardHtml, "p-savings-badge__text");
   const additionalInfo = readListedSavingsCardSection(cardHtml, "additional-info");
-  const validThrough = readListedSavingsCardSection(cardHtml, "valid-dates");
+  const validDates = parsePublixCardValidRange(
+    readListedSavingsCardSection(cardHtml, "valid-dates"),
+    now,
+  );
   const priceDetails = resolveListedSavingsCardPrice(badgeText, additionalInfo);
 
   if (!priceDetails) {
@@ -63,7 +190,8 @@ function normalizeListedSavingsCard(cardHtml: string): WeeklyAdRawOffer | null {
     productName,
     price: priceDetails.price,
     saleLabel: priceDetails.saleLabel,
-    validThrough,
+    validFrom: validDates.validFrom,
+    validThrough: validDates.validThrough,
   };
 }
 
