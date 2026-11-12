@@ -172,6 +172,49 @@ export function selectWeeklyAdRetryChain(input: {
   return null;
 }
 
+/**
+ * The skip line when no chain is chosen.
+ * No stale or thin chain: nothing needs a retry.
+ * A chain that needed a retry and is at the daily cap: say so.
+ * The identical-thin stop does not mention the cap.
+ */
+export function weeklyAdRetrySkipMessage(input: {
+  candidates: readonly WeeklyAdRetryCandidate[];
+  attemptsToday: Readonly<Record<string, number>>;
+  maxPerDay: number;
+  thinStamps?: Readonly<Record<string, WeeklyAdRetryThinStamp>>;
+}): string {
+  const needy = input.candidates.filter(
+    (candidate) => candidate.freshCount <= 0 || candidate.thinPage === true,
+  );
+  if (needy.length === 0) {
+    return "[weekly-ad-retry] nothing needs a retry.";
+  }
+  const eligible = needy.some((candidate) => {
+    if ((input.attemptsToday[candidate.chainId] ?? 0) >= input.maxPerDay) {
+      return false;
+    }
+    const stamp = input.thinStamps?.[candidate.chainId];
+    if (
+      candidate.thinPage === true &&
+      (stamp?.identical ?? 0) >= WEEKLY_AD_THIN_IDENTICAL_LIMIT
+    ) {
+      return false;
+    }
+    return true;
+  });
+  if (eligible) {
+    return "[weekly-ad-retry] nothing needs a retry.";
+  }
+  const hitCap = needy.some(
+    (candidate) => (input.attemptsToday[candidate.chainId] ?? 0) >= input.maxPerDay,
+  );
+  if (hitCap) {
+    return "[weekly-ad-retry] a chain needed a retry but has hit today's limit.";
+  }
+  return "[weekly-ad-retry] nothing needs a retry.";
+}
+
 /** Zero-fresh first. Within a group, sort_order then chain_id. */
 export function orderWeeklyAdRetryCandidates(
   candidates: readonly WeeklyAdRetryCandidate[],

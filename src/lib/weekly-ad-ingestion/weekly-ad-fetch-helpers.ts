@@ -64,18 +64,24 @@ export async function fetchWithRetries(
     : new Error("Weekly-ad fetch failed after retries.");
 }
 
-function getConfiguredRetryCount() {
-  const configured = Number(process.env.YUM4LESS_WEEKLY_AD_HTTP_RETRIES);
-  return Number.isInteger(configured) && configured > 0 && configured <= 5
-    ? configured
-    : 3;
+export function readWeeklyAdHttpRetries(env: NodeJS.ProcessEnv = process.env): number {
+  const configured = Number(env.YUM4LESS_WEEKLY_AD_HTTP_RETRIES);
+  return Number.isInteger(configured) && configured > 0 && configured <= 5 ? configured : 3;
 }
 
-function getConfiguredBackoffMs() {
-  const configured = Number(process.env.YUM4LESS_WEEKLY_AD_BACKOFF_MS);
+export function readWeeklyAdBackoffMs(env: NodeJS.ProcessEnv = process.env): number {
+  const configured = Number(env.YUM4LESS_WEEKLY_AD_BACKOFF_MS);
   return Number.isInteger(configured) && configured >= 100 && configured <= 10_000
     ? configured
     : 1_000;
+}
+
+function getConfiguredRetryCount() {
+  return readWeeklyAdHttpRetries();
+}
+
+function getConfiguredBackoffMs() {
+  return readWeeklyAdBackoffMs();
 }
 
 export async function fetchWeeklyAdHtmlOverHttp(input: {

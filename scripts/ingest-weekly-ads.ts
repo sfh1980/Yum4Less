@@ -46,11 +46,13 @@ import {
   readWeeklyAdRetryMaxPerDay,
   selectWeeklyAdRetryChain,
   weeklyAdRetryDate,
+  weeklyAdRetrySkipMessage,
   weeklyAdThinSignature,
   type WeeklyAdRetryState,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-retry";
 import { acquireWeeklyAdIngestLock } from "@/lib/weekly-ad-ingestion/weekly-ad-ingest-lock";
 import { readWeeklyAdThinPageChains } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
+import { formatWeeklyAdSettingsLine } from "@/lib/weekly-ad-ingestion/weekly-ad-settings";
 
 loadEnvLocal();
 
@@ -77,6 +79,7 @@ async function main() {
   }
 
   try {
+  console.info(formatWeeklyAdSettingsLine());
   enforceFixtureIngestDatabasePolicy();
 
   const membership = await loadChainMembership();
@@ -183,18 +186,17 @@ async function main() {
       `${requestedChain}-only weekly-ad for ${runStores.length} admitted store(s) (ZIP ${flyerZipCode}). No ingest_jobs row. Stale-row purge is limited to ${purgeSourceName}.`,
     );
   } else if (retryStale) {
-    const choice = await chooseStaleWeeklyAdChain(admittedStores);
+    const retry = await chooseStaleWeeklyAdChain(admittedStores);
+    const choice = retry.choice;
     retryChain = choice;
     if (!choice || !flyerZipCode) {
-      console.log(
-        "[weekly-ad-retry] no chain with no fresh rows or a thin page is under today's limit.",
-      );
+      console.log(`[nightly] ${retry.skipMessage}`);
       process.exit(0);
     }
     runStores = admittedStores.filter((store) => store.chain === choice);
     purgeSourceName = getWeeklyAdSourceName(choice);
     console.log(
-      `[weekly-ad-retry] ${choice} for ${runStores.length} admitted store(s) (ZIP ${flyerZipCode}). No ingest_jobs row. Stale-row purge is limited to ${purgeSourceName}.`,
+      `[nightly] [weekly-ad-retry] ${choice} for ${runStores.length} admitted store(s) (ZIP ${flyerZipCode}). No ingest_jobs row. Stale-row purge is limited to ${purgeSourceName}.`,
     );
   } else if (!admittedStores.some((store) => store.chain === "whole-foods")) {
     console.info(
@@ -228,7 +230,7 @@ async function main() {
   }
 
   for (const result of allResults) {
-    console.log(`\n[${result.chain}] ${result.status} — ${result.message}`);
+    console.log(`\n[nightly] [${result.chain}] ${result.status} — ${result.message}`);
     console.log(`  offers: ${result.offers.length}, configured: ${result.configured}`);
   }
 
@@ -255,7 +257,7 @@ async function main() {
 
   for (const summary of allSyncSummaries) {
     console.log(
-      `\n[sync:${summary.chain}] synced=${summary.syncedCount}, skipped=${summary.skippedCount}, failed=${summary.failedCount}`,
+      `\n[nightly] [sync:${summary.chain}] synced=${summary.syncedCount}, skipped=${summary.skippedCount}, failed=${summary.failedCount}`,
     );
     console.log(`  ${summary.message}`);
   }
@@ -325,10 +327,17 @@ async function main() {
 
 async function chooseStaleWeeklyAdChain(
   stores: readonly { chain: string }[],
-): Promise<WeeklyAdChain | null> {
+): Promise<{ choice: WeeklyAdChain | null; skipMessage: string }> {
   const chainIds = [...new Set(stores.map((store) => store.chain))].filter(isWeeklyAdChain);
   if (chainIds.length === 0) {
-    return null;
+    return {
+      choice: null,
+      skipMessage: weeklyAdRetrySkipMessage({
+        candidates: [],
+        attemptsToday: {},
+        maxPerDay: readWeeklyAdRetryMaxPerDay(process.env),
+      }),
+    };
   }
   const pool = getDbPool();
   const orderResult = await pool.query<{ chain_id: string; sort_order: number }>(
@@ -367,22 +376,32 @@ async function chooseStaleWeeklyAdChain(
   }
   const today = weeklyAdRetryDate(new Date());
   const state = readWeeklyAdRetryState(today);
+  const candidates = ordered.map((chainId) => ({
+    chainId,
+    freshCount: fresh.get(chainId) ?? 0,
+    thinPage: thinPages.has(chainId),
+    sortOrder: sortOrder.get(chainId),
+  }));
+  const maxPerDay = readWeeklyAdRetryMaxPerDay(process.env);
   const choice = selectWeeklyAdRetryChain({
-    candidates: ordered.map((chainId) => ({
-      chainId,
-      freshCount: fresh.get(chainId) ?? 0,
-      thinPage: thinPages.has(chainId),
-      sortOrder: sortOrder.get(chainId),
-    })),
+    candidates,
     attemptsToday: state.counts,
-    maxPerDay: readWeeklyAdRetryMaxPerDay(process.env),
+    maxPerDay,
     thinStamps: state.thinStamps,
   });
   if (!choice || !isWeeklyAdChain(choice)) {
-    return null;
+    return {
+      choice: null,
+      skipMessage: weeklyAdRetrySkipMessage({
+        candidates,
+        attemptsToday: state.counts,
+        maxPerDay,
+        thinStamps: state.thinStamps,
+      }),
+    };
   }
   writeWeeklyAdRetryState(bumpWeeklyAdRetryCount(state, choice));
-  return choice;
+  return { choice, skipMessage: "" };
 }
 
 function weeklyAdRetryStatePath(): string {

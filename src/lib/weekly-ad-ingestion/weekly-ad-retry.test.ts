@@ -7,6 +7,7 @@ import {
   selectWeeklyAdRetryChain,
   WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT,
   weeklyAdRetryDate,
+  weeklyAdRetrySkipMessage,
   weeklyAdThinSignature,
   type WeeklyAdRetryState,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-retry";
@@ -335,5 +336,37 @@ describe("weekly-ad retry picker", () => {
     expect(bumpWeeklyAdRetryCount(state, "whole-foods").counts).toEqual({
       "whole-foods": 1,
     });
+  });
+
+  it("says nothing needs a retry when no chain is stale or thin", () => {
+    const message = weeklyAdRetrySkipMessage({
+      candidates: [{ chainId: "publix", freshCount: 10, thinPage: false }],
+      attemptsToday: {},
+      maxPerDay: 7,
+    });
+    expect(message).toBe("[weekly-ad-retry] nothing needs a retry.");
+    expect(message).not.toContain("limit");
+  });
+
+  it("mentions the daily limit only when a needy chain has hit the cap", () => {
+    const message = weeklyAdRetrySkipMessage({
+      candidates: [{ chainId: "publix", freshCount: 0 }],
+      attemptsToday: { publix: 7 },
+      maxPerDay: 7,
+    });
+    expect(message).toBe(
+      "[weekly-ad-retry] a chain needed a retry but has hit today's limit.",
+    );
+  });
+
+  it("does not mention the limit when a thin chain stopped on an identical page", () => {
+    const message = weeklyAdRetrySkipMessage({
+      candidates: [{ chainId: "publix", freshCount: 10, thinPage: true }],
+      attemptsToday: { publix: 1 },
+      maxPerDay: 7,
+      thinStamps: { publix: { signature: "39:39", identical: 2 } },
+    });
+    expect(message).toBe("[weekly-ad-retry] nothing needs a retry.");
+    expect(message).not.toContain("limit");
   });
 });
