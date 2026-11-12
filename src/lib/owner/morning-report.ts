@@ -171,6 +171,12 @@ export type MorningChainPriceFact = {
   priceMissReason?: string | null;
   /** Fresh rows divided by admitted stores, rounded. Absent when the store count is unknown. */
   rowsPerStore?: number;
+  /** Shopper-ranked chain. Used only to name chains that have no store on file. */
+  shopperRanked?: boolean;
+  /** Catalog stores for this chain, including stores outside today's fence. */
+  catalogStoreCount?: number;
+  /** Fresh rows whose start is still in the future, divided by admitted stores. */
+  startingLaterPerStore?: number;
 };
 
 const CHAIN_PRICE_EXCEPTION_LINE =
@@ -179,6 +185,8 @@ const COVERAGE_DROP_LINE = /^(.+) has (\d+) rows per store, down from (\d+)\.$/;
 const ROWS_PER_STORE_LINE = /^Rows per store: (.+)\.$/;
 export const MORNING_COVERAGE_DROP_RATIO_DEFAULT = 0.5;
 export const COVERAGE_BASELINE_MORNINGS = 7;
+/** Marks a census that counted only rows a shopper can see. Older rows lack it. */
+export const SHOPPER_WINDOW_BASELINE_KEY = "_shopperWindow";
 const COVERAGE_DROP_AGAIN_LINE = "Price rows per store are down again.";
 const THIN_PAGE_LINE = /^(.+) weekly ad page was thin\.$/;
 const THIN_PAGE_AGAIN_LINE = /^(.+) weekly ad page was thin again\.$/;
@@ -424,13 +432,37 @@ export function coverageHighBaseline(
   const baseline: Record<string, number> = {};
   for (const census of window) {
     for (const [name, rows] of Object.entries(census)) {
-      if (!name.trim() || !Number.isFinite(rows) || rows <= 0) {
+      if (!name.trim() || name.startsWith("_") || !Number.isFinite(rows) || rows <= 0) {
         continue;
       }
       baseline[name] = Math.max(baseline[name] ?? 0, rows);
     }
   }
   return Object.keys(baseline).length > 0 ? baseline : null;
+}
+
+export function withShopperWindowBaseline(
+  counts: Record<string, number> | null,
+): Record<string, number> | null {
+  if (!counts) {
+    return null;
+  }
+  return { ...counts, [SHOPPER_WINDOW_BASELINE_KEY]: 1 };
+}
+
+/**
+ * Highest shopper-visible rows per store in the saved mornings.
+ * Censuses saved before that count existed are left out, so the first mornings
+ * after the change are not compared with the older, higher numbers.
+ */
+export function shopperWindowBaselineHigh(
+  censusesNewestFirst: readonly (Readonly<Record<string, number>> | null | undefined)[],
+  mornings: number = COVERAGE_BASELINE_MORNINGS,
+): Record<string, number> | null {
+  const marked = censusesNewestFirst.filter(
+    (census) => census?.[SHOPPER_WINDOW_BASELINE_KEY] === 1,
+  );
+  return coverageHighBaseline(marked, mornings);
 }
 
 export function thinPageNamesInNote(body: string): string[] {
@@ -464,6 +496,55 @@ export function coverageDropNamesInNote(body: string): string[] {
     const match = COVERAGE_DROP_LINE.exec(line.trim());
     return match?.[1] ? [match[1]] : [];
   });
+}
+
+function startingLaterSentence(
+  chains: readonly { displayName: string; startingLaterPerStore?: number }[],
+): string | null {
+  const parts = chains
+    .map((chain) => ({
+      name: chain.displayName.trim(),
+      rows: chain.startingLaterPerStore,
+    }))
+    .filter(
+      (part): part is { name: string; rows: number } =>
+        Boolean(part.name) && typeof part.rows === "number" && part.rows > 0,
+    )
+    .sort((left, right) => left.name.localeCompare(right.name));
+  if (parts.length === 0) {
+    return null;
+  }
+  return `Starting later this week: ${parts
+    .map((part) => `${part.name} ${part.rows}`)
+    .join(", ")}.`;
+}
+
+function noStoreOnFileSentence(
+  chains: readonly {
+    displayName: string;
+    shopperRanked?: boolean;
+    catalogStoreCount?: number;
+  }[],
+): string | null {
+  const names = chains
+    .filter(
+      (chain) =>
+        chain.shopperRanked === true &&
+        chain.catalogStoreCount === 0 &&
+        chain.displayName.trim(),
+    )
+    .map((chain) => chain.displayName.trim())
+    .sort((left, right) => left.localeCompare(right));
+  if (names.length === 0) {
+    return null;
+  }
+  if (names.length === 1) {
+    return `${names[0]} has no store on file.`;
+  }
+  if (names.length === 2) {
+    return `${names[0]} and ${names[1]} have no store on file.`;
+  }
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]} have no store on file.`;
 }
 
 function rowsPerStoreCensusLine(
@@ -554,12 +635,16 @@ export function describeMorningChainPrices(input: {
     ? thinWithRows.filter((name) => priorThin.includes(name))
     : [];
   const census = rowsPerStoreCensusLine(counted);
+  const laterLine = startingLaterSentence(counted);
+  const noStoreLine = noStoreOnFileSentence(input.chains);
   const extra = [
     ...thinWithRows.map((name) => `${name} weekly ad page was thin.`),
     ...repeatedThin.map((name) => `${name} weekly ad page was thin again.`),
     ...drops,
     ...(repeatedDrops.length > 0 ? [COVERAGE_DROP_AGAIN_LINE] : []),
     ...(census ? [census] : []),
+    ...(laterLine ? [laterLine] : []),
+    ...(noStoreLine ? [noStoreLine] : []),
   ];
   const dropNeedsYou = repeatedDrops.length > 0;
   const thinNeedsYou = repeatedThin.length > 0;

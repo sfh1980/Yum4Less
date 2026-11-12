@@ -77,4 +77,27 @@ describe("morning chain price facts", () => {
     });
     expect(facts[0]?.rowsPerStore).toBe(24);
   });
+
+  it("counts only shopper-visible rows and names rows that start later", () => {
+    const facts = assembleMorningChainPriceFacts({
+      registry: [
+        {
+          chainId: "lidl",
+          displayName: "Lidl",
+          saleSource: true,
+          sortOrder: 40,
+          shopperRanked: true,
+        },
+      ],
+      admittedChainIds: new Set(["lidl"]),
+      admittedStoreCounts: new Map([["lidl", 2]]),
+      catalogStoreCounts: new Map([["lidl", 2]]),
+      freshBySource: [{ sourceName: "lidl-weekly-ad-scrape", freshCount: 50 }],
+      visibleBySource: [{ sourceName: "lidl-weekly-ad-scrape", freshCount: 44 }],
+      startingLaterBySource: [{ sourceName: "lidl-weekly-ad-scrape", freshCount: 10 }],
+    });
+    expect(facts[0]?.rowsPerStore).toBe(22);
+    expect(facts[0]?.startingLaterPerStore).toBe(5);
+    expect(facts[0]?.freshFlyerCount).toBe(50);
+  });
 });

@@ -8,7 +8,12 @@ import {
   storePassesIngestFence,
 } from "@/lib/market-ingest-fence";
 import type { MorningChainPriceFact } from "@/lib/owner/morning-report";
-import { getRankedPriceSourceKind } from "@/lib/price-source-policy";
+import { getRankedPriceSourceKind, RANKED_PRICE_SOURCE_SQL_FILTER } from "@/lib/price-source-policy";
+import {
+  RANKED_PRICE_CACHE_AGE_SQL_FILTER,
+  RANKED_PRICE_THROUGH_ONLY_SQL_FILTER,
+  rankedPriceWindowSql,
+} from "@/lib/ranked-price-cache-policy";
 import { logServerError } from "@/lib/server-log";
 import { filterCatalogStoresNearLocation } from "@/lib/store-catalog-sync";
 import { isWeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-registry";
@@ -19,6 +24,7 @@ export type MorningChainRegistryRow = {
   saleSource: boolean;
   sortOrder: number;
   priceMissReason?: string | null;
+  shopperRanked?: boolean;
 };
 
 /** Map a ranked price source onto a chain and whether the row is official or a flyer. */
@@ -41,10 +47,17 @@ export function assembleMorningChainPriceFacts(input: {
   registry: readonly MorningChainRegistryRow[];
   admittedChainIds: ReadonlySet<string>;
   freshBySource: readonly { sourceName: string; freshCount: number }[];
+  /** Shopper-visible rows. When set, rows per store uses this instead of every fresh row. */
+  visibleBySource?: readonly { sourceName: string; freshCount: number }[];
+  /** Rows whose start is still in the future. */
+  startingLaterBySource?: readonly { sourceName: string; freshCount: number }[];
   admittedStoreCounts?: ReadonlyMap<string, number>;
+  catalogStoreCounts?: ReadonlyMap<string, number>;
 }): MorningChainPriceFact[] {
   const freshOfficial = new Map<string, number>();
   const freshFlyer = new Map<string, number>();
+  const visible = new Map<string, number>();
+  const startingLater = new Map<string, number>();
   for (const row of input.freshBySource) {
     const parsed = priceSourceFreshnessKind(row.sourceName);
     if (!parsed) {
@@ -53,6 +66,8 @@ export function assembleMorningChainPriceFacts(input: {
     const target = parsed.kind === "official" ? freshOfficial : freshFlyer;
     target.set(parsed.chainId, (target.get(parsed.chainId) ?? 0) + row.freshCount);
   }
+  addSourceCounts(visible, input.visibleBySource ?? input.freshBySource);
+  addSourceCounts(startingLater, input.startingLaterBySource ?? []);
 
   return [...input.registry]
     .sort(
@@ -73,12 +88,33 @@ export function assembleMorningChainPriceFacts(input: {
       if (row.priceMissReason) {
         fact.priceMissReason = row.priceMissReason;
       }
+      if (input.catalogStoreCounts) {
+        fact.shopperRanked = row.shopperRanked === true;
+        fact.catalogStoreCount = input.catalogStoreCounts.get(row.chainId) ?? 0;
+      }
       const storeCount = input.admittedStoreCounts?.get(row.chainId) ?? 0;
       if (storeCount > 0) {
-        fact.rowsPerStore = Math.round((freshOfficialCount + freshFlyerCount) / storeCount);
+        fact.rowsPerStore = Math.round((visible.get(row.chainId) ?? 0) / storeCount);
+        const laterPerStore = Math.round((startingLater.get(row.chainId) ?? 0) / storeCount);
+        if (laterPerStore > 0) {
+          fact.startingLaterPerStore = laterPerStore;
+        }
       }
       return fact;
     });
+}
+
+function addSourceCounts(
+  target: Map<string, number>,
+  rows: readonly { sourceName: string; freshCount: number }[],
+) {
+  for (const row of rows) {
+    const parsed = priceSourceFreshnessKind(row.sourceName);
+    if (!parsed) {
+      continue;
+    }
+    target.set(parsed.chainId, (target.get(parsed.chainId) ?? 0) + row.freshCount);
+  }
 }
 
 export async function loadMorningChainPriceFacts(input: {
@@ -90,14 +126,16 @@ export async function loadMorningChainPriceFacts(input: {
     display_name: string;
     sale_discovery_strategy: string;
     sort_order: number;
+    shopper_ranked: boolean;
   }>(
     `
-      select chain_id, display_name, sale_discovery_strategy, sort_order
+      select chain_id, display_name, sale_discovery_strategy, sort_order, shopper_ranked
       from chain_registry
       order by sort_order asc, display_name asc
     `,
   );
   const freshness = await queryRankedPriceFreshness(pool);
+  const shopperCounts = await loadShopperPriceCounts(pool);
   const admitted = await listAdmittedChains(input.activeZipCodes);
   const missReasons = await loadPriceMissReasons(pool);
   return assembleMorningChainPriceFacts({
@@ -106,12 +144,60 @@ export async function loadMorningChainPriceFacts(input: {
       displayName: row.display_name,
       saleSource: row.sale_discovery_strategy.trim().toLowerCase() !== "none",
       sortOrder: row.sort_order,
+      shopperRanked: row.shopper_ranked === true,
       priceMissReason: missReasons.get(row.chain_id) ?? null,
     })),
     admittedChainIds: admitted.ids,
     admittedStoreCounts: admitted.storeCounts,
+    catalogStoreCounts: admitted.catalogStoreCounts,
     freshBySource: freshness.bySource,
+    visibleBySource: shopperCounts.visibleBySource,
+    startingLaterBySource: shopperCounts.startingLaterBySource,
   });
+}
+
+/**
+ * Rows a shopper read can return, and rows that start later.
+ * The window fragment is the same one ranked reads use. A null start stays visible.
+ */
+async function loadShopperPriceCounts(pool: ReturnType<typeof getDbPool>): Promise<{
+  visibleBySource: { sourceName: string; freshCount: number }[];
+  startingLaterBySource: { sourceName: string; freshCount: number }[];
+}> {
+  const windowSql = await rankedPriceWindowSql(pool);
+  const result = await pool.query<{
+    source_name: string;
+    visible_count: number;
+    later_count: number;
+  }>(
+    `
+      select
+        source_name,
+        count(*) filter (
+          where ${windowSql}
+            and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+        )::int as visible_count,
+        count(*) filter (
+          where valid_from > now()
+            and ${RANKED_PRICE_THROUGH_ONLY_SQL_FILTER}
+            and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+        )::int as later_count
+      from price_observations
+      where in_stock = true
+        and (${RANKED_PRICE_SOURCE_SQL_FILTER})
+      group by source_name
+    `,
+  );
+  return {
+    visibleBySource: result.rows.map((row) => ({
+      sourceName: row.source_name,
+      freshCount: Number(row.visible_count),
+    })),
+    startingLaterBySource: result.rows.map((row) => ({
+      sourceName: row.source_name,
+      freshCount: Number(row.later_count),
+    })),
+  };
 }
 
 /**
@@ -147,10 +233,22 @@ async function loadPriceMissReasons(
  */
 async function listAdmittedChains(
   activeZipCodes: readonly string[],
-): Promise<{ ids: Set<string>; storeCounts: Map<string, number> }> {
+): Promise<{
+  ids: Set<string>;
+  storeCounts: Map<string, number>;
+  catalogStoreCounts: Map<string, number>;
+}> {
   const ids = new Set<string>();
   const storesByChain = new Map<string, Set<string>>();
+  const catalogStoreCounts = new Map<string, number>();
   const stores = await loadCatalogStores();
+  for (const store of stores) {
+    const chain = inferStoreChainFromCatalog(store);
+    if (!isWeeklyAdChain(chain)) {
+      continue;
+    }
+    catalogStoreCounts.set(chain, (catalogStoreCounts.get(chain) ?? 0) + 1);
+  }
   for (const zipCode of activeZipCodes) {
     const locationResult = await resolveLocationInput({ zipCode });
     if (!locationResult.ok) {
@@ -184,7 +282,7 @@ async function listAdmittedChains(
   for (const [chain, seen] of storesByChain) {
     storeCounts.set(chain, seen.size);
   }
-  return { ids, storeCounts };
+  return { ids, storeCounts, catalogStoreCounts };
 }
 
 export function logMorningChainPriceFailure(error: unknown) {

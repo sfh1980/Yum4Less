@@ -13,6 +13,8 @@ import {
   coverageBaselineInNote,
   coverageDropNamesInNote,
   coverageHighBaseline,
+  shopperWindowBaselineHigh,
+  SHOPPER_WINDOW_BASELINE_KEY,
   formatRowsPerStoreCensus,
   thinPageNamesInNote,
   composeMissedMorningReport,
@@ -794,6 +796,76 @@ describe("morning report", () => {
     expect(coverageHighBaseline(history)).toEqual({ Publix: 132, Aldi: 41 });
     expect(coverageHighBaseline(history, 7)?.Publix).toBe(132);
     expect(coverageHighBaseline([{ Publix: 55 }])?.Publix).toBe(55);
+  });
+
+  it("names rows that start later and ranked chains with no store, without Needs you", () => {
+    const note = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Lidl",
+          freshFlyerCount: 50,
+          rowsPerStore: 25,
+          startingLaterPerStore: 5,
+        }),
+        priceChain({
+          displayName: "Food Lion",
+          freshFlyerCount: 44,
+          rowsPerStore: 44,
+        }),
+        {
+          displayName: "Target",
+          admittedStore: false,
+          saleSource: true,
+          freshOfficialCount: 0,
+          freshFlyerCount: 0,
+          shopperRanked: true,
+          catalogStoreCount: 0,
+        },
+        {
+          displayName: "Dollar General",
+          admittedStore: false,
+          saleSource: true,
+          freshOfficialCount: 0,
+          freshFlyerCount: 0,
+          shopperRanked: true,
+          catalogStoreCount: 0,
+        },
+      ],
+      priorChainPriceExceptions: [],
+      previousRowsPerStore: null,
+    });
+    expect(note.body).toContain("All 2 chains have prices from the last day.");
+    expect(note.body).toContain("Starting later this week: Lidl 5.");
+    expect(note.body).toContain("Dollar General and Target have no store on file.");
+    expect(note.body).toContain("Nothing needs you.");
+    expect(note.needsAttention).toBe(false);
+    expect(rowsPerStoreInNote(note.body)).toEqual({ "Food Lion": 44, Lidl: 25 });
+  });
+
+  it("does not compare the new shopper count with an older higher baseline", () => {
+    const oldHigh = [{ Publix: 132 }];
+    expect(shopperWindowBaselineHigh(oldHigh)).toBeNull();
+    const marked: Record<string, number>[] = [
+      { Publix: 73, [SHOPPER_WINDOW_BASELINE_KEY]: 1 },
+      { Publix: 132 },
+    ];
+    expect(shopperWindowBaselineHigh(marked)).toEqual({ Publix: 73 });
+
+    const first = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({ displayName: "Publix", freshFlyerCount: 440, rowsPerStore: 40 }),
+      ],
+      priorChainPriceExceptions: [],
+      previousRowsPerStore: shopperWindowBaselineHigh(oldHigh),
+      priorCoverageDropNames: [],
+    });
+    expect(first.body).not.toContain("down from");
+    expect(first.needsAttention).toBe(false);
+    expect(first.body).toContain("Nothing needs you.");
   });
 
   it("accepts only a Discord webhook URL", () => {

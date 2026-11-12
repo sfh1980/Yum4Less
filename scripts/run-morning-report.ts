@@ -11,9 +11,9 @@ import { logMorningChainPriceFailure, loadMorningChainPriceFacts } from "@/lib/o
 import {
   appendMorningIssue,
   chainPriceExceptionsInNote,
-  coverageBaselineInNote,
-  coverageHighBaseline,
   COVERAGE_BASELINE_MORNINGS,
+  shopperWindowBaselineHigh,
+  withShopperWindowBaseline,
   thinPageNamesInNote,
   coverageDropNamesInNote,
   composeMorningReport,
@@ -198,11 +198,9 @@ export async function runMorningReport(): Promise<void> {
     priorChainPriceExceptions = priorNote
       ? chainPriceExceptionsInNote(priorNote.body)
       : null;
-    const storedBaseline = coverageHighBaseline(
+    previousRowsPerStore = shopperWindowBaselineHigh(
       await readRecentCoverageBaselines(reportDate, COVERAGE_BASELINE_MORNINGS),
     );
-    previousRowsPerStore =
-      storedBaseline ?? (priorNote ? coverageBaselineInNote(priorNote.body) : null);
     priorCoverageDropNames = priorNote
       ? coverageDropNamesInNote(priorNote.body)
       : null;
@@ -300,7 +298,9 @@ export async function runMorningReport(): Promise<void> {
     kind: "morning",
     body: note.body,
     needsAttention: note.needsAttention,
-    coverageBaseline: chainPrices ? rowsPerStoreInNote(note.body) : null,
+    coverageBaseline: chainPrices
+      ? withShopperWindowBaseline(rowsPerStoreInNote(note.body))
+      : null,
   });
   console.log(note.body);
 }
