@@ -531,7 +531,7 @@ curl -sS -X POST http://127.0.0.1:3000/api/market-search \
 
 **Superseded for production-like / homelab:** host-side `npm run build` + `NODE_ENV=production npm run start`. That remains valid for local debugging only — not the documented deploy model.
 
-Set `TRUST_PROXY_HEADERS=1` only when a trusted proxy strips client `X-Forwarded-For`. Continental US ZIP search in production requires `GEOCODIO_API_KEY` (Compose: `.env.local`; TrueNAS: app env / secret as configured in the Custom App).
+Set `TRUST_PROXY_HEADERS=1` and `YUM4LESS_TRUSTED_PROXY_HOPS` only when a trusted proxy appends the caller address. Continental US ZIP search in production requires `GEOCODIO_API_KEY` (Compose: `.env.local`; TrueNAS: app env / secret as configured in the Custom App).
 
 ---
 
@@ -972,7 +972,7 @@ Ingest + Watchtower are **deployed** on TrueNAS. Manual one-shot dry-run closed 
 | 3. One successful ingest (non-empty ranked window) | **Closed (manual dry-run)** — 246/246 fresh @ ZIP `23111`; see §10 Status |
 | 4. `db:backup-restore-drill` on TrueNAS target | **Closed (2026-08-31)** — host dump/restore into `yum4less_backup_drill`; counts **276/324/29** matched; drill DB dropped |
 | 5. Public/WAN exposure | **Closed (2026-08-03/04)** — Cloudflare Tunnel → `https://yum4less.com/` ([§12](#12-cloudflare-tunnel-wan--live)) |
-| 6. Prod env flags on app | Confirm after each Watchtower recreate: `TRUST_PROXY_HEADERS=1`, `YUM4LESS_TRUSTED_PROXY_VERIFIED=1`, feedback/analytics as desired |
+| 6. Prod env flags on app | Confirm after each Watchtower recreate: `TRUST_PROXY_HEADERS=1`, `YUM4LESS_TRUSTED_PROXY_VERIFIED=1`, `YUM4LESS_TRUSTED_PROXY_HOPS=1`, feedback/analytics as desired |
 | Watchtower first hourly scan | **Closed** (owner 2026-09-01 paste) — 2026-08-31 22:55Z `Updated=2` (`72c6591` / `bfe5bf4`); later hourly sessions `Updated=0`. **2026-09-03 23:55Z** `Updated=2` — app `73645334fbd8`, ingest `1aa2eb2dec54` (owner migrate `030`/`031` after pull). **2026-09-04 00:55Z** `Updated=2` — app `32bf2c300872`, ingest `f1c6fa510914` (`ec84286` store-list omit + GM junk). |
 
 ---
@@ -994,9 +994,10 @@ Ingest + Watchtower are **deployed** on TrueNAS. Manual one-shot dry-run closed 
 ```yaml
 TRUST_PROXY_HEADERS: "1"
 YUM4LESS_TRUSTED_PROXY_VERIFIED: "1"
+YUM4LESS_TRUSTED_PROXY_HOPS: "1"
 ```
 
-Without these, all clients share the `"unknown"` rate-limit bucket.
+`YUM4LESS_TRUSTED_PROXY_HOPS` is how many proxies append to `X-Forwarded-For`. `1` means the app reads the last entry. Without a hop count or `YUM4LESS_CLIENT_IP_HEADER`, every caller shares the `"unknown"` rate-limit bucket. Optional `YUM4LESS_CLIENT_IP_HEADER` names one header that already holds a single address; when that header is present it wins over the hop list.
 
 Optional (enabled on live box as of 2026-08-04):
 

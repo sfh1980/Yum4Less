@@ -6,6 +6,7 @@ import {
 import { RATE_LIMITS, resetRateLimitsForTests } from "@/lib/rate-limit";
 
 const originalTrustProxy = process.env.TRUST_PROXY_HEADERS;
+const originalHops = process.env.YUM4LESS_TRUSTED_PROXY_HOPS;
 
 describe("api-rate-limit", () => {
   afterEach(() => {
@@ -15,17 +16,23 @@ describe("api-rate-limit", () => {
     } else {
       process.env.TRUST_PROXY_HEADERS = originalTrustProxy;
     }
+    if (originalHops === undefined) {
+      delete process.env.YUM4LESS_TRUSTED_PROXY_HOPS;
+    } else {
+      process.env.YUM4LESS_TRUSTED_PROXY_HOPS = originalHops;
+    }
   });
 
   it("rate limits distinct clients when proxy trust is enabled", () => {
     process.env.TRUST_PROXY_HEADERS = "1";
+    process.env.YUM4LESS_TRUSTED_PROXY_HOPS = "1";
     const config = RATE_LIMITS.apiMarketSearch;
 
     const first = new Request("http://localhost/api/market-search", {
-      headers: { "x-forwarded-for": "203.0.113.10" },
+      headers: { "x-forwarded-for": "203.0.113.50, 198.51.100.2" },
     });
     const second = new Request("http://localhost/api/market-search", {
-      headers: { "x-forwarded-for": "198.51.100.2" },
+      headers: { "x-forwarded-for": "203.0.113.99, 192.0.2.8" },
     });
 
     for (let index = 0; index < config.maxRequests; index += 1) {

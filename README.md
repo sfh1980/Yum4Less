@@ -142,6 +142,8 @@ Copy `.env.example` → `.env.local`. Key variables:
 | `YUM4LESS_INGEST_ZIPS` | Optional debug overlay of comma-separated ZIPs for scheduled ingest. If unset, cron reads `active_markets`. |
 | `YUM4LESS_ENABLE_API_DB_WRITES` | Local dev only — allow public API Postgres writes (**never in production**) |
 | `TRUST_PROXY_HEADERS` | `=1` only behind a trusted reverse proxy |
+| `YUM4LESS_TRUSTED_PROXY_HOPS` | How many proxies append to `X-Forwarded-For`. `1` uses the last entry |
+| `YUM4LESS_CLIENT_IP_HEADER` | Optional single trusted header used instead of the hop list |
 | `NEXT_PUBLIC_YUM4LESS_ANALYTICS` + `YUM4LESS_ENABLE_ANALYTICS` | Both required to record events |
 | `YUM4LESS_FEEDBACK_ENABLED` | Enable `/feedback` (`db/init/007_customer_feedback.sql`; `038` for missing-store requests) |
 
@@ -215,7 +217,7 @@ May 2026 audit: no classic SQL injection / IDOR / BOLA; parameterized SQL throug
 | Response sanitization | Internal store/snapshot IDs stripped from public JSON |
 | Shopping-route limits | Max 8 stops; bounded coordinates and labels |
 | Geographic scope | Continental US bounds (`us-service-area.ts`) |
-| Rate limiting | In-memory per-process; `TRUST_PROXY_HEADERS=1` for trusted proxy IP; optional edge `/api/*` throttle before multi-instance; Redis only when running multiple app instances |
+| Rate limiting | In-memory per-process. `TRUST_PROXY_HEADERS=1` plus `YUM4LESS_TRUSTED_PROXY_HOPS` (or `YUM4LESS_CLIENT_IP_HEADER`). Without the hop count or header, every caller shares `unknown`. Add a shared counter before multi-instance |
 
 **Dependency monitoring:** A moderate PostCSS advisory (`GHSA-qx2v-qp2m-jg93`, transitive via Next.js) is tracked via Dependabot and the weekly `dependency-watch` workflow — wait for an upstream Next.js fix; do **not** run `npm audit fix --force`. `overrides` pin `sharp` to `0.35.5` and `source-map-js` to `1.2.2`. CI `npm run audit:high` still fails other high or critical advisories. It allows only `GHSA-vfj7-8cjw-p6xm` (`braces` `<=3.0.3`, no patched release, pulled by `eslint-config-next` and not shipped in the app image). Delete that exception when the advisory leaves the report.
 | Security headers | X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy |
@@ -227,6 +229,7 @@ May 2026 audit: no classic SQL injection / IDOR / BOLA; parameterized SQL throug
 |---------|-------|--------|
 | `YUM4LESS_ENABLE_API_DB_WRITES` | Unset (opt-in for debug only) | **Never set** |
 | `TRUST_PROXY_HEADERS` | Unset unless testing proxy | `=1` only with trusted reverse proxy |
+| `YUM4LESS_TRUSTED_PROXY_HOPS` | Unset | Whole number of proxies. `1` for one proxy that appends the caller |
 | Rate limits | Fine for single process | Add edge/Redis limits before multi-instance |
 | Postgres writes | Fixture/live ingest scripts | Schedule ingest; HTTP routes stay read-only |
 
