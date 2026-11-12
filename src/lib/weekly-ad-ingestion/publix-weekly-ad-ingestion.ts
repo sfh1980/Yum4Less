@@ -73,10 +73,13 @@ async function ingestPublixWeeklyAd(
       networkJsonBodies: pageFetch.networkJsonBodies,
     });
     const seenCardCount = pageFetch.seenCardCount ?? pageFetch.savingsCardCount;
+    // The thin rule keeps the final page's own count. A merged harvest must
+    // not make a thin final page look full, or a full page look thin.
+    const thinSeenCount = pageFetch.pageSeenCount ?? seenCardCount;
     const scrapeIsThin =
-      typeof seenCardCount === "number" &&
+      typeof thinSeenCount === "number" &&
       publixPageIsThin({
-        seenCount: seenCardCount,
+        seenCount: thinSeenCount,
         expectedCount: pageFetch.expectedCardCount,
         rememberedOfferCount: rememberedCardCount,
       });

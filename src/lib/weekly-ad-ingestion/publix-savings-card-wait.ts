@@ -67,6 +67,17 @@ export function readPublixPrintedTotalIsFloor(
   return env.YUM4LESS_PUBLIX_PRINTED_TOTAL_IS_FLOOR?.trim() === "1";
 }
 
+/**
+ * Off unless set to exactly "1".
+ * On: cards from the main page and each section page share one map.
+ * Off: only the final page is harvested, which is today's stored output.
+ */
+export function readPublixMergeSectionCards(
+  env: NodeJS.ProcessEnv | { YUM4LESS_PUBLIX_MERGE_SECTION_CARDS?: string } = process.env,
+): boolean {
+  return env.YUM4LESS_PUBLIX_MERGE_SECTION_CARDS?.trim() === "1";
+}
+
 export function readPublixCardScrollViewports(
   env: NodeJS.ProcessEnv = process.env,
 ): number {
@@ -176,6 +187,33 @@ function pushPublixCategoryResultCount(
   }
   seen.add(categoryId);
   counts.push({ categoryId, count });
+}
+
+/**
+ * Setting off keeps only the final page, which is the harvest stored today.
+ * Setting on unions the main page, each section that loaded, then the final page.
+ * A null section failed to load and adds nothing. The first HTML for a key wins.
+ */
+export function collectPublixHarvestCards(input: {
+  mergeSectionCards: boolean;
+  mainCards: readonly { key: string; html: string }[];
+  sectionCards: readonly (readonly { key: string; html: string }[] | null)[];
+  finalCards: readonly { key: string; html: string }[];
+}): Map<string, string> {
+  const seen = new Map<string, string>();
+  if (!input.mergeSectionCards) {
+    rememberPublixCardHtml(seen, input.finalCards);
+    return seen;
+  }
+  rememberPublixCardHtml(seen, input.mainCards);
+  for (const section of input.sectionCards) {
+    if (!section) {
+      continue;
+    }
+    rememberPublixCardHtml(seen, section);
+  }
+  rememberPublixCardHtml(seen, input.finalCards);
+  return seen;
 }
 
 /** Keep the first HTML seen for each card. A later scroll that drops it does not erase it. */

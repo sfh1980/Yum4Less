@@ -18,6 +18,7 @@ import {
   publixResponseStatusIsRelevant,
   readPublixCardMaxWaitMs,
   readPublixCardScrollViewports,
+  readPublixMergeSectionCards,
   readPublixPrintedTotalIsFloor,
   summarizePublixSavingsBody,
   type PublixResponseStatus,
@@ -66,6 +67,12 @@ export type PublixWeeklyAdFetchResult = {
   visitedUrls?: string[];
   savingsCardCount?: number;
   seenCardCount?: number;
+  /**
+   * Card count the thin rule sees. The final page's settle, not the merged
+   * harvest. Unset when section cards are not merged, so callers keep using
+   * seenCardCount and the thin check is unchanged.
+   */
+  pageSeenCount?: number;
   expectedCardCount?: number | null;
   gotoStatus?: number | null;
 };
@@ -89,6 +96,7 @@ export type PublixWeeklyAdFetcherDeps = {
     seenCardCount?: number;
     expectedCardCount?: number | null;
     gotoStatus?: number | null;
+    pageSeenCount?: number;
   }>;
 };
 
@@ -127,6 +135,7 @@ export async function fetchPublixWeeklyAdPage(input: {
       visitedUrls: browserResult.visitedUrls,
       savingsCardCount: browserResult.savingsCardCount,
       seenCardCount: browserResult.seenCardCount,
+      pageSeenCount: browserResult.pageSeenCount,
       expectedCardCount: browserResult.expectedCardCount,
       gotoStatus: browserResult.gotoStatus,
     };
@@ -170,6 +179,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
   visitedUrls: string[];
   savingsCardCount: number;
   seenCardCount: number;
+  pageSeenCount?: number;
   expectedCardCount: number | null;
   gotoStatus: number | null;
 }> {
@@ -232,16 +242,30 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
     const maxWaitMs = input.maxWaitMs ?? readPublixCardMaxWaitMs();
     const scrollViewports = readPublixCardScrollViewports();
     const printedTotalIsFloor = readPublixPrintedTotalIsFloor();
+    const mergeSectionCards = readPublixMergeSectionCards();
     const savingsCalls: PublixSavingsCallSummary[] = [];
     attachPublixSavingsCallSummary(page, savingsCalls);
     const collectedCards = new Map<string, string>();
     const sectionLogs: PublixSectionLog[] = [];
+    if (mergeSectionCards) {
+      // Harvest the page we are on before section navigation leaves it.
+      // A section that fails to load cannot erase these cards.
+      await settlePublixSavingsCardCount(page, {
+        timeoutMs: input.timeoutMs,
+        rememberedOfferCount,
+        maxWaitMs,
+        scrollViewports,
+        printedTotalIsFloor,
+        collectedCards,
+      });
+    }
     await explorePublixWeeklyAdCategories(page, input.url, visitedUrls, input.timeoutMs, {
       rememberedOfferCount,
       maxWaitMs,
       scrollViewports,
       printedTotalIsFloor,
       sectionLogs,
+      sharedCards: mergeSectionCards ? collectedCards : undefined,
     });
     let settled = await settlePublixSavingsCardCount(page, {
       timeoutMs: input.timeoutMs,
@@ -278,7 +302,9 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
       });
     }
 
-    const savingsCardCount = settled.seenCount;
+    const pageSeenCount = settled.seenCount;
+    const distinctCardCount = mergeSectionCards ? collectedCards.size : pageSeenCount;
+    const savingsCardCount = distinctCardCount;
     const pageHtml = await page.content();
     const html =
       collectedCards.size > 0
@@ -289,7 +315,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
       html,
       networkJsonBodies,
     }).length;
-    logPublixHarvestSummary(sectionLogs, settled.seenCount, parsedOfferCount, savingsCalls);
+    logPublixHarvestSummary(sectionLogs, distinctCardCount, parsedOfferCount, savingsCalls);
     if (
       publixPageIsThin({
         seenCount: settled.seenCount,
@@ -316,7 +342,8 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
       waitSelectorMatched,
       visitedUrls,
       savingsCardCount,
-      seenCardCount: settled.seenCount,
+      seenCardCount: distinctCardCount,
+      pageSeenCount: mergeSectionCards ? pageSeenCount : undefined,
       expectedCardCount: settled.expectedCount,
       gotoStatus,
     };
@@ -598,6 +625,7 @@ async function explorePublixWeeklyAdCategories(
     scrollViewports: number;
     printedTotalIsFloor: boolean;
     sectionLogs: PublixSectionLog[];
+    sharedCards?: Map<string, string>;
   },
 ) {
   const base = new URL(baseUrl);
@@ -632,6 +660,12 @@ async function explorePublixWeeklyAdCategories(
         }).length;
       } catch {
         offers = 0;
+      }
+      if (settle.sharedCards) {
+        rememberPublixCardHtml(
+          settle.sharedCards,
+          [...sectionCards].map(([key, html]) => ({ key, html })),
+        );
       }
       const line: PublixSectionLog = {
         section: slug,
