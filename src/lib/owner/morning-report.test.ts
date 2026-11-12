@@ -28,6 +28,7 @@ import {
   judgeShopperProbeWithDinners,
   morningReportDate,
   pickMorningZipCandidates,
+  previousMarkedShopperCensus,
   previousMorningReportDate,
   recipeImportDidNotFinish,
   rowsPerStoreInNote,
@@ -770,6 +771,151 @@ describe("morning report", () => {
     expect(cleared.body).not.toContain("weekly ad page was thin");
     expect(cleared.needsAttention).toBe(false);
     expect(cleared.body).toContain("Nothing needs you.");
+  });
+
+  it("puts the harvest reason on the thin line and still reads the chain name", () => {
+    const note = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Publix",
+          freshFlyerCount: 374,
+          rowsPerStore: 34,
+          priceMissReason: "thin-page",
+          thinReason: "saved 39 cards but the bogo page showed 225",
+        }),
+      ],
+      priorChainPriceExceptions: [],
+      priorThinPageNames: [],
+    });
+    expect(note.body).toContain(
+      "Publix weekly ad page was thin. saved 39 cards but the bogo page showed 225",
+    );
+    expect(thinPageNamesInNote(note.body)).toEqual(["Publix"]);
+    expect(note.needsAttention).toBe(false);
+    expect(note.body).toContain("Nothing needs you.");
+  });
+
+  it("names the chain and a short reason when the flyer fetch failed", () => {
+    const note = composeMorningReport({
+      ...quiet,
+      lastNightOk: false,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Publix",
+          freshFlyerCount: 10,
+          rowsPerStore: 10,
+          priceMissReason: "fetch-failed",
+          priceMissDetail: "the page timed out",
+        }),
+      ],
+      priorChainPriceExceptions: [],
+    });
+    expect(note.body).toContain("Last night did not finish.");
+    expect(note.body).toContain("Publix flyer fetch failed. the page timed out");
+    expect(note.body).not.toContain("https://");
+    expect(note.body).not.toContain("store id");
+  });
+
+  it("flags a shopper-row drop against yesterday's marked census and stays quiet otherwise", () => {
+    const chains = [
+      priceChain({
+        displayName: "Publix",
+        chainId: "publix",
+        freshFlyerCount: 374,
+        rowsPerStore: 34,
+        shopperRanked: true,
+      }),
+    ];
+    const marked = { Publix: 73, [SHOPPER_WINDOW_BASELINE_KEY]: 1 };
+    const dropped = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: [],
+      previousMorningRowsPerStore: marked,
+    });
+    expect(dropped.body).toContain("Publix fell from 73 to 34 rows per store.");
+    expect(dropped.needsAttention).toBe(true);
+    expect(dropped.body.endsWith("Needs you.")).toBe(true);
+
+    const small = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Publix",
+          chainId: "publix",
+          freshFlyerCount: 660,
+          rowsPerStore: 60,
+          shopperRanked: true,
+        }),
+      ],
+      priorChainPriceExceptions: [],
+      previousMorningRowsPerStore: marked,
+    });
+    expect(small.body).not.toContain("fell from");
+    expect(small.needsAttention).toBe(false);
+
+    const firstMorning = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: [],
+      previousMorningRowsPerStore: previousMarkedShopperCensus([{ Publix: 73 }]),
+    });
+    expect(firstMorning.body).not.toContain("fell from");
+    expect(firstMorning.needsAttention).toBe(false);
+    expect(previousMarkedShopperCensus([])).toBeNull();
+  });
+
+  it("flags a matched-ingredient drop when both nights have stats", () => {
+    const note = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Publix",
+          chainId: "publix",
+          freshFlyerCount: 374,
+          rowsPerStore: 34,
+          shopperRanked: true,
+        }),
+      ],
+      priorChainPriceExceptions: [],
+      matchedToday: { publix: 44 },
+      matchedPrevious: { publix: 90 },
+    });
+    expect(note.body).toContain("Publix matched ingredients fell from 90 to 44.");
+    expect(note.needsAttention).toBe(true);
+
+    const kept = applyOutsideResultToMorningNote(note.body, {
+      codeTests: "passed",
+      siteCheck: "passed",
+      discordConfigured: true,
+    });
+    expect(kept.needsAttention).toBe(true);
+
+    const missing = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Publix",
+          chainId: "publix",
+          freshFlyerCount: 374,
+          rowsPerStore: 34,
+          shopperRanked: true,
+        }),
+      ],
+      priorChainPriceExceptions: [],
+      matchedToday: { publix: 44 },
+      matchedPrevious: null,
+    });
+    expect(missing.body).not.toContain("matched ingredients fell");
+    expect(missing.needsAttention).toBe(false);
   });
 
   it("round-trips a rows-per-store line, including a chain name that contains a comma", () => {

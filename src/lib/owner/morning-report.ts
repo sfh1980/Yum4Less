@@ -163,12 +163,18 @@ export function judgeLiveSite(input: {
 
 export type MorningChainPriceFact = {
   displayName: string;
+  /** chain_registry id. Used to read nightly stats. */
+  chainId?: string;
   admittedStore: boolean;
   saleSource: boolean;
   freshOfficialCount: number;
   freshFlyerCount: number;
   /** Last weekly-ad miss, from weekly_ad_flyer_hashes.price_miss_reason. */
   priceMissReason?: string | null;
+  /** Sentence for a thin harvest, when the night recorded one. */
+  thinReason?: string | null;
+  /** Short fetch-failed text. No URL, token, or store id. */
+  priceMissDetail?: string | null;
   /** Fresh rows divided by admitted stores, rounded. Absent when the store count is unknown. */
   rowsPerStore?: number;
   /** Shopper-ranked chain. Used only to name chains that have no store on file. */
@@ -184,12 +190,15 @@ const CHAIN_PRICE_EXCEPTION_LINE =
 const COVERAGE_DROP_LINE = /^(.+) has (\d+) rows per store, down from (\d+)\.$/;
 const ROWS_PER_STORE_LINE = /^Rows per store: (.+)\.$/;
 export const MORNING_COVERAGE_DROP_RATIO_DEFAULT = 0.5;
+export const MORNING_DROP_ALERT_SHARE_DEFAULT = 0.3;
 export const COVERAGE_BASELINE_MORNINGS = 7;
 /** Marks a census that counted only rows a shopper can see. Older rows lack it. */
 export const SHOPPER_WINDOW_BASELINE_KEY = "_shopperWindow";
 const COVERAGE_DROP_AGAIN_LINE = "Price rows per store are down again.";
-const THIN_PAGE_LINE = /^(.+) weekly ad page was thin\.$/;
+const THIN_PAGE_LINE = /^(.+?) weekly ad page was thin\.(?: .*)?$/;
 const THIN_PAGE_AGAIN_LINE = /^(.+) weekly ad page was thin again\.$/;
+const ROWS_FELL_LINE = /^(.+) fell from (\d+) to (\d+) rows per store\.$/;
+const MATCHED_FELL_LINE = /^(.+) matched ingredients fell from (\d+) to (\d+)\.$/;
 const CHAIN_PRICE_REPEAT_LINE =
   /^\d+ of \d+ chains? (?:is|are) missing prices from the last day again\.$/;
 
@@ -313,6 +322,50 @@ export function chainPriceExceptionSentence(chain: {
     default:
       return `${name} has no prices from the last day.`;
   }
+}
+
+export function thinPageSentence(name: string, reason?: string | null): string {
+  const detail = reason?.trim();
+  if (!detail) {
+    return `${name} weekly ad page was thin.`;
+  }
+  return `${name} weekly ad page was thin. ${detail}`;
+}
+
+export function fetchFailedSentence(name: string, detail?: string | null): string {
+  const text = detail?.trim();
+  if (!text) {
+    return `${name} flyer fetch failed.`;
+  }
+  return `${name} flyer fetch failed. ${text}`;
+}
+
+/**
+ * Names a chain whose turn failed. A chain with no fresh rows already has the
+ * short sentence in the price list, so this adds a line only when a short
+ * reason exists or the chain still has rows.
+ */
+export function fetchFailedNoteLines(
+  chains: readonly MorningChainPriceFact[] | undefined,
+): string[] {
+  if (!chains) {
+    return [];
+  }
+  return chains.flatMap((chain) => {
+    if (chain.priceMissReason !== "fetch-failed") {
+      return [];
+    }
+    const name = chain.displayName.trim();
+    const detail = chain.priceMissDetail?.trim();
+    const fresh = chain.freshOfficialCount + chain.freshFlyerCount;
+    if (detail) {
+      return [fetchFailedSentence(name, detail)];
+    }
+    if (fresh > 0) {
+      return [`${name} flyer fetch failed.`];
+    }
+    return [];
+  });
 }
 
 export function readMorningCoverageDropRatio(
@@ -455,6 +508,85 @@ export function withShopperWindowBaseline(
  * Censuses saved before that count existed are left out, so the first mornings
  * after the change are not compared with the older, higher numbers.
  */
+export function readMorningDropAlertShare(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const raw = env.YUM4LESS_MORNING_DROP_ALERT_SHARE?.trim();
+  if (!raw) {
+    return MORNING_DROP_ALERT_SHARE_DEFAULT;
+  }
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed > 0 && parsed < 1) {
+    return parsed;
+  }
+  return MORNING_DROP_ALERT_SHARE_DEFAULT;
+}
+
+/** The newest saved census, and only when that census counted shopper-visible rows. */
+export function previousMarkedShopperCensus(
+  newestFirst: readonly (Readonly<Record<string, number>> | null | undefined)[],
+): Record<string, number> | null {
+  const newest = newestFirst[0];
+  if (!newest || newest[SHOPPER_WINDOW_BASELINE_KEY] !== 1) {
+    return null;
+  }
+  return { ...newest };
+}
+
+export function rowsPerStoreFellLines(input: {
+  chains: readonly {
+    displayName: string;
+    rowsPerStore?: number;
+    shopperRanked?: boolean;
+  }[];
+  previous: Readonly<Record<string, number>> | null;
+  share: number;
+}): string[] {
+  if (!input.previous) {
+    return [];
+  }
+  return input.chains.flatMap((chain) => {
+    if (chain.shopperRanked !== true) {
+      return [];
+    }
+    const name = chain.displayName.trim();
+    const today = chain.rowsPerStore;
+    const previous = input.previous?.[name];
+    if (typeof today !== "number" || typeof previous !== "number" || previous <= 0) {
+      return [];
+    }
+    if (!(today < previous * (1 - input.share))) {
+      return [];
+    }
+    return [`${name} fell from ${previous} to ${today} rows per store.`];
+  });
+}
+
+export function matchedIngredientFellLines(input: {
+  chains: readonly { chainId?: string; displayName: string; shopperRanked?: boolean }[];
+  today: Readonly<Record<string, number>> | null;
+  previous: Readonly<Record<string, number>> | null;
+  share: number;
+}): string[] {
+  if (!input.today || !input.previous) {
+    return [];
+  }
+  return input.chains.flatMap((chain) => {
+    if (chain.shopperRanked !== true || !chain.chainId) {
+      return [];
+    }
+    const today = input.today?.[chain.chainId];
+    const previous = input.previous?.[chain.chainId];
+    if (typeof today !== "number" || typeof previous !== "number" || previous <= 0) {
+      return [];
+    }
+    if (!(today < previous * (1 - input.share))) {
+      return [];
+    }
+    return [`${chain.displayName.trim()} matched ingredients fell from ${previous} to ${today}.`];
+  });
+}
+
 export function shopperWindowBaselineHigh(
   censusesNewestFirst: readonly (Readonly<Record<string, number>> | null | undefined)[],
   mornings: number = COVERAGE_BASELINE_MORNINGS,
@@ -578,6 +710,10 @@ export function describeMorningChainPrices(input: {
   /** Chains whose previous note already said the weekly ad page was thin. */
   priorThinPageNames?: readonly string[] | null;
   coverageDropRatio?: number;
+  previousMorningRowsPerStore?: Readonly<Record<string, number>> | null;
+  matchedToday?: Readonly<Record<string, number>> | null;
+  matchedPrevious?: Readonly<Record<string, number>> | null;
+  dropAlertShare?: number;
 }): {
   lines: string[];
   needsAttention: boolean;
@@ -623,24 +759,39 @@ export function describeMorningChainPrices(input: {
   const repeatedDrops = priorDrops
     ? dropNames.filter((name) => priorDrops.includes(name))
     : [];
-  const thinWithRows = counted
-    .filter(
-      (chain) =>
-        chain.priceMissReason === "thin-page" &&
-        chain.freshOfficialCount + chain.freshFlyerCount > 0,
-    )
-    .map((chain) => chain.displayName.trim());
+  const thinWithRows = counted.filter(
+    (chain) =>
+      chain.priceMissReason === "thin-page" &&
+      chain.freshOfficialCount + chain.freshFlyerCount > 0,
+  );
+  const thinNames = thinWithRows.map((chain) => chain.displayName.trim());
   const priorThin = input.priorThinPageNames;
   const repeatedThin = priorThin
-    ? thinWithRows.filter((name) => priorThin.includes(name))
+    ? thinNames.filter((name) => priorThin.includes(name))
     : [];
+  const dropAlertShare = input.dropAlertShare ?? MORNING_DROP_ALERT_SHARE_DEFAULT;
+  const fell = rowsPerStoreFellLines({
+    chains: counted,
+    previous: input.previousMorningRowsPerStore ?? null,
+    share: dropAlertShare,
+  });
+  const matchedFell = matchedIngredientFellLines({
+    chains: counted,
+    today: input.matchedToday ?? null,
+    previous: input.matchedPrevious ?? null,
+    share: dropAlertShare,
+  });
   const census = rowsPerStoreCensusLine(counted);
   const laterLine = startingLaterSentence(counted);
   const noStoreLine = noStoreOnFileSentence(input.chains);
   const extra = [
-    ...thinWithRows.map((name) => `${name} weekly ad page was thin.`),
+    ...thinWithRows.map((chain) =>
+      thinPageSentence(chain.displayName.trim(), chain.thinReason),
+    ),
     ...repeatedThin.map((name) => `${name} weekly ad page was thin again.`),
     ...drops,
+    ...fell,
+    ...matchedFell,
     ...(repeatedDrops.length > 0 ? [COVERAGE_DROP_AGAIN_LINE] : []),
     ...(census ? [census] : []),
     ...(laterLine ? [laterLine] : []),
@@ -648,6 +799,7 @@ export function describeMorningChainPrices(input: {
   ];
   const dropNeedsYou = repeatedDrops.length > 0;
   const thinNeedsYou = repeatedThin.length > 0;
+  const fellNeedsYou = fell.length > 0 || matchedFell.length > 0;
 
   if (exceptionNames.length === 0) {
     const count = counted.length;
@@ -655,7 +807,7 @@ export function describeMorningChainPrices(input: {
     const verb = count === 1 ? "has" : "have";
     return {
       lines: [`All ${count} ${noun} ${verb} prices from the last day.`, ...extra],
-      needsAttention: dropNeedsYou || thinNeedsYou,
+      needsAttention: dropNeedsYou || thinNeedsYou || fellNeedsYou,
       exceptionNames: [],
       counted: count,
     };
@@ -671,7 +823,7 @@ export function describeMorningChainPrices(input: {
       `${missing} of ${total} ${total === 1 ? "chain" : "chains"} ${verb} missing prices from the last day${again}.`,
       ...extra,
     ],
-    needsAttention: repeated.length > 0 || dropNeedsYou || thinNeedsYou,
+    needsAttention: repeated.length > 0 || dropNeedsYou || thinNeedsYou || fellNeedsYou,
     exceptionNames,
     counted: total,
   };
@@ -706,6 +858,10 @@ export type MorningReportInput = {
   priorThinPageNames?: readonly string[] | null;
   /** A chain is down when today's rows per store are under this fraction of yesterday. Default 0.5. */
   coverageDropRatio?: number;
+  previousMorningRowsPerStore?: Readonly<Record<string, number>> | null;
+  matchedToday?: Readonly<Record<string, number>> | null;
+  matchedPrevious?: Readonly<Record<string, number>> | null;
+  dropAlertShare?: number;
   cloudflare?: CloudflareMorningFacts;
   /** Night Overpass was skipped on purpose. Informational; does not set Needs you. */
   storeLookupTurnedOff?: boolean;
@@ -734,6 +890,7 @@ export function composeMorningReport(input: MorningReportInput): {
   lines.push(
     input.lastNightOk ? "Last night finished." : "Last night did not finish.",
   );
+  lines.push(...fetchFailedNoteLines(input.chainPrices));
   const recipeImport = describeRecipeImport({
     failedToday: input.recipeImportFailed === true,
     priorConsecutiveMisses: input.recipeImportPriorMisses ?? 0,
@@ -748,6 +905,10 @@ export function composeMorningReport(input: MorningReportInput): {
         priorCoverageDropNames: input.priorCoverageDropNames ?? null,
         priorThinPageNames: input.priorThinPageNames ?? null,
         coverageDropRatio: input.coverageDropRatio,
+        previousMorningRowsPerStore: input.previousMorningRowsPerStore ?? null,
+        matchedToday: input.matchedToday ?? null,
+        matchedPrevious: input.matchedPrevious ?? null,
+        dropAlertShare: input.dropAlertShare,
       })
     : null;
   const priceGapNeedsYou =
@@ -1033,6 +1194,8 @@ function otherMorningLineNeedsAttention(line: string): boolean {
     line.endsWith("has no sale source.") ||
     RECIPE_IMPORT_STREAK_LINE.test(line) ||
     line === COVERAGE_DROP_AGAIN_LINE ||
+    ROWS_FELL_LINE.test(line) ||
+    MATCHED_FELL_LINE.test(line) ||
     THIN_PAGE_AGAIN_LINE.test(line) ||
     (line.includes("did not answer") && !SITE_LINE.test(line))
   );

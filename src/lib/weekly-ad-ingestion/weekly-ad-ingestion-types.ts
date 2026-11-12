@@ -63,6 +63,10 @@ export type WeeklyAdIngestionResult = {
    * or under the no-baseline minimum). A healthy parse leaves this false.
    */
   thinPage?: boolean;
+  /** Why this harvest was thin, when a sanity check supplied a sentence. */
+  thinReason?: string;
+  /** Short fetch-failed text. No URL, token, or store id. */
+  missDetail?: string;
   message: string;
   fetchedAt: string;
   termsNote: string;

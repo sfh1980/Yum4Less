@@ -76,13 +76,15 @@ async function ingestPublixWeeklyAd(
     // The thin rule keeps the final page's own count. A merged harvest must
     // not make a thin final page look full, or a full page look thin.
     const thinSeenCount = pageFetch.pageSeenCount ?? seenCardCount;
-    const scrapeIsThin =
+    const pageIsThin =
       typeof thinSeenCount === "number" &&
       publixPageIsThin({
         seenCount: thinSeenCount,
         expectedCount: pageFetch.expectedCardCount,
         rememberedOfferCount: rememberedCardCount,
       });
+    const scrapeIsThin = pageIsThin || Boolean(pageFetch.harvestThinReason);
+    const thinReason = pageFetch.harvestThinReason ?? undefined;
 
     if (rawOffers.length === 0) {
       captureWeeklyAdArtifacts({
@@ -156,6 +158,7 @@ async function ingestPublixWeeklyAd(
         rawCardCount: pageFetch.savingsCardCount,
         scrapeOfferCount: rawOffers.length,
         thinPage: scrapeIsThin,
+        ...(thinReason ? { thinReason } : {}),
         message: `${label} parsed no scrape offers from ${seenCardCount ?? "an unknown number of"} card(s).${supplementalNote}`,
         fetchedAt,
         termsNote,
@@ -174,6 +177,7 @@ async function ingestPublixWeeklyAd(
       rawCardCount: pageFetch.savingsCardCount,
       scrapeOfferCount: rawOffers.length,
       thinPage: scrapeIsThin,
+      ...(thinReason ? { thinReason } : {}),
       message: `Parsed Publix weekly-ad run for ${storeContext.storeName ?? input.storeName} via ${pageFetch.method} extracted ${rawOffers.length} scrape offer(s) from ${seenCardCount ?? "an unknown number of"} card(s); ${matchedCount} matched tracked dinner ingredients.${supplementalNote}`,
       fetchedAt,
       termsNote,
