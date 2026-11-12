@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildPublixThinCaptureMeta,
   PUBLIX_CARD_MAX_WAIT_MS_MAX,
+  assessPublixHarvest,
   decidePublixCardPoll,
   nextPublixEqualPositiveSamples,
+  nextPublixExpectedCount,
   parsePublixCategoryResultCounts,
   publixCardCountIsThin,
   publixCardScrollStepPx,
@@ -548,6 +550,146 @@ describe("printed Publix result count", () => {
         rememberedOfferCount: null,
         minCards: 50,
       }),
+    ).toBe(false);
+  });
+});
+
+describe("Publix section page printed count", () => {
+  // The bogo grid wraps a dairy chip. The old reader took the first
+  // "N results" inside the bogo element and called 14 the bogo total.
+  const sectionPage = `
+    <div data-weekly-ad-category-id="bogo">
+      <div data-weekly-ad-category-id="dairy">
+        <h2>Dairy</h2>
+        <span>14 results</span>
+      </div>
+      <h2>BOGO</h2>
+      <span>225 results</span>
+    </div>`;
+
+  it("uses the shown section and ignores another category's number", () => {
+    const counts = parsePublixCategoryResultCounts(sectionPage);
+    expect(counts).toEqual([
+      { categoryId: "dairy", count: 14 },
+      { categoryId: "bogo", count: 225 },
+    ]);
+    expect(publixListedCardTarget(counts, "bogo")).toBe(225);
+    expect(publixListedCardTarget(counts, "meat")).toBeNull();
+    expect(publixListedCardTarget(counts)).toBeNull();
+  });
+
+  it("does not stop as listed or look full from a count that is not this section", () => {
+    const counts = parsePublixCategoryResultCounts(sectionPage);
+    const printed = publixListedCardTarget(counts, "bogo");
+    const unknown = publixListedCardTarget(counts, "meat");
+    expect(nextPublixExpectedCount(printed, 14)).toBe(225);
+    expect(unknown).toBeNull();
+    expect(
+      publixPageIsThin({
+        seenCount: 39,
+        expectedCount: unknown,
+        rememberedOfferCount: null,
+        minCards: 50,
+      }),
+    ).toBe(true);
+    expect(
+      decidePublixCardPoll({
+        previousCount: 39,
+        count: 39,
+        seenCount: 39,
+        expectedCount: printed,
+        rememberedOfferCount: null,
+        elapsedMs: 1_000,
+        maxWaitMs: 20_000,
+        samples: 2,
+        equalPositiveSamples: 1,
+      }),
+    ).toBe("continue");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 39,
+        count: 39,
+        seenCount: 39,
+        expectedCount: unknown,
+        rememberedOfferCount: null,
+        elapsedMs: 1_000,
+        maxWaitMs: 20_000,
+        samples: 2,
+        equalPositiveSamples: 1,
+      }),
+    ).not.toBe("listed");
+    expect(
+      decidePublixCardPoll({
+        previousCount: 224,
+        count: 225,
+        seenCount: 225,
+        expectedCount: printed,
+        rememberedOfferCount: null,
+        elapsedMs: 4_000,
+        maxWaitMs: 20_000,
+        samples: 5,
+        equalPositiveSamples: 1,
+      }),
+    ).toBe("listed");
+  });
+});
+
+describe("Publix harvest sanity", () => {
+  const sections = [
+    { section: "bogo", cards: 225 },
+    { section: "meat", cards: 145 },
+    { section: "produce", cards: 89 },
+    { section: "dairy", cards: 37 },
+    { section: "protein", cards: 45 },
+  ];
+
+  it("marks the 11-12 harvest thin against the bogo page and the feed", () => {
+    expect(
+      assessPublixHarvest({
+        harvestedCards: 39,
+        sections,
+        feedItemCount: null,
+      }),
+    ).toEqual({
+      thin: true,
+      reason: "saved 39 cards but the bogo page showed 225",
+    });
+    expect(
+      assessPublixHarvest({
+        harvestedCards: 39,
+        sections: [],
+        feedItemCount: 730,
+      }),
+    ).toEqual({
+      thin: true,
+      reason: "saved 39 cards but the savings feed listed 730",
+    });
+  });
+
+  it("does not mark the 3:40pm harvest thin", () => {
+    expect(
+      assessPublixHarvest({
+        harvestedCards: 445,
+        sections,
+        feedItemCount: 730,
+      }),
+    ).toEqual({ thin: false, reason: null });
+  });
+
+  it("skips the feed check when the feed is empty or missing", () => {
+    expect(
+      assessPublixHarvest({
+        harvestedCards: 445,
+        sections,
+        feedItemCount: 0,
+      }).thin,
+    ).toBe(false);
+    expect(
+      assessPublixHarvest({
+        harvestedCards: 445,
+        sections,
+        feedItemCount: null,
+      }).thin,
     ).toBe(false);
   });
 });
