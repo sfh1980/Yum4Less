@@ -37,6 +37,8 @@ import { tryDiscoveredChainFlyers } from "@/lib/weekly-ad-ingestion/discovered-c
 import { rejectPendingReviewsMatchingJunk } from "@/lib/owner/ingredient-review-repository";
 import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-writes";
 import { logServerError } from "@/lib/server-log";
+import { sanitizeWeeklyAdFailureReason } from "@/lib/weekly-ad-ingestion/weekly-ad-failure-reason";
+import { recordWeeklyAdRunStats } from "@/lib/weekly-ad-ingestion/weekly-ad-run-stats";
 import {
   readWeeklyAdFlyerHash,
   recordWeeklyAdPriceMissReason,
@@ -134,6 +136,8 @@ export async function runWeeklyAdIngestionForStores(input: {
   const nonKrogerStores = nearbyStores.filter((store) => store.chain !== "kroger");
 
   if (krogerStores.length > 0) {
+    const startedMs = Date.now();
+    const summaryStart = syncSummaries.length;
     try {
       const krogerClient = getWeeklyAdIngestionClient("kroger");
       if (krogerClient) {
@@ -169,15 +173,20 @@ export async function runWeeklyAdIngestionForStores(input: {
           });
         }
         results.push(result);
+        await rememberWeeklyAdChainRun({
+          result,
+          summaries: syncSummaries.slice(summaryStart),
+          startedMs,
+        });
       }
     } catch (error) {
-      results.push(
-        await weeklyAdChainTurnFailure({
-          chain: "kroger",
-          error,
-          persist: Boolean(input.persistToDatabase),
-        }),
-      );
+      const result = await weeklyAdChainTurnFailure({
+        chain: "kroger",
+        error,
+        persist: Boolean(input.persistToDatabase),
+      });
+      results.push(result);
+      await rememberWeeklyAdChainRun({ result, summaries: [], startedMs });
     }
   }
 
@@ -191,6 +200,8 @@ export async function runWeeklyAdIngestionForStores(input: {
       continue;
     }
 
+    const startedMs = Date.now();
+    const summaryStart = syncSummaries.length;
     try {
       const primaryStore = pickPrimaryWeeklyAdIngestStoreForChain(chainStores);
       const result = await client.ingestWeeklyAd({
@@ -224,14 +235,19 @@ export async function runWeeklyAdIngestionForStores(input: {
         });
       }
       results.push(result);
+      await rememberWeeklyAdChainRun({
+        result,
+        summaries: syncSummaries.slice(summaryStart),
+        startedMs,
+      });
     } catch (error) {
-      results.push(
-        await weeklyAdChainTurnFailure({
-          chain,
-          error,
-          persist: Boolean(input.persistToDatabase),
-        }),
-      );
+      const result = await weeklyAdChainTurnFailure({
+        chain,
+        error,
+        persist: Boolean(input.persistToDatabase),
+      });
+      results.push(result);
+      await rememberWeeklyAdChainRun({ result, summaries: [], startedMs });
     }
   }
 
@@ -262,6 +278,26 @@ export async function getWeeklyAdIngestionMarketSummaries(input: {
   return getWeeklyAdIngestionStatusSummaries(input);
 }
 
+async function rememberWeeklyAdChainRun(input: {
+  result: WeeklyAdIngestionResult;
+  summaries: readonly WeeklyAdOfferSyncSummary[];
+  startedMs: number;
+}): Promise<void> {
+  await recordWeeklyAdRunStats({
+    chain: input.result.chain,
+    status: input.result.status,
+    cardsSeen: input.result.rawCardCount ?? null,
+    offersParsed: input.result.scrapeOfferCount ?? null,
+    matched: input.result.offers.filter((offer) => offer.ingredientId).length,
+    rowsWritten: input.summaries.reduce((sum, row) => sum + row.syncedCount, 0),
+    rowsSkipped: input.summaries.reduce((sum, row) => sum + row.skippedCount, 0),
+    rowsFailed: input.summaries.reduce((sum, row) => sum + row.failedCount, 0),
+    secondsTaken: (Date.now() - input.startedMs) / 1000,
+    thinReason: input.result.thinReason ?? null,
+    missReason: input.result.missDetail ?? null,
+  });
+}
+
 /**
  * One chain's throw must not skip the chains after it. The result stays
  * status "error" so the existing fail-loud exit still sees a ranked failure.
@@ -278,8 +314,10 @@ async function weeklyAdChainTurnFailure(input: {
       reason: "fetch-failed",
     });
   }
-  const message =
+  const rawMessage =
     input.error instanceof Error ? input.error.message : "Weekly-ad chain failed.";
+  const missDetail = sanitizeWeeklyAdFailureReason(rawMessage);
+  console.info(`[nightly] [${input.chain}] chain failed: ${missDetail}`);
   return {
     chain: input.chain,
     label: `${input.chain} weekly ad ingestion`,
@@ -289,7 +327,8 @@ async function weeklyAdChainTurnFailure(input: {
     configured: true,
     fallbackUsed: false,
     offers: [],
-    message,
+    missDetail,
+    message: missDetail,
     fetchedAt: new Date().toISOString(),
     termsNote: "Weekly-ad prices are directional until verified in store.",
   };

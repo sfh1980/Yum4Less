@@ -80,6 +80,7 @@ export function assembleMorningChainPriceFacts(input: {
       const freshFlyerCount = freshFlyer.get(row.chainId) ?? 0;
       const fact: MorningChainPriceFact = {
         displayName: row.displayName.trim(),
+        chainId: row.chainId,
         admittedStore: input.admittedChainIds.has(row.chainId),
         saleSource: row.saleSource,
         freshOfficialCount,

@@ -348,6 +348,8 @@ export function migrationEffectPresent(version, db) {
       return db.columnExists("weekly_ad_flyer_hashes", "price_miss_reason");
     case "044":
       return db.columnExists("morning_reports", "coverage_baseline");
+    case "045":
+      return db.tableExists("weekly_ad_run_stats");
     default:
       return false;
   }

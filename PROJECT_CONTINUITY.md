@@ -4,6 +4,10 @@
 
 ---
 
+## Resume (as of 2026-11-12)
+
+**This slice (branch `fix/next-round-2026-11-12`, local only, not pushed):** Built on `dfcce49`. Before every Publix card settle, the virtual list and the window scroll to the top and wait one poll. `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS` unset is on; `0` is off. A section's printed count is that section's number, or none. A short harvest is the existing thin page, with a reason. `045_weekly_ad_run_stats.sql` keeps one row per chain per night. The morning note names a failed chain and a shopper-row drop against yesterday's marked census. Dinner floors, `shopper_ranked`, the fail-loud set, and classification were not changed. `npm test` **1552/1552**. Integration **73/73**. Build passed. E2e was not run. A pass is not more dinners.
+
 ## Resume (as of 2026-11-11)
 
 **This slice (branch `fix/current-issues-2026-11-11`, local only, not pushed):** Built on `179b176`. Publix section cards stay out of the stored page unless `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS=1`. Cards that say "Valid M/D - M/D" store a date-only start and an end that includes that last day. One chain throwing while saving no longer skips the chains after it. A ranked chain still fails the night through the existing fail-loud check. The rate limit ignores a spoofed first forwarded address. The morning note counts only rows a shopper can see. Whole Foods stores the flyer start it already logged. No new migration. `npm test` **1530/1530**. Integration **72/72**. Build passed. E2e was not run. A pass is not more dinners.
@@ -53,6 +57,8 @@ The Tuesday visible-row drop is the opening purge (verification older than 24 ho
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **Next round 2026-11-12 (local, not pushed):** Publix settles start at the top of the list. Section cards are stored unless `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS=0`. A short harvest is a thin page. `045` records each chain's night. The morning note can say a chain fell from yesterday's marked census. Not on yum4less.com until this branch is pushed and Watchtower pulls it. After that image is the one running, `sudo docker exec -w /app yum4less-ingest npm run db:migrate`. A box that already sets the merge flag to `1` does not change its merge. A pass is not more dinners.
 
 - **Current issues 2026-11-11 (local, not pushed):** Section-card merge stays off. Publix printed dates and the Whole Foods flyer start are stored on new or changed rows. An unchanged Publix row stays undated. One chain's save error does not skip later chains. Set `YUM4LESS_TRUSTED_PROXY_HOPS=1` on the app when that image is deployed. The morning note's rows-per-store line is what a shopper can see. The 2026-11-08 Publix 132 seed is not rewritten. No new migration. A pass is not more dinners.
 
@@ -328,6 +334,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-12 — Publix harvest, thin reason, nightly stats
+
+**Theme:** The 2026-11-12 night stored 39 Publix cards. The section pages had already shown 225, 145, 89, 37, and 45. The savings call listed 730 items. The page was not marked thin. The morning note had no earlier shopper-window census to compare, and no per-chain history of its own.
+
+**Shipped:** Every Publix settle starts at the top of the virtual list and the window, then waits one poll. Unset `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS` stores the section cards; `0` keeps only the final page. A printed count is the section on screen, or none. A later count cannot lower an earlier one. The year on a Publix "Valid M/D - M/D" range is the one that puts the start nearest the run date, within 183 days. A harvest under half of the largest section page, or under a quarter of a non-empty savings feed, is the existing thin page and the reason is kept. `YUM4LESS_PUBLIX_HARVEST_MIN_SHARE` defaults to 0.5. `YUM4LESS_PUBLIX_FEED_MIN_SHARE` defaults to 0.25. An empty feed skips that check. `045` stores one row per chain per night and a later run that day updates it. A stats write is logged and does not fail the night. The morning note adds `Publix fell from 73 to 34 rows per store.` when the drop is larger than `YUM4LESS_MORNING_DROP_ALERT_SHARE` (default 0.30) against the newest marked census, and the same share for matched ingredients when both nights have a stats row. No line when yesterday's census is not marked. A failed chain is named. The nightly log lines share a `[nightly]` prefix. The retry skip says nothing needs a retry, or that a chain hit the daily cap.
+
+**Limits:** Local branch `fix/next-round-2026-11-12`. Not on yum4less.com. `045` applies only after an image that contains it is running. The savings response is still not parsed into cards. Local `yum4less_dev` row counts are not the live site. E2e was not run. A pass is not more dinners.
+
+**Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1552/1552** pass (262 files). The first run was **1551/1552**; the chain-fact expectation now includes `chainId`, and the re-run passed. `npm run db:up` left `yum4less-postgres` running. `npm run db:migrate` applied `045` on local `yum4less_dev`. `npm run test:integration` **73/73** pass (21 files) on `yum4less_test`, which also applied `045`. `npm run build` exit 0 (Next.js 15.5.28). `npm run test:e2e:ci` was not run. Semgrep `p/typescript` and `p/secrets` on the changed harvest, morning, and stats files exited 0.
 
 ### 2026-11-11 — Publix dates, chain isolation, rate limit, morning counts
 
@@ -3544,10 +3560,14 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-12 | **A short Publix harvest is the existing thin page.** Saved cards under `YUM4LESS_PUBLIX_HARVEST_MIN_SHARE` (default 0.5) of the largest section page, or under `YUM4LESS_PUBLIX_FEED_MIN_SHARE` (default 0.25) of a non-empty savings feed, set `price_miss_reason` to `thin-page` and keep the reason sentence. An empty or missing feed skips the feed check. The other thin inputs and the retry cap stay. | **Active** |
+| 2026-11-12 | **Each chain's night is one row.** `weekly_ad_run_stats` is unique on run date and chain. A later run that day updates the row. A failed write is logged and does not fail the night. The table holds counts and short reasons, not page HTML, URLs, or store ids. | **Active** |
+| 2026-11-12 | **The morning note flags a one-day drop against the newest marked census.** `YUM4LESS_MORNING_DROP_ALERT_SHARE` defaults to 0.30. The line is `Name fell from N to M rows per store.` and it sets Needs you on that morning. The same share applies to matched ingredients when both nights have a stats row. No line when the newest census is missing or unmarked. The 7-morning high and its second-morning line stay. | **Active** |
+| 2026-11-12 | **Publix section cards are stored unless the merge setting is 0.** Unset is on. `1` stays on. The thin-page check still uses the final page's own card count, and the harvest check above can still mark the run thin. | **Active** (supersedes the "exactly 1" half of 2026-11-11) |
 | 2026-11-11 | **Forwarded addresses are trusted by hop count or one named header.** `YUM4LESS_TRUSTED_PROXY_HOPS` is how many proxies sit in front of the app. The client is that many places from the right of `X-Forwarded-For`. A shorter list is unknown. `YUM4LESS_CLIENT_IP_HEADER`, when set and present, wins. `TRUST_PROXY_HEADERS=1` with neither setting shares the unknown bucket and logs which setting to add. An address that is not a valid IP is unknown. Expired buckets are removed. At `YUM4LESS_RATE_LIMIT_MAX_BUCKETS` (default 10000) a new key is denied. | **Active** |
 | 2026-11-11 | **Morning rows per store count only what a shopper can see.** Rows that start later get one sentence and do not set Needs you. Ranked chains with no store on file are named and do not set Needs you. New censuses carry `_shopperWindow`. Older censuses, including the Publix 132 seed on 2026-11-08, are not compared and are not rewritten. | **Active** (narrows the comparison half of 2026-11-08) |
 | 2026-11-11 | **One chain's save error does not skip the chains after it.** The error is logged, that chain is recorded as `fetch-failed`, and the run continues. A ranked chain still fails the job through the existing fail-loud check. That set was not edited. A single-chain retry still writes no `ingest_jobs` row. | **Active** |
-| 2026-11-11 | **Publix section cards are stored only when the merge setting is exactly 1.** Unset keeps today's harvest. The thin-page check still uses the final page's card count. | **Active** (narrows 2026-11-10: section cards stay out unless the setting is on) |
+| 2026-11-11 | **Publix section cards are stored only when the merge setting is exactly 1.** Unset keeps today's harvest. The thin-page check still uses the final page's card count. | **Superseded** (2026-11-12: unset is on; `0` is off) |
 | 2026-11-10 | **Publix section logs do not change the stored harvest.** Each of the five section pages logs printed count, distinct cards, parsed offers, polls, wait, and stop reason. The summary adds savings-call status, byte length, key names, array lengths, and the update time. No body, cookie, token, or query string. A log failure cannot fail the scrape. Section cards are not merged into the page that is parsed for prices. | **Active** |
 | 2026-11-10 | **The printed Publix result count stays a stop unless the floor setting is exactly 1.** `YUM4LESS_PUBLIX_PRINTED_TOTAL_IS_FLOOR=1` stops at the list bottom, three polls with no new distinct card, or the wait cap (ceiling 60 seconds). Unset, or any other value, keeps the printed-count stop. A stuck zero still waits. | **Active** |
 | 2026-11-09 | **A chain with zero fresh rows is retried before a chain that is only thin.** `sort_order` then `chain_id` still order each group. The cap defaults to 7 per chain per New York day, matching the seven retry slots. A thin chain still stops after two identical results, so noon is only an extra try for a chain that still has zero rows. Two identical thin results still stop that chain, and a changed signature resets the count. A lock miss does not count. The purge stays limited to that chain's source. | **Active** (narrows the order half of 2026-11-08) |
@@ -3727,6 +3747,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (Publix scroll reset, section counts, year, harvest thin check, nightly log, run stats) | 2026-11-12 | **1552/1552** pass (262 files). First run **1551/1552**; re-run after the chain-fact expectation included `chainId`. |
+| `npm run typecheck` (same slice) | 2026-11-12 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run lint` (same slice) | 2026-11-12 | **Pass** (exit 0). Run before the one-line chain-fact expectation update. |
+| `npm run test:integration` (`045` on `yum4less_test`) | 2026-11-12 | **73/73** pass (21 files). `npm run db:migrate` applied `045` on local `yum4less_dev` and again on `yum4less_test`. |
+| `npm run build` (same slice) | 2026-11-12 | **Pass** (Next.js 15.5.28, exit 0). |
+| Semgrep CLI `p/typescript` + `p/secrets` (harvest, morning note, run stats, ingest script) | 2026-11-12 | **Exit 0.** No findings printed. `npm run test:e2e:ci` was not run. |
 | `npm test` (Publix section merge, card dates, chain isolation, rate limit, morning window, Whole Foods start) | 2026-11-11 | **1530/1530** pass (260 files). |
 | `npm run typecheck` (same slice) | 2026-11-11 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same slice) | 2026-11-11 | **Pass** (exit 0) |

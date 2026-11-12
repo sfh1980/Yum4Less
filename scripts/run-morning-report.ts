@@ -12,6 +12,8 @@ import {
   appendMorningIssue,
   chainPriceExceptionsInNote,
   COVERAGE_BASELINE_MORNINGS,
+  previousMarkedShopperCensus,
+  readMorningDropAlertShare,
   shopperWindowBaselineHigh,
   withShopperWindowBaseline,
   thinPageNamesInNote,
@@ -50,6 +52,11 @@ import {
   saveMorningReport,
 } from "@/lib/owner/morning-report-repository";
 import { probeShopperArea } from "@/lib/owner/morning-shopper-probe";
+import {
+  applyRunStatsToChainFacts,
+  matchedCountsFromRunStats,
+  readWeeklyAdRunStats,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-run-stats";
 import { isOsmOverpassDisabled } from "@/lib/osm-food-retail-discovery";
 import { readRecipeImportNeedsYouMornings } from "@/lib/recipe-import/themealdb-settings";
 
@@ -187,6 +194,9 @@ export async function runMorningReport(): Promise<void> {
   let chainPrices: MorningChainPriceFact[] | undefined;
   let priorChainPriceExceptions: string[] | null | undefined;
   let previousRowsPerStore: Record<string, number> | null | undefined;
+  let previousMorningRowsPerStore: Record<string, number> | null | undefined;
+  let matchedToday: Record<string, number> | null | undefined;
+  let matchedPrevious: Record<string, number> | null | undefined;
   let priorCoverageDropNames: string[] | null | undefined;
   let priorThinPageNames: string[] | null | undefined;
   try {
@@ -198,9 +208,17 @@ export async function runMorningReport(): Promise<void> {
     priorChainPriceExceptions = priorNote
       ? chainPriceExceptionsInNote(priorNote.body)
       : null;
-    previousRowsPerStore = shopperWindowBaselineHigh(
-      await readRecentCoverageBaselines(reportDate, COVERAGE_BASELINE_MORNINGS),
+    const baselines = await readRecentCoverageBaselines(
+      reportDate,
+      COVERAGE_BASELINE_MORNINGS,
     );
+    previousRowsPerStore = shopperWindowBaselineHigh(baselines);
+    previousMorningRowsPerStore = previousMarkedShopperCensus(baselines);
+    const todayStats = await readWeeklyAdRunStats(reportDate);
+    const yesterdayStats = yesterday ? await readWeeklyAdRunStats(yesterday) : null;
+    chainPrices = applyRunStatsToChainFacts(chainPrices, todayStats);
+    matchedToday = matchedCountsFromRunStats(todayStats);
+    matchedPrevious = matchedCountsFromRunStats(yesterdayStats);
     priorCoverageDropNames = priorNote
       ? coverageDropNamesInNote(priorNote.body)
       : null;
@@ -210,6 +228,9 @@ export async function runMorningReport(): Promise<void> {
     chainPrices = undefined;
     priorChainPriceExceptions = undefined;
     previousRowsPerStore = undefined;
+    previousMorningRowsPerStore = undefined;
+    matchedToday = undefined;
+    matchedPrevious = undefined;
     priorCoverageDropNames = undefined;
     priorThinPageNames = undefined;
   }
@@ -273,9 +294,13 @@ export async function runMorningReport(): Promise<void> {
           chainPrices,
           priorChainPriceExceptions,
           previousRowsPerStore,
+          previousMorningRowsPerStore,
+          matchedToday,
+          matchedPrevious,
           priorCoverageDropNames,
           priorThinPageNames,
           coverageDropRatio: readMorningCoverageDropRatio(),
+          dropAlertShare: readMorningDropAlertShare(),
         }
       : {}),
     storeLookupTurnedOff: isOsmOverpassDisabled(),

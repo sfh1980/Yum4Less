@@ -46,6 +46,7 @@ describe("morning chain price facts", () => {
     expect(facts).toEqual([
       {
         displayName: "Kroger",
+        chainId: "kroger",
         admittedStore: true,
         saleSource: true,
         freshOfficialCount: 9,
@@ -53,6 +54,7 @@ describe("morning chain price facts", () => {
       },
       {
         displayName: "Aldi",
+        chainId: "aldi",
         admittedStore: true,
         saleSource: true,
         freshOfficialCount: 0,
