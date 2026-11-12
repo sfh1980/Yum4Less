@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { shouldFailWeeklyAdIngestExit } from "@/lib/ingest/ingest-script-exit-policy";
 import { getSaleConfidence } from "@/lib/sale-confidence";
 import { createAldiWeeklyAdIngestionClient } from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
 import {
@@ -482,6 +483,59 @@ describe("weekly ad ingestion service", () => {
     expect(result.status).toBe("cached");
     expect(result.offers.some((offer) => offer.ingredientId === "spaghetti")).toBe(true);
     expect(result.offers.some((offer) => offer.ingredientId === "black-beans")).toBe(true);
+  });
+
+  it("keeps the chains around one that throws while saving", async () => {
+    const purgeSpy = vi
+      .spyOn(priceObservationWrites, "purgeStaleRankedPriceObservations")
+      .mockResolvedValue(0);
+    const saved: string[] = [];
+    const syncSpy = vi
+      .spyOn(weeklyAdOfferSync, "syncWeeklyAdOffersToPriceObservations")
+      .mockImplementation(async (call) => {
+        const chain = call.result.chain;
+        if (chain === "food-lion") {
+          throw new Error("save failed");
+        }
+        saved.push(chain);
+        return {
+          chain,
+          storeId: call.result.offers[0]?.storeId ?? "",
+          syncedCount: 1,
+          skippedCount: 0,
+          failedCount: 0,
+          retrievalMode: "cached",
+          message: "synced",
+        };
+      });
+    const missSpy = vi
+      .spyOn(weeklyAdFlyerHash, "recordWeeklyAdPriceMissReason")
+      .mockResolvedValue();
+
+    const { results, syncSummaries } = await runWeeklyAdIngestionForStores({
+      nearbyStores: [
+        { id: "aldi-1", name: "Aldi", chain: "aldi" },
+        { id: "food-lion-1", name: "Food Lion", chain: "food-lion" },
+        { id: "publix-1", name: "Publix", chain: "publix" },
+      ],
+      zipCode: "23111",
+      persistToDatabase: true,
+    });
+
+    expect(saved).toEqual(["aldi", "publix"]);
+    expect(results.map((result) => result.chain)).toEqual(["aldi", "food-lion", "publix"]);
+    expect(results.find((result) => result.chain === "food-lion")?.status).toBe("error");
+    expect(missSpy).toHaveBeenCalledWith({ chain: "food-lion", reason: "fetch-failed" });
+    expect(
+      shouldFailWeeklyAdIngestExit({
+        results,
+        syncSummaries,
+      }),
+    ).toBe(true);
+
+    purgeSpy.mockRestore();
+    syncSpy.mockRestore();
+    missSpy.mockRestore();
   });
 });
 

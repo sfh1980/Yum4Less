@@ -134,40 +134,50 @@ export async function runWeeklyAdIngestionForStores(input: {
   const nonKrogerStores = nearbyStores.filter((store) => store.chain !== "kroger");
 
   if (krogerStores.length > 0) {
-    const krogerClient = getWeeklyAdIngestionClient("kroger");
-    if (krogerClient) {
-      const primaryStore = pickPrimaryKrogerStoreForWeeklyAdIngestList(krogerStores);
-      const result = await krogerClient.ingestWeeklyAd({
-        chain: "kroger",
-        storeId: primaryStore.id,
-        storeName: primaryStore.name,
-        zipCode,
-        trackedIngredientIds,
-        ...catalogFields,
-      });
-      result.offers = await expandUnmatchedWeeklyAdOffers({
-        chain: "kroger",
-        offers: result.offers,
-        catalog,
-        persist: Boolean(input.persistToDatabase),
-      });
-      results.push(result);
-
-      if (input.persistToDatabase && result.offers.length > 0) {
-        syncSummaries.push(
-          ...(await syncWeeklyAdResultAcrossStores({
-            chain: "kroger",
-            result,
-            stores: krogerStores,
-          })),
-        );
-      }
-      if (input.persistToDatabase && result.thinPage) {
-        await recordWeeklyAdPriceMissReason({
+    try {
+      const krogerClient = getWeeklyAdIngestionClient("kroger");
+      if (krogerClient) {
+        const primaryStore = pickPrimaryKrogerStoreForWeeklyAdIngestList(krogerStores);
+        const result = await krogerClient.ingestWeeklyAd({
           chain: "kroger",
-          reason: "thin-page",
+          storeId: primaryStore.id,
+          storeName: primaryStore.name,
+          zipCode,
+          trackedIngredientIds,
+          ...catalogFields,
         });
+        result.offers = await expandUnmatchedWeeklyAdOffers({
+          chain: "kroger",
+          offers: result.offers,
+          catalog,
+          persist: Boolean(input.persistToDatabase),
+        });
+
+        if (input.persistToDatabase && result.offers.length > 0) {
+          syncSummaries.push(
+            ...(await syncWeeklyAdResultAcrossStores({
+              chain: "kroger",
+              result,
+              stores: krogerStores,
+            })),
+          );
+        }
+        if (input.persistToDatabase && result.thinPage) {
+          await recordWeeklyAdPriceMissReason({
+            chain: "kroger",
+            reason: "thin-page",
+          });
+        }
+        results.push(result);
       }
+    } catch (error) {
+      results.push(
+        await weeklyAdChainTurnFailure({
+          chain: "kroger",
+          error,
+          persist: Boolean(input.persistToDatabase),
+        }),
+      );
     }
   }
 
@@ -181,37 +191,47 @@ export async function runWeeklyAdIngestionForStores(input: {
       continue;
     }
 
-    const primaryStore = pickPrimaryWeeklyAdIngestStoreForChain(chainStores);
-    const result = await client.ingestWeeklyAd({
-      chain,
-      storeId: primaryStore.id,
-      storeName: primaryStore.name,
-      zipCode,
-      trackedIngredientIds,
-      ...catalogFields,
-    });
-    result.offers = await expandUnmatchedWeeklyAdOffers({
-      chain,
-      offers: result.offers,
-      catalog,
-      persist: Boolean(input.persistToDatabase),
-    });
-    results.push(result);
-
-    if (input.persistToDatabase && result.offers.length > 0) {
-      syncSummaries.push(
-        ...(await syncWeeklyAdResultAcrossStores({
-          chain,
-          result,
-          stores: chainStores,
-        })),
-      );
-    }
-    if (input.persistToDatabase && result.thinPage) {
-      await recordWeeklyAdPriceMissReason({
+    try {
+      const primaryStore = pickPrimaryWeeklyAdIngestStoreForChain(chainStores);
+      const result = await client.ingestWeeklyAd({
         chain,
-        reason: "thin-page",
+        storeId: primaryStore.id,
+        storeName: primaryStore.name,
+        zipCode,
+        trackedIngredientIds,
+        ...catalogFields,
       });
+      result.offers = await expandUnmatchedWeeklyAdOffers({
+        chain,
+        offers: result.offers,
+        catalog,
+        persist: Boolean(input.persistToDatabase),
+      });
+
+      if (input.persistToDatabase && result.offers.length > 0) {
+        syncSummaries.push(
+          ...(await syncWeeklyAdResultAcrossStores({
+            chain,
+            result,
+            stores: chainStores,
+          })),
+        );
+      }
+      if (input.persistToDatabase && result.thinPage) {
+        await recordWeeklyAdPriceMissReason({
+          chain,
+          reason: "thin-page",
+        });
+      }
+      results.push(result);
+    } catch (error) {
+      results.push(
+        await weeklyAdChainTurnFailure({
+          chain,
+          error,
+          persist: Boolean(input.persistToDatabase),
+        }),
+      );
     }
   }
 
@@ -240,6 +260,39 @@ export async function getWeeklyAdIngestionMarketSummaries(input: {
   storeIds: string[];
 }) {
   return getWeeklyAdIngestionStatusSummaries(input);
+}
+
+/**
+ * One chain's throw must not skip the chains after it. The result stays
+ * status "error" so the existing fail-loud exit still sees a ranked failure.
+ */
+async function weeklyAdChainTurnFailure(input: {
+  chain: WeeklyAdChain;
+  error: unknown;
+  persist: boolean;
+}): Promise<WeeklyAdIngestionResult> {
+  logServerError("weekly-ad-ingest.chain", input.error, { chain: input.chain });
+  if (input.persist) {
+    await recordWeeklyAdPriceMissReason({
+      chain: input.chain,
+      reason: "fetch-failed",
+    });
+  }
+  const message =
+    input.error instanceof Error ? input.error.message : "Weekly-ad chain failed.";
+  return {
+    chain: input.chain,
+    label: `${input.chain} weekly ad ingestion`,
+    status: "error",
+    provenance: "weekly-ad-scrape",
+    retrievalMode: "none",
+    configured: true,
+    fallbackUsed: false,
+    offers: [],
+    message,
+    fetchedAt: new Date().toISOString(),
+    termsNote: "Weekly-ad prices are directional until verified in store.",
+  };
 }
 
 function storesPricedFromFlyerCluster<T extends { id: string }>(
