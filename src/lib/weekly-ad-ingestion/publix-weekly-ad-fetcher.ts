@@ -267,6 +267,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
         scrollViewports,
         printedTotalIsFloor,
         collectedCards,
+        resetToTop: true,
       });
     }
     await explorePublixWeeklyAdCategories(page, input.url, visitedUrls, input.timeoutMs, {
@@ -284,6 +285,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
       scrollViewports,
       printedTotalIsFloor,
       collectedCards,
+      resetToTop: true,
     });
 
     if (
@@ -309,6 +311,7 @@ export async function fetchPublixWeeklyAdWithBrowser(input: {
         scrollViewports,
         printedTotalIsFloor,
         collectedCards,
+        resetToTop: true,
       });
     }
 
@@ -397,6 +400,13 @@ async function settlePublixSavingsCardCount(
     scrollViewports: number;
     printedTotalIsFloor: boolean;
     collectedCards: Map<string, string>;
+    /**
+     * Main page, final page, and thin reload pass true. Those can open at
+     * the bottom, and the scroll only moves down.
+     * A section page passes false. Its URL already opens the shared list
+     * on that section. Resetting it returns the list to BOGO.
+     */
+    resetToTop: boolean;
     /** Slug of the section page. The main page, final page, and thin reload omit it. */
     sectionId?: string | null;
   },
@@ -408,11 +418,10 @@ async function settlePublixSavingsCardCount(
   stop: string;
 }> {
   await waitForPublixSavingsCards(page, input.timeoutMs);
-  // Section settles and the category-link clicks leave the virtual list at
-  // the bottom. scrollPublixCardList only moves down, so a settle that starts
-  // there mounts the tail and never sees the cards above it.
-  await resetPublixCardListToTop(page);
-  await page.waitForTimeout(PUBLIX_CARD_POLL_MS);
+  if (input.resetToTop) {
+    await resetPublixCardListToTop(page);
+    await page.waitForTimeout(PUBLIX_CARD_POLL_MS);
+  }
   const started = Date.now();
   const distinct = new Set<string>();
   let previousCount: number | null = null;
@@ -694,6 +703,7 @@ async function explorePublixWeeklyAdCategories(
         printedTotalIsFloor: settle.printedTotalIsFloor,
         collectedCards: sectionCards,
         sectionId: slug,
+        resetToTop: false,
       });
       let offers = 0;
       try {

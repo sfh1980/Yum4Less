@@ -4,7 +4,12 @@ import {
   collectPublixHarvestCards,
   harvestPublixVirtualList,
   publixCollectedCardsDocument,
+  publixMountedCardKeys,
+  publixVirtualListMaxIndex,
   readPublixMergeSectionCards,
+  resetPublixVirtualListToTop,
+  scrollPublixVirtualListDown,
+  type PublixVirtualCardList,
 } from "@/lib/weekly-ad-ingestion/publix-savings-card-wait";
 
 function card(key: string, title: string): { key: string; html: string } {
@@ -30,6 +35,75 @@ function numbered(prefix: string, count: number): { key: string; html: string }[
     card(`${prefix}-${index}`, `${prefix} ${index}`),
   );
 }
+
+/** One shared list. A section URL opens it already scrolled to that section. */
+function sharedPublixList(sections: readonly { id: string; count: number }[]): {
+  keys: string[];
+  anchors: { id: string; count: number; start: number }[];
+} {
+  const keys: string[] = [];
+  const anchors = sections.map((section) => {
+    const start = keys.length;
+    for (let index = 0; index < section.count; index += 1) {
+      keys.push(`${section.id}-${index}`);
+    }
+    return { id: section.id, count: section.count, start };
+  });
+  return { keys, anchors };
+}
+
+/**
+ * The fake settle. Reset is optional. Reading stops at the printed or half
+ * count, the same way the browser settle stops before the list ends.
+ */
+function readPublixListUntil(input: {
+  keys: readonly string[];
+  startIndex: number;
+  windowSize: number;
+  stepCards: number;
+  resetToTop: boolean;
+  stopAt: number;
+}): string[] {
+  let list: PublixVirtualCardList = {
+    keys: input.keys,
+    scrollIndex: input.startIndex,
+    windowSize: input.windowSize,
+  };
+  if (input.resetToTop) {
+    list = resetPublixVirtualListToTop(list);
+  }
+  const seen: string[] = [];
+  const seenSet = new Set<string>();
+  const maxIndex = publixVirtualListMaxIndex(list);
+  for (;;) {
+    for (const key of publixMountedCardKeys(list)) {
+      if (seenSet.has(key)) {
+        continue;
+      }
+      seenSet.add(key);
+      seen.push(key);
+    }
+    if (seen.length >= input.stopAt || list.scrollIndex >= maxIndex) {
+      break;
+    }
+    const next = scrollPublixVirtualListDown(list, input.stepCards);
+    if (next.scrollIndex === list.scrollIndex) {
+      break;
+    }
+    list = next;
+  }
+  return seen;
+}
+
+/** Night-before section sizes. 239 is the first window every section read on 11-14. */
+const PUBLIX_SECTIONS = [
+  { id: "bogo", count: 220 },
+  { id: "meat", count: 146 },
+  { id: "produce", count: 89 },
+  { id: "dairy", count: 39 },
+  { id: "protein", count: 45 },
+] as const;
+const PUBLIX_FIRST_WINDOW = 239;
 
 describe("Publix section card merge", () => {
   it("is on unless the setting is exactly 0", () => {
@@ -133,5 +207,94 @@ describe("Publix section card merge", () => {
     expect(merged.size).toBe(225 + 145 + 89 + 37 + 45);
     expect(merged.size).not.toBe(39);
     expect(onlyFinal.size).toBe(39);
+  });
+
+  it("harvests the section that was already on screen, not the top of the list", () => {
+    const { keys, anchors } = sharedPublixList(PUBLIX_SECTIONS);
+    const meat = anchors.find((section) => section.id === "meat");
+    if (!meat) {
+      throw new Error("meat anchor missing");
+    }
+    const atTheSection = readPublixListUntil({
+      keys,
+      startIndex: meat.start,
+      windowSize: 39,
+      stepCards: 39,
+      resetToTop: false,
+      stopAt: meat.count,
+    });
+    const sentBackToTheTop = readPublixListUntil({
+      keys,
+      startIndex: meat.start,
+      windowSize: 39,
+      stepCards: 39,
+      resetToTop: true,
+      stopAt: PUBLIX_FIRST_WINDOW,
+    });
+    expect(atTheSection[0]).toBe("meat-0");
+    expect(atTheSection).toContain("meat-145");
+    expect(atTheSection).not.toContain("bogo-0");
+    expect(sentBackToTheTop[0]).toBe("bogo-0");
+    expect(sentBackToTheTop).not.toContain("meat-145");
+  });
+
+  it("reads the final page from the top when that page opens at the bottom", () => {
+    const keys = Array.from({ length: 551 }, (_, index) => `card-${index}`);
+    const windowSize = 39;
+    const startIndex = keys.length - windowSize;
+    const finalPage = harvestPublixVirtualList({
+      keys,
+      startIndex,
+      windowSize,
+      stepCards: windowSize,
+      resetToTop: true,
+    });
+    const leftAtTheBottom = harvestPublixVirtualList({
+      keys,
+      startIndex,
+      windowSize,
+      stepCards: windowSize,
+      resetToTop: false,
+    });
+    expect(finalPage).toEqual(keys);
+    expect(leftAtTheBottom).toHaveLength(windowSize);
+    expect(leftAtTheBottom[0]).toBe(keys[startIndex]);
+  });
+
+  it("does not let the five 11-14 sections read the same first window", () => {
+    const { keys, anchors } = sharedPublixList(PUBLIX_SECTIONS);
+    const windowSize = 39;
+    const broken = anchors.map((section) =>
+      readPublixListUntil({
+        keys,
+        startIndex: section.start,
+        windowSize,
+        stepCards: windowSize,
+        resetToTop: true,
+        stopAt: PUBLIX_FIRST_WINDOW,
+      }),
+    );
+    const fixed = anchors.map((section) =>
+      readPublixListUntil({
+        keys,
+        startIndex: section.start,
+        windowSize,
+        stepCards: windowSize,
+        resetToTop: false,
+        stopAt: section.count,
+      }),
+    );
+    expect(new Set(broken.map((cards) => cards.join("|"))).size).toBe(1);
+    expect(broken[0]?.[0]).toBe("bogo-0");
+    expect(broken[1]).not.toContain("meat-145");
+    expect(new Set(fixed.map((cards) => cards.join("|"))).size).toBe(anchors.length);
+    for (const [index, section] of anchors.entries()) {
+      const cards = fixed[index] ?? [];
+      expect(cards[0]).toBe(`${section.id}-0`);
+      expect(cards).toContain(`${section.id}-${section.count - 1}`);
+      if (section.id !== "bogo") {
+        expect(cards).not.toContain("bogo-0");
+      }
+    }
   });
 });

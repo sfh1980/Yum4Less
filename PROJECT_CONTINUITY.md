@@ -4,6 +4,10 @@
 
 ---
 
+## Resume (as of 2026-11-14)
+
+**This slice (branch `fix/publix-section-reset`, not merged):** Built on `ed29f56`. A Publix section settle stays where that section's URL opened the shared list. The main page, the final page, and the thin reload still start at the top. Printed-count reading, the expected-count rule, and the stop rule were not changed. Dinner floors, `shopper_ranked`, the fail-loud set, and classification were not changed. `npm test` **1555/1555**. Build passed. Integration and e2e were not run. A pass is not more dinners.
+
 ## Resume (as of 2026-11-12)
 
 **This slice (branch `fix/next-round-2026-11-12`, local only, not pushed):** Built on `dfcce49`. Before every Publix card settle, the virtual list and the window scroll to the top and wait one poll. `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS` unset is on; `0` is off. A section's printed count is that section's number, or none. A short harvest is the existing thin page, with a reason. `045_weekly_ad_run_stats.sql` keeps one row per chain per night. The morning note names a failed chain and a shopper-row drop against yesterday's marked census. Dinner floors, `shopper_ranked`, the fail-loud set, and classification were not changed. `npm test` **1552/1552**. Integration **73/73**. Build passed. E2e was not run. A pass is not more dinners.
@@ -57,6 +61,8 @@ The Tuesday visible-row drop is the opening purge (verification older than 24 ho
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **Publix section reset (2026-11-14, branch `fix/publix-section-reset`):** Section pages stay where their URL opened them. The main page, the final page, and the thin reload still start at the top. Not on yum4less.com until the owner fast-forwards master and Watchtower pulls that image. A pass is not more dinners.
 
 - **Next round 2026-11-12 (local, not pushed):** Publix settles start at the top of the list. Section cards are stored unless `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS=0`. A short harvest is a thin page. `045` records each chain's night. The morning note can say a chain fell from yesterday's marked census. Not on yum4less.com until this branch is pushed and Watchtower pulls it. After that image is the one running, `sudo docker exec -w /app yum4less-ingest npm run db:migrate`. A box that already sets the merge flag to `1` does not change its merge. A pass is not more dinners.
 
@@ -334,6 +340,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-14 — Publix section pages stay on their own section
+
+**Theme:** On `ed29f56` with merge on, the 2026-11-14 night stored 81 Publix rows per store. The night before, on `dfcce49` with merge on, it stored 125. All five section settles read the same first window (about 239 cards). The harvest was 246 distinct cards. The night before the sections read 220, 146, 89, 39, and 45, and the harvest was 445.
+
+**Shipped:** `settlePublixSavingsCardCount` takes `resetToTop`. The five section settles pass false and start from the fresh navigation. The main-page settle, the final settle, and the thin-reload settle pass true. This slice does not change printed-count reading, expected count, or the stop rule.
+
+**Limits:** Branch `fix/publix-section-reset`. Not on yum4less.com until the owner fast-forwards master. A heading that is still in the document can still set that section's stop target. The scroll still only moves down, so a settle that starts in a section can include cards after that section. No live request. Dinner floors, `shopper_ranked`, the fail-loud set, and classification were not changed. Integration and e2e were not run. A pass is not more dinners.
+
+**Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1555/1555** pass (262 files). `npm run build` exit 0 (Next.js 15.5.28). `npm run test:integration` and `npm run test:e2e:ci` were not run. No schema change.
 
 ### 2026-11-12 — Publix harvest, thin reason, nightly stats
 
@@ -3747,6 +3763,10 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (Publix section pages stay at their own place in the list) | 2026-11-14 | **1555/1555** pass (262 files). |
+| `npm run typecheck` (same slice) | 2026-11-14 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run lint` (same slice) | 2026-11-14 | **Pass** (exit 0) |
+| `npm run build` (same slice) | 2026-11-14 | **Pass** (Next.js 15.5.28, exit 0). Integration and e2e were not run. |
 | `npm test` (Publix scroll reset, section counts, year, harvest thin check, nightly log, run stats) | 2026-11-12 | **1552/1552** pass (262 files). First run **1551/1552**; re-run after the chain-fact expectation included `chainId`. |
 | `npm run typecheck` (same slice) | 2026-11-12 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same slice) | 2026-11-12 | **Pass** (exit 0). Run before the one-line chain-fact expectation update. |
