@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChooseLocationScreen } from "@/components/meal-planner/choose-location-screen";
+import { UNSET_PRICED_AREA_COVERAGE_SENTENCE } from "@/lib/priced-area-coverage";
 import { RESET_PREFERENCES_BUTTON_LABEL } from "@/lib/reset-preferences-copy";
 
 vi.mock("next/link", () => ({
@@ -24,6 +25,7 @@ describe("ChooseLocationScreen legal links", () => {
   it("shows FAQ, Terms, and Reset Preferences", () => {
     render(
       createElement(ChooseLocationScreen, {
+        coverageSentence: UNSET_PRICED_AREA_COVERAGE_SENTENCE,
         gpsRequesting: false,
         onUseGps: vi.fn(),
         onEnterZip: vi.fn(),
@@ -34,6 +36,7 @@ describe("ChooseLocationScreen legal links", () => {
     expect(
       screen.getByRole("heading", { name: "Let’s get started" }),
     ).toBeInTheDocument();
+    expect(screen.getByText(UNSET_PRICED_AREA_COVERAGE_SENTENCE)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "FAQ" })).toHaveAttribute("href", "/faq");
     expect(screen.getByRole("link", { name: "Terms of use" })).toHaveAttribute(
       "href",

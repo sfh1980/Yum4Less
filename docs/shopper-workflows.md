@@ -55,6 +55,8 @@ Incomplete setup: splash → resume last persistable wizard step. Feedback and S
 
 Settings CTAs: **Use GPS** · **Enter ZIP code**. ZIP places a map pin (cached in `yum4less.zip-search-centers.v1`) as the radius center. GPS skips a pin map and goes to radius.
 
+**Let’s get started** includes one sentence: dinner price estimates are available today in the place named by `YUM4LESS_PRICED_AREA_LABEL` (server-only). When that setting is unset, the sentence says “a limited area” and names no city. Elsewhere, the shopper still sees nearby stores while coverage grows.
+
 ```mermaid
 flowchart TD
   startLoc[Location search started] --> validInput{Input valid?}
@@ -150,7 +152,9 @@ flowchart TD
 
 Client `marketBlocked` = scoped market exists **and** `recommendationReadyStoreCount === 0`.
 
-**Key files:** `src/lib/market-shopper-status.ts`, `src/components/meal-planner/use-meal-planner.ts`
+When that check is `no-trusted-rollout` (stores nearby, none priced for dinners), the shopping-style screen shows the existing Tier C reason **before** the store picker. The same line stays at the top of the store picker. Empty radius and a database outage keep their own messages. Tier rules are unchanged.
+
+**Key files:** `src/lib/market-shopper-status.ts`, `src/lib/priced-area-coverage.ts`, `src/components/meal-planner/use-meal-planner.ts`
 
 ---
 

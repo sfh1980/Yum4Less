@@ -145,6 +145,7 @@ Copy `.env.example` → `.env.local`. Key variables:
 | `YUM4LESS_TRUSTED_PROXY_HOPS` | How many proxies append to `X-Forwarded-For`. `1` uses the last entry |
 | `YUM4LESS_CLIENT_IP_HEADER` | Optional single trusted header used instead of the hop list |
 | `NEXT_PUBLIC_YUM4LESS_ANALYTICS` + `YUM4LESS_ENABLE_ANALYTICS` | Both required to record events |
+| `YUM4LESS_PRICED_AREA_LABEL` | Optional place phrase in the first-step coverage sentence. Unset says “a limited area” |
 | `YUM4LESS_FEEDBACK_ENABLED` | Enable `/feedback` (`db/init/007_customer_feedback.sql`; `038` for missing-store requests) |
 | `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS` | Publix section cards join the stored page. Unset is on. `0` keeps only the final page |
 | `YUM4LESS_PUBLIX_HARVEST_MIN_SHARE` | Thin when saved Publix cards are under this share of the largest section page (default 0.5) |

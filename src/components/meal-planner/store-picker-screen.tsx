@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { MapPinIcon } from "@/components/map-pin-icon";
 import { SingleStoreMapOverlay } from "@/components/single-store-map-overlay";
@@ -35,6 +35,7 @@ type StorePickerScreenProps = {
   marketSearchLoading: boolean;
   marketSearchState: MarketSearchState;
   settingsSaveError?: string;
+  coverageNotice?: ReactNode;
   showFactoryReset: boolean;
   onContinue: () => void;
   onFactoryReset: () => void;
@@ -47,6 +48,7 @@ export function StorePickerScreen({
   marketSearchLoading,
   marketSearchState,
   settingsSaveError,
+  coverageNotice,
   showFactoryReset,
   onContinue,
   onFactoryReset,
@@ -116,6 +118,7 @@ export function StorePickerScreen({
       <p className="wizard-copy">
         Now we can start looking for dinner options.
       </p>
+      {coverageNotice}
       <p className="wizard-copy">
         Don&apos;t see a store you shop, or does this list miss stores in your area?{" "}
         <Link className="text-link" href="/feedback?topic=missing_store">

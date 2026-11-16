@@ -1,16 +1,19 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
 import { WizardChoiceButton } from "@/components/meal-planner/wizard-choice-button";
 
 type ShoppingStyleScreenProps = {
   shoppingStyle: MealPreferenceForm["shoppingStyle"];
+  coverageNotice?: ReactNode;
   onShoppingStyleChange: (shoppingStyle: MealPreferenceForm["shoppingStyle"]) => void;
   onContinue: () => void;
 };
 
 export function ShoppingStyleScreen({
   shoppingStyle,
+  coverageNotice,
   onShoppingStyleChange,
   onContinue,
 }: ShoppingStyleScreenProps) {
@@ -27,6 +30,7 @@ export function ShoppingStyleScreen({
       <p className="wizard-copy">
         You can change this later in Settings.
       </p>
+      {coverageNotice}
 
       <div className="wizard-choice-stack">
         <WizardChoiceButton

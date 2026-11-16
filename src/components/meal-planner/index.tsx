@@ -13,6 +13,7 @@ import { InternalDetailsDevTrigger } from "@/components/meal-planner/internal-de
 import { IngredientsMarketUnavailable } from "@/components/meal-planner/ingredients-market-unavailable";
 import { IngredientsStepPanel } from "@/components/meal-planner/ingredients-step-panel";
 import { LockedTabPanel } from "@/components/meal-planner/locked-tab-panel";
+import { MapOnlyCoverageNotice } from "@/components/meal-planner/map-only-coverage-notice";
 import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
 import { PantryStepPanel } from "@/components/meal-planner/pantry-step-panel";
 import { RadiusScreen } from "@/components/meal-planner/radius-screen";
@@ -30,14 +31,22 @@ import {
   previousOnboardingStep,
 } from "@/components/meal-planner/onboarding-step";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
+import {
+  tierCMapOnlyReason,
+  UNSET_PRICED_AREA_COVERAGE_SENTENCE,
+} from "@/lib/priced-area-coverage";
 import { isInternalDetailsUiEnabled } from "@/lib/show-internal-details-ui";
 import { throwIfLocalhostVerificationRenderErrorRequested } from "@/lib/localhost-verification-triggers";
 
 type MealPlannerProps = {
   feedbackEnabled?: boolean;
+  pricedAreaCoverageSentence?: string;
 };
 
-export function MealPlanner({ feedbackEnabled = false }: MealPlannerProps) {
+export function MealPlanner({
+  feedbackEnabled = false,
+  pricedAreaCoverageSentence = UNSET_PRICED_AREA_COVERAGE_SENTENCE,
+}: MealPlannerProps) {
   throwIfLocalhostVerificationRenderErrorRequested();
   const demo = useMealPlanner();
   const showInternalDetails = isInternalDetailsUiEnabled();
@@ -72,6 +81,10 @@ export function MealPlanner({ feedbackEnabled = false }: MealPlannerProps) {
     />
   );
 
+  const mapOnlyReason = demo.market ? tierCMapOnlyReason(demo.market) : null;
+  const mapOnlyNotice = mapOnlyReason ? (
+    <MapOnlyCoverageNotice reason={mapOnlyReason} />
+  ) : null;
   const lockedMessage = formatLockedTabMessage(demo.remainingSetupSteps);
   const tabOptions = {
     settingsComplete: demo.settingsComplete,
@@ -88,6 +101,7 @@ export function MealPlanner({ feedbackEnabled = false }: MealPlannerProps) {
       case "choose-location":
         return (
           <ChooseLocationScreen
+            coverageSentence={pricedAreaCoverageSentence}
             gpsRequesting={demo.gpsRequesting}
             gpsNotice={demo.gpsNotice}
             onUseGps={demo.handleBrowserLocationSearch}
@@ -125,6 +139,7 @@ export function MealPlanner({ feedbackEnabled = false }: MealPlannerProps) {
       case "shopping-style":
         return (
           <ShoppingStyleScreen
+            coverageNotice={mapOnlyNotice}
             shoppingStyle={demo.form.shoppingStyle}
             onShoppingStyleChange={demo.handleShoppingStyleChange}
             onContinue={demo.handleShoppingStyleContinue}
@@ -139,6 +154,7 @@ export function MealPlanner({ feedbackEnabled = false }: MealPlannerProps) {
             marketSearchLoading={demo.marketSearchLoading}
             marketSearchState={demo.marketSearchState}
             settingsSaveError={demo.settingsSaveError}
+            coverageNotice={mapOnlyNotice}
             showFactoryReset
             onContinue={demo.handleSaveSettings}
             onFactoryReset={demo.handleFactoryReset}

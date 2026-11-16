@@ -5,6 +5,7 @@ import { WizardChoiceButton } from "@/components/meal-planner/wizard-choice-butt
 import { RESET_PREFERENCES_BUTTON_LABEL } from "@/lib/reset-preferences-copy";
 
 type ChooseLocationScreenProps = {
+  coverageSentence: string;
   gpsRequesting: boolean;
   gpsNotice?: string;
   onUseGps: () => void;
@@ -13,6 +14,7 @@ type ChooseLocationScreenProps = {
 };
 
 export function ChooseLocationScreen({
+  coverageSentence,
   gpsRequesting,
   gpsNotice,
   onUseGps,
@@ -25,6 +27,9 @@ export function ChooseLocationScreen({
         Let’s get started
       </h1>
       <p className="wizard-copy">How should we center your area?</p>
+      <p className="wizard-copy" id="priced-area-coverage">
+        {coverageSentence}
+      </p>
 
       <div className="wizard-choice-stack">
         <WizardChoiceButton
