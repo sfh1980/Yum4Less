@@ -57,7 +57,7 @@ describe("MealRecommendationCard", () => {
   it("labels the meal total with confidence-flexed shopper wording", () => {
     renderCard();
 
-    expect(screen.getByText("Estimated lowest price: $13.42")).toBeInTheDocument();
+    expect(screen.getByText("Estimated total: about $13.42")).toBeInTheDocument();
   });
 
   it("shows trust pills for confidence and freshness labels", () => {
@@ -79,7 +79,7 @@ describe("MealRecommendationCard", () => {
     });
 
     expect(screen.queryByRole("heading", { name: "Hidden Title Meal" })).not.toBeInTheDocument();
-    expect(screen.getByText("Estimated lowest price: $13.42")).toBeInTheDocument();
+    expect(screen.getByText("Estimated total: about $13.42")).toBeInTheDocument();
   });
 
   it("opens the store map from the store plan, not the collapsed pill row", () => {

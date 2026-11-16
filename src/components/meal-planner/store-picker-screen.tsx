@@ -21,6 +21,7 @@ import {
 import { HelpLegalLinks } from "@/components/help-legal-links";
 import { RESET_PREFERENCES_BUTTON_LABEL } from "@/lib/reset-preferences-copy";
 import { StoreCoverageHelpHint } from "@/components/meal-planner/store-coverage-help-hint";
+import { TryAgainButton } from "@/components/meal-planner/try-again-button";
 import type { FormState, MarketSearchState } from "@/components/meal-planner/types";
 import type { RecommendationExperience } from "@/lib/recommendation-service";
 import type { MealPreferenceForm } from "@/lib/recommendation-service";
@@ -39,6 +40,7 @@ type StorePickerScreenProps = {
   showFactoryReset: boolean;
   onContinue: () => void;
   onFactoryReset: () => void;
+  onRetryStoreSearch?: () => void;
 };
 
 export function StorePickerScreen({
@@ -52,6 +54,7 @@ export function StorePickerScreen({
   showFactoryReset,
   onContinue,
   onFactoryReset,
+  onRetryStoreSearch,
 }: StorePickerScreenProps) {
   const selectableStores = filterSettingsSelectableStores(
     market?.nearbyStores ?? [],
@@ -137,9 +140,14 @@ export function StorePickerScreen({
       ) : null}
 
       {marketSearchState.status === "error" ? (
-        <p className="field-error" role="alert">
-          {marketSearchState.error ?? "Could not find stores for your area."}
-        </p>
+        <div role="alert">
+          <p className="field-error">
+            {marketSearchState.error ?? "Could not find stores for your area."}
+          </p>
+          {marketSearchState.retryable && onRetryStoreSearch ? (
+            <TryAgainButton onClick={onRetryStoreSearch} />
+          ) : null}
+        </div>
       ) : null}
 
       {marketSearchState.status === "ready" && marketSearchState.notice ? (

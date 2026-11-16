@@ -76,8 +76,11 @@ import {
   CHOOSE_STORES_ACTION,
   MILES_CHANGED_NOTICE,
   SEARCH_STORES_AGAIN_ACTION,
+  SEARCH_STORES_FOR_ZIP_ACTION,
   SPENDING_LIMIT_NOTICE,
   STORES_NOT_READY_NOTICE,
+  TRY_AGAIN_ACTION,
+  ZIP_CLEARED_STORE_LIST_NOTICE,
 } from "@/components/meal-planner/shopper-recovery-copy";
 import {
   GEOLOCATION_PROMPT_TIMEOUT_MS_DEFAULT,
@@ -87,6 +90,10 @@ import {
   type GeolocationPromptFailure,
 } from "@/lib/geolocation-prompt";
 import { resolveThemePreference } from "@/lib/resolve-theme";
+import {
+  RANK_TIMEOUT_MS_DEFAULT,
+  STORE_SEARCH_TIMEOUT_MS_DEFAULT,
+} from "@/lib/shopper-request-timeout";
 import type { PantryItemSource } from "@/components/meal-planner/pantry-step-panel";
 import type {
   ActiveLocationRequest,
@@ -195,9 +202,16 @@ function persistLocationPreferences(
   );
 }
 
-export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
+export function useMealPlanner(options?: {
+  geolocationTimeoutMs?: number;
+  storeSearchTimeoutMs?: number;
+  rankTimeoutMs?: number;
+}) {
   const geolocationTimeoutMs =
     options?.geolocationTimeoutMs ?? GEOLOCATION_PROMPT_TIMEOUT_MS_DEFAULT;
+  const storeSearchTimeoutMs =
+    options?.storeSearchTimeoutMs ?? STORE_SEARCH_TIMEOUT_MS_DEFAULT;
+  const rankTimeoutMs = options?.rankTimeoutMs ?? RANK_TIMEOUT_MS_DEFAULT;
   const [activeTab, setActiveTab] = useState<AppTab>(SSR_DEFAULT_APP_TAB);
   const [settingsComplete, setSettingsComplete] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
@@ -210,6 +224,7 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
   const [suggestRecipesAction, setSuggestRecipesAction] = useState<
     "stores" | "search" | "budget"
   >("stores");
+  const [zipStoreListNotice, setZipStoreListNotice] = useState<string>();
   const [pendingBrowserLocation, setPendingBrowserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -251,7 +266,11 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
   );
   const [savedMeals, setSavedMeals] = useState<SavedMealSnapshot[]>(() => readSavedMeals());
   const marketSearchRequestRef = useRef(0);
+  const marketSearchAbortRef = useRef<AbortController | null>(null);
+  const marketSearchClearTimerRef = useRef<(() => void) | null>(null);
   const rankRequestRef = useRef(0);
+  const rankAbortRef = useRef<AbortController | null>(null);
+  const rankClearTimerRef = useRef<(() => void) | null>(null);
   const pantryCoverageRequestRef = useRef(0);
   const geolocationRequestRef = useRef(0);
   const cancelGeolocationPromptRef = useRef<(() => void) | null>(null);
@@ -751,8 +770,32 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
     const requestId = ++marketSearchRequestRef.current;
     rankRequestRef.current += 1;
     rankedStoreScopeRef.current = null;
+    setZipStoreListNotice(undefined);
     setMarketSearchState({ status: "loading" });
     setRecommendationState(initialRecommendationState);
+    const timed = startTimedRequest(
+      storeSearchTimeoutMs,
+      marketSearchAbortRef,
+      marketSearchClearTimerRef,
+      () => {
+        if (requestId !== marketSearchRequestRef.current) {
+          return;
+        }
+        const mapped = mapMarketSearchApiError({ httpStatus: 500 });
+        setMarketSearchState({
+          status: "error",
+          error: mapped.body,
+          errorTitle: mapped.title,
+          errorHint: mapped.hint,
+          retryable: true,
+        });
+        showSuggestBlock({
+          notice: mapped.body,
+          actionLabel: TRY_AGAIN_ACTION,
+          action: "search",
+        });
+      },
+    );
     trackClientEvent("location_search_started", {
       mode: request.mode,
       radius_miles: payload.radiusMiles,
@@ -764,10 +807,12 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         cache: "no-store",
+        signal: timed.signal,
       });
       const result = (await response.json()) as MarketSearchResponse;
+      timed.clearTimer();
 
-      if (requestId !== marketSearchRequestRef.current) {
+      if (timed.timedOut() || requestId !== marketSearchRequestRef.current) {
         return;
       }
 
@@ -865,7 +910,8 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
         );
       }
     } catch (error: unknown) {
-      if (requestId !== marketSearchRequestRef.current) {
+      timed.clearTimer();
+      if (timed.timedOut() || requestId !== marketSearchRequestRef.current) {
         return;
       }
 
@@ -1008,6 +1054,11 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
   }
 
   function handleZipCodeChange(zipCode: string) {
+    const hadStoreList =
+      marketSearchState.status === "ready" ||
+      (market?.nearbyStores.length ?? 0) > 0 ||
+      form.selectedStoreIds.length > 0;
+    const changed = zipCode !== form.zipCode;
     setForm((current) => {
       const previous = current.zipCode.trim();
       if (/^\d{5}$/.test(previous) && previous !== zipCode.trim()) {
@@ -1017,6 +1068,9 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
     });
     setZipCenterCancelNotice(undefined);
     resetLocationDependentState();
+    if (hadStoreList && changed) {
+      setZipStoreListNotice(ZIP_CLEARED_STORE_LIST_NOTICE);
+    }
   }
 
   function handleRadiusMilesChange(radiusMiles: string) {
@@ -1599,6 +1653,24 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
     });
 
     const requestId = ++rankRequestRef.current;
+    const timed = startTimedRequest(
+      rankTimeoutMs,
+      rankAbortRef,
+      rankClearTimerRef,
+      () => {
+        if (requestId !== rankRequestRef.current) {
+          return;
+        }
+        const mapped = mapRecommendationApiError({ httpStatus: 500 });
+        setRecommendationState({
+          status: "error",
+          error: mapped.body,
+          errorTitle: mapped.title,
+          errorHint: mapped.hint,
+          retryable: true,
+        });
+      },
+    );
 
     const payload: RecommendationRequest = {
       ...preferences,
@@ -1622,10 +1694,11 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         cache: "no-store",
+        signal: timed.signal,
       });
       const result = (await response.json()) as RecommendationResponse;
-
-      if (requestId !== rankRequestRef.current) {
+      timed.clearTimer();
+      if (timed.timedOut() || requestId !== rankRequestRef.current) {
         return;
       }
 
@@ -1697,7 +1770,8 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
         ),
       });
     } catch (error: unknown) {
-      if (requestId !== rankRequestRef.current) {
+      timed.clearTimer();
+      if (timed.timedOut() || requestId !== rankRequestRef.current) {
         return;
       }
 
@@ -1852,6 +1926,8 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
     savedMealIds,
     settingsSaveError,
     zipCenterCancelNotice,
+    zipStoreListNotice,
+    zipStoreListActionLabel: SEARCH_STORES_FOR_ZIP_ACTION,
     isZipCenterPickerOpen,
     isInternalDetailsOpen,
     setIsInternalDetailsOpen,
@@ -1908,6 +1984,36 @@ export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
     handleWelcomeBudgetBack: () => {
       setFlowStep("welcome-budget");
     },
+  };
+}
+
+function startTimedRequest(
+  timeoutMs: number,
+  abortRef: { current: AbortController | null },
+  clearTimerRef: { current: (() => void) | null },
+  onTimeout: () => void,
+) {
+  clearTimerRef.current?.();
+  abortRef.current?.abort();
+  const controller = new AbortController();
+  abortRef.current = controller;
+  let didTimeOut = false;
+  const timer = setTimeout(() => {
+    didTimeOut = true;
+    controller.abort();
+    onTimeout();
+  }, timeoutMs);
+  const clearTimer = () => {
+    clearTimeout(timer);
+    if (clearTimerRef.current === clearTimer) {
+      clearTimerRef.current = null;
+    }
+  };
+  clearTimerRef.current = clearTimer;
+  return {
+    signal: controller.signal,
+    timedOut: () => didTimeOut,
+    clearTimer,
   };
 }
 

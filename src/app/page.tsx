@@ -4,6 +4,10 @@ import { readCfWebAnalyticsToken } from "@/lib/cf-web-analytics";
 import { isFeedbackEnabled } from "@/lib/feedback/feedback-policy";
 import { readGeolocationPromptTimeoutMs } from "@/lib/geolocation-prompt";
 import { readPricedAreaCoverageSentence } from "@/lib/priced-area-coverage";
+import {
+  readRankTimeoutMs,
+  readStoreSearchTimeoutMs,
+} from "@/lib/shopper-request-timeout";
 
 /**
  * The place label, feedback switch, and Cloudflare token are container env.
@@ -20,6 +24,8 @@ export default function HomePage() {
           feedbackEnabled={isFeedbackEnabled()}
           geolocationTimeoutMs={readGeolocationPromptTimeoutMs()}
           pricedAreaCoverageSentence={readPricedAreaCoverageSentence()}
+          rankTimeoutMs={readRankTimeoutMs()}
+          storeSearchTimeoutMs={readStoreSearchTimeoutMs()}
         />
       </main>
     </>

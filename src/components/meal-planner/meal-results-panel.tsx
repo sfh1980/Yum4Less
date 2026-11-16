@@ -20,6 +20,7 @@ import {
   MILES_CHANGED_NOTICE,
   SEARCH_STORES_AGAIN_ACTION,
 } from "@/components/meal-planner/shopper-recovery-copy";
+import { TryAgainButton } from "@/components/meal-planner/try-again-button";
 import type {
   ActiveLocationRequest,
   FormState,
@@ -47,6 +48,7 @@ type MealResultsPanelProps = {
   onChangeSpendingLimit?: () => void;
   onSearchStoresAgain?: () => void;
   onBackToPantry?: () => void;
+  onRetryRank?: () => void;
 };
 
 export function MealResultsPanel({
@@ -67,6 +69,7 @@ export function MealResultsPanel({
   onChangeSpendingLimit,
   onSearchStoresAgain,
   onBackToPantry,
+  onRetryRank,
 }: MealResultsPanelProps) {
   const [storeMapTarget, setStoreMapTarget] = useState<NearbyStoreSummary | null>(null);
   const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
@@ -204,6 +207,7 @@ export function MealResultsPanel({
           />
         ) : recommendationState.status === "error" ? (
           <StatusCard
+            alert={Boolean(recommendationState.retryable)}
             title={recommendationState.errorTitle ?? "We could not suggest recipes yet"}
             body={
               recommendationState.error ??
@@ -223,6 +227,9 @@ export function MealResultsPanel({
                   >
                     {SEARCH_STORES_AGAIN_ACTION}
                   </button>
+                ) : null}
+                {recommendationState.retryable && onRetryRank ? (
+                  <TryAgainButton onClick={onRetryRank} />
                 ) : null}
               </>
             }
@@ -367,13 +374,15 @@ function StatusCard({
   title,
   body,
   extra,
+  alert = false,
 }: {
   title: string;
   body: string;
   extra?: ReactNode;
+  alert?: boolean;
 }) {
   return (
-    <div className="card">
+    <div className="card" role={alert ? "alert" : undefined}>
       <h3 className="card-title">{title}</h3>
       <p className="explanation">{body}</p>
       {extra}

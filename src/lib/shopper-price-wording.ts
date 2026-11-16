@@ -95,6 +95,20 @@ export function formatShopperPriceWording(
   }
 }
 
+/** Dinner total and per-store subtotal. Single items stay on formatShopperPriceWording. */
+export function formatShopperTotalWording(
+  amount: number,
+  tier: ShopperPriceConfidenceTier,
+): string {
+  switch (tier) {
+    case "high":
+    case "medium":
+      return `Estimated total: about $${amount.toFixed(2)}`;
+    case "low":
+      return "Estimated total - worth verifying in store";
+  }
+}
+
 /** Phrase that completes “{ingredient} from {store} for ___ (quantity).” */
 export function formatShopperPriceClause(
   amount: number,

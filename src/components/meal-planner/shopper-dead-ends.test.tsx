@@ -5,6 +5,8 @@ import { act, render, renderHook, screen, waitFor } from "@testing-library/react
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChooseLocationScreen } from "@/components/meal-planner/choose-location-screen";
 import { MealResultsPanel } from "@/components/meal-planner/meal-results-panel";
+import { StorePickerScreen } from "@/components/meal-planner/store-picker-screen";
+import { ZipInputScreen } from "@/components/meal-planner/zip-input-screen";
 import { buildTestMarket } from "@/components/meal-planner/test-fixtures";
 import { useMealPlanner } from "@/components/meal-planner/use-meal-planner";
 import type {
@@ -270,5 +272,150 @@ describe("shopper dead ends", () => {
     });
     expect(result.current.marketSearchState.notice).toMatch(/taking too long/i);
     expect(result.current.activeLocationRequest?.mode).toBe("zip");
+  });
+
+  it("stops a store search that never answers and offers Try again", async () => {
+    const fetchMock = vi.fn().mockImplementation(
+      () => new Promise(() => {}),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useMealPlanner({ storeSearchTimeoutMs: 40 }),
+    );
+    await act(async () => {
+      result.current.setForm((current) => ({ ...current, zipCode: "23111" }));
+    });
+    await act(async () => {
+      result.current.handleFindStores();
+    });
+
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("error");
+    });
+    expect(result.current.marketSearchState.retryable).toBe(true);
+    expect(result.current.marketSearchState.errorTitle).toMatch(
+      /temporarily unavailable/i,
+    );
+
+    const retry = vi.fn();
+    render(
+      createElement(StorePickerScreen, {
+        form,
+        setShoppingStyleSelection: vi.fn(),
+        marketSearchLoading: false,
+        marketSearchState: result.current.marketSearchState,
+        showFactoryReset: false,
+        onContinue: vi.fn(),
+        onFactoryReset: vi.fn(),
+        onRetryStoreSearch: retry,
+      }),
+    );
+    const tryAgain = screen.getByRole("button", { name: "Try again" });
+    expect(tryAgain).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      result.current.marketSearchState.error ?? "",
+    );
+  });
+
+  it("stops dinner ranking that never answers and offers Try again", async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (String(url).includes("/api/recommendations")) {
+        return new Promise(() => {});
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify(marketPayload(5)), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner({ rankTimeoutMs: 40 }));
+    await act(async () => {
+      result.current.setForm((current) => ({ ...current, zipCode: "23111" }));
+    });
+    await act(async () => {
+      result.current.handleFindStores();
+    });
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.handleRankMeals();
+    });
+    await waitFor(() => {
+      expect(result.current.recommendationState.status).toBe("error");
+    });
+    expect(result.current.recommendationState.retryable).toBe(true);
+    expect(result.current.recommendationState.errorTitle).toMatch(
+      /temporarily unavailable/i,
+    );
+
+    render(
+      createElement(MealResultsPanel, {
+        form,
+        market: result.current.market,
+        marketBlocked: false,
+        marketSearchState: result.current.marketSearchState,
+        recommendationState: result.current.recommendationState,
+        recommendations: [],
+        onRetryRank: vi.fn(),
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Try again" })).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /could not load ranked meal estimates/i,
+    );
+  });
+
+  it("says the store list was cleared when the ZIP changes and offers a new search", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(marketPayload(5)), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useMealPlanner());
+    await act(async () => {
+      result.current.setForm((current) => ({ ...current, zipCode: "23111" }));
+    });
+    await act(async () => {
+      result.current.handleFindStores();
+    });
+    await waitFor(() => {
+      expect(result.current.marketSearchState.status).toBe("ready");
+    });
+
+    await act(async () => {
+      result.current.handleZipCodeChange("23110");
+    });
+
+    expect(result.current.market).toBeUndefined();
+    expect(result.current.zipStoreListNotice).toBe(
+      "Changing the ZIP cleared the store list.",
+    );
+    expect(result.current.zipStoreListActionLabel).toBe(
+      "Search stores for this ZIP",
+    );
+
+    render(
+      createElement(ZipInputScreen, {
+        zipCode: result.current.form.zipCode,
+        storeListClearedNotice: result.current.zipStoreListNotice,
+        onZipCodeChange: vi.fn(),
+        onSearchStoresForZip: vi.fn(),
+        onContinue: vi.fn(),
+      }),
+    );
+    const search = screen.getByRole("button", { name: "Search stores for this ZIP" });
+    expect(search).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Changing the ZIP cleared the store list.",
+    );
   });
 });

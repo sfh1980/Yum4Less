@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatShopperPriceClause,
   formatShopperPriceWording,
+  formatShopperTotalWording,
   shopperPriceTierFromOfferFields,
   shopperPriceTierFromSaleConfidenceLevel,
   shopperPriceTierFromShoppingPlan,
@@ -74,6 +75,19 @@ describe("formatShopperPriceWording", () => {
     expect(formatShopperPriceWording(2.1, "low")).toMatch(/estimated/i);
     expect(formatShopperPriceWording(2.1, "low")).not.toMatch(/\$/);
     expect(formatShopperPriceWording(13.42, "high")).not.toMatch(/Lowest price we found/);
+  });
+
+  it("labels dinner totals and store subtotals as an estimated total", () => {
+    expect(formatShopperTotalWording(13.42, "high")).toBe(
+      "Estimated total: about $13.42",
+    );
+    expect(formatShopperTotalWording(6.49, "medium")).toBe(
+      "Estimated total: about $6.49",
+    );
+    expect(formatShopperTotalWording(2.1, "low")).toBe(
+      "Estimated total - worth verifying in store",
+    );
+    expect(formatShopperTotalWording(2.1, "low")).not.toMatch(/\$/);
   });
 
   it("fits the shopping-plan line as one sentence", () => {

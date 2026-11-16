@@ -1,11 +1,13 @@
 "use client";
 
 import { ServiceUnavailablePanel } from "@/components/service-unavailable-panel";
+import { TryAgainButton } from "@/components/meal-planner/try-again-button";
 import type { MarketSearchState } from "@/components/meal-planner/types";
 
 type IngredientsMarketUnavailableProps = {
   marketSearchLoading: boolean;
   marketSearchState: MarketSearchState;
+  onRetryStoreSearch?: () => void;
 };
 
 function looksLikeInfrastructureOutage(error: string | undefined): boolean {
@@ -28,6 +30,7 @@ function looksLikeInfrastructureOutage(error: string | undefined): boolean {
 export function IngredientsMarketUnavailable({
   marketSearchLoading,
   marketSearchState,
+  onRetryStoreSearch,
 }: IngredientsMarketUnavailableProps) {
   if (marketSearchLoading || marketSearchState.status === "loading") {
     return (
@@ -60,10 +63,15 @@ export function IngredientsMarketUnavailable({
     return (
       <div className="panel panel-padding meal-planner-panel flow-panel">
         <h2>Ingredients</h2>
-        <p className="field-error" role="alert">
-          {marketSearchState.error ??
-            "Could not load sale ingredients for your area."}
-        </p>
+        <div role="alert">
+          <p className="field-error">
+            {marketSearchState.error ??
+              "Could not load sale ingredients for your area."}
+          </p>
+          {marketSearchState.retryable && onRetryStoreSearch ? (
+            <TryAgainButton onClick={onRetryStoreSearch} />
+          ) : null}
+        </div>
       </div>
     );
   }

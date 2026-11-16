@@ -28,6 +28,7 @@ export type MarketSearchState = {
   errorHint?: string;
   notice?: string;
   providerConfigured?: boolean;
+  retryable?: boolean;
 };
 
 export type RecommendationState = {
@@ -38,6 +39,7 @@ export type RecommendationState = {
   error?: string;
   errorTitle?: string;
   errorHint?: string;
+  retryable?: boolean;
 };
 
 export type ActiveLocationRequest =

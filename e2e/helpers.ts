@@ -592,7 +592,7 @@ export async function runCoreMvpFlow(
   await expect(
     expandedPanel
       .getByText(
-        /Estimated lowest price(?: from an older ad)?: \$\d+\.\d{2}|Estimated price — worth verifying in store/,
+        /Estimated total: about \$\d+\.\d{2}|Estimated total - worth verifying in store/,
       )
       .first(),
   ).toBeVisible();

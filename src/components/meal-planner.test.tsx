@@ -205,7 +205,7 @@ describe("MealPlanner", () => {
       screen.getByRole("button", { name: "Weeknight Lemon Chicken" }),
     );
 
-    expect(screen.getByText("Estimated lowest price: $13.42")).toBeInTheDocument();
+    expect(screen.getByText("Estimated total: about $13.42")).toBeInTheDocument();
     expect(document.querySelector(".meal-card-price-age")).toBeNull();
     expect(
       screen.queryByText(

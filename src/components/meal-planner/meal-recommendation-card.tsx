@@ -11,7 +11,7 @@ import { MultiStoreRoutePanel } from "@/components/meal-planner/multi-store-rout
 import type { ActiveLocationRequest, FormState } from "@/components/meal-planner/types";
 import {
   formatShopperPriceClause,
-  formatShopperPriceWording,
+  formatShopperTotalWording,
   shopperPriceTierFromSaleConfidenceLevel,
   shopperPriceTierFromShoppingPlan,
 } from "@/lib/shopper-price-wording";
@@ -85,7 +85,7 @@ export function MealRecommendationCard({
   const hasPantryLines = meal.shoppingPlan.some((item) => item.sourcedFromPantry);
   const nearbyStores = market.nearbyStores;
   const mealPriceTier = shopperPriceTierFromShoppingPlan(meal.shoppingPlan);
-  const mealPriceLabel = formatShopperPriceWording(meal.estimatedTotal, mealPriceTier);
+  const mealPriceLabel = formatShopperTotalWording(meal.estimatedTotal, mealPriceTier);
 
   function handleOpenFullRecipe() {
     const recipeId = publicRecipePageId(meal.recipeAttributionUrl);
@@ -222,7 +222,7 @@ export function MealRecommendationCard({
                 storeName={store.storeName}
               />
               <span>
-                {formatShopperPriceWording(store.subtotal, mealPriceTier)} ·{" "}
+                {formatShopperTotalWording(store.subtotal, mealPriceTier)} ·{" "}
                 {store.itemCount} item(s)
               </span>
             </div>

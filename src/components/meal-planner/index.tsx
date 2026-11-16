@@ -42,15 +42,23 @@ type MealPlannerProps = {
   feedbackEnabled?: boolean;
   pricedAreaCoverageSentence?: string;
   geolocationTimeoutMs?: number;
+  storeSearchTimeoutMs?: number;
+  rankTimeoutMs?: number;
 };
 
 export function MealPlanner({
   feedbackEnabled = false,
   pricedAreaCoverageSentence = UNSET_PRICED_AREA_COVERAGE_SENTENCE,
   geolocationTimeoutMs,
+  storeSearchTimeoutMs,
+  rankTimeoutMs,
 }: MealPlannerProps) {
   throwIfLocalhostVerificationRenderErrorRequested();
-  const demo = useMealPlanner({ geolocationTimeoutMs });
+  const demo = useMealPlanner({
+    geolocationTimeoutMs,
+    storeSearchTimeoutMs,
+    rankTimeoutMs,
+  });
   const showInternalDetails = isInternalDetailsUiEnabled();
   const previousStep = previousOnboardingStep(
     demo.onboardingStep,
@@ -84,6 +92,7 @@ export function MealPlanner({
       onChangeSpendingLimit={demo.handleChangeSpendingLimit}
       onSearchStoresAgain={demo.handleSearchStoresAgain}
       onBackToPantry={demo.handleBackToPantry}
+      onRetryRank={demo.handleRankMeals}
     />
   );
 
@@ -125,7 +134,9 @@ export function MealPlanner({
             zipCode={demo.form.zipCode}
             error={demo.displayedErrors.zipCode}
             notice={demo.gpsNotice}
+            storeListClearedNotice={demo.zipStoreListNotice}
             onZipCodeChange={demo.handleZipCodeChange}
+            onSearchStoresForZip={demo.handleFindStores}
             onContinue={demo.handleZipInputContinue}
           />
         );
@@ -168,6 +179,7 @@ export function MealPlanner({
             showFactoryReset
             onContinue={demo.handleSaveSettings}
             onFactoryReset={demo.handleFactoryReset}
+            onRetryStoreSearch={demo.handleSearchStoresAgain}
           />
         );
     }
@@ -235,6 +247,7 @@ export function MealPlanner({
                 <IngredientsMarketUnavailable
                   marketSearchLoading={demo.marketSearchLoading}
                   marketSearchState={demo.marketSearchState}
+                  onRetryStoreSearch={demo.handleSearchStoresAgain}
                 />
               ) : null}
 
@@ -271,6 +284,7 @@ export function MealPlanner({
               market={demo.scopedMarket}
               marketSearchLoading={demo.marketSearchLoading}
               marketSearchState={demo.marketSearchState}
+              onRetryStoreSearch={demo.handleSearchStoresAgain}
             />
           ) : null}
 
@@ -301,6 +315,7 @@ export function MealPlanner({
               suppressInlineLoading={demo.rankLoading}
               storeListStale={demo.storeListStale}
               onSearchStoresAgain={demo.handleSearchStoresAgain}
+              onRetryRank={demo.handleRankMeals}
               surface="cook"
             />
           ) : null}

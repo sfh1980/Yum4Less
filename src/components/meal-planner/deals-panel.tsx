@@ -7,18 +7,21 @@ import {
 } from "@/lib/shopper-price-wording";
 import { shopperVisibleSaleLabel } from "@/lib/meal-price-source-copy";
 import { formatIngredientPriceAge } from "@/lib/sale-ingredient-offers";
+import { TryAgainButton } from "@/components/meal-planner/try-again-button";
 import type { MarketSearchState } from "@/components/meal-planner/types";
 
 type DealsPanelProps = {
   market?: RecommendationExperience["market"];
   marketSearchLoading: boolean;
   marketSearchState: MarketSearchState;
+  onRetryStoreSearch?: () => void;
 };
 
 export function DealsPanel({
   market,
   marketSearchLoading,
   marketSearchState,
+  onRetryStoreSearch,
 }: DealsPanelProps) {
   if (marketSearchLoading || marketSearchState.status === "loading") {
     return (
@@ -35,9 +38,14 @@ export function DealsPanel({
     return (
       <div className="panel panel-padding meal-planner-panel flow-panel">
         <h2>Deals</h2>
-        <p className="field-error" role="alert">
-          {marketSearchState.error ?? "Could not load deals for your area."}
-        </p>
+        <div role="alert">
+          <p className="field-error">
+            {marketSearchState.error ?? "Could not load deals for your area."}
+          </p>
+          {marketSearchState.retryable && onRetryStoreSearch ? (
+            <TryAgainButton onClick={onRetryStoreSearch} />
+          ) : null}
+        </div>
       </div>
     );
   }

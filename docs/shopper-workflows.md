@@ -90,7 +90,7 @@ Chrome **Back** walks `previousOnboardingStep`: zip-input → choose-location; z
 
 ## Tree 3 — Market search (`POST /api/market-search`)
 
-Market search runs when leaving the **radius** screen. Changing the miles after that search marks the store list out of date until **Search stores again**. A browser location prompt waits `YUM4LESS_GEOLOCATION_TIMEOUT_MS` (default 12 seconds), then offers a ZIP. **Enter ZIP code** stays available during the wait. After setup, Home/Deals can auto-search from saved location.
+Market search runs when leaving the **radius** screen. Changing the miles after that search marks the store list out of date until **Search stores again**. Changing the ZIP after a store list exists clears that list and says so, with **Search stores for this ZIP**. A browser location prompt waits `YUM4LESS_GEOLOCATION_TIMEOUT_MS` (default 12 seconds), then offers a ZIP. **Enter ZIP code** stays available during the wait. A store search waits `YUM4LESS_STORE_SEARCH_TIMEOUT_MS` (default 20 seconds) and dinner ranking waits `YUM4LESS_RANK_TIMEOUT_MS` (default 30 seconds). When either limit passes, the existing error is shown with **Try again**. After setup, Home/Deals can auto-search from saved location.
 
 ```mermaid
 flowchart TD
