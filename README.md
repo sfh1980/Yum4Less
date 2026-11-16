@@ -147,6 +147,7 @@ Copy `.env.example` → `.env.local`. Key variables:
 | `NEXT_PUBLIC_YUM4LESS_ANALYTICS` + `YUM4LESS_ENABLE_ANALYTICS` | Both required to record events |
 | `YUM4LESS_PRICED_AREA_LABEL` | Optional place phrase in the first-step coverage sentence. Unset says “a limited area” |
 | `YUM4LESS_CF_WEB_ANALYTICS_TOKEN` | Optional public Cloudflare Web Analytics token. Unset adds no beacon script |
+| `YUM4LESS_AREA_INTEREST_MAX_PER_MINUTE` | Cap for the ZIP waitlist route. Unset is 6 |
 | `YUM4LESS_FEEDBACK_ENABLED` | Enable `/feedback` (`db/init/007_customer_feedback.sql`; `038` for missing-store requests) |
 | `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS` | Publix section cards join the stored page. Unset is on. `0` keeps only the final page |
 | `YUM4LESS_PUBLIX_HARVEST_MIN_SHARE` | Thin when saved Publix cards are under this share of the largest section page (default 0.5) |

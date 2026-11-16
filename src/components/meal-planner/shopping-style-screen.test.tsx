@@ -3,7 +3,10 @@
 import { createElement } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { MapOnlyCoverageNotice } from "@/components/meal-planner/map-only-coverage-notice";
+import {
+  AREA_INTEREST_BUTTON_LABEL,
+  MapOnlyCoverageNotice,
+} from "@/components/meal-planner/map-only-coverage-notice";
 import { ShoppingStyleScreen } from "@/components/meal-planner/shopping-style-screen";
 
 describe("ShoppingStyleScreen", () => {
@@ -43,5 +46,26 @@ describe("ShoppingStyleScreen", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent(reason);
     expect(screen.getByRole("heading", { name: "How do you shop?" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: AREA_INTEREST_BUTTON_LABEL }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers the ZIP waitlist button when the shopper typed a ZIP", () => {
+    render(
+      createElement(ShoppingStyleScreen, {
+        shoppingStyle: "single-store",
+        coverageNotice: createElement(MapOnlyCoverageNotice, {
+          reason: "Nearby stores are on the map.",
+          zip: "30301",
+        }),
+        onShoppingStyleChange: vi.fn(),
+        onContinue: vi.fn(),
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: AREA_INTEREST_BUTTON_LABEL }),
+    ).toBeEnabled();
   });
 });

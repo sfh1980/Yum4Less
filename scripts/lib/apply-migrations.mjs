@@ -350,6 +350,8 @@ export function migrationEffectPresent(version, db) {
       return db.columnExists("morning_reports", "coverage_baseline");
     case "045":
       return db.tableExists("weekly_ad_run_stats");
+    case "046":
+      return db.tableExists("area_interest");
     default:
       return false;
   }

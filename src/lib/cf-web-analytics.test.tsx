@@ -5,6 +5,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CfWebAnalytics } from "@/components/cf-web-analytics";
 import { readCfWebAnalyticsToken } from "@/lib/cf-web-analytics";
+import { buildTestProcessEnv } from "@/lib/test-only/process-env-test-helpers";
 
 vi.mock("next/script", () => ({
   default: ({
@@ -18,18 +19,24 @@ vi.mock("next/script", () => ({
 
 describe("Cloudflare web analytics token", () => {
   it("is absent when unset and present when the token is a public site token", () => {
-    expect(readCfWebAnalyticsToken({})).toBeNull();
-    expect(readCfWebAnalyticsToken({ YUM4LESS_CF_WEB_ANALYTICS_TOKEN: "  " })).toBeNull();
+    expect(readCfWebAnalyticsToken(buildTestProcessEnv())).toBeNull();
     expect(
-      readCfWebAnalyticsToken({ YUM4LESS_CF_WEB_ANALYTICS_TOKEN: "bad token" }),
+      readCfWebAnalyticsToken(buildTestProcessEnv({ YUM4LESS_CF_WEB_ANALYTICS_TOKEN: "  " })),
     ).toBeNull();
     expect(
-      readCfWebAnalyticsToken({ YUM4LESS_CF_WEB_ANALYTICS_TOKEN: 'abc"defghij' }),
+      readCfWebAnalyticsToken(
+        buildTestProcessEnv({ YUM4LESS_CF_WEB_ANALYTICS_TOKEN: "bad token" }),
+      ),
     ).toBeNull();
     expect(
-      readCfWebAnalyticsToken({
-        YUM4LESS_CF_WEB_ANALYTICS_TOKEN: "abcdef1234567890",
-      }),
+      readCfWebAnalyticsToken(
+        buildTestProcessEnv({ YUM4LESS_CF_WEB_ANALYTICS_TOKEN: 'abc"defghij' }),
+      ),
+    ).toBeNull();
+    expect(
+      readCfWebAnalyticsToken(
+        buildTestProcessEnv({ YUM4LESS_CF_WEB_ANALYTICS_TOKEN: "abcdef1234567890" }),
+      ),
     ).toBe("abcdef1234567890");
   });
 

@@ -4,6 +4,10 @@
 
 ---
 
+## Resume (as of 2026-11-16)
+
+**This slice (branch `feat/first-users-2026-11-16`, not merged):** Built on `6240e9b`. The first location step says where dinner estimates are available. The place phrase is `YUM4LESS_PRICED_AREA_LABEL`; unset says "a limited area". After a search, a location with nearby stores and no ranked dinners shows the existing Tier C sentence before the store picker. A shopper who typed a ZIP can save that ZIP only. GPS shows the sentence and no button. `046_area_interest.sql` stores zip, first and last request time, and a count. No name, email, IP, or session id. New events: `site_opened`, `map_only_shown`, `recipe_opened`, `area_interest_saved`. Optional Cloudflare beacon when `YUM4LESS_CF_WEB_ANALYTICS_TOKEN` is set. `/owner` Analytics shows usage for the last 30 days. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. `npm test` **1581/1581**. Integration **75/75**. E2e **39 passed**, 2 skipped. A pass is not more dinners.
+
 ## Resume (as of 2026-11-14)
 
 **This slice (branch `fix/publix-section-reset`, not merged):** Built on `ed29f56`. A Publix section settle stays where that section's URL opened the shared list. The main page, the final page, and the thin reload still start at the top. Printed-count reading, the expected-count rule, and the stop rule were not changed. Dinner floors, `shopper_ranked`, the fail-loud set, and classification were not changed. `npm test` **1555/1555**. Build passed. Integration and e2e were not run. A pass is not more dinners.
@@ -61,6 +65,8 @@ The Tuesday visible-row drop is the opening purge (verification older than 24 ho
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **First users (2026-11-16, branch `feat/first-users-2026-11-16`):** The wizard says where dinner estimates are available before setup. A no-priced location shows the existing Tier C sentence, and a typed ZIP can be saved with no date promised. `046` is not on yum4less.com until the owner fast-forwards master, Watchtower pulls the image, and `sudo docker exec -w /app yum4less-ingest npm run db:migrate`. Set `YUM4LESS_PRICED_AREA_LABEL` on the app if a place phrase should show. Cloudflare Web Analytics stays off unless the token is set. A pass is not more dinners.
 
 - **Publix section reset (2026-11-14, branch `fix/publix-section-reset`):** Section pages stay where their URL opened them. The main page, the final page, and the thin reload still start at the top. Not on yum4less.com until the owner fast-forwards master and Watchtower pulls that image. A pass is not more dinners.
 
@@ -207,7 +213,7 @@ The Tuesday visible-row drop is the opening purge (verification older than 24 ho
 6. ~~**Deferred D1–D6** — 5-tab shell, theme tokens, ingredient gate/chips, map-as-link overlay, session pantry UI~~ **done (2026-06-25)** — ~~cuisine chips (R11)~~ **done (2026-09-15)** curated chips + `cuisine_tags` / hide-empty. Device-local Saved meals shipped 2026-08-20; **cross-device Saved stays paused** (needs accounts; same horizon as Redis).
 7. ~~**D7 — Color/tokens port** — Theme C (dark) + Theme D (light) from `.private/tokens.css`; flat page bg; system font; light default first visit; recolor buttons/panels/nav/map~~ **done (2026-06-26)** — owner browser verify **CLOSED** 2026-08-31 (live theme toggle in use).
 
-**Next (nationwide de-hardcoding — ordered):** ~~A no silent ZIP~~ **done** · ~~B1 `active_markets` + ZIP cache~~ **done** (TrueNAS `025`) · ~~B2 `chain_registry` + Coverage~~ **done** (TrueNAS `026`) · ~~C `/owner` Markets ZIP activate~~ **done** · ~~weekly-ad fail-soft for unranked chains~~ **done** · ~~Lidl/Walmart shopper-ranked v1~~ **done** then **Lidl demoted 2026-09-03** (`030` live) · ~~Dollar General Flipp + food-desert dinners~~ **done** (`031` live **2026-09-03 23:59Z**) · ~~membership DB-wins~~ **done** (Watchtower **2026-09-03 23:55Z**). **Market admission is on live** (unattended worker **2026-08-31** 07:01–07:09Z; ZIP-outline fence on the 2026-09-03 ingest image). **`23220` Activate** owner-clicked 2026-08-31 (first ingest **2026-09-01**). **Settings grocery-pin picker** shipped. **Slice D** catalog OSM↔official matcher is **in repo** (provisional writes; AUTO_CONFIRM and shopper expand stay **OFF**). Organic shopper-ZIP waiting list, threshold profiles, scrape TZ, banner-row split, and new ranked adapters stay later.
+**Next (nationwide de-hardcoding — ordered):** ~~A no silent ZIP~~ **done** · ~~B1 `active_markets` + ZIP cache~~ **done** (TrueNAS `025`) · ~~B2 `chain_registry` + Coverage~~ **done** (TrueNAS `026`) · ~~C `/owner` Markets ZIP activate~~ **done** · ~~weekly-ad fail-soft for unranked chains~~ **done** · ~~Lidl/Walmart shopper-ranked v1~~ **done** then **Lidl demoted 2026-09-03** (`030` live) · ~~Dollar General Flipp + food-desert dinners~~ **done** (`031` live **2026-09-03 23:59Z**) · ~~membership DB-wins~~ **done** (Watchtower **2026-09-03 23:55Z**). **Market admission is on live** (unattended worker **2026-08-31** 07:01–07:09Z; ZIP-outline fence on the 2026-09-03 ingest image). **`23220` Activate** owner-clicked 2026-08-31 (first ingest **2026-09-01**). **Settings grocery-pin picker** shipped. **Slice D** catalog OSM↔official matcher is **in repo** (provisional writes; AUTO_CONFIRM and shopper expand stay **OFF**). **ZIP-only area interest** shipped in code 2026-11-16 (`046`; typed ZIP, no email). Threshold profiles, scrape TZ, banner-row split, and new ranked adapters stay later.
 
 **Later (when reprioritized):** chain go/no-go on the free stack (OSM / Flipp / scrape; no paid aggregator) — **keep in docs, not near-term**; GYAM Cloudflare hostname on same tunnel; Saved tab **cross-device** persistence (paused with accounts); SNAP nationwide USDA CSV on TrueNAS (parser + fixture path **shipped**; live CSV path is ops-optional); banner-per-row with shared family adapters (not 20 copied Kroger clients). Owner Check fragment lists: research, stay open. New ranked adapters stay open. **Never** coupon/checkout. User accounts stay out until Redis-scale traffic. BJ's / Target **ranked** pricing stays later until floors + membership — Walmart yield plan already closed (Flipp + `/owner`). Cuisine chips (R11) **shipped 2026-09-15**.
 
@@ -340,6 +346,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-16 — Coverage sentence, usage events, area waitlist
+
+**Theme:** Two recorded visits in 30 days, both likely the owner. A shopper outside the priced area only learned that after choosing location and stores.
+
+**Shipped:** The first location step states where dinner price estimates are available. The place phrase is the server setting `YUM4LESS_PRICED_AREA_LABEL` (max 80 characters, no `<` or `>`). Unset uses "a limited area". After search, `no-trusted-rollout` shows the existing Tier C sentence before the store picker. A typed 5-digit ZIP can be saved with "Let us know you want dinners here". Thank-you text names no date. GPS shows the sentence and no button. `046_area_interest.sql` upserts zip, first_requested_at, last_requested_at, and request_count. POST `/api/area-interest` returns `{ ok: true }` only. Repeat clicks in one browser session do not post again. `YUM4LESS_AREA_INTEREST_MAX_PER_MINUTE` defaults to 6 (valid 1–30). Events `site_opened` (setup_complete), `map_only_shown` (typed zip only), `recipe_opened` (numeric recipe id), and `area_interest_saved` (typed zip) fire at most once per session per state. A 5-digit `zip` is the only new stored property; coordinates and free text stay rejected. Optional Cloudflare beacon when `YUM4LESS_CF_WEB_ANALYTICS_TOKEN` matches the public token shape. `/owner` usage is read-only and uses the existing owner key.
+
+**Limits:** Branch `feat/first-users-2026-11-16`. Not on yum4less.com until the owner fast-forwards master. `046` applies only after migrate on the ingest container. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. A pass is not more dinners.
+
+**Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1581/1581** pass (270 files). `npm run test:integration` **75/75** pass (23 files); applied `046` on `yum4less_test`. `npm run build` exit 0 (Next.js 15.5.28). `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0. Semgrep CLI `--config auto` on the waitlist route and changed analytics files exit 0, no findings. Semgrep MCP timed out.
 
 ### 2026-11-14 — Publix section pages stay on their own section
 
@@ -3576,6 +3592,8 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-16 | **Dinner-estimate coverage is said up front, and a typed ZIP can be saved when this location has no ranked stores.** The place phrase is `YUM4LESS_PRICED_AREA_LABEL`. Unset says "a limited area" and names no city. Tier choice stays `buildMarketShopperBlockedStatus`. The waitlist stores the 5-digit ZIP and counts only. No name, email, IP, session id, GPS-derived ZIP, or date promise. A repeat in the same browser session is not posted again. | **Active** |
+| 2026-11-16 | **Usage events stay first-party and ZIP-only.** `site_opened`, `map_only_shown`, `recipe_opened`, and `area_interest_saved` fire once per session per state. `zip` is allowed only as exactly five digits on the two ZIP events. Coordinates and free text stay rejected. Cloudflare Web Analytics is optional and adds no cookie of our own. Unset token adds no script. | **Active** |
 | 2026-11-12 | **A short Publix harvest is the existing thin page.** Saved cards under `YUM4LESS_PUBLIX_HARVEST_MIN_SHARE` (default 0.5) of the largest section page, or under `YUM4LESS_PUBLIX_FEED_MIN_SHARE` (default 0.25) of a non-empty savings feed, set `price_miss_reason` to `thin-page` and keep the reason sentence. An empty or missing feed skips the feed check. The other thin inputs and the retry cap stay. | **Active** |
 | 2026-11-12 | **Each chain's night is one row.** `weekly_ad_run_stats` is unique on run date and chain. A later run that day updates the row. A failed write is logged and does not fail the night. The table holds counts and short reasons, not page HTML, URLs, or store ids. | **Active** |
 | 2026-11-12 | **The morning note flags a one-day drop against the newest marked census.** `YUM4LESS_MORNING_DROP_ALERT_SHARE` defaults to 0.30. The line is `Name fell from N to M rows per store.` and it sets Needs you on that morning. The same share applies to matched ingredients when both nights have a stats row. No line when the newest census is missing or unmarked. The 7-morning high and its second-morning line stay. | **Active** |
@@ -3597,7 +3615,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 | 2026-10-17 | **The morning note can include one Cloudflare line.** Ingest reads whether the `truenas-homelab` tunnel is connected and how many 500-level responses yum4less.com had yesterday. Errors or a down tunnel say **Needs you.** The token is read-only and stays on the ingest service. Raw logs are not stored. A pass is not more dinners. | **Active** |
 | 2026-10-15 | **A late outside result rewrites today’s note.** GitHub’s daily check may start hours after 8:15am. Saving the result updates that morning’s note and sends it to Discord once. The 8:15am job sends Discord only when the result is already there. Clocks stay. The app service needs the same Discord webhook as ingest. A pass is not more dinners. | **Active** |
 | 2026-10-12 | **Obsidian vault holds the durable notes.** Canonical vault `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`. Yum4Less Home is `Projects/Yum4Less/Yum4Less Home.md`. This file stays the committed history, decision log, and verification snapshot. A material slice updates both when status, a decision, or next actions changed. Nexus session records are archive. Do not store secrets in the vault. | **Active** |
-| 2026-10-12 | **Morning note books nearby off-ZIPs.** Every other even UTC day the ingest morning job Activates up to 3 ZIPs that Markets already shows as pale shapes (a ranked store within about 8 miles of an active ZIP). Shoppers still do not create a waiting list. Owner Markets Check then Activate stays for a ZIP you type. If last night failed, add none. An empty nearby pool pauses adding and the note says so. One note each morning, same words on Discord and `/owner`, including good days. A pass is not more dinners. Not live until the image is published, Watchtower pulls, `039` is applied, the Discord webhook is set, and the GitHub admin-key secret is set. | **Narrowed** (2026-10-20: ZIP choice is a touching Census outline, not the 8-mile circle. The note, the every-other-day cap, and owner Activate stay.) |
+| 2026-10-12 | **Morning note books nearby off-ZIPs.** Every other even UTC day the ingest morning job Activates up to 3 ZIPs that Markets already shows as pale shapes (a ranked store within about 8 miles of an active ZIP). Shoppers still do not create a waiting list. Owner Markets Check then Activate stays for a ZIP you type. If last night failed, add none. An empty nearby pool pauses adding and the note says so. One note each morning, same words on Discord and `/owner`, including good days. A pass is not more dinners. Not live until the image is published, Watchtower pulls, `039` is applied, the Discord webhook is set, and the GitHub admin-key secret is set. | **Narrowed** (2026-10-20: ZIP choice is a touching Census outline, not the 8-mile circle. The note, the every-other-day cap, and owner Activate stay. 2026-11-16: a typed ZIP on a location with no ranked stores can be saved; still no email, and Activate stays owner-only.) |
 | 2026-10-06 | **High audit gate allows only the unpatched braces advisory.** `sharp` stays on `0.35.5` and `source-map-js` on `1.2.2`. `GHSA-vfj7-8cjw-p6xm` (`braces` `<=3.0.3`, eslint-only, no patched release) does not block the image. Any other high or critical advisory still fails CI. Remove the exception when braces leaves the audit report. Do not `npm audit fix --force`. | **Active** |
 | 2026-10-06 | **After update checks are a read of this database.** `/owner` After update does not start ingest, Activate, or scrape. A pass is not more dinners and is not yum4less.com unless you ran it there. | **Active** |
 | 2026-10-06 | **Local Richmond ingest set is 18 ZIPs in `active_markets`.** `23060`, `23111`, `23219`–`23230`, `23233`, `23234`, `23235`, `23298`. Not a TypeScript roster. Laptop and yum4less.com stay separate databases. Overnight pricing happens only where those rows exist and a night job runs. Do not claim more dinners from Activate alone. | **Active** |
@@ -3763,6 +3781,13 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (coverage sentence, usage events, area waitlist) | 2026-11-16 | **1581/1581** pass (270 files). |
+| `npm run typecheck` (same slice) | 2026-11-16 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run lint` (same slice) | 2026-11-16 | **Pass** (exit 0). Re-run after the ProcessEnv test-helper casts. |
+| `npm run test:integration` (`046` on `yum4less_test`) | 2026-11-16 | **75/75** pass (23 files). Applied `046_area_interest.sql` on `yum4less_test`. |
+| `npm run build` (same slice) | 2026-11-16 | **Pass** (Next.js 15.5.28, exit 0). |
+| `npm run test:e2e:ci` (same slice) | 2026-11-16 | **39 passed**, 2 skipped, exit 0. |
+| Semgrep CLI `--config auto` (area-interest route, analytics, usage, beacon) | 2026-11-16 | **Exit 0.** No findings printed. Semgrep MCP timed out. |
 | `npm test` (Publix section pages stay at their own place in the list) | 2026-11-14 | **1555/1555** pass (262 files). |
 | `npm run typecheck` (same slice) | 2026-11-14 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same slice) | 2026-11-14 | **Pass** (exit 0) |
@@ -4213,6 +4238,7 @@ Full chat prose lives in agent transcripts; use these links for deep context.
 
 | When | Topic | Transcript |
 |------|-------|------------|
+| 2026-11-16 | Coverage sentence, usage events, area waitlist | [First users](8cf546a9-5cf6-4183-94a5-620ef83509da) |
 | 2026-11-11 | Publix coverage, chain isolation, rate limit, morning note | [Current issues](68315514-cfb5-4557-b08c-a54d297d878f) |
 | 2026-10-12 | Morning note and nearby ZIP adds | [Daily automation](8c596a68-2d6c-4db6-a764-a1e7af9c390b) |
 | 2026-09-28 | Store street on the building row | [Markets reach](03b94214-33a8-47ef-8f4f-a98e90a98963) |

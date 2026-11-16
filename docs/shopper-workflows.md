@@ -152,7 +152,7 @@ flowchart TD
 
 Client `marketBlocked` = scoped market exists **and** `recommendationReadyStoreCount === 0`.
 
-When that check is `no-trusted-rollout` (stores nearby, none priced for dinners), the shopping-style screen shows the existing Tier C reason **before** the store picker. The same line stays at the top of the store picker. Empty radius and a database outage keep their own messages. Tier rules are unchanged.
+When that check is `no-trusted-rollout` (stores nearby, none priced for dinners), the shopping-style screen shows the existing Tier C reason **before** the store picker. The same line stays at the top of the store picker. If the shopper typed a ZIP, a button labeled **Let us know you want dinners here** saves that ZIP only. The thank-you does not name a date. GPS with no typed ZIP shows the reason and no button. Empty radius and a database outage keep their own messages. Tier rules are unchanged.
 
 **Key files:** `src/lib/market-shopper-status.ts`, `src/lib/priced-area-coverage.ts`, `src/components/meal-planner/use-meal-planner.ts`
 

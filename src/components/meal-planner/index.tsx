@@ -82,8 +82,12 @@ export function MealPlanner({
   );
 
   const mapOnlyReason = demo.market ? tierCMapOnlyReason(demo.market) : null;
+  const enteredZip =
+    demo.locationValidationMode === "zip" && /^\d{5}$/.test(demo.form.zipCode.trim())
+      ? demo.form.zipCode.trim()
+      : undefined;
   const mapOnlyNotice = mapOnlyReason ? (
-    <MapOnlyCoverageNotice reason={mapOnlyReason} />
+    <MapOnlyCoverageNotice reason={mapOnlyReason} zip={enteredZip} />
   ) : null;
   const lockedMessage = formatLockedTabMessage(demo.remainingSetupSteps);
   const tabOptions = {

@@ -20,9 +20,7 @@ export const UNSET_PRICED_AREA_COVERAGE_SENTENCE = pricedAreaCoverageSentence(nu
  * Owner-set place phrase from YUM4LESS_PRICED_AREA_LABEL.
  * Empty, too long, or markup-like values fall back to the neutral sentence.
  */
-export function readPricedAreaLabel(
-  env: NodeJS.ProcessEnv = process.env,
-): string | null {
+export function readPricedAreaLabel(env: NodeJS.ProcessEnv = process.env): string | null {
   const collapsed = env.YUM4LESS_PRICED_AREA_LABEL?.trim().replace(/\s+/g, " ") ?? "";
   if (!collapsed || collapsed.length > PRICED_AREA_LABEL_MAX_LENGTH) {
     return null;

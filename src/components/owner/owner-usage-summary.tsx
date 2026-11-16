@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { AreaInterestRow } from "@/lib/area-interest/area-interest-repository";
 import type { UsageSummary, UsageZipCount } from "@/lib/analytics/usage-summary";
 
 type OwnerUsageSummaryProps = {
@@ -10,11 +11,15 @@ type OwnerUsageSummaryProps = {
 type UsageResponse = {
   ok?: boolean;
   usage?: UsageSummary;
+  areaInterest?: AreaInterestRow[];
+  areaInterestNotice?: string;
   error?: string;
 };
 
 export function OwnerUsageSummary({ adminKey }: OwnerUsageSummaryProps) {
   const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [areaInterest, setAreaInterest] = useState<AreaInterestRow[] | null>(null);
+  const [areaInterestNotice, setAreaInterestNotice] = useState<string | undefined>();
   const [notice, setNotice] = useState<string | undefined>();
 
   useEffect(() => {
@@ -34,10 +39,13 @@ export function OwnerUsageSummary({ adminKey }: OwnerUsageSummaryProps) {
         const body = (await response.json()) as UsageResponse;
         if (!response.ok || body.ok !== true || !isUsageSummary(body.usage)) {
           setUsage(null);
+          setAreaInterest(null);
           setNotice(body.error ?? "Usage summary is unavailable.");
           return;
         }
         setUsage(body.usage);
+        setAreaInterest(Array.isArray(body.areaInterest) ? body.areaInterest : []);
+        setAreaInterestNotice(body.areaInterestNotice);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -83,6 +91,23 @@ export function OwnerUsageSummary({ adminKey }: OwnerUsageSummaryProps) {
           )}
           <ZipList title="Top ZIPs, map-only" rows={usage.mapOnlyTopZips} />
           <ZipList title="Top ZIPs, area interest" rows={usage.areaInterestTopZips} />
+          <h4>Area interest counts</h4>
+          {areaInterestNotice ? (
+            <p className="field-hint" role="status">
+              {areaInterestNotice}
+            </p>
+          ) : null}
+          {!areaInterest || areaInterest.length === 0 ? (
+            <p className="panel-copy">No ZIP requests yet.</p>
+          ) : (
+            <ol>
+              {areaInterest.map((row) => (
+                <li key={row.zip}>
+                  {row.zip}: {row.requestCount}
+                </li>
+              ))}
+            </ol>
+          )}
         </>
       ) : null}
     </section>

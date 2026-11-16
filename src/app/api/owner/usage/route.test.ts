@@ -3,9 +3,14 @@ import { GET } from "@/app/api/owner/usage/route";
 import { resetRateLimitsForTests } from "@/lib/rate-limit";
 
 const summarizeRecentUsage = vi.fn();
+const listAreaInterest = vi.fn();
 
 vi.mock("@/lib/analytics/usage-summary", () => ({
   summarizeRecentUsage: (...args: unknown[]) => summarizeRecentUsage(...args),
+}));
+
+vi.mock("@/lib/area-interest/area-interest-repository", () => ({
+  listAreaInterest: (...args: unknown[]) => listAreaInterest(...args),
 }));
 
 const originalKey = process.env.YUM4LESS_FEEDBACK_ADMIN_KEY;
@@ -15,6 +20,7 @@ describe("GET /api/owner/usage", () => {
   afterEach(() => {
     resetRateLimitsForTests();
     summarizeRecentUsage.mockReset();
+    listAreaInterest.mockReset();
     restoreEnv("YUM4LESS_FEEDBACK_ADMIN_KEY", originalKey);
     restoreEnv("DATABASE_URL", originalDatabaseUrl);
   });
@@ -27,11 +33,26 @@ describe("GET /api/owner/usage", () => {
 
     expect(response.status).toBe(401);
     expect(summarizeRecentUsage).not.toHaveBeenCalled();
+    expect(listAreaInterest).not.toHaveBeenCalled();
   });
 
   it("returns the summary and no session or address fields", async () => {
     process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "expected-key";
     process.env.DATABASE_URL = "postgresql://example";
+    listAreaInterest.mockResolvedValue([
+      {
+        zip: "30301",
+        requestCount: 4,
+        firstRequestedAt: "2026-11-01T00:00:00.000Z",
+        lastRequestedAt: "2026-11-09T00:00:00.000Z",
+      },
+      {
+        zip: "20202",
+        requestCount: 1,
+        firstRequestedAt: "2026-11-02T00:00:00.000Z",
+        lastRequestedAt: "2026-11-02T00:00:00.000Z",
+      },
+    ]);
     summarizeRecentUsage.mockResolvedValue({
       windowDays: 30,
       visitorsByDay: [{ day: "2026-11-09", visitors: 1 }],
@@ -59,7 +80,24 @@ describe("GET /api/owner/usage", () => {
         mapOnlyTopZips: [{ zip: "30301", count: 2 }],
         areaInterestTopZips: [{ zip: "30301", count: 1 }],
       },
+      areaInterest: [
+        {
+          zip: "30301",
+          requestCount: 4,
+          firstRequestedAt: "2026-11-01T00:00:00.000Z",
+          lastRequestedAt: "2026-11-09T00:00:00.000Z",
+        },
+        {
+          zip: "20202",
+          requestCount: 1,
+          firstRequestedAt: "2026-11-02T00:00:00.000Z",
+          lastRequestedAt: "2026-11-02T00:00:00.000Z",
+        },
+      ],
     });
+    expect(body.areaInterest.map((row: { requestCount: number }) => row.requestCount)).toEqual([
+      4, 1,
+    ]);
     expect(body.usage).not.toHaveProperty("sessionId");
     expect(body.usage).not.toHaveProperty("latitude");
     expect(body.usage).not.toHaveProperty("longitude");
