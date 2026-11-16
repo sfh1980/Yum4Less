@@ -4,13 +4,17 @@
 
 ---
 
+## Resume (as of 2026-11-16, shopper round follow-up)
+
+**This slice (branch `fix/shopper-round-2026-11-16`, not on yum4less.com):** Continues `bfd9645`. A dinner total and a store subtotal read `Estimated total: about $X`. The low tier reads `Estimated total - worth verifying in store` and shows no dollar. A single item still uses the existing estimate line. A store search waits `YUM4LESS_STORE_SEARCH_TIMEOUT_MS` (default 20 seconds). Dinner ranking waits `YUM4LESS_RANK_TIMEOUT_MS` (default 30 seconds). Both are read when the home page is requested. When the limit passes, the existing error is shown with **Try again**. Changing the ZIP after a store list exists says the list was cleared and offers **Search stores for this ZIP**. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. `npm test` **1597/1597**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. A pass is not more dinners.
+
 ## Resume (as of 2026-11-16, shopper round)
 
 **This slice (branch `fix/shopper-round-2026-11-16`, not on yum4less.com):** Built on `a94e74a`. An empty dinner list has **Change spending limit**. A miles change keeps the shopper on pantry until **Search stores again**. A location prompt waits `YUM4LESS_GEOLOCATION_TIMEOUT_MS` (default 12 seconds) and **Enter ZIP code** stays available during the wait. **Suggest recipes** before stores are ready stays on pantry with **Finish choosing stores**. Every price tier says estimated. High is `Estimated lowest price: $X`. Medium adds `from an older ad`. Low hides the dollar. A shopping line reads `{ingredient} from {store} for an estimated lowest price of $X (quantity).` Tier C, the coverage sentence, and the area waitlist are unchanged. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. `npm test` **1591/1591**. Typecheck passed. `npm run test:e2e:ci` **39 passed**, 2 skipped (that run includes `npm run build`). A pass is not more dinners.
 
 ## Resume (as of 2026-11-16)
 
-**This slice (branch `feat/first-users-2026-11-16`, not merged):** Built on `6240e9b`. The first location step says where dinner estimates are available. The place phrase is `YUM4LESS_PRICED_AREA_LABEL`; unset says "a limited area". After a search, a location with nearby stores and no ranked dinners shows the existing Tier C sentence before the store picker. A shopper who typed a ZIP can save that ZIP only. GPS shows the sentence and no button. `046_area_interest.sql` stores zip, first and last request time, and a count. No name, email, IP, or session id. New events: `site_opened`, `map_only_shown`, `recipe_opened`, `area_interest_saved`. Optional Cloudflare beacon on the home page when `YUM4LESS_CF_WEB_ANALYTICS_TOKEN` is set. `/` is request-time so the place label, feedback switch, and beacon token come from the running container. `/faq` and `/terms` stay static. `/owner` Analytics shows usage for the last 30 days. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. `npm test` **1582/1582**. Integration **75/75** (unchanged this follow-up). E2e **39 passed**, 2 skipped. A pass is not more dinners.
+**This slice (PR 43, on master and live since 2026-11-16):** Commits `f309047`, `a2086e0`, `9424938`, and `a94e74a`. Built on `6240e9b`. The first location step says where dinner estimates are available. The place phrase is `YUM4LESS_PRICED_AREA_LABEL`; it is set on the live app. Unset would say "a limited area". After a search, a location with nearby stores and no ranked dinners shows the existing Tier C sentence before the store picker. A shopper who typed a ZIP can save that ZIP only. GPS shows the sentence and no button. `046_area_interest.sql` is applied. It stores zip, first and last request time, and a count. No name, email, IP, or session id. New events: `site_opened`, `map_only_shown`, `recipe_opened`, `area_interest_saved`. Optional Cloudflare beacon on the home page when `YUM4LESS_CF_WEB_ANALYTICS_TOKEN` is set. `/` is request-time so the place label, feedback switch, and beacon token come from the running container. `/faq` and `/terms` stay static. `/owner` Analytics shows usage for the last 30 days. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. `npm test` **1582/1582**. Integration **75/75**. E2e **39 passed**, 2 skipped. A pass is not more dinners.
 
 ## Resume (as of 2026-11-14)
 
@@ -70,9 +74,11 @@ The Tuesday visible-row drop is the opening purge (verification older than 24 ho
 
 ### Working today (honest)
 
-- **Shopper round (2026-11-16, branch `fix/shopper-round-2026-11-16`):** Empty dinners, a miles change, a hung location prompt, and an early Suggest recipes each have one next step. Every price tier says estimated. Not on yum4less.com until this branch is pushed and the owner fast-forwards master. A pass is not more dinners.
+- **Shopper round follow-up (2026-11-16, branch `fix/shopper-round-2026-11-16`):** Dinner totals and store subtotals say `Estimated total: about $X`. Low totals hide the dollar. A store search waits 20 seconds (`YUM4LESS_STORE_SEARCH_TIMEOUT_MS`) and dinner ranking waits 30 seconds (`YUM4LESS_RANK_TIMEOUT_MS`) unless those settings say otherwise. A ZIP change that clears the store list says so and offers **Search stores for this ZIP**. Not on yum4less.com until the owner fast-forwards master. A pass is not more dinners.
 
-- **First users (2026-11-16, branch `feat/first-users-2026-11-16`):** The wizard says where dinner estimates are available before setup. A no-priced location shows the existing Tier C sentence, and a typed ZIP can be saved with no date promised. `046` is not on yum4less.com until the owner fast-forwards master, Watchtower pulls the image, and `sudo docker exec -w /app yum4less-ingest npm run db:migrate`. Set `YUM4LESS_PRICED_AREA_LABEL` on the app if a place phrase should show. Cloudflare Web Analytics stays off unless the token is set. A pass is not more dinners.
+- **Shopper round (2026-11-16, branch `fix/shopper-round-2026-11-16`):** Empty dinners, a miles change, a hung location prompt, and an early Suggest recipes each have one next step. Every price tier says estimated. The follow-up above is the same branch. A pass is not more dinners.
+
+- **First users (2026-11-16, PR 43, live):** The wizard says where dinner estimates are available before setup. A no-priced location shows the existing Tier C sentence, and a typed ZIP can be saved with no date promised. On master and live since 2026-11-16 (`f309047`, `a2086e0`, `9424938`, `a94e74a`). Migration `046` is applied. `YUM4LESS_PRICED_AREA_LABEL` is set. Cloudflare Web Analytics stays off unless the token is set. A pass is not more dinners.
 
 - **Publix section reset (2026-11-14, branch `fix/publix-section-reset`):** Section pages stay where their URL opened them. The main page, the final page, and the thin reload still start at the top. Not on yum4less.com until the owner fast-forwards master and Watchtower pulls that image. A pass is not more dinners.
 
@@ -353,6 +359,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 ## Changelog (newest first)
 
+### 2026-11-16 — Shopper round follow-up
+
+**Theme:** Dinner totals still said "Estimated lowest price". A store search or a dinner ranking that never returned left the spinner up. Changing the ZIP cleared the store list without saying so. The continuity note still said the first-users branch was not merged.
+
+**Shipped:** Dinner totals and store subtotals use `Estimated total: about $X`. Low is `Estimated total - worth verifying in store` with no dollar. Single-item prices stay on the existing estimate line. `YUM4LESS_STORE_SEARCH_TIMEOUT_MS` defaults to 20000. `YUM4LESS_RANK_TIMEOUT_MS` defaults to 30000. Valid values are 1000–120000. Both are read when the home page is requested, with `YUM4LESS_GEOLOCATION_TIMEOUT_MS` (default 12000). When a limit passes, the existing store-lookup or recommendation error is shown with **Try again**, and that error is announced. Changing the ZIP after a store list exists says "Changing the ZIP cleared the store list." and offers **Search stores for this ZIP**. PR 43 (`f309047`, `a2086e0`, `9424938`, `a94e74a`) is on master and live since 2026-11-16. Migration `046` is applied. `YUM4LESS_PRICED_AREA_LABEL` is set.
+
+**Limits:** Branch `fix/shopper-round-2026-11-16`. Not on yum4less.com until the owner fast-forwards master. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. Integration and Semgrep were not run. A pass is not more dinners.
+
+**Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1597/1597** pass (274 files). `npm run build` exit 0 (Next.js 15.5.28). `/` is `ƒ` (54.7 kB / 188 kB first load). `/faq` and `/terms` stay `○`. `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0. No live retailer, Flipp, Overpass, or yum4less.com request.
+
 ### 2026-11-16 — Shopper dead ends and estimate wording
 
 **Theme:** A shopper could finish a search with no dinners and no way back, change the miles and then get a vague failure, wait forever on a location prompt, or tap Suggest recipes before stores were ready. The strongest price line did not say estimated, and a shopping line read “for Lowest price we found: $X”.
@@ -369,7 +385,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 **Shipped:** The first location step states where dinner price estimates are available. The place phrase is the server setting `YUM4LESS_PRICED_AREA_LABEL` (max 80 characters, no `<` or `>`). Unset uses "a limited area". After search, `no-trusted-rollout` shows the existing Tier C sentence before the store picker. A typed 5-digit ZIP can be saved with "Let us know you want dinners here". Thank-you text names no date. GPS shows the sentence and no button. `046_area_interest.sql` upserts zip, first_requested_at, last_requested_at, and request_count. POST `/api/area-interest` returns `{ ok: true }` only. Repeat clicks in one browser session do not post again. `YUM4LESS_AREA_INTEREST_MAX_PER_MINUTE` defaults to 6 (valid 1–30). Events `site_opened` (setup_complete), `map_only_shown` (typed zip only), `recipe_opened` (numeric recipe id), and `area_interest_saved` (typed zip) fire at most once per session per state. A 5-digit `zip` is the only new stored property; coordinates and free text stay rejected. Optional Cloudflare beacon when `YUM4LESS_CF_WEB_ANALYTICS_TOKEN` matches the public token shape. `/owner` usage is read-only and uses the existing owner key.
 
-**Limits:** Branch `feat/first-users-2026-11-16`. Not on yum4less.com until the owner fast-forwards master. `046` applies only after migrate on the ingest container. `/` is `force-dynamic` so the place label, the home feedback switch, and the Cloudflare token are read from the container, not baked by `next build`. The beacon is on the home page. `/faq` and `/terms` stay static. `/feedback` was already request-time. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. A pass is not more dinners.
+**Limits:** PR 43 (`f309047`, `a2086e0`, `9424938`, `a94e74a`) is on master and live since 2026-11-16. Migration `046` is applied. `YUM4LESS_PRICED_AREA_LABEL` is set. `/` is `force-dynamic` so the place label, the home feedback switch, and the Cloudflare token are read from the container, not baked by `next build`. The beacon is on the home page. `/faq` and `/terms` stay static. `/feedback` was already request-time. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. A pass is not more dinners.
 
 **Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1582/1582** pass (271 files) after `/` was made request-time. Earlier the same day, before that follow-up, **1581/1581** (270 files). `npm run test:integration` **75/75** pass (23 files); applied `046` on `yum4less_test`. `npm run build` exit 0 (Next.js 15.5.28); `/` is `ƒ`, `/faq` and `/terms` stay `○`. `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0. The first e2e attempt looked for Chromium in a sandbox cache and did not launch; the retry used the installed browsers. Semgrep CLI `--config auto` on the waitlist route and changed analytics files exit 0, no findings. Semgrep MCP timed out. This follow-up did not re-run integration or Semgrep.
 
@@ -3608,6 +3624,8 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-16 | **Dinner totals say estimated total.** A dinner total and a store subtotal read `Estimated total: about $X`. Low reads `Estimated total - worth verifying in store` and shows no dollar. A single item keeps `Estimated lowest price` (or the older-ad or verify-in-store line). Price math is unchanged. | **Active** |
+| 2026-11-16 | **A store search and a dinner ranking stop waiting.** `YUM4LESS_STORE_SEARCH_TIMEOUT_MS` defaults to 20 seconds. `YUM4LESS_RANK_TIMEOUT_MS` defaults to 30 seconds. Valid values are 1000–120000. Both are read when the home page is requested. The existing error is shown with Try again. Changing the ZIP after a store list exists says the list was cleared and offers Search stores for this ZIP. | **Active** |
 | 2026-11-16 | **A stuck shopper gets one next step.** An empty dinner list offers Change spending limit. A miles change does not rank against the previous store list; Search stores again runs the search. A location prompt waits `YUM4LESS_GEOLOCATION_TIMEOUT_MS` (default 12 seconds) and Enter ZIP code stays available. Suggest recipes before stores are ready stays on pantry and offers Finish choosing stores. Tier C copy stays the blocked-status sentence. | **Active** |
 | 2026-11-16 | **Every shopper price tier says the number is an estimate.** High (`advertised-recent`) is `Estimated lowest price: $X`. Medium (`advertised-aging`) is `Estimated lowest price from an older ad: $X`. Low (stale, regular, no sale data, directional-provider-match) is `Estimated price — worth verifying in store` and shows no dollar. A shopping line is `{ingredient} from {store} for an estimated … (quantity).` Tiers still come from the existing sale-confidence levels. Price math is unchanged. | **Active** (supersedes the 2026-07-20 shopper price confidence wording strings) |
 | 2026-11-16 | **Dinner-estimate coverage is said up front, and a typed ZIP can be saved when this location has no ranked stores.** The place phrase is `YUM4LESS_PRICED_AREA_LABEL`. Unset says "a limited area" and names no city. Tier choice stays `buildMarketShopperBlockedStatus`. The waitlist stores the 5-digit ZIP and counts only. No name, email, IP, session id, GPS-derived ZIP, or date promise. A repeat in the same browser session is not posted again. | **Active** |
@@ -3799,6 +3817,11 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (shopper round follow-up) | 2026-11-16 | **1597/1597** pass (274 files). |
+| `npm run typecheck` (same follow-up) | 2026-11-16 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run lint` (same follow-up) | 2026-11-16 | **Pass** (exit 0) |
+| `npm run build` (same follow-up) | 2026-11-16 | **Pass** (Next.js 15.5.28). `/` is `ƒ` (54.7 kB / 188 kB). `/faq` and `/terms` stay `○`. |
+| `npm run test:e2e:ci` (same follow-up) | 2026-11-16 | **39 passed**, 2 skipped, exit 0. |
 | `npm test` (shopper dead ends and estimate wording) | 2026-11-16 | **1591/1591** pass (273 files). |
 | `npm run typecheck` (same slice) | 2026-11-16 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run test:e2e:ci` (same slice) | 2026-11-16 | **39 passed**, 2 skipped, exit 0. The script also ran `npm run build` (Next.js 15.5.28). `/` stayed `ƒ`. |
@@ -4264,6 +4287,7 @@ Full chat prose lives in agent transcripts; use these links for deep context.
 
 | When | Topic | Transcript |
 |------|-------|------------|
+| 2026-11-16 | Shopper round: dead ends, estimate wording, follow-up | [Shopper round](d7160a2c-2773-43f8-bf3c-8a3e33b827c0) |
 | 2026-11-16 | Coverage sentence, usage events, area waitlist | [First users](8cf546a9-5cf6-4183-94a5-620ef83509da) |
 | 2026-11-11 | Publix coverage, chain isolation, rate limit, morning note | [Current issues](68315514-cfb5-4557-b08c-a54d297d878f) |
 | 2026-10-12 | Morning note and nearby ZIP adds | [Daily automation](8c596a68-2d6c-4db6-a764-a1e7af9c390b) |
