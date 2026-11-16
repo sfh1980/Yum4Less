@@ -12,6 +12,7 @@ import {
 
 vi.mock("@/lib/analytics/track-client-event", () => ({
   trackClientEvent: vi.fn(),
+  trackClientEventOnce: vi.fn(),
 }));
 
 function marketPayload(locationLabel: string, zipCode: string) {

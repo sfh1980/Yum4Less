@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { FeedbackRecentFeed } from "@/components/feedback/feedback-recent-feed";
 import { OwnerAnalyticsFeed } from "@/components/owner/owner-analytics-feed";
+import { OwnerUsageSummary } from "@/components/owner/owner-usage-summary";
 import { OwnerCoveragePanel } from "@/components/owner/owner-coverage-panel";
 import { OwnerAfterUpdatePanel } from "@/components/owner/owner-after-update-panel";
 import { OwnerMorningPanel } from "@/components/owner/owner-morning-panel";
@@ -1083,6 +1084,7 @@ export function OwnerConsole() {
             role="tabpanel"
           >
             <h2>Analytics</h2>
+            <OwnerUsageSummary adminKey={activeKey} />
             <p className="panel-copy">
               Events from <code>analytics_events</code>, grouped by session.
               Loaded {events.length}

@@ -26,6 +26,10 @@ export type AnalyticsScoreboard = {
   rankFailed: number;
   rankZeroDinners: number;
   storePinSelected: number;
+  siteOpened: number;
+  mapOnlyShown: number;
+  recipeOpened: number;
+  areaInterestSaved: number;
 };
 
 function truncateSessionId(sessionId: string | null): string {
@@ -98,6 +102,10 @@ export function summarizeAnalyticsEvents(
         row.properties.result_count_bucket === "0",
     ).length,
     storePinSelected: countName(rows, "store_pin_selected"),
+    siteOpened: countName(rows, "site_opened"),
+    mapOnlyShown: countName(rows, "map_only_shown"),
+    recipeOpened: countName(rows, "recipe_opened"),
+    areaInterestSaved: countName(rows, "area_interest_saved"),
   };
 }
 
@@ -180,6 +188,10 @@ export function OwnerAnalyticsFeed({ rows, notice }: OwnerAnalyticsFeedProps) {
             <li>Ranks failed: {scoreboard.rankFailed}</li>
             <li>Ranks with zero dinners: {scoreboard.rankZeroDinners}</li>
             <li>Pins selected: {scoreboard.storePinSelected}</li>
+            <li>Site opened: {scoreboard.siteOpened}</li>
+            <li>Map only shown: {scoreboard.mapOnlyShown}</li>
+            <li>Recipe opened: {scoreboard.recipeOpened}</li>
+            <li>Area interest saved: {scoreboard.areaInterestSaved}</li>
           </ul>
           <label className="field" htmlFor="owner-analytics-event-filter">
             <span className="field-label">Event type</span>
@@ -196,6 +208,10 @@ export function OwnerAnalyticsFeed({ rows, notice }: OwnerAnalyticsFeedProps) {
               <option value="rank_meals_completed">Ranks finished</option>
               <option value="rank_meals_failed">Ranks failed</option>
               <option value="store_pin_selected">Pins selected</option>
+              <option value="site_opened">Site opened</option>
+              <option value="map_only_shown">Map only shown</option>
+              <option value="recipe_opened">Recipe opened</option>
+              <option value="area_interest_saved">Area interest saved</option>
             </select>
           </label>
           {filteredSessions.map((session) => {

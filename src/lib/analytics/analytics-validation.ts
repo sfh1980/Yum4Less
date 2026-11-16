@@ -45,6 +45,10 @@ export const ANALYTICS_EVENT_PROPERTY_ALLOWLISTS: Record<
   ],
   rank_meals_failed: ["error_code"],
   store_pin_selected: ["chain", "recommendation_enabled"],
+  site_opened: ["setup_complete"],
+  map_only_shown: ["zip"],
+  recipe_opened: ["recipe_id"],
+  area_interest_saved: ["zip"],
 };
 
 export function validateAnalyticsEventPayload(
@@ -78,6 +82,11 @@ export function validateAnalyticsEventPayload(
     return allowlistResult;
   }
 
+  const valueResult = validateEventPropertyValues(eventName, propertiesResult.properties);
+  if (!valueResult.ok) {
+    return valueResult;
+  }
+
   return {
     ok: true,
     event: {
@@ -98,6 +107,31 @@ function validateEventPropertyAllowlist(
     if (!allowed.has(key)) {
       return { ok: false, error: "Analytics event property is not supported." };
     }
+  }
+
+  return { ok: true };
+}
+
+function validateEventPropertyValues(
+  eventName: AnalyticsEventName,
+  properties: AnalyticsProperties,
+): { ok: true } | { ok: false; error: string } {
+  if (eventName === "site_opened" && typeof properties.setup_complete !== "boolean") {
+    return { ok: false, error: "Analytics event property is not supported." };
+  }
+
+  if (eventName === "recipe_opened") {
+    if (typeof properties.recipe_id !== "string" || !/^\d{1,12}$/.test(properties.recipe_id)) {
+      return { ok: false, error: "Analytics event includes disallowed data." };
+    }
+  }
+
+  if (eventName === "area_interest_saved" && typeof properties.zip !== "string") {
+    return { ok: false, error: "Analytics event property is not supported." };
+  }
+
+  if ("zip" in properties && (typeof properties.zip !== "string" || !/^\d{5}$/.test(properties.zip))) {
+    return { ok: false, error: "Analytics event includes disallowed data." };
   }
 
   return { ok: true };

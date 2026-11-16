@@ -1,6 +1,6 @@
 # Customer feedback path
 
-Yum4Less keeps **first-party analytics** separate from customer feedback. Analytics events are coarse, allowlisted, and must never carry raw ZIP codes, exact coordinates, prices, meal titles, store IDs, provider IDs, IPs, or user agents. Owner notes: Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`.
+Yum4Less keeps **first-party analytics** separate from customer feedback. Analytics events are coarse and allowlisted. They must never carry exact coordinates, a ZIP derived from GPS, prices, meal titles, store IDs, provider IDs, names, email, free text, IPs, or user agents. A 5-digit ZIP is stored only on map-only and area-interest events when the shopper typed that ZIP. Owner notes: Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`.
 
 ## Channels
 

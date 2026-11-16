@@ -6,6 +6,10 @@ export const ANALYTICS_EVENT_NAMES = [
   "rank_meals_completed",
   "rank_meals_failed",
   "store_pin_selected",
+  "site_opened",
+  "map_only_shown",
+  "recipe_opened",
+  "area_interest_saved",
 ] as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];

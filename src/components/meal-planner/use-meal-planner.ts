@@ -14,7 +14,8 @@ import {
   mapMarketSearchApiError,
   mapRecommendationApiError,
 } from "@/components/meal-planner/recommendation-error-copy";
-import { trackClientEvent } from "@/lib/analytics/track-client-event";
+import { trackClientEvent, trackClientEventOnce } from "@/lib/analytics/track-client-event";
+import { tierCMapOnlyReason } from "@/lib/priced-area-coverage";
 import { trimMarketForRankingPassThrough } from "@/lib/market-pass-through";
 import {
   buildSettingsPreferencesPatch,
@@ -307,6 +308,15 @@ export function useMealPlanner() {
     }, delay);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!preferencesHydrated) {
+      return;
+    }
+    trackClientEventOnce("site_opened", "load", {
+      setup_complete: settingsComplete,
+    });
+  }, [preferencesHydrated, settingsComplete]);
 
   useEffect(() => {
     if (recommendationState.status === "ready") {
@@ -718,6 +728,17 @@ export function useMealPlanner() {
           result.market.recommendationReadyStoreCount,
         ),
       });
+      if (tierCMapOnlyReason(result.market)) {
+        const enteredZip =
+          request.mode === "zip" && /^\d{5}$/.test(payload.zipCode.trim())
+            ? payload.zipCode.trim()
+            : undefined;
+        trackClientEventOnce(
+          "map_only_shown",
+          enteredZip ?? "no-zip",
+          enteredZip ? { zip: enteredZip } : {},
+        );
+      }
     } catch (error: unknown) {
       if (requestId !== marketSearchRequestRef.current) {
         return;

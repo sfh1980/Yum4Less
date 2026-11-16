@@ -1,6 +1,8 @@
 "use client";
 
 import { CollapsibleCardSection } from "@/components/meal-planner/collapsible-card-section";
+import { trackClientEventOnce } from "@/lib/analytics/track-client-event";
+import { publicRecipePageId } from "@/lib/analytics/public-recipe-page-id";
 import { MapPinIcon } from "@/components/map-pin-icon";
 import type { MealRecommendation, RecommendationExperience } from "@/lib/recommendation-service";
 import { HelpHint } from "@/components/help-hint";
@@ -84,6 +86,14 @@ export function MealRecommendationCard({
   const mealPriceTier = shopperPriceTierFromShoppingPlan(meal.shoppingPlan);
   const mealPriceLabel = formatShopperPriceWording(meal.estimatedTotal, mealPriceTier);
 
+  function handleOpenFullRecipe() {
+    const recipeId = publicRecipePageId(meal.recipeAttributionUrl);
+    if (!recipeId) {
+      return;
+    }
+    trackClientEventOnce("recipe_opened", recipeId, { recipe_id: recipeId });
+  }
+
   return (
     <article className="card recommendation-card">
       <div
@@ -116,6 +126,7 @@ export function MealRecommendationCard({
               {meal.recipeAttributionUrl ? (
                 <a
                   href={meal.recipeAttributionUrl}
+                  onClick={handleOpenFullRecipe}
                   rel="noopener noreferrer"
                   target="_blank"
                 >
@@ -292,6 +303,7 @@ export function MealRecommendationCard({
             <a
               className="text-link"
               href={meal.recipeAttributionUrl}
+              onClick={handleOpenFullRecipe}
               rel="noopener noreferrer"
               target="_blank"
             >

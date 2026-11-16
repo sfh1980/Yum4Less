@@ -23,6 +23,21 @@ describe("analytics privacy", () => {
     });
   });
 
+  it("accepts a 5-digit ZIP and still rejects coordinates and free text", () => {
+    expect(validateAnalyticsProperties({ zip: "30301" })).toEqual({
+      ok: true,
+      properties: { zip: "30301" },
+    });
+    expect(validateAnalyticsProperties({ zip: "near the river" })).toEqual({
+      ok: false,
+      error: "Analytics event includes disallowed data.",
+    });
+    expect(validateAnalyticsProperties({ latitude: 37.6085, longitude: -77.3739 })).toEqual({
+      ok: false,
+      error: "Analytics event includes disallowed data.",
+    });
+  });
+
   it("rejects location and internal identifiers", () => {
     expect(validateAnalyticsProperties({ latitude: 37.6 })).toEqual({
       ok: false,

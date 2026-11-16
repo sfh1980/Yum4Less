@@ -123,7 +123,7 @@ Expired sale rows stay in `price_observations` as history; unchanged sales with 
 
 **Kroger:** set `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_API_ENV=production`; verify with `npm run probe:kroger-api`. Certification API omits store-specific prices.
 
-**Analytics:** first-party, off by default; rejects raw ZIPs, coordinates, prices, and meal titles. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1`, including a missing-store request from the store list — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; Ingredient review, Markets Check/Activate plus a zoomable coverage-area map, Coverage search that lists tracked banners then stores, Analytics scoreboard, feedback). Operator ZIP steps → [`docs/owner-zip-intake.md`](docs/owner-zip-intake.md).
+**Analytics:** first-party, off by default; rejects coordinates, prices, meal titles, and free text. A 5-digit ZIP is stored only for map-only and area-interest events when the shopper typed one. Optional Cloudflare Web Analytics (`YUM4LESS_CF_WEB_ANALYTICS_TOKEN`) adds Cloudflare's beacon when set; leave it unset to use Cloudflare's automatic setup instead, or to add no third-party script. **Feedback:** `/feedback` when `YUM4LESS_FEEDBACK_ENABLED=1`, including a missing-store request from the store list — see [`docs/feedback-path.md`](docs/feedback-path.md). **FAQ / Terms:** `/faq` and `/terms`. **Owner console:** `/owner` (admin key; Ingredient review, Markets Check/Activate plus a zoomable coverage-area map, Coverage search that lists tracked banners then stores, Analytics scoreboard, feedback). Operator ZIP steps → [`docs/owner-zip-intake.md`](docs/owner-zip-intake.md).
 
 **Semgrep:** CI runs `semgrep ci` when the GitHub repository secret `SEMGREP_APP_TOKEN` is set (Settings → Secrets → Actions). Local Cursor hooks use the optional `semgrep` CLI — not the same token. Lint, unit tests, build, integration, and E2E remain merge gates.
 
@@ -146,6 +146,7 @@ Copy `.env.example` → `.env.local`. Key variables:
 | `YUM4LESS_CLIENT_IP_HEADER` | Optional single trusted header used instead of the hop list |
 | `NEXT_PUBLIC_YUM4LESS_ANALYTICS` + `YUM4LESS_ENABLE_ANALYTICS` | Both required to record events |
 | `YUM4LESS_PRICED_AREA_LABEL` | Optional place phrase in the first-step coverage sentence. Unset says “a limited area” |
+| `YUM4LESS_CF_WEB_ANALYTICS_TOKEN` | Optional public Cloudflare Web Analytics token. Unset adds no beacon script |
 | `YUM4LESS_FEEDBACK_ENABLED` | Enable `/feedback` (`db/init/007_customer_feedback.sql`; `038` for missing-store requests) |
 | `YUM4LESS_PUBLIX_MERGE_SECTION_CARDS` | Publix section cards join the stored page. Unset is on. `0` keeps only the final page |
 | `YUM4LESS_PUBLIX_HARVEST_MIN_SHARE` | Thin when saved Publix cards are under this share of the largest section page (default 0.5) |

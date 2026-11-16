@@ -6,6 +6,33 @@ import type {
 } from "@/lib/analytics/analytics-event-types";
 
 const SESSION_STORAGE_KEY = "yum4less_analytics_session_id";
+const ONCE_PREFIX = "yum4less_analytics_once:";
+
+/** At most once per browser session for this event and state key. Failures stay silent. */
+export function trackClientEventOnce(
+  eventName: AnalyticsEventName,
+  dedupeKey: string,
+  properties: AnalyticsProperties = {},
+) {
+  if (process.env.NEXT_PUBLIC_YUM4LESS_ANALYTICS !== "1") {
+    return;
+  }
+  if (!dedupeKey || dedupeKey.length > 80) {
+    return;
+  }
+
+  try {
+    const storageKey = `${ONCE_PREFIX}${eventName}:${dedupeKey}`;
+    if (window.sessionStorage.getItem(storageKey) === "1") {
+      return;
+    }
+    window.sessionStorage.setItem(storageKey, "1");
+  } catch {
+    return;
+  }
+
+  trackClientEvent(eventName, properties);
+}
 
 export function trackClientEvent(
   eventName: AnalyticsEventName,

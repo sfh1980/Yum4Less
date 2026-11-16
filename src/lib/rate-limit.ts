@@ -92,6 +92,7 @@ export const RATE_LIMITS = {
   apiOwnerMarkets: { windowMs: 60_000, maxRequests: 20 },
   apiOwnerAfterUpdate: { windowMs: 60_000, maxRequests: 10 },
   apiOwnerMorningReport: { windowMs: 60_000, maxRequests: 10 },
+  apiOwnerUsage: { windowMs: 60_000, maxRequests: 30 },
   apiMarketSearch: { windowMs: 60_000, maxRequests: 30 },
   apiRecommendations: { windowMs: 60_000, maxRequests: 20 },
   apiPantryCoverage: { windowMs: 60_000, maxRequests: 40 },

@@ -13,7 +13,6 @@ const FORBIDDEN_PROPERTY_KEYS = new Set([
   "storeId",
   "storeName",
   "userAgent",
-  "zip",
   "zipCode",
 ]);
 const FORBIDDEN_PROPERTY_KEYS_NORMALIZED = new Set(
@@ -33,6 +32,14 @@ export function validateAnalyticsProperties(
 
   const safeProperties: AnalyticsProperties = {};
   for (const [key, value] of Object.entries(properties)) {
+    if (key.toLowerCase() === "zip") {
+      if (key !== "zip" || typeof value !== "string" || !/^\d{5}$/.test(value)) {
+        return { ok: false, error: "Analytics event includes disallowed data." };
+      }
+      safeProperties.zip = value;
+      continue;
+    }
+
     if (
       FORBIDDEN_PROPERTY_KEYS.has(key) ||
       FORBIDDEN_PROPERTY_KEYS_NORMALIZED.has(key.toLowerCase())
