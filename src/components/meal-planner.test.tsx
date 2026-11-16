@@ -205,7 +205,7 @@ describe("MealPlanner", () => {
       screen.getByRole("button", { name: "Weeknight Lemon Chicken" }),
     );
 
-    expect(screen.getByText("Lowest price we found: $13.42")).toBeInTheDocument();
+    expect(screen.getByText("Estimated lowest price: $13.42")).toBeInTheDocument();
     expect(document.querySelector(".meal-card-price-age")).toBeNull();
     expect(
       screen.queryByText(
@@ -218,7 +218,9 @@ describe("MealPlanner", () => {
       ),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Shopping plan" }));
-    expect(screen.getAllByText(/Lowest price we found: \$6\.49|Estimated lowest price: \$6\.49/).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/an estimated lowest price of \$6\.49/).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByRole("link", {
         name: "Where do these prices come from? Opens FAQ",

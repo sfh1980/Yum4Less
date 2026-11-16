@@ -10,6 +10,7 @@ import { formatDifficulty } from "@/components/meal-planner/form-validation";
 import { MultiStoreRoutePanel } from "@/components/meal-planner/multi-store-route-panel";
 import type { ActiveLocationRequest, FormState } from "@/components/meal-planner/types";
 import {
+  formatShopperPriceClause,
   formatShopperPriceWording,
   shopperPriceTierFromSaleConfidenceLevel,
   shopperPriceTierFromShoppingPlan,
@@ -257,13 +258,13 @@ export function MealRecommendationCard({
             ) : (
               <li key={`${meal.title}-${item.ingredientId}-${item.storeName}`}>
                 <strong>{item.ingredient}</strong> from {item.storeName} for{" "}
-                {formatShopperPriceWording(
+                {formatShopperPriceClause(
                   item.price,
                   shopperPriceTierFromSaleConfidenceLevel(
                     item.saleConfidence.level,
                   ),
                 )}{" "}
-                ({item.quantityNote})
+                ({item.quantityNote}).
                 {shopperVisibleSaleLabel(item.saleLabel, item.storeName ?? "")
                   ? ` · ${shopperVisibleSaleLabel(item.saleLabel, item.storeName ?? "")}`
                   : ""}

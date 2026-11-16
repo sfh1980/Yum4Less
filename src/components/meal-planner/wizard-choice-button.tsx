@@ -1,10 +1,13 @@
 "use client";
 
+import type { Ref } from "react";
+
 type WizardChoiceButtonProps = {
   label: string;
   description?: string;
   selected?: boolean;
   disabled?: boolean;
+  buttonRef?: Ref<HTMLButtonElement>;
   onClick: () => void;
 };
 
@@ -13,6 +16,7 @@ export function WizardChoiceButton({
   description,
   selected = false,
   disabled = false,
+  buttonRef,
   onClick,
 }: WizardChoiceButtonProps) {
   return (
@@ -22,6 +26,7 @@ export function WizardChoiceButton({
       aria-label={label}
       aria-pressed={selected}
       disabled={disabled}
+      ref={buttonRef}
       onClick={onClick}
     >
       <span className="wizard-choice-label">{label}</span>

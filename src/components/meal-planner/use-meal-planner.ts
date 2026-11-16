@@ -71,6 +71,21 @@ import {
   type OnboardingStep,
   type PersistableOnboardingStep,
 } from "@/components/meal-planner/onboarding-step";
+import {
+  CHANGE_SPENDING_LIMIT_ACTION,
+  CHOOSE_STORES_ACTION,
+  MILES_CHANGED_NOTICE,
+  SEARCH_STORES_AGAIN_ACTION,
+  SPENDING_LIMIT_NOTICE,
+  STORES_NOT_READY_NOTICE,
+} from "@/components/meal-planner/shopper-recovery-copy";
+import {
+  GEOLOCATION_PROMPT_TIMEOUT_MS_DEFAULT,
+  GPS_PROMPT_TIMED_OUT_NOTICE,
+  GPS_PROMPT_TIMED_OUT_SAVED_ZIP_NOTICE,
+  requestBrowserLocation,
+  type GeolocationPromptFailure,
+} from "@/lib/geolocation-prompt";
 import { resolveThemePreference } from "@/lib/resolve-theme";
 import type { PantryItemSource } from "@/components/meal-planner/pantry-step-panel";
 import type {
@@ -180,13 +195,21 @@ function persistLocationPreferences(
   );
 }
 
-export function useMealPlanner() {
+export function useMealPlanner(options?: { geolocationTimeoutMs?: number }) {
+  const geolocationTimeoutMs =
+    options?.geolocationTimeoutMs ?? GEOLOCATION_PROMPT_TIMEOUT_MS_DEFAULT;
   const [activeTab, setActiveTab] = useState<AppTab>(SSR_DEFAULT_APP_TAB);
   const [settingsComplete, setSettingsComplete] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("choose-location");
   const [gpsRequesting, setGpsRequesting] = useState(false);
   const [gpsNotice, setGpsNotice] = useState<string>();
+  const [suggestRecipesNotice, setSuggestRecipesNotice] = useState<string>();
+  const [suggestRecipesActionLabel, setSuggestRecipesActionLabel] =
+    useState<string>();
+  const [suggestRecipesAction, setSuggestRecipesAction] = useState<
+    "stores" | "search" | "budget"
+  >("stores");
   const [pendingBrowserLocation, setPendingBrowserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -231,6 +254,7 @@ export function useMealPlanner() {
   const rankRequestRef = useRef(0);
   const pantryCoverageRequestRef = useRef(0);
   const geolocationRequestRef = useRef(0);
+  const cancelGeolocationPromptRef = useRef<(() => void) | null>(null);
   const autoMarketSearchAttemptedRef = useRef(false);
   const rankedStoreScopeRef = useRef<string[] | null>(null);
   const pantryCoverageStatusRef = useRef<PantryCoverageState["status"]>(
@@ -341,6 +365,13 @@ export function useMealPlanner() {
   }, [marketSearchState, recommendationState]);
 
   const market = marketSearchState.market;
+  const storeListStale = useMemo(() => {
+    if (!market || marketSearchState.status !== "ready") {
+      return false;
+    }
+    const miles = Number(form.radiusMiles);
+    return Number.isFinite(miles) && miles !== market.radiusMiles;
+  }, [form.radiusMiles, market, marketSearchState.status]);
   const scopedMarket = useMemo(() => {
     if (!market) {
       return market;
@@ -473,7 +504,102 @@ export function useMealPlanner() {
     clearHomeSessionDinners();
   }
 
+  function stopGeolocationPrompt() {
+    cancelGeolocationPromptRef.current?.();
+    cancelGeolocationPromptRef.current = null;
+  }
+
+  function watchBrowserLocation(
+    onSuccess: (position: GeolocationPosition) => void,
+    onFailure: (reason: GeolocationPromptFailure) => void,
+  ) {
+    stopGeolocationPrompt();
+    const requestId = ++geolocationRequestRef.current;
+    cancelGeolocationPromptRef.current = requestBrowserLocation({
+      timeoutMs: geolocationTimeoutMs,
+      onSuccess: (position) => {
+        if (requestId !== geolocationRequestRef.current) {
+          return;
+        }
+        onSuccess(position);
+      },
+      onFailure: (reason) => {
+        if (requestId !== geolocationRequestRef.current) {
+          return;
+        }
+        onFailure(reason);
+      },
+    });
+  }
+
+  function showSuggestBlock(block: {
+    notice: string;
+    actionLabel: string;
+    action: "stores" | "search" | "budget";
+  }) {
+    setSuggestRecipesNotice(block.notice);
+    setSuggestRecipesActionLabel(block.actionLabel);
+    setSuggestRecipesAction(block.action);
+  }
+
+  function clearSuggestBlock() {
+    setSuggestRecipesNotice(undefined);
+    setSuggestRecipesActionLabel(undefined);
+  }
+
+  function rankPrerequisiteBlock(): {
+    notice: string;
+    actionLabel: string;
+    action: "stores" | "search" | "budget";
+  } | null {
+    if (storeListStale) {
+      return {
+        notice: MILES_CHANGED_NOTICE,
+        actionLabel: SEARCH_STORES_AGAIN_ACTION,
+        action: "search",
+      };
+    }
+
+    if (
+      marketSearchState.status === "loading" ||
+      !market ||
+      !activeLocationRequest
+    ) {
+      return {
+        notice: STORES_NOT_READY_NOTICE,
+        actionLabel: CHOOSE_STORES_ACTION,
+        action: "stores",
+      };
+    }
+
+    if (form.selectedStoreIds.length === 0) {
+      return {
+        notice: STORES_NOT_READY_NOTICE,
+        actionLabel: CHOOSE_STORES_ACTION,
+        action: "stores",
+      };
+    }
+
+    const locationFieldErrors = validateLocationFields(
+      form,
+      activeLocationRequest.mode === "zip",
+    );
+    if (
+      Object.keys(locationFieldErrors).length > 0 ||
+      Object.keys(validateMealFields(form)).length > 0
+    ) {
+      return {
+        notice: SPENDING_LIMIT_NOTICE,
+        actionLabel: CHANGE_SPENDING_LIMIT_ACTION,
+        action: "budget",
+      };
+    }
+
+    return null;
+  }
+
   function resetLocationDependentState() {
+    stopGeolocationPrompt();
     marketSearchRequestRef.current += 1;
     rankRequestRef.current += 1;
     geolocationRequestRef.current += 1;
@@ -547,14 +673,8 @@ export function useMealPlanner() {
       setMarketSearchState({ status: "loading" });
       setRecommendationState(initialRecommendationState);
 
-      const geolocationRequestId = ++geolocationRequestRef.current;
-
-      navigator.geolocation.getCurrentPosition(
+      watchBrowserLocation(
         (position) => {
-          if (geolocationRequestId !== geolocationRequestRef.current) {
-            return;
-          }
-
           void runMarketSearch(
             {
               zipCode: form.zipCode.trim(),
@@ -569,15 +689,14 @@ export function useMealPlanner() {
             },
           );
         },
-        () => {
-          if (geolocationRequestId !== geolocationRequestRef.current) {
-            return;
-          }
-
-          void runMarketSearchWithZipFallback(
-            "Location access was denied — using your saved ZIP instead.",
-            radiusMiles,
-          );
+        (reason) => {
+          const notice =
+            reason === "timeout"
+              ? GPS_PROMPT_TIMED_OUT_SAVED_ZIP_NOTICE
+              : reason === "denied"
+                ? "Location access was denied — using your saved ZIP instead."
+                : "Browser location is unavailable — using your saved ZIP instead.";
+          void runMarketSearchWithZipFallback(notice, radiusMiles);
         },
       );
       return;
@@ -665,6 +784,11 @@ export function useMealPlanner() {
           errorTitle: mapped.title,
           errorHint: mapped.hint,
         });
+        showSuggestBlock({
+          notice: mapped.body,
+          actionLabel: SEARCH_STORES_AGAIN_ACTION,
+          action: "search",
+        });
         trackClientEvent("location_search_failed", {
           mode: request.mode,
           error_code:
@@ -686,6 +810,7 @@ export function useMealPlanner() {
         market: result.market,
         ...(options?.notice ? { notice: options.notice } : {}),
       });
+      clearSuggestBlock();
       setActiveLocationRequest(request);
       persistLocationPreferences(
         {
@@ -744,12 +869,18 @@ export function useMealPlanner() {
         return;
       }
 
+      const lookupError =
+        error instanceof Error
+          ? error.message
+          : "Nearby store lookup failed unexpectedly.";
       setMarketSearchState({
         status: "error",
-        error:
-          error instanceof Error
-            ? error.message
-            : "Nearby store lookup failed unexpectedly.",
+        error: lookupError,
+      });
+      showSuggestBlock({
+        notice: lookupError,
+        actionLabel: SEARCH_STORES_AGAIN_ACTION,
+        action: "search",
       });
       trackClientEvent("location_search_failed", {
         mode: request.mode,
@@ -842,6 +973,7 @@ export function useMealPlanner() {
     setZipCenterCancelNotice(undefined);
     setLocationValidationMode("zip");
     setHasAttemptedLocationSearch(true);
+    stopGeolocationPrompt();
     geolocationRequestRef.current += 1;
 
     if (Object.keys(validateLocationFields(form, true)).length > 0) {
@@ -890,6 +1022,20 @@ export function useMealPlanner() {
   function handleRadiusMilesChange(radiusMiles: string) {
     setForm((current) => ({ ...current, radiusMiles }));
     setZipCenterCancelNotice(undefined);
+    const miles = Number(radiusMiles);
+    if (!market || marketSearchState.status !== "ready" || !Number.isFinite(miles)) {
+      return;
+    }
+    if (miles === market.radiusMiles) {
+      clearSuggestBlock();
+      return;
+    }
+    invalidateRankedResults();
+    showSuggestBlock({
+      notice: MILES_CHANGED_NOTICE,
+      actionLabel: SEARCH_STORES_AGAIN_ACTION,
+      action: "search",
+    });
   }
 
   function handleBrowserLocationSearch() {
@@ -897,9 +1043,9 @@ export function useMealPlanner() {
     setGpsNotice(undefined);
     setLocationValidationMode("browser");
     setHasAttemptedLocationSearch(true);
-    geolocationRequestRef.current += 1;
 
     if (!("geolocation" in navigator)) {
+      stopGeolocationPrompt();
       setGpsRequesting(false);
       setGpsNotice(GPS_UNAVAILABLE_NOTICE);
       goToOnboardingStep("zip-input");
@@ -907,15 +1053,8 @@ export function useMealPlanner() {
     }
 
     setGpsRequesting(true);
-
-    const geolocationRequestId = ++geolocationRequestRef.current;
-
-    navigator.geolocation.getCurrentPosition(
+    watchBrowserLocation(
       (position) => {
-        if (geolocationRequestId !== geolocationRequestRef.current) {
-          return;
-        }
-
         const coords = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -929,13 +1068,11 @@ export function useMealPlanner() {
         });
         goToOnboardingStep("radius", { locationMode: "geolocation" });
       },
-      () => {
-        if (geolocationRequestId !== geolocationRequestRef.current) {
-          return;
-        }
-
+      (reason) => {
         setGpsRequesting(false);
-        setGpsNotice(GPS_UNAVAILABLE_NOTICE);
+        setGpsNotice(
+          reason === "timeout" ? GPS_PROMPT_TIMED_OUT_NOTICE : GPS_UNAVAILABLE_NOTICE,
+        );
         goToOnboardingStep("zip-input");
       },
     );
@@ -1001,6 +1138,14 @@ export function useMealPlanner() {
     invalidateRankedResults();
     setActiveTab("home");
     setFlowStep("welcome-budget");
+    const savedMiles = Number(form.radiusMiles);
+    if (
+      market &&
+      Number.isFinite(savedMiles) &&
+      savedMiles !== market.radiusMiles
+    ) {
+      startMarketSearchForCurrentLocation();
+    }
   }
 
   function handleFactoryReset() {
@@ -1053,6 +1198,7 @@ export function useMealPlanner() {
   }
 
   function handleEnterZipPath() {
+    stopGeolocationPrompt();
     setGpsRequesting(false);
     geolocationRequestRef.current += 1;
     setLocationValidationMode("zip");
@@ -1115,12 +1261,8 @@ export function useMealPlanner() {
         return;
       }
 
-      const geolocationRequestId = ++geolocationRequestRef.current;
-      navigator.geolocation.getCurrentPosition(
+      watchBrowserLocation(
         (position) => {
-          if (geolocationRequestId !== geolocationRequestRef.current) {
-            return;
-          }
           void runMarketSearch(
             {
               zipCode: "",
@@ -1135,11 +1277,10 @@ export function useMealPlanner() {
             },
           );
         },
-        () => {
-          if (geolocationRequestId !== geolocationRequestRef.current) {
-            return;
-          }
-          setGpsNotice(GPS_UNAVAILABLE_NOTICE);
+        (reason) => {
+          setGpsNotice(
+            reason === "timeout" ? GPS_PROMPT_TIMED_OUT_NOTICE : GPS_UNAVAILABLE_NOTICE,
+          );
           goToOnboardingStep("zip-input");
         },
       );
@@ -1192,6 +1333,7 @@ export function useMealPlanner() {
   }
 
   function handleWizardBack() {
+    stopGeolocationPrompt();
     geolocationRequestRef.current += 1;
     setGpsRequesting(false);
     const locationMode =
@@ -1378,13 +1520,54 @@ export function useMealPlanner() {
   }
 
   function handleSuggestRecipesFromPantry() {
+    const block = rankPrerequisiteBlock();
+    if (block) {
+      showSuggestBlock(block);
+      return;
+    }
+
+    clearSuggestBlock();
     rankedStoreScopeRef.current = null;
     setRecommendationState(initialRecommendationState);
     setFlowStep("results");
     void handleRankMeals();
   }
 
+  function handleSuggestRecipesRecovery() {
+    if (suggestRecipesAction === "search") {
+      startMarketSearchForCurrentLocation();
+      return;
+    }
+    if (suggestRecipesAction === "budget") {
+      handleChangeSpendingLimit();
+      return;
+    }
+    setActiveTab("settings");
+    goToOnboardingStep("stores");
+  }
+
+  function handleChangeSpendingLimit() {
+    invalidateRankedResults();
+    clearSuggestBlock();
+    setFlowStep("welcome-budget");
+  }
+
+  function handleBackToPantry() {
+    setRecommendationState(initialRecommendationState);
+    setFlowStep("pantry");
+  }
+
+  function handleSearchStoresAgain() {
+    startMarketSearchForCurrentLocation();
+  }
+
   async function handleRankMeals() {
+    const block = rankPrerequisiteBlock();
+    if (block) {
+      showSuggestBlock(block);
+      return;
+    }
+
     setHasAttemptedRanking(true);
 
     if (!market || !activeLocationRequest) {
@@ -1658,6 +1841,9 @@ export function useMealPlanner() {
     showMapLink,
     isMapOverlayOpen,
     showResultsInHomeFlow,
+    storeListStale,
+    suggestRecipesNotice,
+    suggestRecipesActionLabel,
     ingredientPickMode,
     pantryIngredientIds,
     pantryCoverageState,
@@ -1682,6 +1868,10 @@ export function useMealPlanner() {
     handleCompleteWelcome,
     handleContinueToPantry,
     handleSuggestRecipesFromPantry,
+    handleSuggestRecipesRecovery,
+    handleChangeSpendingLimit,
+    handleBackToPantry,
+    handleSearchStoresAgain,
     handleRankMeals,
     selectedIngredientIds,
     handleToggleIngredient,

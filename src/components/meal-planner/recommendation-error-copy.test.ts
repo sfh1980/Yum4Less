@@ -34,7 +34,8 @@ describe("recommendation error copy", () => {
     });
 
     expect(mapped.title).toMatch(/out of date/i);
-    expect(mapped.hint).toMatch(/Step 1/i);
+    expect(mapped.hint).toBe("Search stores again, then suggest recipes.");
+    expect(mapped.hint).not.toMatch(/Step 1/i);
     expect(mapped.title).not.toContain("meal preferences");
   });
 

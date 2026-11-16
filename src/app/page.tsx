@@ -2,6 +2,7 @@ import { CfWebAnalytics } from "@/components/cf-web-analytics";
 import { MealPlanner } from "@/components/meal-planner";
 import { readCfWebAnalyticsToken } from "@/lib/cf-web-analytics";
 import { isFeedbackEnabled } from "@/lib/feedback/feedback-policy";
+import { readGeolocationPromptTimeoutMs } from "@/lib/geolocation-prompt";
 import { readPricedAreaCoverageSentence } from "@/lib/priced-area-coverage";
 
 /**
@@ -17,6 +18,7 @@ export default function HomePage() {
       <main className="app-page">
         <MealPlanner
           feedbackEnabled={isFeedbackEnabled()}
+          geolocationTimeoutMs={readGeolocationPromptTimeoutMs()}
           pricedAreaCoverageSentence={readPricedAreaCoverageSentence()}
         />
       </main>

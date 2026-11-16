@@ -40,7 +40,7 @@ export function mapRecommendationApiError(input: {
         body:
           apiError ||
           "The saved store list no longer matches this location. Find nearby stores again, then suggest recipes.",
-        hint: "Search for stores again in Step 1 before ranking meals.",
+        hint: "Search stores again, then suggest recipes.",
       };
     }
 

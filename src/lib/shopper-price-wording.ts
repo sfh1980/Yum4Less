@@ -87,10 +87,25 @@ export function formatShopperPriceWording(
 ): string {
   switch (tier) {
     case "high":
-      return `Lowest price we found: $${amount.toFixed(2)}`;
-    case "medium":
       return `Estimated lowest price: $${amount.toFixed(2)}`;
+    case "medium":
+      return `Estimated lowest price from an older ad: $${amount.toFixed(2)}`;
     case "low":
-      return "Price estimate — worth verifying in store";
+      return "Estimated price — worth verifying in store";
+  }
+}
+
+/** Phrase that completes “{ingredient} from {store} for ___ (quantity).” */
+export function formatShopperPriceClause(
+  amount: number,
+  tier: ShopperPriceConfidenceTier,
+): string {
+  switch (tier) {
+    case "high":
+      return `an estimated lowest price of $${amount.toFixed(2)}`;
+    case "medium":
+      return `an estimated lowest price of $${amount.toFixed(2)} from an older ad`;
+    case "low":
+      return "an estimated price worth verifying in store";
   }
 }

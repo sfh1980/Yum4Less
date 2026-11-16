@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   MealRecommendation,
   RecommendationExperience,
@@ -15,6 +15,11 @@ import { FAQ_SLUG } from "@/lib/faq-articles";
 import { MEAL_CARD_SHOW_EXTENDED_CHROME } from "@/components/meal-planner/meal-card-chrome";
 import { buildResultsPanelPriceSourceLine } from "@/lib/meal-price-source-copy";
 import { buildMealRankingPausedStatus } from "@/lib/market-shopper-status";
+import {
+  CHANGE_SPENDING_LIMIT_ACTION,
+  MILES_CHANGED_NOTICE,
+  SEARCH_STORES_AGAIN_ACTION,
+} from "@/components/meal-planner/shopper-recovery-copy";
 import type {
   ActiveLocationRequest,
   FormState,
@@ -38,6 +43,10 @@ type MealResultsPanelProps = {
   surface?: "home" | "cook";
   savedMealIds?: ReadonlySet<string>;
   onToggleSaveMeal?: (meal: MealRecommendation) => void;
+  storeListStale?: boolean;
+  onChangeSpendingLimit?: () => void;
+  onSearchStoresAgain?: () => void;
+  onBackToPantry?: () => void;
 };
 
 export function MealResultsPanel({
@@ -54,6 +63,10 @@ export function MealResultsPanel({
   surface = "home",
   savedMealIds,
   onToggleSaveMeal,
+  storeListStale = false,
+  onChangeSpendingLimit,
+  onSearchStoresAgain,
+  onBackToPantry,
 }: MealResultsPanelProps) {
   const [storeMapTarget, setStoreMapTarget] = useState<NearbyStoreSummary | null>(null);
   const [isStoreMapOpen, setIsStoreMapOpen] = useState(false);
@@ -69,6 +82,38 @@ export function MealResultsPanel({
 
   const mealPausedStatus =
     market && marketBlocked ? buildMealRankingPausedStatus(market) : null;
+  const showEmptyRecovery =
+    Boolean(onChangeSpendingLimit) &&
+    !storeListStale &&
+    marketSearchState.status === "ready" &&
+    Boolean(market) &&
+    !(marketBlocked && mealPausedStatus) &&
+    recommendationState.status === "ready" &&
+    recommendations.length === 0;
+  const showStaleSearch =
+    storeListStale && Boolean(onSearchStoresAgain);
+  const showOutOfDateSearch =
+    !showStaleSearch &&
+    recommendationState.status === "error" &&
+    (recommendationState.errorTitle ?? "").includes("out of date") &&
+    Boolean(onSearchStoresAgain);
+  const staleRecoveryRef = useRef<HTMLButtonElement>(null);
+  const emptyRecoveryRef = useRef<HTMLButtonElement>(null);
+  const outOfDateRecoveryRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (showStaleSearch) {
+      staleRecoveryRef.current?.focus();
+      return;
+    }
+    if (showOutOfDateSearch) {
+      outOfDateRecoveryRef.current?.focus();
+      return;
+    }
+    if (showEmptyRecovery) {
+      emptyRecoveryRef.current?.focus();
+    }
+  }, [showEmptyRecovery, showOutOfDateSearch, showStaleSearch]);
   const resultsPriceSourceLine =
     market &&
     recommendationState.status === "ready" &&
@@ -127,7 +172,22 @@ export function MealResultsPanel({
       </div>
 
       <div aria-live="polite" className="results-stack meal-results-stack">
-        {marketSearchState.status !== "ready" || !market ? (
+        {showStaleSearch ? (
+          <StatusCard
+            title="Store list is out of date"
+            body={MILES_CHANGED_NOTICE}
+            extra={
+              <button
+                ref={staleRecoveryRef}
+                className="primary-button"
+                type="button"
+                onClick={onSearchStoresAgain}
+              >
+                {SEARCH_STORES_AGAIN_ACTION}
+              </button>
+            }
+          />
+        ) : marketSearchState.status !== "ready" || !market ? (
           <StatusCard
             title="Meal results will appear here"
             body="Find nearby stores first, set your spending limit and preferences, then select sale ingredients and suggest recipes."
@@ -150,9 +210,21 @@ export function MealResultsPanel({
               "Try searching for stores again or adjusting your filters."
             }
             extra={
-              recommendationState.errorHint ? (
-                <p className="explanation">{recommendationState.errorHint}</p>
-              ) : null
+              <>
+                {recommendationState.errorHint ? (
+                  <p className="explanation">{recommendationState.errorHint}</p>
+                ) : null}
+                {showOutOfDateSearch ? (
+                  <button
+                    ref={outOfDateRecoveryRef}
+                    className="primary-button"
+                    type="button"
+                    onClick={onSearchStoresAgain}
+                  >
+                    {SEARCH_STORES_AGAIN_ACTION}
+                  </button>
+                ) : null}
+              </>
             }
           />
         ) : recommendationState.status !== "ready" ? (
@@ -167,6 +239,17 @@ export function MealResultsPanel({
                 ? "Cook shows dinners from your latest ranking. After store or preference changes, suggest recipes again on Home — this tab updates when new results are ready."
                 : "Finish pantry check on the Home tab, then tap Suggest recipes for my store(s)."
             }
+            extra={
+              surface === "home" && onBackToPantry ? (
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={onBackToPantry}
+                >
+                  Back to pantry check
+                </button>
+              ) : null
+            }
           />
         ) : (
           <>
@@ -180,18 +263,30 @@ export function MealResultsPanel({
                 />
               ))}
             {recommendations.length === 0 ? (
-              hasExplicitEmptyMealNotice(shopperNotice, supplementaryShopperNotices) ? null : (
-                <StatusCard
-                  title="No recipes match the current filters"
-                  body="That is useful feedback, not a failure. Your spending limit or store preference may be too strict for the nearby sale coverage."
-                  extra={
-                    <p className="explanation">
-                      Try raising your spending limit, allowing multiple stores, or
-                      selecting different sale ingredients.
-                    </p>
-                  }
-                />
-              )
+              <>
+                {hasExplicitEmptyMealNotice(shopperNotice, supplementaryShopperNotices) ? null : (
+                  <StatusCard
+                    title="No recipes match the current filters"
+                    body="That is useful feedback, not a failure. Your spending limit or store preference may be too strict for the nearby sale coverage."
+                    extra={
+                      <p className="explanation">
+                        Try raising your spending limit, allowing multiple stores, or
+                        selecting different sale ingredients.
+                      </p>
+                    }
+                  />
+                )}
+                {showEmptyRecovery ? (
+                  <button
+                    ref={emptyRecoveryRef}
+                    className="primary-button"
+                    type="button"
+                    onClick={onChangeSpendingLimit}
+                  >
+                    {CHANGE_SPENDING_LIMIT_ACTION}
+                  </button>
+                ) : null}
+              </>
             ) : (
               <>
                 <MealResultsAccordion

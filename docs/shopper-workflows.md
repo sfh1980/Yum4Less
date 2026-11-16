@@ -67,7 +67,7 @@ flowchart TD
   usBounds -->|No| outsideArea[404: outside supported beta area]
   usBounds -->|Yes| gpsSource[source=browser]
 
-  gpsOrZip -->|GPS deny or unavailable| zipFallback[ZIP input + GPS isn't available notice]
+  gpsOrZip -->|GPS deny, timeout, or unavailable| zipFallback[ZIP input + a notice]
   zipFallback --> zipPinPath
 
   gpsOrZip -->|ZIP + confirmed pin| zipPinPath[Geocode ZIP label]
@@ -90,7 +90,7 @@ Chrome **Back** walks `previousOnboardingStep`: zip-input → choose-location; z
 
 ## Tree 3 — Market search (`POST /api/market-search`)
 
-Market search runs when leaving the **radius** screen (not on every later tap). After setup, Home/Deals can auto-search from saved location.
+Market search runs when leaving the **radius** screen. Changing the miles after that search marks the store list out of date until **Search stores again**. A browser location prompt waits `YUM4LESS_GEOLOCATION_TIMEOUT_MS` (default 12 seconds), then offers a ZIP. **Enter ZIP code** stays available during the wait. After setup, Home/Deals can auto-search from saved location.
 
 ```mermaid
 flowchart TD
@@ -240,8 +240,10 @@ flowchart TD
   assess --> toggles[Shopper toggles near-miss checklist]
   toggles --> reassess[Debounced reassess on pantryIngredientIds]
   reassess --> sticky[Sticky: showableFullyCovered / eligibleRecipeCount]
-  sticky --> suggest[Suggest recipes always enabled when ranking is available]
-  suggest --> rankPass[flowStep results + pantryIngredientIds pass-through]
+  sticky --> suggest[Suggest recipes]
+  suggest --> ready{Stores and miles ready?}
+  ready -->|No| stay[Stay on pantry with one next step]
+  ready -->|Yes| rankPass[flowStep results + pantryIngredientIds pass-through]
 ```
 
 | Rule | Behavior |

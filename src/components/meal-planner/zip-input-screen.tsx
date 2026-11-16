@@ -29,7 +29,7 @@ export function ZipInputScreen({
       </p>
 
       {notice ? (
-        <p className="field-hint" role="status">
+        <p className="field-hint" role="alert">
           {notice}
         </p>
       ) : null}
@@ -46,6 +46,7 @@ export function ZipInputScreen({
           inputMode="numeric"
           autoComplete="postal-code"
           aria-invalid={error ? true : undefined}
+          autoFocus={Boolean(notice)}
           value={zipCode}
           onChange={(event) => onZipCodeChange(event.target.value)}
         />

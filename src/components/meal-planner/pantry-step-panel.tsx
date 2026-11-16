@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PantryCoverageChecklistItem } from "@/contracts/pantry-coverage";
 
 export type PantryItemSource = "suggested" | "manual";
@@ -25,6 +25,9 @@ type PantryStepPanelProps = {
   rankingPaused: boolean;
   rankLoading: boolean;
   onSuggestRecipes: () => void;
+  recoveryNotice?: string;
+  recoveryActionLabel?: string;
+  onRecovery?: () => void;
 };
 
 export function PantryStepPanel({
@@ -40,9 +43,19 @@ export function PantryStepPanel({
   rankingPaused,
   rankLoading,
   onSuggestRecipes,
+  recoveryNotice,
+  recoveryActionLabel,
+  onRecovery,
 }: PantryStepPanelProps) {
   const suggestDisabled = rankingPaused || rankLoading;
   const [pantryListExpanded, setPantryListExpanded] = useState(false);
+  const recoveryRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (recoveryNotice) {
+      recoveryRef.current?.focus();
+    }
+  }, [recoveryNotice]);
 
   return (
     <div className="panel panel-padding meal-planner-panel meal-planner-panel--inputs flow-panel flow-panel--pantry">
@@ -83,6 +96,22 @@ export function PantryStepPanel({
         <p className="field-error" role="alert">
           {error}
         </p>
+      ) : null}
+
+      {recoveryNotice ? (
+        <div role="alert">
+          <p className="field-error">{recoveryNotice}</p>
+          {recoveryActionLabel && onRecovery ? (
+            <button
+              ref={recoveryRef}
+              className="primary-button"
+              type="button"
+              onClick={onRecovery}
+            >
+              {recoveryActionLabel}
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {suggestedChecklist.length > 0 ? (

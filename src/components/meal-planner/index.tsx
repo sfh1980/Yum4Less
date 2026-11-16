@@ -41,14 +41,16 @@ import { throwIfLocalhostVerificationRenderErrorRequested } from "@/lib/localhos
 type MealPlannerProps = {
   feedbackEnabled?: boolean;
   pricedAreaCoverageSentence?: string;
+  geolocationTimeoutMs?: number;
 };
 
 export function MealPlanner({
   feedbackEnabled = false,
   pricedAreaCoverageSentence = UNSET_PRICED_AREA_COVERAGE_SENTENCE,
+  geolocationTimeoutMs,
 }: MealPlannerProps) {
   throwIfLocalhostVerificationRenderErrorRequested();
-  const demo = useMealPlanner();
+  const demo = useMealPlanner({ geolocationTimeoutMs });
   const showInternalDetails = isInternalDetailsUiEnabled();
   const previousStep = previousOnboardingStep(
     demo.onboardingStep,
@@ -78,6 +80,10 @@ export function MealPlanner({
       shopperNotice={demo.shopperNotice}
       supplementaryShopperNotices={demo.supplementaryShopperNotices}
       suppressInlineLoading={demo.rankLoading}
+      storeListStale={demo.storeListStale}
+      onChangeSpendingLimit={demo.handleChangeSpendingLimit}
+      onSearchStoresAgain={demo.handleSearchStoresAgain}
+      onBackToPantry={demo.handleBackToPantry}
     />
   );
 
@@ -246,6 +252,9 @@ export function MealPlanner({
                   rankingPaused={demo.marketBlocked}
                   rankLoading={demo.rankLoading}
                   onSuggestRecipes={demo.handleSuggestRecipesFromPantry}
+                  recoveryNotice={demo.suggestRecipesNotice}
+                  recoveryActionLabel={demo.suggestRecipesActionLabel}
+                  onRecovery={demo.handleSuggestRecipesRecovery}
                 />
               ) : null}
 
@@ -290,6 +299,8 @@ export function MealPlanner({
               shopperNotice={demo.shopperNotice}
               supplementaryShopperNotices={demo.supplementaryShopperNotices}
               suppressInlineLoading={demo.rankLoading}
+              storeListStale={demo.storeListStale}
+              onSearchStoresAgain={demo.handleSearchStoresAgain}
               surface="cook"
             />
           ) : null}

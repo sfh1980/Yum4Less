@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatShopperPriceClause,
   formatShopperPriceWording,
   shopperPriceTierFromOfferFields,
   shopperPriceTierFromSaleConfidenceLevel,
@@ -58,17 +59,35 @@ describe("shopperPriceTierFromShoppingPlan", () => {
 });
 
 describe("formatShopperPriceWording", () => {
-  it("flexes copy by tier and suppresses bare $ for low", () => {
+  it("calls every tier an estimate and suppresses a bare dollar on low", () => {
     expect(formatShopperPriceWording(13.42, "high")).toBe(
-      "Lowest price we found: $13.42",
+      "Estimated lowest price: $13.42",
     );
     expect(formatShopperPriceWording(6.49, "medium")).toBe(
-      "Estimated lowest price: $6.49",
+      "Estimated lowest price from an older ad: $6.49",
     );
     expect(formatShopperPriceWording(2.1, "low")).toBe(
-      "Price estimate — worth verifying in store",
+      "Estimated price — worth verifying in store",
     );
+    expect(formatShopperPriceWording(13.42, "high")).toMatch(/estimated/i);
+    expect(formatShopperPriceWording(6.49, "medium")).toMatch(/estimated/i);
+    expect(formatShopperPriceWording(2.1, "low")).toMatch(/estimated/i);
     expect(formatShopperPriceWording(2.1, "low")).not.toMatch(/\$/);
+    expect(formatShopperPriceWording(13.42, "high")).not.toMatch(/Lowest price we found/);
+  });
+
+  it("fits the shopping-plan line as one sentence", () => {
+    const line = `Spinach from Publix (Brandy Creek Commons) for ${formatShopperPriceClause(1.99, "high")} (1 bunch).`;
+    expect(line).toBe(
+      "Spinach from Publix (Brandy Creek Commons) for an estimated lowest price of $1.99 (1 bunch).",
+    );
+    expect(
+      `Spinach from Publix for ${formatShopperPriceClause(1.99, "medium")} (1 bunch).`,
+    ).toContain("from an older ad");
+    expect(formatShopperPriceClause(2.1, "low")).toBe(
+      "an estimated price worth verifying in store",
+    );
+    expect(formatShopperPriceClause(2.1, "low")).not.toMatch(/\$/);
   });
 });
 

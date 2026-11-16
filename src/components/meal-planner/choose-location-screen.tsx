@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { HelpLegalLinks } from "@/components/help-legal-links";
 import { WizardChoiceButton } from "@/components/meal-planner/wizard-choice-button";
 import { RESET_PREFERENCES_BUTTON_LABEL } from "@/lib/reset-preferences-copy";
@@ -21,6 +22,14 @@ export function ChooseLocationScreen({
   onEnterZip,
   onFactoryReset,
 }: ChooseLocationScreenProps) {
+  const zipButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (gpsNotice && !gpsRequesting) {
+      zipButtonRef.current?.focus();
+    }
+  }, [gpsNotice, gpsRequesting]);
+
   return (
     <section className="wizard-screen" aria-labelledby="choose-location-title">
       <h1 id="choose-location-title" className="wizard-title">
@@ -41,7 +50,7 @@ export function ChooseLocationScreen({
         <WizardChoiceButton
           label="Enter ZIP code"
           description="Works without location access."
-          disabled={gpsRequesting}
+          buttonRef={zipButtonRef}
           onClick={onEnterZip}
         />
       </div>
