@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readBusinessTimeZone } from "@/lib/business-time-zone";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { claimNextIngestJob, finishIngestJob } from "@/lib/ingest-jobs";
 import { isScheduledIngestStepNonFatal } from "@/lib/scheduled-ingest-pipeline";
@@ -47,6 +48,7 @@ function isNonFatal(kind: string): boolean {
 }
 
 async function main() {
+  readBusinessTimeZone();
   if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL =
       "postgresql://postgres:postgres@localhost:5433/yum4less_dev";

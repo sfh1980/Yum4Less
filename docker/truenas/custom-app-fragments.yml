@@ -22,6 +22,8 @@
 #       KROGER_CLIENT_SECRET: "REPLACE"
 #       KROGER_API_ENV: production
 #       TZ: America/New_York
+#       # Calendar day for ingest and the morning note. TZ above is only the cron clock.
+#       YUM4LESS_BUSINESS_TIME_ZONE: America/New_York
 #       # Optional: YUM4LESS_FRESHNESS_WEBHOOK_URL: "https://..."
 #       # Dry-run once: set YUM4LESS_INGEST_ONCE=1 (container exits after one run)
 #     labels:

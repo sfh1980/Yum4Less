@@ -1,3 +1,5 @@
+import { readBusinessTimeZone } from "@/lib/business-time-zone";
+
 export const WEEKLY_AD_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
@@ -6,6 +8,6 @@ export function getWeeklyAdBrowserContextOptions() {
     userAgent: WEEKLY_AD_BROWSER_USER_AGENT,
     viewport: { width: 1280, height: 720 },
     locale: "en-US",
-    timezoneId: "America/New_York",
-  } as const;
+    timezoneId: readBusinessTimeZone(),
+  };
 }

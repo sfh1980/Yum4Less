@@ -1,3 +1,4 @@
+import { readBusinessTimeZone } from "@/lib/business-time-zone";
 import { resetDbPoolForTests } from "@/lib/db";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import { postMorningDiscord } from "@/lib/owner/morning-discord";
@@ -16,6 +17,7 @@ import {
 loadEnvLocal();
 
 async function main() {
+  readBusinessTimeZone();
   if (process.env.YUM4LESS_MORNING_REPORT !== "1") {
     console.log(
       "Outside-check follow-up skipped. The ingest cron sets YUM4LESS_MORNING_REPORT=1.",

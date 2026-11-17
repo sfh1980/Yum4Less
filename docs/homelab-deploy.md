@@ -696,6 +696,9 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/yum4less_dev
       YUM4LESS_DEBUG_ROUTES_ENABLED: "0"
       YUM4LESS_ENABLE_API_DB_WRITES: "0"
+      # Required with the business-time-zone code. The outside-check route reads it.
+      # No silent default. Do not start that code until this line is on the box.
+      YUM4LESS_BUSINESS_TIME_ZONE: America/New_York
     # Required for Watchtower (§11). Do NOT put this label on `db`.
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
@@ -786,7 +789,7 @@ Expect `200`. Then proceed to the ingest container (§10) and freshness checks (
 
 | Approach | Recommendation |
 |----------|----------------|
-| **In-container cron (default)** | More portable — schedule travels with the image. Entrypoint runs `cron -f`; job in `/etc/cron.d/yum4less-ingest` at `0 3 * * *`. Set `TZ` to your market (e.g. `America/New_York`). Entrypoint dumps Docker `environment:` into `/etc/yum4less/ingest.env` so the cron job sees `DATABASE_URL` / API keys (cron does not inherit container env by default). |
+| **In-container cron (default)** | More portable — schedule travels with the image. Entrypoint runs `cron -f`; job in `/etc/cron.d/yum4less-ingest` at `0 3 * * *`. Set `TZ` to your market (e.g. `America/New_York`) so cron hours stay on that clock. Also set `YUM4LESS_BUSINESS_TIME_ZONE` to the same IANA zone on `yum4less-ingest` and `yum4less-app`. That setting is the calendar day the code uses. Unset, those scripts stop at start-up. Entrypoint dumps Docker `environment:` into `/etc/yum4less/ingest.env` so the cron job sees `DATABASE_URL` / API keys (cron does not inherit container env by default). |
 | **TrueNAS / host `docker exec`** | Slightly more visible in host crontab; set `YUM4LESS_INGEST_CRON=0` so the container only stays up (`tail -F` log). Then schedule: `0 3 * * * sudo docker exec yum4less-ingest npm run ingest:weekly-ads:scheduled`. |
 
 Default = in-container cron. Use host exec if you prefer all schedules in one TrueNAS place.
@@ -896,6 +899,9 @@ Add to the **same** Custom App as `db` / `app` (after `app:`). Replace secrets a
       KROGER_CLIENT_SECRET: "REPLACE"
       KROGER_API_ENV: production
       TZ: America/New_York
+      # Calendar day for run dates, the retry day, the browser, and the morning note.
+      # TZ above only decides when cron fires. No silent default.
+      YUM4LESS_BUSINESS_TIME_ZONE: America/New_York
       # YUM4LESS_FRESHNESS_WEBHOOK_URL: "https://hooks.example.local/yum4less-freshness"
     labels:
       - "com.centurylinklabs.watchtower.enable=true"

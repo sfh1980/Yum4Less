@@ -1,9 +1,12 @@
+import { formatBusinessCalendarDate, readBusinessTimeZone } from "@/lib/business-time-zone";
+
 /**
  * Daytime retry for chains that have no fresh ranked rows.
  * Installed in docker/ingest/crontab. One chain per run. Does not write an ingest_jobs row.
  * A run that cannot take the weekly-ad lock skips and does not count an attempt.
  *
- * Container TZ is America/New_York. This does not replace the 3:00am run.
+ * The calendar day is YUM4LESS_BUSINESS_TIME_ZONE. Container TZ still decides
+ * when cron fires. This does not replace the 3:00am run.
  *
  * 0 6-12 * * * root . /etc/yum4less/ingest.env && cd /app && /usr/local/bin/npm run ingest:weekly-ads:retry >> /var/log/yum4less/ingest.log 2>&1
  *
@@ -13,7 +16,7 @@
  */
 
 export const WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT = 7;
-/** Stop thin retries after this many identical thin results in one New York day. */
+/** Stop thin retries after this many identical thin results in one business-zone day. */
 export const WEEKLY_AD_THIN_IDENTICAL_LIMIT = 2;
 
 export type WeeklyAdRetryCandidate = {
@@ -57,14 +60,12 @@ export function readWeeklyAdRetryMaxPerDay(
   return parsed;
 }
 
-/** New York calendar date, matching the morning note. */
-export function weeklyAdRetryDate(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+/** Business-zone calendar date, matching the morning note. */
+export function weeklyAdRetryDate(
+  now: Date,
+  timeZone: string = readBusinessTimeZone(),
+): string {
+  return formatBusinessCalendarDate(now, timeZone);
 }
 
 export function emptyWeeklyAdRetryState(date: string): WeeklyAdRetryState {

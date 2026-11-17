@@ -1,3 +1,4 @@
+import { readBusinessTimeZone } from "@/lib/business-time-zone";
 import { resetDbPoolForTests } from "@/lib/db";
 import { loadEnvLocal } from "@/lib/load-env-local";
 import {
@@ -35,6 +36,7 @@ async function postDiscord(body: string): Promise<void> {
 }
 
 async function main() {
+  readBusinessTimeZone();
   if (process.env.YUM4LESS_MORNING_REPORT !== "1") {
     console.log("Morning dead-man skipped. The ingest cron sets YUM4LESS_MORNING_REPORT=1.");
     return;
@@ -66,7 +68,14 @@ main()
   .catch(async (error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Morning dead-man crashed: ${message}`);
-    await postDiscord(composeMissedMorningReport(morningWeekday()).body);
+    try {
+      await postDiscord(composeMissedMorningReport(morningWeekday()).body);
+    } catch (noteError) {
+      const noteMessage = noteError instanceof Error ? noteError.message : String(noteError);
+      if (noteMessage !== message) {
+        console.error(noteMessage);
+      }
+    }
     process.exitCode = 1;
   })
   .finally(async () => {
