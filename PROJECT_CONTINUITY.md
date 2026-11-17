@@ -20,6 +20,10 @@
 
 **This slice (branch `fix/security-basics-2026-11-16`, not on yum4less.com):** Owner and admin keys are compared with `timingSafeEqual`. A different length, a missing key, or an empty configured key is rejected. Every response sends `nosniff`, `strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, geolocation for this origin only, and a report-only content security policy. The policy names the map tiles, the Cloudflare beacon script and its endpoint, and TheMealDB. No report collector. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. `npm test` **1604/1604**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. Semgrep on the key and header files found nothing. A pass is not more dinners.
 
+## Resume (as of 2026-11-16, business time zone, held)
+
+**This slice (branch `fix/business-time-zone`, not pushed to master, no pull request):** Weekly-ad run dates, the retry day, the weekly-ad browser, and the morning note read `YUM4LESS_BUSINESS_TIME_ZONE`. Unset or invalid stops ingest and the morning report at start-up. There is no silent default. Container `TZ` still decides when cron fires. Held until after the owner's Thursday 2026-11-19 check. Before it goes live, `yum4less-ingest` and `yum4less-app` need `YUM4LESS_BUSINESS_TIME_ZONE=America/New_York`. Nightly ingest behavior, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. `npm test` **1601/1601**. Integration **75/75**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. A pass is not more dinners.
+
 ## Resume (as of 2026-11-16, shopper round follow-up)
 
 **This slice (branch `fix/shopper-round-2026-11-16`, not on yum4less.com):** Continues `bfd9645`. A dinner total and a store subtotal read `Estimated total: about $X`. The low tier reads `Estimated total - worth verifying in store` and shows no dollar. A single item still uses the existing estimate line. A store search waits `YUM4LESS_STORE_SEARCH_TIMEOUT_MS` (default 20 seconds). Dinner ranking waits `YUM4LESS_RANK_TIMEOUT_MS` (default 30 seconds). Both are read when the home page is requested. When the limit passes, the existing error is shown with **Try again**. Changing the ZIP after a store list exists says the list was cleared and offers **Search stores for this ZIP**. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. `npm test` **1597/1597**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. A pass is not more dinners.
@@ -416,6 +420,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 **Limits:** Branch `fix/security-basics-2026-11-16`. Not on yum4less.com until the owner fast-forwards master. The policy is report-only, so a mismatch is logged and the page still loads. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. A pass is not more dinners.
 
 **Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1604/1604** pass (275 files). `npm run build` exit 0 (Next.js 15.5.28). `/` is `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0 (retry used the installed Playwright browsers). Semgrep `p/typescript` and `p/secrets` on the key and header files: 0 findings, 351 rules. No live retailer, Flipp, Overpass, or yum4less.com request.
+
+### 2026-11-16 — Business time zone (held)
+
+**Theme:** Run dates, the retry day, the weekly-ad browser, and the morning note were hard-coded to `America/New_York`.
+
+**Shipped:** One helper, `readBusinessTimeZone`, reads `YUM4LESS_BUSINESS_TIME_ZONE` and accepts only a real IANA zone. Unset or invalid throws one error that names the setting. Ingest, the worker, the scheduled night, the morning report, the dead-man, and the outside-check follow-up call it at start-up and stop. The e2e harness sets `America/New_York` when the variable is absent so fixture ingest can run. That pin is not a production default.
+
+**Limits:** Branch `fix/business-time-zone`. No pull request. Held until after the owner's Thursday 2026-11-19 check. Do not put this on yum4less.com until `yum4less-ingest` and `yum4less-app` have `YUM4LESS_BUSINESS_TIME_ZONE=America/New_York`. Container `TZ` stays the cron clock. A Whole Foods probe script repeats the same check because it runs under plain node. Dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. A pass is not more dinners.
+
+**Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1601/1601** pass (275 files). `npm run test:integration` **75/75** pass (23 files). `npm run build` exit 0 (Next.js 15.5.28). `/` is `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0. The first e2e attempt stopped with the unset-zone error; the harness pin then let the suite finish. No live retailer, Flipp, Overpass, or yum4less.com request.
 
 ### 2026-11-16 — Shopper round follow-up
 
@@ -3898,6 +3912,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 | `npm run build` (security basics) | 2026-11-16 | **Pass** (Next.js 15.5.28). `/` is `ƒ`. |
 | `npm run test:e2e:ci` (security basics) | 2026-11-16 | **39 passed**, 2 skipped, exit 0. First attempt looked for Chromium in a sandbox cache. Retry used the installed browsers. |
 | Semgrep `p/typescript` + `p/secrets` (admin key and response headers) | 2026-11-16 | **0 findings**, 351 rules, 4 files. |
+| `npm test` (business time zone) | 2026-11-16 | **1601/1601** pass (275 files). |
+| `npm run typecheck` (business time zone) | 2026-11-16 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run lint` (business time zone) | 2026-11-16 | **Pass** (exit 0). Re-run after the e2e harness pin. |
+| `npm run test:integration` (business time zone) | 2026-11-16 | **75/75** pass (23 files). |
+| `npm run build` (business time zone) | 2026-11-16 | **Pass** (Next.js 15.5.28). `/` is `ƒ`. |
+| `npm run test:e2e:ci` (business time zone) | 2026-11-16 | **39 passed**, 2 skipped, exit 0. First attempt stopped because the zone was unset. |
 | `npm test` (shopper round follow-up) | 2026-11-16 | **1597/1597** pass (274 files). |
 | `npm run typecheck` (same follow-up) | 2026-11-16 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same follow-up) | 2026-11-16 | **Pass** (exit 0) |

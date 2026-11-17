@@ -4,6 +4,13 @@ import {
   spawnNpx,
 } from "./lib/spawn-safe.mjs";
 
+const zoneCheck = spawnNpx(["tsx", "scripts/assert-business-time-zone.ts"], {
+  env: process.env,
+});
+if (zoneCheck.status !== 0) {
+  process.exit(zoneCheck.status ?? 1);
+}
+
 console.log(`[${new Date().toISOString()}] Starting scheduled Yum4Less pricing ingest...`);
 
 const useFixture = process.argv.includes("--fixture");

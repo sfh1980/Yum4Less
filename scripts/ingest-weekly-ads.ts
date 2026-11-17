@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { readBusinessTimeZone } from "@/lib/business-time-zone";
 import { weeklyAdTouchingZipFailureMessage } from "@/lib/geo/active-zip-clusters";
 import { getDbPool } from "@/lib/db";
 import { queryRankedPriceFreshness } from "@/lib/ingest/ingest-freshness-heartbeat";
@@ -57,6 +58,7 @@ import { formatWeeklyAdSettingsLine } from "@/lib/weekly-ad-ingestion/weekly-ad-
 loadEnvLocal();
 
 async function main() {
+  readBusinessTimeZone();
   const requestedChain = readWeeklyAdOnlyChain(process.argv);
   const retryStale = process.argv.includes("--retry-stale");
   if (retryStale && requestedChain) {

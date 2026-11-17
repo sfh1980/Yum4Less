@@ -94,6 +94,10 @@ async function main() {
     DATABASE_URL: databaseUrl,
     // Test geography only — fixture ingest must not inherit a silent production default.
     YUM4LESS_INGEST_ZIPS: "23111",
+    // Fixture ingest stops without a zone. This pin is the test harness only.
+    // Production ingest and the morning report have no default and exit instead.
+    YUM4LESS_BUSINESS_TIME_ZONE:
+      process.env.YUM4LESS_BUSINESS_TIME_ZONE?.trim() || "America/New_York",
   };
   process.env.CI = "1";
   process.env.YUM4LESS_CI_BOOTSTRAP_STORES = "1";

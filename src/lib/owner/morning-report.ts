@@ -5,10 +5,14 @@ import {
   describeCloudflareMorning,
   type CloudflareMorningFacts,
 } from "@/lib/owner/cloudflare-morning";
+import {
+  formatBusinessCalendarDate,
+  formatBusinessWeekday,
+  readBusinessTimeZone,
+} from "@/lib/business-time-zone";
 import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
 
 export const MORNING_ZIP_BATCH = 3;
-export const MORNING_REPORT_TIME_ZONE = "America/New_York";
 export const OUTSIDE_CHECK_CUTOFF_ENV = "YUM4LESS_OUTSIDE_CHECK_CUTOFF";
 export const OUTSIDE_CHECK_CUTOFF_DEFAULT = "16:00";
 export const MORNING_ZIP_ADDS_ENV = "YUM4LESS_MORNING_ZIP_ADDS";
@@ -45,20 +49,18 @@ export function morningZipAddsEnabled(
 
 const ZIP5 = /^\d{5}$/;
 
-export function morningReportDate(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: MORNING_REPORT_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+export function morningReportDate(
+  now = new Date(),
+  timeZone: string = readBusinessTimeZone(),
+): string {
+  return formatBusinessCalendarDate(now, timeZone);
 }
 
-export function morningWeekday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: MORNING_REPORT_TIME_ZONE,
-    weekday: "long",
-  }).format(now);
+export function morningWeekday(
+  now = new Date(),
+  timeZone: string = readBusinessTimeZone(),
+): string {
+  return formatBusinessWeekday(now, timeZone);
 }
 
 /** Even UTC day-numbers are add days. Neighbors of an add day are not. */
@@ -1046,7 +1048,7 @@ export function readOutsideCheckCutoff(
 export function isBeforeOutsideCheckCutoff(
   now: Date,
   cutoff: OutsideCheckCutoff = readOutsideCheckCutoff(),
-  timeZone = MORNING_REPORT_TIME_ZONE,
+  timeZone = readBusinessTimeZone(),
 ): boolean {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,

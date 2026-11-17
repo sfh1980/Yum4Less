@@ -1,3 +1,4 @@
+import { readBusinessTimeZone } from "@/lib/business-time-zone";
 import { listIngestMarkets } from "@/lib/active-markets";
 import { resetDbPoolForTests } from "@/lib/db";
 import { loadEnvLocal } from "@/lib/load-env-local";
@@ -66,6 +67,7 @@ const APP_ORIGIN =
   process.env.YUM4LESS_MORNING_APP_ORIGIN?.trim() || "http://yum4less-app:3000";
 
 export async function runMorningReport(): Promise<void> {
+  readBusinessTimeZone();
   if (process.env.YUM4LESS_MORNING_REPORT !== "1") {
     console.log(
       "Morning report skipped. The ingest cron sets YUM4LESS_MORNING_REPORT=1. A laptop run does not turn ZIPs on.",
