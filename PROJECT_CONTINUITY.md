@@ -4,6 +4,10 @@
 
 ---
 
+## Resume (as of 2026-11-16, security basics)
+
+**This slice (branch `fix/security-basics-2026-11-16`, not on yum4less.com):** Owner and admin keys are compared with `timingSafeEqual`. A different length, a missing key, or an empty configured key is rejected. Every response sends `nosniff`, `strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, geolocation for this origin only, and a report-only content security policy. The policy names the map tiles, the Cloudflare beacon script and its endpoint, and TheMealDB. No report collector. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. `npm test` **1604/1604**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. Semgrep on the key and header files found nothing. A pass is not more dinners.
+
 ## Resume (as of 2026-11-16, shopper round follow-up)
 
 **This slice (branch `fix/shopper-round-2026-11-16`, not on yum4less.com):** Continues `bfd9645`. A dinner total and a store subtotal read `Estimated total: about $X`. The low tier reads `Estimated total - worth verifying in store` and shows no dollar. A single item still uses the existing estimate line. A store search waits `YUM4LESS_STORE_SEARCH_TIMEOUT_MS` (default 20 seconds). Dinner ranking waits `YUM4LESS_RANK_TIMEOUT_MS` (default 30 seconds). Both are read when the home page is requested. When the limit passes, the existing error is shown with **Try again**. Changing the ZIP after a store list exists says the list was cleared and offers **Search stores for this ZIP**. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. `npm test` **1597/1597**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. A pass is not more dinners.
@@ -358,6 +362,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-16 — Security basics
+
+**Theme:** Owner keys were compared with `===`. Responses had framing and referrer headers and no content security policy.
+
+**Shipped:** `timingSafeEqual` for every owner and admin key check, including `/api/owner/*` through the shared helper. Different lengths return false. A missing or empty configured key returns false before any compare. `Content-Security-Policy-Report-Only` lists the origins the browser loads: OpenStreetMap tiles, `static.cloudflareinsights.com` and `cloudflareinsights.com`, and `www.themealdb.com`. System fonts stay on this origin. No `report-uri`.
+
+**Limits:** Branch `fix/security-basics-2026-11-16`. Not on yum4less.com until the owner fast-forwards master. The policy is report-only, so a mismatch is logged and the page still loads. Nightly ingest, dinner floors, `shopper_ranked`, the fail-loud set, classification, recipe sources, and price math were not changed. A pass is not more dinners.
+
+**Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1604/1604** pass (275 files). `npm run build` exit 0 (Next.js 15.5.28). `/` is `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0 (retry used the installed Playwright browsers). Semgrep `p/typescript` and `p/secrets` on the key and header files: 0 findings, 351 rules. No live retailer, Flipp, Overpass, or yum4less.com request.
 
 ### 2026-11-16 — Shopper round follow-up
 
@@ -3817,6 +3831,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (security basics) | 2026-11-16 | **1604/1604** pass (275 files). |
+| `npm run typecheck` (security basics) | 2026-11-16 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run lint` (security basics) | 2026-11-16 | **Pass** (exit 0) |
+| `npm run build` (security basics) | 2026-11-16 | **Pass** (Next.js 15.5.28). `/` is `ƒ`. |
+| `npm run test:e2e:ci` (security basics) | 2026-11-16 | **39 passed**, 2 skipped, exit 0. First attempt looked for Chromium in a sandbox cache. Retry used the installed browsers. |
+| Semgrep `p/typescript` + `p/secrets` (admin key and response headers) | 2026-11-16 | **0 findings**, 351 rules, 4 files. |
 | `npm test` (shopper round follow-up) | 2026-11-16 | **1597/1597** pass (274 files). |
 | `npm run typecheck` (same follow-up) | 2026-11-16 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same follow-up) | 2026-11-16 | **Pass** (exit 0) |

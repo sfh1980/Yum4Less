@@ -59,4 +59,28 @@ describe("isFeedbackListAuthorized", () => {
       ),
     ).toBe(false);
   });
+
+  it("rejects a presented key of a different length", () => {
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "secret";
+
+    expect(
+      isFeedbackListAuthorized(
+        new Request("http://localhost/api/owner/markets", {
+          headers: { Authorization: "Bearer secret-extra" },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects an empty configured key", () => {
+    process.env.YUM4LESS_FEEDBACK_ADMIN_KEY = "";
+
+    expect(
+      isFeedbackListAuthorized(
+        new Request("http://localhost/api/owner/markets", {
+          headers: { Authorization: "Bearer secret" },
+        }),
+      ),
+    ).toBe(false);
+  });
 });
