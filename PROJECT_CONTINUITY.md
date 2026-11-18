@@ -375,7 +375,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 **Limits:** Branch `fix/dev-advisories-2026-11-17`. Not on yum4less.com until the owner fast-forwards master. No runtime dependency changes. No Next, TypeScript, ESLint, or Vite major. chai 6.3.0 and tinyrainbow 3.2.0 came along inside the vitest ranges. A pass is not more dinners.
 
-**Evidence:** `npm run audit:high` exit 0, with the exception line. `npm audit --omit=dev` found 0 vulnerabilities. `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1608/1608** pass (274 files). `npm run build` exit 0 (Next.js 15.5.28). `/` is `ƒ` (54.7 kB / 188 kB). `/faq` and `/terms` stay `○`. `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0. Semgrep `p/javascript` and `p/secrets` on the audit gate exited 0 (0 findings, 345 rules). No live retailer request.
+**Evidence:** `npm run audit:high` exit 0, with the exception line. `npm audit --omit=dev` found 0 vulnerabilities. `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1608/1608** pass (275 files). `npm run build` exit 0 (Next.js 15.5.28). `/` is `ƒ` (54.7 kB / 188 kB). `/faq` and `/terms` stay `○`. `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0. Semgrep `p/javascript` and `p/secrets` on the audit gate exited 0 (0 findings, 345 rules). No live retailer request.
 
 ### 2026-11-16 — Security basics
 
@@ -3846,7 +3846,7 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
-| `npm test` (dev-tool advisories) | 2026-11-17 | **1608/1608** pass (274 files). |
+| `npm test` (dev-tool advisories) | 2026-11-17 | **1608/1608** pass (275 files). |
 | `npm run typecheck` (same slice) | 2026-11-17 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same slice) | 2026-11-17 | **Pass** (exit 0) |
 | `npm run audit:high` (same slice) | 2026-11-17 | **Exit 0.** Prints `high audit: exception GHSA-fc5q-39xc-vjpf is in use and expires on 2026-12-15.` |
