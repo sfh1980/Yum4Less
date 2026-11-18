@@ -226,7 +226,7 @@ May 2026 audit: no classic SQL injection / IDOR / BOLA; parameterized SQL throug
 | Geographic scope | Continental US bounds (`us-service-area.ts`) |
 | Rate limiting | In-memory per-process. `TRUST_PROXY_HEADERS=1` plus `YUM4LESS_TRUSTED_PROXY_HOPS` (or `YUM4LESS_CLIENT_IP_HEADER`). Without the hop count or header, every caller shares `unknown`. Add a shared counter before multi-instance |
 
-**Dependency monitoring:** A moderate PostCSS advisory (`GHSA-qx2v-qp2m-jg93`, transitive via Next.js) is tracked via Dependabot and the weekly `dependency-watch` workflow — wait for an upstream Next.js fix; do **not** run `npm audit fix --force`. `overrides` pin `sharp` to `0.35.5` and `source-map-js` to `1.2.2`. CI `npm run audit:high` still fails other high or critical advisories. It allows only `GHSA-vfj7-8cjw-p6xm` (`braces` `<=3.0.3`, no patched release, pulled by `eslint-config-next` and not shipped in the app image). Delete that exception when the advisory leaves the report.
+**Dependency monitoring:** A moderate PostCSS advisory (`GHSA-qx2v-qp2m-jg93`, transitive via Next.js) is tracked via Dependabot and the weekly `dependency-watch` workflow — wait for an upstream Next.js fix; do **not** run `npm audit fix --force`. `overrides` pin `sharp` to `0.35.5` and `source-map-js` to `1.2.2`. CI `npm run audit:high` still fails other high or critical advisories. It ignores `GHSA-fc5q-39xc-vjpf` (picomatch, development tools) through 2026-12-15, and only when `npm audit --omit=dev` reports no high or critical issue. After that date the gate fails and asks for a patched picomatch.
 | Security headers | X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy |
 | Analytics gate | Disabled by default; allowlisted, privacy-safe events only |
 

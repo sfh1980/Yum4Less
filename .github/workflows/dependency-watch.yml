@@ -38,11 +38,11 @@ jobs:
               console.log(`- ${entry.name} (${entry.severity}): ${entry.via}`);
             }
           }
-          const braces = advisories.filter((entry) =>
-            JSON.stringify(entry.via ?? '').includes('GHSA-vfj7-8cjw-p6xm')
+          const picomatch = advisories.filter((entry) =>
+            JSON.stringify(entry.via ?? '').includes('GHSA-fc5q-39xc-vjpf')
           );
-          if (braces.length > 0) {
-            console.log('::warning::braces GHSA-vfj7-8cjw-p6xm has no patched release (eslint-config-next only). CI allows this one high advisory. Remove the exception in scripts/audit-high-gate.mjs when it disappears.');
+          if (picomatch.length > 0) {
+            console.log('::warning::GHSA-fc5q-39xc-vjpf (picomatch) is excepted by scripts/audit-high-gate.mjs through 2026-12-15. Check for a patched picomatch and remove the exception when one exists.');
           }
           NODE
 
