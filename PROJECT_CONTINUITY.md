@@ -4,6 +4,10 @@
 
 ---
 
+## Resume (as of 2026-11-19, OSM data container)
+
+**This slice (branch `feat/osm-data-container`, not on yum4less.com):** `yum4less-osm` keeps a US OpenStreetMap extract and writes a grocery-only file. The container sleeps until a TrueNAS Cron Job runs `docker exec yum4less-osm osm-refresh`. No database, no secrets, and no cron inside the image. The user is uid **8456**. A full download happens when the file is missing or older than 60 days (`OSM_FULL_REFRESH_DAYS`). Otherwise `pyosmium-up-to-date` applies changes, capped at 2048 MB (`OSM_UPDATE_MAX_MB`). The grocery filter keeps supermarket, greengrocer, bakery, butcher, seafood, deli, wholesale, and department_store, and leaves out convenience and fuel. `YUM4LESS_OSM_GROCERY_FILE` defaults to `/osm/us-grocery.osm.pbf` for a later loader. The nightly ingest does not read it. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. Local image **49,007,474 bytes**. Fixture filter peak **14,024 KB**. `npm test` **1611/1611**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run audit:high` exit 0. Not on the NAS until the owner adds the dataset, the YAML, and the Sunday 13:30 job, and only after this branch is on master. A pass is not more dinners.
+
 ## Resume (as of 2026-11-17, dev-tool advisories)
 
 **This slice (branch `fix/dev-advisories-2026-11-17`, not on yum4less.com):** vitest and every `@vitest/*` package are 4.1.12. `@typescript-eslint/*` is pinned at 8.73.0, which uses minimatch 11.0.9. Runtime dependencies were not changed. `npm run audit:high` ignores advisory `GHSA-fc5q-39xc-vjpf` through 2026-12-15, and only when `npm audit --omit=dev` has no high or critical issue. The gate prints that the exception is in use and names the expiry. After that date it fails and asks for a patched picomatch. Any other high or critical advisory still fails. `npm test` **1608/1608**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. `npm audit --omit=dev` found 0 vulnerabilities. A pass is not more dinners.
@@ -366,6 +370,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-19 — OSM data container
+
+**Theme:** The NAS should keep one current US OpenStreetMap extract and a small grocery file, without putting that work in the nightly ingest or the database.
+
+**Shipped:** `yum4less-osm` (Debian bookworm, osmium-tool 1.15.0, pyosmium 3.6.0, uid 8456) sleeps until `docker exec yum4less-osm osm-refresh`. The script downloads Geofabrik's US extract when the file is missing or older than `OSM_FULL_REFRESH_DAYS` (default 60), checks the `.md5`, and otherwise updates with `pyosmium-up-to-date` under `OSM_UPDATE_MAX_MB` (default 2048). A failed update tries one fresh download. The grocery filter writes `us-grocery.osm.pbf.tmp` and renames it only when complete. `status.json` records the header timestamp, last success, last error, sizes, object counts, and duration. A lock stops a second run. `publish-osm-image` pushes `ghcr.io/sfh1980/yum4less-osm:<sha7>` and `:homelab` on master only. The app and ingest image jobs are unchanged. `YUM4LESS_OSM_GROCERY_FILE` defaults to `/osm/us-grocery.osm.pbf`. Nothing schedules a load.
+
+**Limits:** Branch `feat/osm-data-container`. Not on yum4less.com and not on the NAS. The first download is about 12 GB and is an owner step after the image exists. No state, ZIP, or chain exception. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. A pass is not more dinners.
+
+**Evidence:** `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1611/1611** pass (276 files). `npm run build` exit 0 (Next.js 15.5.28). `/` is `ƒ` (54.7 kB / 188 kB). `/faq` and `/terms` stay `○`. `npm run audit:high` exit 0 (`high audit: no high or critical advisories.`). Local image `yum4less-osm:local` **49,007,474 bytes**. Container tests **6/6** on a tiny fixture, no network. Filter peak RSS **14,024 KB**. Integration, e2e, and Semgrep were not run. No Geofabrik download.
 
 ### 2026-11-17 — Dev-tool advisories
 
@@ -3652,6 +3666,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-19 | **The US grocery map file is its own container, run by a host Cron Job.** `yum4less-osm` keeps a Geofabrik US extract and writes `/data/grocery/us-grocery.osm.pbf`. Convenience and fuel stay out. No database and no secrets. The container sleeps until `docker exec yum4less-osm osm-refresh`. Defaults: full refresh after 60 days, replication cap 2048 MB, later loader path `/osm/us-grocery.osm.pbf`. The night job does not load the file. No state, ZIP, or chain exception. OpenStreetMap contributors keep the ODbL credit. | **Active** |
 | 2026-11-17 | **Dev-tool high audit: patch vitest and typescript-eslint, and time-box picomatch.** vitest is 4.1.12. `@typescript-eslint/*` stays on major 8 at 8.73.0 so minimatch is at least 11.0.1. `GHSA-fc5q-39xc-vjpf` is ignored through 2026-12-15 only when `npm audit --omit=dev` has no high or critical issue. After that date the gate fails and asks for a patched picomatch. Any other advisory id still fails. | **Active** (supersedes the braces allowance in the 2026-10-06 and 2026-10-20 audit rows) |
 | 2026-11-16 | **Dinner totals say estimated total.** A dinner total and a store subtotal read `Estimated total: about $X`. Low reads `Estimated total - worth verifying in store` and shows no dollar. A single item keeps `Estimated lowest price` (or the older-ad or verify-in-store line). Price math is unchanged. | **Active** |
 | 2026-11-16 | **A store search and a dinner ranking stop waiting.** `YUM4LESS_STORE_SEARCH_TIMEOUT_MS` defaults to 20 seconds. `YUM4LESS_RANK_TIMEOUT_MS` defaults to 30 seconds. Valid values are 1000–120000. Both are read when the home page is requested. The existing error is shown with Try again. Changing the ZIP after a store list exists says the list was cleared and offers Search stores for this ZIP. | **Active** |
@@ -3846,6 +3861,12 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (OSM data container) | 2026-11-19 | **1611/1611** pass (276 files). |
+| `npm run typecheck` (same slice) | 2026-11-19 | **Pass** (`tsc --noEmit`, exit 0) |
+| `npm run lint` (same slice) | 2026-11-19 | **Pass** (exit 0) |
+| `npm run build` (same slice) | 2026-11-19 | **Pass** (Next.js 15.5.28). `/` is `ƒ` (54.7 kB / 188 kB). `/faq` and `/terms` stay `○`. |
+| `npm run audit:high` (same slice) | 2026-11-19 | **Exit 0.** Prints `high audit: no high or critical advisories.` |
+| `yum4less-osm` fixture tests (no network) | 2026-11-19 | **6/6** pass. Image **49,007,474 bytes**. Filter peak RSS **14,024 KB**. |
 | `npm test` (dev-tool advisories) | 2026-11-17 | **1608/1608** pass (275 files). |
 | `npm run typecheck` (same slice) | 2026-11-17 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same slice) | 2026-11-17 | **Pass** (exit 0) |

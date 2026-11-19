@@ -1,0 +1,479 @@
+#!/usr/bin/env python3
+"""Refresh the US OpenStreetMap extract and write a grocery-only file.
+
+The container does not call this by itself. TrueNAS runs:
+  docker exec yum4less-osm osm-refresh
+
+Settings (unset uses the default; a bad number uses the default and is logged):
+
+  OSM_DATA_DIR            /data
+  OSM_FULL_REFRESH_DAYS   60      full download when the file is missing or older
+  OSM_SOURCE_URL          https://download.geofabrik.de/north-america/us-latest.osm.pbf
+  OSM_SOURCE_MD5_URL      that URL plus .md5
+  OSM_UPDATE_MAX_MB       2048    per-run cap passed to pyosmium-up-to-date --size
+  OSM_PYOSMIUM_BIN        pyosmium-up-to-date
+  OSM_OSMIUM_BIN          osmium
+
+No state, ZIP, or chain value is special. Exit 0 on success, 1 on failure.
+A second run exits 1 while the lock is held. Half-written files are removed.
+"""
+
+from __future__ import annotations
+
+import fcntl
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+DEFAULT_SOURCE_URL = "https://download.geofabrik.de/north-america/us-latest.osm.pbf"
+DEFAULT_FULL_REFRESH_DAYS = 60
+DEFAULT_UPDATE_MAX_MB = 2048
+USER_AGENT = "yum4less-osm/1.0 (TrueNAS homelab weekly grocery extract)"
+
+# shop=convenience and amenity=fuel are left out on purpose.
+GROCERY_FILTERS = (
+    "nwr/shop=supermarket",
+    "nwr/shop=greengrocer",
+    "nwr/shop=bakery",
+    "nwr/shop=butcher",
+    "nwr/shop=seafood",
+    "nwr/shop=deli",
+    "nwr/shop=wholesale",
+    "nwr/shop=department_store",
+)
+
+
+class RefreshError(Exception):
+    pass
+
+
+def log(message: str) -> None:
+    text = " ".join(str(message).split())
+    print(f"osm-refresh: {text}", flush=True)
+
+
+def one_line(text: str, limit: int = 300) -> str:
+    collapsed = " ".join(text.split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return collapsed[: limit - 3] + "..."
+
+
+def read_positive_int(name: str, default: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 0
+    if value <= 0:
+        log(f"{name}={raw!r} is not a positive integer; using {default}")
+        return default
+    return value
+
+
+def read_source_url() -> str:
+    raw = os.environ.get("OSM_SOURCE_URL", "").strip()
+    return raw or DEFAULT_SOURCE_URL
+
+
+def read_md5_url(source_url: str) -> str:
+    raw = os.environ.get("OSM_SOURCE_MD5_URL", "").strip()
+    return raw or f"{source_url}.md5"
+
+
+def osmium_bin() -> str:
+    return os.environ.get("OSM_OSMIUM_BIN", "").strip() or "osmium"
+
+
+def pyosmium_bin() -> str:
+    return os.environ.get("OSM_PYOSMIUM_BIN", "").strip() or "pyosmium-up-to-date"
+
+
+def check_url(url: str) -> urllib.parse.ParseResult:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("https", "http", "file"):
+        raise RefreshError(f"unsupported URL scheme for {url}")
+    return parsed
+
+
+def fetch_to(url: str, dest: Path) -> None:
+    parsed = check_url(url)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if parsed.scheme == "file":
+        source = Path(urllib.request.url2pathname(parsed.path))
+        if not source.is_file():
+            raise RefreshError(f"source file not found: {source}")
+        shutil.copyfile(source, dest)
+        return
+
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response, dest.open("wb") as handle:
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                handle.write(chunk)
+    except urllib.error.URLError as exc:
+        raise RefreshError(f"download failed for {url}: {exc.reason}") from exc
+
+
+def file_md5(path: Path) -> str:
+    digest = hashlib.md5()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def read_expected_md5(md5_url: str) -> str:
+    parsed = check_url(md5_url)
+    if parsed.scheme == "file":
+        source = Path(urllib.request.url2pathname(parsed.path))
+        if not source.is_file():
+            raise RefreshError(f"checksum file not found: {source}")
+        text = source.read_text(encoding="utf-8", errors="replace")
+    else:
+        request = urllib.request.Request(md5_url, headers={"User-Agent": USER_AGENT})
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response:
+                text = response.read().decode("utf-8", errors="replace")
+        except urllib.error.URLError as exc:
+            raise RefreshError(f"checksum download failed for {md5_url}: {exc.reason}") from exc
+    match = re.search(r"\b([0-9a-fA-F]{32})\b", text)
+    if not match:
+        raise RefreshError("checksum file has no MD5")
+    return match.group(1).lower()
+
+
+def download_into_place(source_url: str, md5_url: str, full_path: Path) -> None:
+    partial = full_path.with_name(full_path.name + ".partial")
+    if partial.exists():
+        partial.unlink()
+    try:
+        fetch_to(source_url, partial)
+        expected = read_expected_md5(md5_url)
+        actual = file_md5(partial)
+        if actual != expected:
+            raise RefreshError(f"checksum mismatch (expected {expected}, got {actual})")
+        os.replace(partial, full_path)
+    except Exception:
+        if partial.exists():
+            partial.unlink()
+        raise
+    log("download verified and moved into place")
+
+
+def needs_full_download(full_path: Path, days: int) -> bool:
+    if not full_path.is_file() or full_path.stat().st_size == 0:
+        return True
+    age_seconds = time.time() - full_path.stat().st_mtime
+    return age_seconds > days * 86400
+
+
+def needs_explicit_pbf_format(path: Path) -> bool:
+    name = path.name
+    return not (name.endswith(".osm.pbf") or name.endswith(".pbf"))
+
+
+def run_fileinfo(path: Path, extended: bool) -> dict:
+    command = [osmium_bin(), "fileinfo", "-j"]
+    if extended:
+        command.append("-e")
+    if needs_explicit_pbf_format(path):
+        command.extend(["-F", "pbf"])
+    command.append(str(path))
+    completed = subprocess.run(command, capture_output=True, text=True)
+    if completed.returncode != 0:
+        detail = one_line(completed.stderr) or f"osmium fileinfo exit {completed.returncode}"
+        raise RefreshError(detail)
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise RefreshError("osmium fileinfo did not return JSON") from exc
+
+
+def header_timestamp(info: dict) -> str | None:
+    header = info.get("header") or {}
+    options = header.get("options") or header.get("option") or {}
+    if isinstance(options, list):
+        merged: dict[str, str] = {}
+        for item in options:
+            if isinstance(item, dict):
+                for key, value in item.items():
+                    if isinstance(value, str):
+                        merged[key] = value
+        options = merged
+    if not isinstance(options, dict):
+        return None
+    for key in ("osmosis_replication_timestamp", "timestamp"):
+        value = options.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def object_counts(info: dict) -> dict[str, int]:
+    count = (info.get("data") or {}).get("count") or {}
+    if not isinstance(count, dict):
+        count = {}
+    return {
+        "nodes": int(count.get("nodes") or 0),
+        "ways": int(count.get("ways") or 0),
+        "relations": int(count.get("relations") or 0),
+    }
+
+
+def try_extended_info(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    try:
+        return run_fileinfo(path, extended=True)
+    except (RefreshError, OSError):
+        return None
+
+
+def update_full_file(full_path: Path, data_dir: Path, max_mb: int) -> tuple[bool, int, str]:
+    updating = full_path.with_name(full_path.name + ".updating")
+    if updating.exists():
+        updating.unlink()
+    command = [
+        pyosmium_bin(),
+        "--size",
+        str(max_mb),
+        "--outfile",
+        str(updating),
+        "--format",
+        "pbf",
+        "--tmpdir",
+        str(data_dir),
+        str(full_path),
+    ]
+    completed = subprocess.run(command, capture_output=True, text=True)
+    detail = one_line(completed.stderr or completed.stdout)
+    usable = completed.returncode in (0, 1) and updating.is_file() and updating.stat().st_size > 0
+    if usable:
+        try:
+            run_fileinfo(updating, extended=False)
+        except RefreshError as exc:
+            updating.unlink(missing_ok=True)
+            return False, completed.returncode, one_line(str(exc))
+        os.replace(updating, full_path)
+        return True, completed.returncode, ""
+    updating.unlink(missing_ok=True)
+    return False, completed.returncode, detail
+
+
+def filter_grocery(source: Path, grocery: Path) -> dict[str, int]:
+    tmp = grocery.with_name(grocery.name + ".tmp")
+    if tmp.exists():
+        tmp.unlink()
+    command = [
+        osmium_bin(),
+        "tags-filter",
+        "--overwrite",
+        "-f",
+        "pbf",
+        "-o",
+        str(tmp),
+        str(source),
+        *GROCERY_FILTERS,
+    ]
+    log("filtering grocery places")
+    completed = subprocess.run(command, capture_output=True, text=True)
+    if completed.returncode != 0 or not tmp.is_file() or tmp.stat().st_size == 0:
+        tmp.unlink(missing_ok=True)
+        detail = one_line(completed.stderr) or f"exit {completed.returncode}"
+        raise RefreshError(f"grocery filter failed ({detail}); old grocery file left in place")
+    info = run_fileinfo(tmp, extended=True)
+    counts = object_counts(info)
+    if counts["nodes"] + counts["ways"] + counts["relations"] == 0:
+        tmp.unlink(missing_ok=True)
+        raise RefreshError("grocery filter kept zero objects; old grocery file left in place")
+    os.replace(tmp, grocery)
+    log("grocery file renamed into place")
+    return counts
+
+
+def status_path(data_dir: Path) -> Path:
+    return data_dir / "grocery" / "status.json"
+
+
+def load_status(path: Path) -> dict:
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def write_status(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def file_size(path: Path) -> int | None:
+    if not path.is_file():
+        return None
+    return path.stat().st_size
+
+
+def cleanup_temps(data_dir: Path) -> None:
+    names = (
+        "us-latest.osm.pbf.partial",
+        "us-latest.osm.pbf.updating",
+        "grocery/us-grocery.osm.pbf.tmp",
+        "grocery/status.json.tmp",
+    )
+    for name in names:
+        path = data_dir / name
+        if path.exists():
+            path.unlink()
+
+
+def record_failure(data_dir: Path, started: float, message: str) -> None:
+    grocery_dir = data_dir / "grocery"
+    full_path = data_dir / "us-latest.osm.pbf"
+    grocery_path = grocery_dir / "us-grocery.osm.pbf"
+    previous = load_status(status_path(data_dir))
+    source_info = try_extended_info(full_path)
+    grocery_info = try_extended_info(grocery_path)
+    payload = {
+        "source_timestamp": header_timestamp(source_info) if source_info else previous.get("source_timestamp"),
+        "last_success": previous.get("last_success"),
+        "last_error": one_line(message, 500),
+        "sizes": {
+            "source_bytes": file_size(full_path),
+            "grocery_bytes": file_size(grocery_path),
+        },
+        "object_counts": {
+            "source": object_counts(source_info) if source_info else None,
+            "grocery": object_counts(grocery_info) if grocery_info else None,
+        },
+        "duration_seconds": round(time.monotonic() - started, 1),
+    }
+    try:
+        write_status(status_path(data_dir), payload)
+    except OSError as exc:
+        log(f"could not write status: {exc}")
+        return
+    log("status written")
+
+
+def refresh(data_dir: Path, started: float) -> int:
+    days = read_positive_int("OSM_FULL_REFRESH_DAYS", DEFAULT_FULL_REFRESH_DAYS)
+    max_mb = read_positive_int("OSM_UPDATE_MAX_MB", DEFAULT_UPDATE_MAX_MB)
+    source_url = read_source_url()
+    md5_url = read_md5_url(source_url)
+    full_path = data_dir / "us-latest.osm.pbf"
+    grocery_dir = data_dir / "grocery"
+    grocery_path = grocery_dir / "us-grocery.osm.pbf"
+    grocery_dir.mkdir(parents=True, exist_ok=True)
+
+    mode = "download"
+    if needs_full_download(full_path, days):
+        log(f"full file missing or older than {days} days; downloading {source_url}")
+        download_into_place(source_url, md5_url, full_path)
+    else:
+        mode = "update"
+        log(f"full file is within {days} days; updating from replication (cap {max_mb} MB)")
+        updated, code, detail = update_full_file(full_path, data_dir, max_mb)
+        if updated and code == 0:
+            log("replication update finished")
+        elif updated and code == 1:
+            log(
+                "replication update stopped at the download cap; "
+                "newer file is in place; the next run continues"
+            )
+        else:
+            extra = f": {detail}" if detail else ""
+            log(f"replication update failed (exit {code}){extra}; falling back to one fresh download")
+            try:
+                download_into_place(source_url, md5_url, full_path)
+            except RefreshError as exc:
+                raise RefreshError(f"fallback download failed: {exc}") from exc
+            mode = "download"
+
+    grocery_counts = filter_grocery(full_path, grocery_path)
+    source_info = run_fileinfo(full_path, extended=True)
+    source_counts = object_counts(source_info)
+    finished = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    payload = {
+        "source_timestamp": header_timestamp(source_info),
+        "last_success": finished,
+        "last_error": None,
+        "sizes": {
+            "source_bytes": file_size(full_path),
+            "grocery_bytes": file_size(grocery_path),
+        },
+        "object_counts": {
+            "source": source_counts,
+            "grocery": grocery_counts,
+        },
+        "duration_seconds": round(time.monotonic() - started, 1),
+        "mode": mode,
+    }
+    write_status(status_path(data_dir), payload)
+    log("status written")
+    log(f"done in {payload['duration_seconds']}s")
+    return 0
+
+
+def main() -> int:
+    started = time.monotonic()
+    data_dir = Path(os.environ.get("OSM_DATA_DIR", "/data"))
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        log(f"cannot create data dir {data_dir}: {exc}")
+        return 1
+
+    lock_path = data_dir / ".osm-refresh.lock"
+    try:
+        lock_file = lock_path.open("a+", encoding="utf-8")
+    except OSError as exc:
+        log(f"cannot open lock {lock_path}: {exc}")
+        return 1
+
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        log("lock held; another run is in progress")
+        return 1
+
+    log("lock acquired")
+    try:
+        return refresh(data_dir, started)
+    except RefreshError as exc:
+        cleanup_temps(data_dir)
+        log(f"failed: {exc}")
+        record_failure(data_dir, started, str(exc))
+        return 1
+    except Exception as exc:
+        cleanup_temps(data_dir)
+        log(f"failed: {exc}")
+        record_failure(data_dir, started, str(exc))
+        return 1
+    finally:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        lock_file.close()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

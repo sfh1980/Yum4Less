@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="yum4less-osm-fixture">
+  <node id="1" lat="37.6085" lon="-77.3739" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="shop" v="supermarket"/>
+    <tag k="name" v="Fixture Market"/>
+  </node>
+  <node id="2" lat="37.6086" lon="-77.3740" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="shop" v="convenience"/>
+    <tag k="name" v="Fixture Convenience"/>
+  </node>
+  <node id="3" lat="37.6087" lon="-77.3741" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="amenity" v="fuel"/>
+    <tag k="name" v="Fixture Fuel"/>
+  </node>
+  <node id="4" lat="37.6088" lon="-77.3742" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="shop" v="greengrocer"/>
+    <tag k="name" v="Fixture Greens"/>
+  </node>
+  <node id="5" lat="37.6089" lon="-77.3743" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="shop" v="butcher"/>
+    <tag k="name" v="Fixture Butcher"/>
+  </node>
+  <node id="6" lat="37.6090" lon="-77.3744" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="shop" v="seafood"/>
+    <tag k="name" v="Fixture Seafood"/>
+  </node>
+  <node id="7" lat="37.6091" lon="-77.3745" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="shop" v="deli"/>
+    <tag k="name" v="Fixture Deli"/>
+  </node>
+  <node id="8" lat="37.6092" lon="-77.3746" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="shop" v="wholesale"/>
+    <tag k="name" v="Fixture Wholesale"/>
+  </node>
+  <node id="9" lat="37.6093" lon="-77.3747" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <tag k="shop" v="department_store"/>
+    <tag k="name" v="Fixture Department"/>
+  </node>
+  <node id="20" lat="37.6094" lon="-77.3748" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture"/>
+  <node id="21" lat="37.6095" lon="-77.3749" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture"/>
+  <node id="22" lat="37.6096" lon="-77.3750" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture"/>
+  <node id="23" lat="37.6097" lon="-77.3751" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture"/>
+  <way id="100" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <nd ref="20"/>
+    <nd ref="21"/>
+    <tag k="shop" v="bakery"/>
+    <tag k="name" v="Fixture Bakery"/>
+  </way>
+  <way id="101" version="1" timestamp="2024-06-01T00:00:00Z" changeset="1" uid="1" user="fixture">
+    <nd ref="22"/>
+    <nd ref="23"/>
+    <tag k="shop" v="convenience"/>
+    <tag k="name" v="Fixture Convenience Way"/>
+  </way>
+</osm>

@@ -1,3 +1,6 @@
 docker/ingest/entrypoint.sh text eol=lf
 docker/ingest/crontab text eol=lf
+docker/osm/osm-refresh text eol=lf
+docker/osm/test_osm_refresh.py text eol=lf
+docker/osm/fixtures/*.osm text eol=lf
 *.sql text eol=lf

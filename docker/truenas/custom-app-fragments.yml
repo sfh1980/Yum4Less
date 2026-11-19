@@ -1,5 +1,5 @@
 # Reference TrueNAS Custom App fragments — copy into the working stack YAML
-# documented in docs/homelab-deploy.md §9–§11. Not used by local docker compose.
+# documented in docs/homelab-deploy.md §9–§11 and §13. Not used by local docker compose.
 
 # ---------------------------------------------------------------------------
 # ingest — add alongside existing `db` + `app` in the SAME Custom App so
@@ -13,6 +13,8 @@
 #     depends_on:
 #       db:
 #         condition: service_healthy
+#     volumes:
+#       - /mnt/appPool/yum4less/osm/grocery:/osm:ro
 #     environment:
 #       YUM4LESS_EXTERNAL_POSTGRES: "1"
 #       DATABASE_URL: postgresql://postgres:postgres@db:5432/yum4less_dev
@@ -22,8 +24,32 @@
 #       KROGER_CLIENT_SECRET: "REPLACE"
 #       KROGER_API_ENV: production
 #       TZ: America/New_York
+#       # Later loader path. Unset in the image code uses this same path.
+#       # Does not start a load.
+#       YUM4LESS_OSM_GROCERY_FILE: /osm/us-grocery.osm.pbf
 #       # Optional: YUM4LESS_FRESHNESS_WEBHOOK_URL: "https://..."
 #       # Dry-run once: set YUM4LESS_INGEST_ONCE=1 (container exits after one run)
+#     labels:
+#       - "com.centurylinklabs.watchtower.enable=true"
+#
+# ---------------------------------------------------------------------------
+# osm — same Custom App project (ix-yum4less). No ports. No DATABASE_URL.
+# The container user is uid 8456. mem_limit is the Compose memory cap
+# (Docker's 4g is 4 GiB). TrueNAS 25.04 Custom App YAML is Compose, so this
+# key is how the 4 GB cap is set. The form field "Memory (in MB)" is separate.
+# memswap_limit matches mem_limit so the service cannot add a swap allowance
+# on a host that has no swap.
+# ---------------------------------------------------------------------------
+#
+#   osm:
+#     image: ghcr.io/sfh1980/yum4less-osm:homelab   # Watchtower float; rollback = :<sha7>
+#     container_name: yum4less-osm
+#     restart: unless-stopped
+#     user: "8456:8456"
+#     mem_limit: 4g
+#     memswap_limit: 4g
+#     volumes:
+#       - /mnt/appPool/yum4less/osm:/data
 #     labels:
 #       - "com.centurylinklabs.watchtower.enable=true"
 #

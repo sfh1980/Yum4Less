@@ -2,7 +2,7 @@
 
 Copy-paste guide for a **dedicated Linux / TrueNAS SCALE box** running Postgres, the Yum4Less app, and **daily live ingest** via cron. Local proof uses **Docker Compose**; the production-like host path on this project is **TrueNAS Apps “Custom App” YAML** (see [§9](#9-truenas-apps-custom-app--working-deploy)).
 
-**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). **Unattended ingest-worker night closed** (owner paste-back 2026-08-31). **15-night `ingest_jobs` rollup closed** (owner paste-back 2026-09-14: **2026-08-31 through 2026-09-14**, each **6/6 succeeded**, enqueue ~07:00:03Z). **Backup/restore drill closed** (2026-08-31). Remaining open ops: TheMealDB **dev test key**. Watchtower pull and extra ZIP **`23220`** first ingest **closed** (owner paste 2026-09-01).
+**Scope:** (1) App + Postgres on the box, (2) unattended `npm run ingest:weekly-ads:scheduled` via a **dedicated ingest container** ([§10](#10-ingest-cron-container-truenas)), (3) Watchtower auto-update for labeled app/ingest images ([§11](#11-watchtower-auto-update)), (4) public HTTPS via **Cloudflare Tunnel** ([§12](#12-cloudflare-tunnel-wan--live)). CI publishes SHA-pinned **app** and **ingest** images to GHCR ([§8](#8-ghcr-app-image-for-truenas)). **yum4less-osm** is a third image; it is not on the box until [§13](#13-osm-data-container-yum4less-osm). **§10 ingest + §11 Watchtower + §12 Tunnel are deployed** on TrueNAS (see those sections). **Unattended 3am two-night proof closed** (owner paste-back 2026-08-29). **Unattended ingest-worker night closed** (owner paste-back 2026-08-31). **15-night `ingest_jobs` rollup closed** (owner paste-back 2026-09-14: **2026-08-31 through 2026-09-14**, each **6/6 succeeded**, enqueue ~07:00:03Z). **Backup/restore drill closed** (2026-08-31). Remaining open ops: TheMealDB **dev test key**. Watchtower pull and extra ZIP **`23220`** first ingest **closed** (owner paste 2026-09-01).
 
 **Related:** [`README.md`](../README.md) (commands), [`.env.example`](../.env.example) (env truth), [`PROJECT_CONTINUITY.md`](../PROJECT_CONTINUITY.md) (product scope), [`docs/provider-integration-pattern.md`](provider-integration-pattern.md) (chain data paths). Owner notes: Obsidian `Projects/Yum4Less/Yum4Less Home.md` in `C:\Users\sfh19\OneDrive\Documents\Obsidian Vault`.
 
@@ -553,14 +553,15 @@ TrueNAS Apps “Install via YAML” **pulls** pre-built images — it does not `
 |---------|------------|------|
 | `yum4less-app` | `Dockerfile` (Next.js standalone) | `publish-image` |
 | `yum4less-ingest` | `Dockerfile.ingest` (Node 22 + Playwright + cron) | `publish-ingest-image` |
+| `yum4less-osm` | `docker/osm/Dockerfile` (Debian, osmium, pyosmium; no cron) | `publish-osm-image` |
 
 | Tag | Purpose |
 |-----|---------|
 | **`<git-sha7>`** | **Rollback / audit pin** — immutable digest for that green commit |
 | **`:homelab`** | **Watchtower float** — moved to the same digest as that commit’s SHA on every green `master` publish |
-| **`:latest`** | Convenience only — same float as `:homelab`; do not use for rollback pins |
+| **`:latest`** | Convenience only — same float as `:homelab` on **app** and **ingest**; do not use for rollback pins. **yum4less-osm has no `:latest` tag.** |
 
-**Important (Watchtower):** Immutable SHA tags never “update.” Auto-update only works on a **mutable** tag (`:homelab` or `:latest`). Prefer `:homelab` on labeled app/ingest services; keep the SHA handy for manual rollback.
+**Important (Watchtower):** Immutable SHA tags never “update.” Auto-update only works on a **mutable** tag (`:homelab` or `:latest`). Prefer `:homelab` on labeled app, ingest, and osm services; keep the SHA handy for manual rollback.
 
 - **Visibility:** Actions-published packages from this **public** GitHub repo inherit **public** visibility. TrueNAS can pull **without** a GitHub PAT while that stays true.
 - Ingest is **never** baked into the app image — separate package on purpose.
@@ -570,9 +571,11 @@ TrueNAS Apps “Install via YAML” **pulls** pre-built images — it does not `
 ```bash
 docker pull ghcr.io/sfh1980/yum4less-app:<git-sha7>
 docker pull ghcr.io/sfh1980/yum4less-ingest:<git-sha7>
+docker pull ghcr.io/sfh1980/yum4less-osm:<git-sha7>
 # Watchtower-managed float:
 docker pull ghcr.io/sfh1980/yum4less-app:homelab
 docker pull ghcr.io/sfh1980/yum4less-ingest:homelab
+docker pull ghcr.io/sfh1980/yum4less-osm:homelab
 ```
 
 If a package is later flipped to **private**, TrueNAS will need a GitHub PAT with **`read:packages`**.
@@ -877,7 +880,7 @@ Also use §4.2 SQL via `sudo docker exec yum4less-postgres psql ...`.
 
 ### 10.5 Custom App YAML block (`ingest`)
 
-Add to the **same** Custom App as `db` / `app` (after `app:`). Replace secrets and ZIPs. Fragments also live in [`docker/truenas/custom-app-fragments.yml`](../docker/truenas/custom-app-fragments.yml).
+Add to the **same** Custom App as `db` / `app` (after `app:`). Replace secrets and ZIPs. Fragments also live in [`docker/truenas/custom-app-fragments.yml`](../docker/truenas/custom-app-fragments.yml). The grocery volume and `YUM4LESS_OSM_GROCERY_FILE` are not in this block: add them from [§13](#13-osm-data-container-yum4less-osm). Ingest has no mounted folders until that edit.
 
 ```yaml
   ingest:
@@ -914,7 +917,7 @@ Logs: `sudo docker logs yum4less-ingest` (cron stdout is limited; job appends `/
 - `Only checking containers using enable label`
 - Scoped correctly to **app + ingest** only; **db** unlabeled and excluded by design (Postgres updates stay manual).
 
-**Goal:** Hourly poll of GHCR; **only** recreate containers labeled for Watchtower (`app` + `ingest`). **Never** touch `db` (Postgres updates stay manual — no label).
+**Goal:** Hourly poll of GHCR; **only** recreate containers labeled for Watchtower (`app`, `ingest`, and `osm` once [§13](#13-osm-data-container-yum4less-osm) is in the YAML). **Never** touch `db` (Postgres updates stay manual — no label).
 
 ### 11.1 Tag model (required reading)
 
@@ -1046,6 +1049,123 @@ Add GYAM as another public hostname on the **same** tunnel after Yum4Less path i
 
 ---
 
+## 13. OSM data container (yum4less-osm)
+
+**Not on the TrueNAS box until you do the steps below.** The image is published only after this branch is on `master` and `publish-osm-image` succeeds. Shoppers do not see a change. The nightly ingest is unchanged. Nothing in this container reads or writes Postgres, and it has no secrets.
+
+The container keeps a full US OpenStreetMap extract at `/data/us-latest.osm.pbf` and writes a grocery-only file at `/data/grocery/us-grocery.osm.pbf`. It sleeps until a host Cron Job runs `docker exec yum4less-osm osm-refresh`. There is no cron inside the container. The process user is **uid 8456** (group 8456, name `osm`).
+
+OpenStreetMap data is © OpenStreetMap contributors and is available under the Open Database License (ODbL): <https://www.openstreetmap.org/copyright>. Geofabrik packages the US extract. Yum4Less does not claim that map data as its own. This container only stores the file. It does not load stores into the database.
+
+### 13.1 What a run does
+
+1. If `/data/us-latest.osm.pbf` is missing or older than `OSM_FULL_REFRESH_DAYS` (default **60**), download `OSM_SOURCE_URL` (default `https://download.geofabrik.de/north-america/us-latest.osm.pbf`) to a temp file, check Geofabrik's `.md5`, then move it into place.
+2. Otherwise update that file with `pyosmium-up-to-date`, using the replication info already in the file. `OSM_UPDATE_MAX_MB` (default **2048**) is the per-run download cap (`--size`, megabytes). Diffs are held in memory, and processing needs about 1 GB more, so 2048 MB stays inside the 4 GB container cap. If the cap stops the catch-up, the newer file is kept and the next run continues. If the update fails, the run logs that and tries **one** fresh download.
+3. `osmium tags-filter` keeps places tagged `shop=supermarket`, `greengrocer`, `bakery`, `butcher`, `seafood`, `deli`, `wholesale`, or `department_store`. Convenience and fuel are left out. The result is written to `us-grocery.osm.pbf.tmp` and renamed over the old grocery file only when the filter finishes and keeps at least one object.
+4. `/data/grocery/status.json` records the source header timestamp, last success, last error, file sizes, object counts, and duration.
+5. A lock (`/data/.osm-refresh.lock`) makes a second run exit non-zero instead of overlapping. A failed run removes temp files and leaves the previous grocery file in place. Exit 0 is success. Any other exit code is a failed Cron Job.
+
+Leave these unset unless you want a different value. There is no state, ZIP, or chain exception.
+
+| Setting | Default |
+|---|---|
+| `OSM_FULL_REFRESH_DAYS` | `60` |
+| `OSM_SOURCE_URL` | Geofabrik US `.osm.pbf` (URL above) |
+| `OSM_SOURCE_MD5_URL` | that URL plus `.md5` |
+| `OSM_UPDATE_MAX_MB` | `2048` |
+| `YUM4LESS_OSM_GROCERY_FILE` (ingest, later loader) | `/osm/us-grocery.osm.pbf` |
+
+`YUM4LESS_OSM_GROCERY_FILE` is the path the ingest container will read later. This branch does not load the file and does not add it to the night job.
+
+### 13.2 Disk
+
+Keep about **12 GB** for the US extract and the grocery file, plus about **12 GB** of temporary space while an update or a fresh download is in progress. Keep **30 GB free** on `appPool`. The pool had about 910 GB free on 2026-11-19, so this fits. There is no snapshot task and no replication task to lean on.
+
+### 13.3 Owner steps, in order
+
+Do this on TrueNAS SCALE 25.04 after `ghcr.io/sfh1980/yum4less-osm:homelab` exists. The running project is the Custom App **yum4less** (compose project `ix-yum4less`: `db`, `app`, `ingest`). Scheduled work is a host Cron Job, same as "Yum4Less nightly backup" and "Yum4Less ingest worker".
+
+1. **Wait for the image.** After the branch is fast-forwarded onto `master`, wait until `publish-osm-image` is green. Confirm `sudo docker pull ghcr.io/sfh1980/yum4less-osm:homelab` works. The app and ingest Dockerfiles are unchanged. A master push still publishes those two images as well, because their jobs run on every green `master` push. Watchtower can recreate app and ingest from that same push.
+
+2. **Create the dataset.** Datasets → `appPool` → `yum4less` → Add Dataset. Name: `osm`. Preset: **Apps**. Then in the System Settings shell:
+
+   ```bash
+   mkdir -p /mnt/appPool/yum4less/osm/grocery
+   chown -R 8456:8456 /mnt/appPool/yum4less/osm
+   ```
+
+   The Apps preset starts as the apps user (uid 568). The container writes as **8456**, so the chown is required. If a later ACL reset blocks the write, set the dataset owner to uid 8456 and run the chown again.
+
+3. **Edit the Custom App.** Apps → yum4less → Edit. Add the `osm` service, and add the ingest volume as the **first** volume line. Save. That recreates ingest with the new mount. Ingest has no mounted folders today; this is the first one.
+
+   TrueNAS 25.04 Custom App YAML is Docker Compose. The 4 GB cap is the Compose key `mem_limit: 4g` on the `osm` service (Docker's `g` is 1024-based, so this is 4 GiB). `memswap_limit: 4g` matches it so Docker does not add a swap allowance. The host has no swap, and about 9.6 GiB was free on 2026-11-19, so the cap keeps this weekly job from taking the rest of the 31 GiB. The Apps form field "Memory (in MB)" is a different control. Do not also set a second limit there for this service.
+
+   ```yaml
+     osm:
+       image: ghcr.io/sfh1980/yum4less-osm:homelab
+       container_name: yum4less-osm
+       restart: unless-stopped
+       user: "8456:8456"
+       mem_limit: 4g
+       memswap_limit: 4g
+       volumes:
+         - /mnt/appPool/yum4less/osm:/data
+       labels:
+         - "com.centurylinklabs.watchtower.enable=true"
+   ```
+
+   On `ingest`, first volume line, plus the loader setting. No new port. The osm service has no `DATABASE_URL` and no ports. Fragments also live in [`docker/truenas/custom-app-fragments.yml`](../docker/truenas/custom-app-fragments.yml).
+
+   ```yaml
+     volumes:
+       - /mnt/appPool/yum4less/osm/grocery:/osm:ro
+     environment:
+       YUM4LESS_OSM_GROCERY_FILE: /osm/us-grocery.osm.pbf
+   ```
+
+   Keep the existing ingest environment (`DATABASE_URL`, keys, `TZ`). Watchtower will recreate `yum4less-osm` when `:homelab` moves, and the volume stays because it is in this YAML. It still never touches `db`.
+
+4. **First manual run.** This downloads the US extract (about 12 GB) from `download.geofabrik.de`. The NAS can reach that host.
+
+   ```bash
+   sudo docker exec yum4less-osm osm-refresh
+   echo "Exit code: $?"
+   ```
+
+   Exit 0 is success. Then read the status file on the host:
+
+   ```bash
+   sudo cat /mnt/appPool/yum4less/osm/grocery/status.json
+   ```
+
+   `last_error` is null, `last_success` is set, and `source_timestamp` is the timestamp from the extract header. `sudo docker logs yum4less-osm` stays quiet, because `docker exec` output goes to the shell, not the container log. The container is still sleeping.
+
+5. **Add the weekly Cron Job.** System Settings → Advanced → Cron Jobs → Add.
+
+   | Field | Value |
+   |---|---|
+   | Description | `Yum4Less OSM weekly refresh` |
+   | Command | `docker exec yum4less-osm osm-refresh` |
+   | Run as user | `root` |
+   | Schedule | Sunday **13:30** (minute 30, hour 13, day of week Sunday) |
+
+   Leave "Yum4Less nightly backup" (04:00) and "Yum4Less ingest worker" (every minute) as they are. This job does not replace them.
+
+### 13.4 status.json and a forced fresh download
+
+`/mnt/appPool/yum4less/osm/grocery/status.json` is the run record: header timestamp, last success, last error, sizes, object counts, duration. A failed run keeps the previous grocery file and sets `last_error`. The Cron Job shows a failure when the exit code is not 0.
+
+To force one fresh download, delete only the full extract and run again. Leave the grocery file unless you mean to drop it.
+
+```bash
+sudo rm /mnt/appPool/yum4less/osm/us-latest.osm.pbf
+sudo docker exec yum4less-osm osm-refresh
+```
+
+Do not delete `/data/.osm-refresh.lock`. The next run reuses it.
+
+---
+
 ## Pre-go-live gaps (flag — don’t fix in this pass)
 
 Issues to resolve **before** relying on unattended cron:
@@ -1071,6 +1191,7 @@ Issues to resolve **before** relying on unattended cron:
 
 | Date | Change |
 |------|--------|
+| 2026-11-19 | §13 `yum4less-osm`: weekly host Cron Job, grocery file, no database. Not on the box until the owner adds the dataset, the YAML, and the Sunday 13:30 job. |
 | 2026-09-03 | Dollar General live Flipp ingest + food-desert dinners (`031`). Same floors as other ranked banners. Sale list can show DG weekly-ad rows without ranking. Lidl stays fail-soft. |
 | 2026-08-04 | §12 Cloudflare Tunnel **live** (`yum4less.com`); TRUST_PROXY + feedback/analytics ops notes; CI/Dockerfile bake `NEXT_PUBLIC_YUM4LESS_ANALYTICS=1` for published app images; shopper UI copy trim cross-ref |
 | 2026-07-26 | §10 / §11 marked **deployed and verified** on TrueNAS (same-stack ingest; sibling Watchtower Custom App; `:homelab` + enable label on app; one-shot dry-run 246/246 @ ZIP `23111`; Watchtower Discord + label-scope logs). Still open: 3am cron, Watchtower first hourly scan, backup drill, Cloudflare Tunnel WAN. Added zsh `!` / single-quote `DATABASE_URL` troubleshooting note. |
