@@ -6,9 +6,13 @@ on:
       - master
   pull_request:
 
+# ubuntu-latest is Ubuntu 26.04. Playwright 1.60.0 cannot install Chromium
+# dependencies on ubuntu26.04-x64, and image publish waits on e2e, so every
+# job stays on ubuntu-24.04. Move to 26.04 only after a Playwright release
+# that supports it.
 jobs:
   semgrep:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: semgrep/semgrep
     if: github.actor != 'dependabot[bot]'
@@ -30,7 +34,7 @@ jobs:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -67,7 +71,7 @@ jobs:
         run: npm run build
 
   integration:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -86,7 +90,7 @@ jobs:
         run: npm run test:integration
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [verify, integration]
 
     steps:
@@ -116,7 +120,7 @@ jobs:
   # Master-push only (same trigger as the rest of CI). Tag/release-only publishing
   # is a later option if TrueNAS pin ceremony prefers it; SHA tags already pin builds.
   publish-image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [verify, integration, e2e, semgrep]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     permissions:
@@ -193,7 +197,7 @@ jobs:
 
   # Separate ingest image (Playwright + cron) — never bake ingest into yum4less-app.
   publish-ingest-image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [verify, integration, e2e, semgrep]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     permissions:
@@ -256,7 +260,7 @@ jobs:
   # OSM data image (osmium + pyosmium, no cron, no database).
   # Master pushes only. Does not change the app or ingest image builds.
   publish-osm-image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [verify, integration, e2e, semgrep]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     permissions:

@@ -9,9 +9,12 @@ on:
     - cron: "20 9 * * *"
   workflow_dispatch:
 
+# ubuntu-latest is Ubuntu 26.04. Playwright 1.60.0 cannot install Chromium
+# dependencies on ubuntu26.04-x64, so every job stays on ubuntu-24.04. Move
+# to 26.04 only after a Playwright release that supports it.
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,7 +50,7 @@ jobs:
         run: npm run build
 
   integration:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -65,7 +68,7 @@ jobs:
         run: npm run test:integration
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [verify, integration]
     steps:
       - name: Checkout repository
@@ -91,7 +94,7 @@ jobs:
           GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY }}
 
   site:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -111,7 +114,7 @@ jobs:
   report:
     if: always()
     needs: [verify, integration, e2e, site]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Save the outside result for the morning note
         env:
