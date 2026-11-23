@@ -352,6 +352,8 @@ export function migrationEffectPresent(version, db) {
       return db.tableExists("weekly_ad_run_stats");
     case "046":
       return db.tableExists("area_interest");
+    case "047":
+      return db.tableExists("osm_grocery_places");
     default:
       return false;
   }

@@ -80,6 +80,10 @@ import {
   mergeCatalogStoresForMap,
 } from "@/lib/market-store-catalog-merge";
 import { isNonLiveOsmCatalogIdentity } from "@/lib/osm-food-retail-discovery";
+import {
+  loadOsmGroceryPlacesNear,
+  mergeOsmGroceryPlaces,
+} from "@/lib/osm-grocery-places";
 import { shouldUseMapSearchOsmFixture } from "@/lib/map-search-osm-cache";
 import {
   buildStoreMapLocationBadge,
@@ -254,6 +258,15 @@ export async function getMarketSearchExperience(
     mergedCatalogStores,
     identityLookup,
     storeIdentityEnv,
+  );
+
+  mergedCatalogStores = mergeOsmGroceryPlaces(
+    mergedCatalogStores,
+    await loadOsmGroceryPlacesNear({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      radiusMiles,
+    }),
   );
 
   let nearbyStores = buildNearbyStoresForSearch(

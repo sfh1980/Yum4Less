@@ -4,6 +4,12 @@
 
 ---
 
+## Resume (as of 2026-11-23, OSM grocery pins)
+
+**This slice (branch `feat/next-three-2026-11-23`, third commit, not on yum4less.com):** The grocery file loads into `osm_grocery_places`, not `stores`. Nightly map-catalog, weekly-ad admission, aliases, and the morning note walk `stores` (about 290 rows). Tens of thousands of extra rows there would slow those walks and could change who is admitted. Store search reads the new table inside the radius and skips an id the catalog already has. The hand command is `npx tsx scripts/load-osm-grocery.ts`. `--dry-run` prints counts and writes nothing. `YUM4LESS_OSM_GROCERY_FILE` still defaults to `/osm/us-grocery.osm.pbf`. Convenience and fuel are never loaded. A department store is kept only when the name is Target. A place missing from two loads in a row is marked closed, not deleted. Official locator rows, chain ranking, prices, and market activation are not written. ZIP adds stay paused. Overpass stays off. The map tiles already show OpenStreetMap contributors. Migration `047`. The owner runs `db:migrate` and the load by hand. Relation-only shops are counted and not loaded yet. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. `npm test` **1620/1620**. Integration **78/78**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. `npm run audit:high` exit 0. A pass is not more dinners.
+
+The first commit on this branch keeps a printed sale whose end is still ahead. The second commit is the business time zone setting. Unset, that setting still stops ingest and the morning report. Both app and ingest need `YUM4LESS_BUSINESS_TIME_ZONE` before that commit goes live.
+
 ## Resume (as of 2026-11-23, keep dated sales)
 
 **This slice (branch `feat/next-three-2026-11-23`, commit 1, not on yum4less.com):** A ranked row whose printed end is still ahead stays in the opening purge and in the shopper read for `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` days since it was last seen. Unset, blank, or unusable values use 3. A row with no printed end still uses 24 hours. An ended row is removed. The morning note's visible counts and starting-later counts use that same helper. A future start stays stored and does not replace the current offer. No chain, ZIP, state, or city exception. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. A pass is not more dinners.
@@ -93,6 +99,8 @@ The Tuesday visible-row drop is the opening purge (verification older than 24 ho
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **OSM grocery pins (2026-11-23, branch `feat/next-three-2026-11-23`):** The grocery file loads into `osm_grocery_places` by hand (`npx tsx scripts/load-osm-grocery.ts`). Search shows those pins with the existing no-price wording. Overpass stays off. Not on yum4less.com until the owner fast-forwards this commit, runs `db:migrate` for `047`, and runs the load. A pass is not more dinners.
 
 - **Keep dated sales (2026-11-23, branch `feat/next-three-2026-11-23`):** A printed end that is still ahead stays visible for 3 days after the last time it was seen, unless `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` says otherwise. No printed end still means 24 hours. Not on yum4less.com until the owner fast-forwards this commit. A pass is not more dinners.
 
@@ -380,6 +388,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-23 — OSM grocery file becomes map pins
+
+**Theme:** The grocery file should become map pins without putting tens of thousands of places into the nightly store walk.
+
+**Shipped:** Migration `047` creates `osm_grocery_places` with an index on open latitudes. `npx tsx scripts/load-osm-grocery.ts` reads `YUM4LESS_OSM_GROCERY_FILE` (default `/osm/us-grocery.osm.pbf`). `--dry-run` writes nothing. The upsert key is `osm-node-<id>` or `osm-way-<id>`. Source is `osm-extract`. The file timestamp is stored. Two consecutive misses set `closed_at`. Store search merges open pins inside the radius and keeps the existing no-price wording. Overpass stays disabled. The map tiles already credit OpenStreetMap contributors.
+
+**Limits:** Not scheduled. Not on yum4less.com until the owner fast-forwards this commit, runs `db:migrate`, and runs the load. ZIP adds stay paused. Relations are not pins yet. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. A pass is not more dinners.
+
+**Evidence:** This session on the combined branch. `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1620/1620** (278 files). `npm run test:integration` **78/78** (25 files) on `yum4less_test`. `npm run build` kept `/` as `ƒ` (54.7 kB / 188 kB); `/faq` and `/terms` stay `○`. `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0. The first e2e attempt looked for Chromium in a sandbox cache; the retry used the installed browsers. `npm run audit:high` exit 0 and printed `high audit: no high or critical advisories.` Semgrep was not run.
 
 ### 2026-11-23 — Keep dated sales visible
 
@@ -3696,6 +3714,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-23 | **Grocery-file pins live in `osm_grocery_places`, not `stores`.** Nightly map-catalog, weekly-ad admission, aliases, and the morning note walk `stores`. Tens of thousands of extra store rows would slow those walks and could change who is admitted. Search reads the new table beside the catalog and skips an id that is already saved. The loader is hand-run. A place missing twice is marked closed. No prices, no market activation, and ZIP adds stay paused. | **Active** |
 | 2026-11-23 | **A printed end that is still ahead stays visible after a missed night.** `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` defaults to 3. The purge, the ranked read, and the morning note use that window. No printed end stays on the 24-hour rule. An ended row is removed. A future start does not replace the current offer. No chain, ZIP, state, or city exception. | **Active** |
 | 2026-11-19 | **The US grocery map file is its own container, run by a host Cron Job.** `yum4less-osm` keeps a Geofabrik US extract and writes `/data/grocery/us-grocery.osm.pbf`. Convenience and fuel stay out. No database and no secrets. The container sleeps until `docker exec yum4less-osm osm-refresh`. Defaults: full refresh after 60 days, replication cap 2048 MB, later loader path `/osm/us-grocery.osm.pbf`. The night job does not load the file. No state, ZIP, or chain exception. OpenStreetMap contributors keep the ODbL credit. | **Active** |
 | 2026-11-17 | **Dev-tool high audit: patch vitest and typescript-eslint, and time-box picomatch.** vitest is 4.1.12. `@typescript-eslint/*` stays on major 8 at 8.73.0 so minimatch is at least 11.0.1. `GHSA-fc5q-39xc-vjpf` is ignored through 2026-12-15 only when `npm audit --omit=dev` has no high or critical issue. After that date the gate fails and asks for a patched picomatch. Any other advisory id still fails. | **Active** (supersedes the braces allowance in the 2026-10-06 and 2026-10-20 audit rows) |
@@ -3892,6 +3911,13 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (next three, combined branch) | 2026-11-23 | **1620/1620** pass (278 files). |
+| `npm run typecheck` (same slice) | 2026-11-23 | **Pass** (`tsc --noEmit`, exit 0). Also exit 0 on commit 1 and commit 2 before the undated-row SQL correction; that correction is SQL text. |
+| `npm run lint` (same slice) | 2026-11-23 | **Pass** (exit 0) |
+| `npm run test:integration` (same slice) | 2026-11-23 | **78/78** pass (25 files) on `yum4less_test`. |
+| `npm run build` (same slice) | 2026-11-23 | **Pass** (Next.js 15.5.28). `/` is `ƒ` (54.7 kB / 188 kB). `/faq` and `/terms` stay `○`. |
+| `npm run test:e2e:ci` (same slice) | 2026-11-23 | **39 passed**, 2 skipped, exit 0. First attempt looked for Chromium in a sandbox cache. Retry used the installed browsers. |
+| `npm run audit:high` (same slice) | 2026-11-23 | **Exit 0.** Prints `high audit: no high or critical advisories.` |
 | `npm test` (OSM data container) | 2026-11-19 | **1611/1611** pass (276 files). |
 | `npm run typecheck` (same slice) | 2026-11-19 | **Pass** (`tsc --noEmit`, exit 0) |
 | `npm run lint` (same slice) | 2026-11-19 | **Pass** (exit 0) |

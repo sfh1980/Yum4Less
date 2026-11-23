@@ -21,7 +21,8 @@ describe("fuel location skip", () => {
     }
   });
 
-  it("skips OSM gas_station and fueling_station tags", () => {
+  it("skips OSM fuel, gas_station, and fueling_station tags", () => {
+    expect(shouldSkipFuelLocation({ osmAmenity: "fuel", name: "Shell" })).toBe(true);
     expect(shouldSkipFuelLocation({ osmAmenity: "fueling_station", name: "Shell" })).toBe(
       true,
     );

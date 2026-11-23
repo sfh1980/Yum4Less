@@ -7,7 +7,7 @@
 export const KROGER_FUEL_DEPARTMENT_IDS = ["10", "92", "93", "95", "96"] as const;
 export const KROGER_GROCERY_DEPARTMENT_IDS = ["01", "02", "04", "05", "87", "88"] as const;
 
-const FUEL_PLACE_TAGS = new Set(["gas_station", "fueling_station"]);
+const FUEL_PLACE_TAGS = new Set(["fuel", "gas_station", "fueling_station"]);
 
 function normalizeDepartmentId(value: string): string {
   const trimmed = value.trim();

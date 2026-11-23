@@ -1061,7 +1061,7 @@ Add GYAM as another public hostname on the **same** tunnel after Yum4Less path i
 
 The container keeps a full US OpenStreetMap extract at `/data/us-latest.osm.pbf` and writes a grocery-only file at `/data/grocery/us-grocery.osm.pbf`. It sleeps until a host Cron Job runs `docker exec yum4less-osm osm-refresh`. There is no cron inside the container. The process user is **uid 8456** (group 8456, name `osm`).
 
-OpenStreetMap data is © OpenStreetMap contributors and is available under the Open Database License (ODbL): <https://www.openstreetmap.org/copyright>. Geofabrik packages the US extract. Yum4Less does not claim that map data as its own. This container only stores the file. It does not load stores into the database.
+OpenStreetMap data is © OpenStreetMap contributors and is available under the Open Database License (ODbL): <https://www.openstreetmap.org/copyright>. Geofabrik packages the US extract. Yum4Less does not claim that map data as its own. This container only stores the file. Loading pins is a separate hand-run step on the ingest container, after migration `047`. The shopper map already shows “© OpenStreetMap contributors” on its tiles.
 
 ### 13.1 What a run does
 
@@ -1081,7 +1081,7 @@ Leave these unset unless you want a different value. There is no state, ZIP, or 
 | `OSM_UPDATE_MAX_MB` | `2048` |
 | `YUM4LESS_OSM_GROCERY_FILE` (ingest, later loader) | `/osm/us-grocery.osm.pbf` |
 
-`YUM4LESS_OSM_GROCERY_FILE` is the path the ingest container will read later. This branch does not load the file and does not add it to the night job.
+`YUM4LESS_OSM_GROCERY_FILE` is the path the ingest container reads when you run the loader by hand. The night job does not read the file and does not load pins.
 
 ### 13.2 Disk
 
@@ -1169,6 +1169,43 @@ sudo docker exec yum4less-osm osm-refresh
 ```
 
 Do not delete `/data/.osm-refresh.lock`. The next run reuses it.
+
+### 13.5 Load grocery pins by hand
+
+Do this after the grocery file exists and after the ingest image that contains migration `047` is the one running. The loader does not run on the night job. It does not turn ZIPs on, attach prices, or change chain ranking.
+
+1. Confirm the file is in the ingest container:
+
+   ```bash
+   sudo docker exec yum4less-ingest ls -l /osm/us-grocery.osm.pbf
+   ```
+
+2. Apply the new table if this image has not had a migrate yet:
+
+   ```bash
+   sudo docker exec -w /app yum4less-ingest npm run db:migrate
+   ```
+
+3. Dry run, then load. Both commands only read the file. The dry run writes nothing.
+
+   ```bash
+   sudo docker exec -w /app yum4less-ingest npx tsx scripts/load-osm-grocery.ts --dry-run
+   sudo docker exec -w /app yum4less-ingest npx tsx scripts/load-osm-grocery.ts
+   ```
+
+4. Check the counts:
+
+   ```bash
+   sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "select count(*) filter (where closed_at is null) as open_pins, count(*) filter (where closed_at is not null) as closed_pins from osm_grocery_places;"
+   ```
+
+5. On the site, search Charlotte ZIP `28269`. The new pins are map context with the existing no-price wording. Overpass stays off.
+
+6. Undo a load. This removes the grocery-file pins only. Saved store rows stay.
+
+   ```bash
+   sudo docker exec yum4less-postgres psql -U postgres -d yum4less_dev -c "delete from osm_grocery_places where source_name = 'osm-extract';"
+   ```
 
 ---
 
