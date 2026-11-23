@@ -251,7 +251,7 @@ Prevent unbounded growth on a 24/7 box. Example `/etc/logrotate.d/yum4less`:
 
 ## 4. Verify ingest health
 
-Ranked meal reads and weekly-ad promotion gates both use a **24-hour** freshness window (`src/lib/ranked-price-cache-policy.ts`, `src/lib/weekly-ad-ingestion/weekly-ad-coverage.ts`). For the UI, you care about **< 24 hours** since the last successful write. `weeklyAdIngestionStatus` reports **all-time** row counts only — not freshness; compare with promotion readiness when diagnosing stale ingest.
+Weekly-ad promotion gates use a **24-hour** freshness window (`src/lib/weekly-ad-ingestion/weekly-ad-coverage.ts`). A ranked row with **no printed end** uses that same 24-hour window. A ranked row whose **printed end is still ahead** stays in the shopper read for `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` days since it was last seen (unset uses 3) (`src/lib/ranked-price-cache-policy.ts`). An ended row is removed. `weeklyAdIngestionStatus` reports **all-time** row counts only — not freshness; compare with promotion readiness when diagnosing stale ingest.
 
 ### 4.1 Quick log check
 

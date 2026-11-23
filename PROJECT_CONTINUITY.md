@@ -4,6 +4,10 @@
 
 ---
 
+## Resume (as of 2026-11-23, keep dated sales)
+
+**This slice (branch `feat/next-three-2026-11-23`, commit 1, not on yum4less.com):** A ranked row whose printed end is still ahead stays in the opening purge and in the shopper read for `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` days since it was last seen. Unset, blank, or unusable values use 3. A row with no printed end still uses 24 hours. An ended row is removed. The morning note's visible counts and starting-later counts use that same helper. A future start stays stored and does not replace the current offer. No chain, ZIP, state, or city exception. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. A pass is not more dinners.
+
 ## Resume (as of 2026-11-19, OSM data container)
 
 **This slice (branch `feat/osm-data-container`, not on yum4less.com):** `yum4less-osm` keeps a US OpenStreetMap extract and writes a grocery-only file. The container sleeps until a TrueNAS Cron Job runs `docker exec yum4less-osm osm-refresh`. No database, no secrets, and no cron inside the image. The user is uid **8456**. A full download happens when the file is missing or older than 60 days (`OSM_FULL_REFRESH_DAYS`). Otherwise `pyosmium-up-to-date` applies changes, capped at 2048 MB (`OSM_UPDATE_MAX_MB`). The grocery filter keeps supermarket, greengrocer, bakery, butcher, seafood, deli, wholesale, and department_store, and leaves out convenience and fuel. `YUM4LESS_OSM_GROCERY_FILE` defaults to `/osm/us-grocery.osm.pbf` for a later loader. The nightly ingest does not read it. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. Local image **49,007,474 bytes**. Fixture filter peak **14,024 KB**. `npm test` **1611/1611**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run audit:high` exit 0. Not on the NAS until the owner adds the dataset, the YAML, and the Sunday 13:30 job, and only after this branch is on master. A pass is not more dinners.
@@ -85,6 +89,8 @@ The Tuesday visible-row drop is the opening purge (verification older than 24 ho
 > **Changelog history:** Older entries below are point-in-time agent notes (e.g. a missing key on a past date). Check `.env.local` and the repo for current truth.
 
 ### Working today (honest)
+
+- **Keep dated sales (2026-11-23, branch `feat/next-three-2026-11-23`):** A printed end that is still ahead stays visible for 3 days after the last time it was seen, unless `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` says otherwise. No printed end still means 24 hours. Not on yum4less.com until the owner fast-forwards this commit. A pass is not more dinners.
 
 - **Shopper round follow-up (2026-11-16, branch `fix/shopper-round-2026-11-16`):** Dinner totals and store subtotals say `Estimated total: about $X`. Low totals hide the dollar. A store search waits 20 seconds (`YUM4LESS_STORE_SEARCH_TIMEOUT_MS`) and dinner ranking waits 30 seconds (`YUM4LESS_RANK_TIMEOUT_MS`) unless those settings say otherwise. A ZIP change that clears the store list says so and offers **Search stores for this ZIP**. Not on yum4less.com until the owner fast-forwards master. A pass is not more dinners.
 
@@ -370,6 +376,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-23 — Keep dated sales visible
+
+**Theme:** A night search that only returns next week's flyer was deleting this week's rows once they had not been seen for 24 hours, even when the printed end was still ahead.
+
+**Shipped:** `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` defaults to 3. The opening purge, the ranked price read, and the morning note's visible and starting-later counts share `rankedPriceVisibilitySql`. A future start stays in the table and does not hide the current offer. Rows with no printed end still drop after 24 hours. Ended rows still drop.
+
+**Limits:** Branch `feat/next-three-2026-11-23`. Not on yum4less.com until the owner fast-forwards this commit. Promotion gates still use 24 hours. No new migration. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. A pass is not more dinners.
+
+**Evidence:** `npm run typecheck` exit 0 at this commit. `npx vitest run src/lib/ranked-price-cache-policy.test.ts` **9/9**. Full gate counts are on the third commit of this branch.
 
 ### 2026-11-19 — OSM data container
 
@@ -3666,6 +3682,7 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-23 | **A printed end that is still ahead stays visible after a missed night.** `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` defaults to 3. The purge, the ranked read, and the morning note use that window. No printed end stays on the 24-hour rule. An ended row is removed. A future start does not replace the current offer. No chain, ZIP, state, or city exception. | **Active** |
 | 2026-11-19 | **The US grocery map file is its own container, run by a host Cron Job.** `yum4less-osm` keeps a Geofabrik US extract and writes `/data/grocery/us-grocery.osm.pbf`. Convenience and fuel stay out. No database and no secrets. The container sleeps until `docker exec yum4less-osm osm-refresh`. Defaults: full refresh after 60 days, replication cap 2048 MB, later loader path `/osm/us-grocery.osm.pbf`. The night job does not load the file. No state, ZIP, or chain exception. OpenStreetMap contributors keep the ODbL credit. | **Active** |
 | 2026-11-17 | **Dev-tool high audit: patch vitest and typescript-eslint, and time-box picomatch.** vitest is 4.1.12. `@typescript-eslint/*` stays on major 8 at 8.73.0 so minimatch is at least 11.0.1. `GHSA-fc5q-39xc-vjpf` is ignored through 2026-12-15 only when `npm audit --omit=dev` has no high or critical issue. After that date the gate fails and asks for a patched picomatch. Any other advisory id still fails. | **Active** (supersedes the braces allowance in the 2026-10-06 and 2026-10-20 audit rows) |
 | 2026-11-16 | **Dinner totals say estimated total.** A dinner total and a store subtotal read `Estimated total: about $X`. Low reads `Estimated total - worth verifying in store` and shows no dollar. A single item keeps `Estimated lowest price` (or the older-ad or verify-in-store line). Price math is unchanged. | **Active** |

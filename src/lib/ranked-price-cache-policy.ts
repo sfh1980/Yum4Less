@@ -6,8 +6,79 @@ export const RANKED_PRICE_CACHE_TTL_HOURS = 24;
 export const RANKED_PRICE_CACHE_TTL_MINUTES =
   RANKED_PRICE_CACHE_TTL_HOURS * 60;
 
-/** SQL fragment: ranked price_observations must be within the cache window. */
+/** SQL fragment: a row was seen inside the 24-hour cache window. */
 export const RANKED_PRICE_CACHE_AGE_SQL_FILTER = `coalesce(last_verified_at, observed_at) >= now() - interval '${RANKED_PRICE_CACHE_TTL_HOURS} hours'`;
+
+/**
+ * How long a row with a printed end still in the future stays after a search
+ * misses it. Unset, blank, or unusable values use the default.
+ */
+export const KEEP_DATED_SALE_UNSEEN_DAYS_ENV = "YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS";
+
+export const KEEP_DATED_SALE_UNSEEN_DAYS_DEFAULT = 3;
+
+export function readKeepDatedSaleUnseenDays(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const raw = env[KEEP_DATED_SALE_UNSEEN_DAYS_ENV]?.trim();
+  if (!raw) {
+    return KEEP_DATED_SALE_UNSEEN_DAYS_DEFAULT;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return KEEP_DATED_SALE_UNSEEN_DAYS_DEFAULT;
+  }
+  return parsed;
+}
+
+/**
+ * Shopper-visible age rule, shared by the opening purge, ranked reads, and
+ * the morning note.
+ * A printed end still in the future stays for N days since last seen.
+ * A row with no printed end stays for 24 hours.
+ * An ended row matches neither branch.
+ * The dated branch starts with `valid_through is not null`. Without that,
+ * `valid_through >= now()` is null for an undated row, and a purge of
+ * `not (visibility)` would skip it.
+ * A future start is hidden by rankedPriceWindowSql, not by this fragment.
+ */
+export function rankedPriceVisibilitySql(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const days = readKeepDatedSaleUnseenDays(env);
+  return `(
+    (
+      valid_through is null
+      and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+    )
+    or (
+      valid_through is not null
+      and valid_through >= now()
+      and coalesce(last_verified_at, observed_at) >= now() - interval '${days} days'
+    )
+  )`;
+}
+
+/**
+ * Same rule as rankedPriceVisibilitySql, for tests and callers that already
+ * have the dates. A future start is not considered here.
+ */
+export function isRankedSaleVisible(input: {
+  validThrough: Date | null;
+  lastSeenAt: Date;
+  now: Date;
+  unseenDays?: number;
+}): boolean {
+  const days = input.unseenDays ?? readKeepDatedSaleUnseenDays();
+  const ageMs = input.now.getTime() - input.lastSeenAt.getTime();
+  if (input.validThrough && input.validThrough.getTime() < input.now.getTime()) {
+    return false;
+  }
+  if (input.validThrough && input.validThrough.getTime() >= input.now.getTime()) {
+    return ageMs <= days * 24 * 3_600_000;
+  }
+  return ageMs <= RANKED_PRICE_CACHE_TTL_HOURS * 3_600_000;
+}
 
 /**
  * A row is rankable when its sale has started and has not ended.

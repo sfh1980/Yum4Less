@@ -10,8 +10,8 @@ import {
 import type { MorningChainPriceFact } from "@/lib/owner/morning-report";
 import { getRankedPriceSourceKind, RANKED_PRICE_SOURCE_SQL_FILTER } from "@/lib/price-source-policy";
 import {
-  RANKED_PRICE_CACHE_AGE_SQL_FILTER,
   RANKED_PRICE_THROUGH_ONLY_SQL_FILTER,
+  rankedPriceVisibilitySql,
   rankedPriceWindowSql,
 } from "@/lib/ranked-price-cache-policy";
 import { logServerError } from "@/lib/server-log";
@@ -159,7 +159,8 @@ export async function loadMorningChainPriceFacts(input: {
 
 /**
  * Rows a shopper read can return, and rows that start later.
- * The window fragment is the same one ranked reads use. A null start stays visible.
+ * Both counts use rankedPriceVisibilitySql, the same rule as the purge and
+ * the ranked read. A null start stays visible when that rule keeps the row.
  */
 async function loadShopperPriceCounts(pool: ReturnType<typeof getDbPool>): Promise<{
   visibleBySource: { sourceName: string; freshCount: number }[];
@@ -176,12 +177,12 @@ async function loadShopperPriceCounts(pool: ReturnType<typeof getDbPool>): Promi
         source_name,
         count(*) filter (
           where ${windowSql}
-            and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+            and ${rankedPriceVisibilitySql()}
         )::int as visible_count,
         count(*) filter (
           where valid_from > now()
             and ${RANKED_PRICE_THROUGH_ONLY_SQL_FILTER}
-            and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+            and ${rankedPriceVisibilitySql()}
         )::int as later_count
       from price_observations
       where in_stock = true

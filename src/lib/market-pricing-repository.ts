@@ -6,7 +6,7 @@ import {
   RANKED_PRICE_SOURCE_TIER_SQL,
 } from "@/lib/price-source-policy";
 import {
-  RANKED_PRICE_CACHE_AGE_SQL_FILTER,
+  rankedPriceVisibilitySql,
   rankedPriceWindowSql,
 } from "@/lib/ranked-price-cache-policy";
 
@@ -31,7 +31,7 @@ function rankedPriceObservationsSql(windowSql: string): string {
   from price_observations
   where (${RANKED_PRICE_SOURCE_SQL_FILTER})
     and ${windowSql}
-    and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+    and ${rankedPriceVisibilitySql()}
   order by store_id, ingredient_id, source_tier asc, coalesce(last_verified_at, observed_at) desc, confidence_score desc nulls last, observed_at desc
 `;
 }
@@ -53,7 +53,7 @@ export async function countLivePriceObservationsForStore(storeId: string): Promi
       where store_id = $1
         and (${RANKED_PRICE_SOURCE_SQL_FILTER})
         and ${await rankedPriceWindowSql(pool)}
-        and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+        and ${rankedPriceVisibilitySql()}
     `,
     [storeId],
   );

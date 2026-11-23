@@ -15,7 +15,7 @@ import {
   RANKED_PRICE_SOURCE_TIER_SQL,
 } from "@/lib/price-source-policy";
 import {
-  RANKED_PRICE_CACHE_AGE_SQL_FILTER,
+  rankedPriceVisibilitySql,
   rankedPriceWindowSql,
 } from "@/lib/ranked-price-cache-policy";
 import { USDA_SNAP_CONTEXT_SOURCE } from "@/lib/map-context-types";
@@ -214,10 +214,6 @@ export type PriceObservationSyncOutcome =
   | "skipped-unchanged"
   | "skipped-superseded";
 
-/** Purge uses the end date only. A future valid_from stays stored. */
-const CURRENT_PRICE_OBSERVATION_SQL_FILTER =
-  "(valid_through is null or valid_through >= now())";
-
 export async function getCurrentRankedPriceObservationForStoreIngredient(input: {
   storeId: string;
   ingredientId: string;
@@ -248,7 +244,7 @@ export async function getCurrentRankedPriceObservationForStoreIngredient(input: 
         and ingredient_id = $2
         and (${RANKED_PRICE_SOURCE_SQL_FILTER})
         and ${await rankedPriceWindowSql(pool)}
-        and ${RANKED_PRICE_CACHE_AGE_SQL_FILTER}
+        and ${rankedPriceVisibilitySql()}
       order by ${RANKED_PRICE_SOURCE_TIER_SQL} asc,
         coalesce(last_verified_at, observed_at) desc,
         confidence_score desc nulls last,
@@ -441,9 +437,12 @@ export function rankedPricePurgeSourceName(sourceName?: string): string | null {
 }
 
 /**
- * Remove ranked sale rows outside the cache window or past valid_through.
+ * Remove ranked sale rows the shopper read would not show.
+ * A printed end still in the future stays for the keep-dated window.
+ * A row with no printed end stays for 24 hours. An ended row is removed.
  * `sourceName` limits the delete to that source, so a one-chain run cannot
- * remove another chain's rows.
+ * remove another chain's rows. A future start that still matches this window
+ * stays in the table. The ranked read hides it until the start date.
  */
 export async function purgeStaleRankedPriceObservations(input?: {
   sourceName?: string;
@@ -455,10 +454,7 @@ export async function purgeStaleRankedPriceObservations(input?: {
       delete from price_observations
       where (${RANKED_PRICE_SOURCE_SQL_FILTER})
         and ($1::text is null or source_name = $1)
-        and (
-          not (${RANKED_PRICE_CACHE_AGE_SQL_FILTER})
-          or not (${CURRENT_PRICE_OBSERVATION_SQL_FILTER})
-        )
+        and not (${rankedPriceVisibilitySql()})
     `,
     [sourceName],
   );
