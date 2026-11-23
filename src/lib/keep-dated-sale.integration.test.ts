@@ -1,18 +1,40 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getDbPool, resetDbPoolForTests } from "@/lib/db";
 import { loadRankedPriceObservations } from "@/lib/market-pricing-repository";
 import {
-  deletePriceObservationsForStore,
   insertPriceObservation,
   purgeStaleRankedPriceObservations,
 } from "@/lib/price-observation-writes";
 import { KEEP_DATED_SALE_UNSEEN_DAYS_ENV } from "@/lib/ranked-price-cache-policy";
 
-const STORE_ID = "lidl-laburnum";
-const SOURCE = "lidl-weekly-ad-scrape";
+const STORE_ID = "keep-dated-sale-store";
+const SOURCE = "keep-dated-weekly-ad-scrape";
+
+async function removeRowsThisTestCreated() {
+  const pool = getDbPool();
+  await pool.query(
+    `delete from price_observations where source_record_id like 'keep-dated-%'`,
+  );
+  await pool.query(`delete from stores where id = $1`, [STORE_ID]);
+}
 
 describe("keep dated sales", () => {
   const originalUnseenDays = process.env[KEEP_DATED_SALE_UNSEEN_DAYS_ENV];
+
+  beforeEach(async () => {
+    await removeRowsThisTestCreated();
+    await getDbPool().query(
+      `
+        insert into stores (
+          id, name, kind, city, state, latitude, longitude, source_name, source_store_id
+        ) values (
+          $1, 'Keep Dated Sale', 'grocery', 'Test', 'VA', 37.000000, -77.000000,
+          $2, $1
+        )
+      `,
+      [STORE_ID, SOURCE],
+    );
+  });
 
   afterEach(async () => {
     if (originalUnseenDays === undefined) {
@@ -20,7 +42,7 @@ describe("keep dated sales", () => {
     } else {
       process.env[KEEP_DATED_SALE_UNSEEN_DAYS_ENV] = originalUnseenDays;
     }
-    await deletePriceObservationsForStore(STORE_ID);
+    await removeRowsThisTestCreated();
     await resetDbPoolForTests();
   });
 
@@ -153,7 +175,12 @@ describe("keep dated sales", () => {
     await purgeStaleRankedPriceObservations({ sourceName: SOURCE });
 
     const left = await getDbPool().query<{ source_record_id: string }>(
-      `select source_record_id from price_observations where store_id = $1`,
+      `
+        select source_record_id
+        from price_observations
+        where store_id = $1
+          and source_record_id like 'keep-dated-%'
+      `,
       [STORE_ID],
     );
     expect(left.rows).toEqual([]);

@@ -24,8 +24,35 @@ function file(parts: string[]): string {
   return `<?xml version="1.0"?><osm>${parts.join("")}</osm>`;
 }
 
+type SavedOsmRow = {
+  id: string;
+  consecutive_misses: number;
+  closed_at: Date | null;
+};
+
 describe("osm grocery loader", () => {
   const originalOverpass = process.env.YUM4LESS_OSM_OVERPASS_DISABLED;
+  let savedOtherRows: SavedOsmRow[] = [];
+
+  async function removeRowsThisTestCreated() {
+    const pool = getDbPool();
+    await pool.query(
+      `delete from osm_grocery_places where osm_id between 880100 and 880399`,
+    );
+    await pool.query(`delete from price_observations where store_id = $1`, [LOCATOR_ID]);
+    await pool.query(`delete from stores where id = $1`, [LOCATOR_ID]);
+    for (const row of savedOtherRows) {
+      await pool.query(
+        `
+          update osm_grocery_places
+          set consecutive_misses = $2, closed_at = $3
+          where id = $1
+        `,
+        [row.id, row.consecutive_misses, row.closed_at],
+      );
+    }
+    savedOtherRows = [];
+  }
 
   afterEach(async () => {
     if (originalOverpass === undefined) {
@@ -33,18 +60,22 @@ describe("osm grocery loader", () => {
     } else {
       process.env.YUM4LESS_OSM_OVERPASS_DISABLED = originalOverpass;
     }
-    const pool = getDbPool();
-    await pool.query(
-      `delete from osm_grocery_places where osm_id between 880100 and 880399`,
-    );
-    await pool.query(`delete from stores where id = $1`, [LOCATOR_ID]);
-    await pool.query(`delete from price_observations where store_id = $1`, [LOCATOR_ID]);
+    await removeRowsThisTestCreated();
     await resetDbPoolForTests();
   });
 
   it("loads grocery pins, leaves a locator pin alone, closes a place missing twice, and does not attach prices", async () => {
     process.env.YUM4LESS_OSM_OVERPASS_DISABLED = "1";
     const pool = getDbPool();
+    savedOtherRows = (
+      await pool.query<SavedOsmRow>(
+        `
+          select id, consecutive_misses, closed_at
+          from osm_grocery_places
+          where osm_id < 880100 or osm_id > 880399
+        `,
+      )
+    ).rows;
     await pool.query(
       `
         insert into stores (
