@@ -1,10 +1,10 @@
 import type { CatalogIngredient } from "@/lib/ingredient-category";
 import { INTERNAL_CATALOG_INGREDIENTS } from "@/lib/internal-catalog";
 import {
-  fetchFlippSearchOffersForMerchant,
-  fetchFlippWeeklyAdOffersForMerchantFlyers,
-  fetchFlippWeeklyAdOffersForSearchTerms,
   mergeWeeklyAdRawOffers,
+  readFlippMerchantFlyers,
+  readFlippMerchantSearch,
+  readFlippSupplementalSearches,
   type FlippWeeklyAdMerchantName,
 } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { getWeeklyAdIngredientSearchTerms } from "@/lib/weekly-ad-ingestion/weekly-ad-ingredient-search-terms";
@@ -21,21 +21,33 @@ export async function resolveFlippWeeklyAdOffersForChain(input: {
   trackedIngredientIds: string[];
   catalogIngredients?: CatalogIngredient[];
   extraSearchTermsByIngredientId?: Record<string, string[]>;
-}): Promise<{ rawOffers: WeeklyAdRawOffer[]; retrievalLabel: string }> {
-  const merchantOffers = await fetchFlippSearchOffersForMerchant({
+}): Promise<{
+  rawOffers: WeeklyAdRawOffer[];
+  retrievalLabel: string;
+  /**
+   * True only when the merchant search and the flyer list both returned the
+   * expected JSON and neither one had a current flyer for this merchant, and
+   * every supplemental search that ran also returned expected JSON.
+   * A thrown request never reaches this flag. An unexpected body or a
+   * swallowed item lookup leaves it false.
+   */
+  noCurrentFlyer: boolean;
+}> {
+  const merchant = await readFlippMerchantSearch({
     zipCode: input.zipCode,
     merchantName: input.merchantName,
   });
-  const flyerOffers = await fetchFlippWeeklyAdOffersForMerchantFlyers({
+  const flyers = await readFlippMerchantFlyers({
     zipCode: input.zipCode,
     merchantName: input.merchantName,
   });
 
-  let rawOffers = mergeWeeklyAdRawOffers(merchantOffers, flyerOffers);
+  let rawOffers = mergeWeeklyAdRawOffers(merchant.offers, flyers.offers);
   let retrievalLabel =
-    flyerOffers.length > 0
+    flyers.offers.length > 0
       ? "Flipp syndicated weekly-ad feed + flyer lookup"
       : "Flipp syndicated weekly-ad feed";
+  let supplementalFailed = false;
 
   const unmatchedIngredientIds = listUnmatchedTrackedIngredientIds(
     input.chain,
@@ -51,19 +63,30 @@ export async function resolveFlippWeeklyAdOffersForChain(input: {
       input.catalogIngredients,
     );
     if (supplementalSearchTerms.length > 0) {
-      const supplementalOffers = await fetchFlippWeeklyAdOffersForSearchTerms({
+      const supplemental = await readFlippSupplementalSearches({
         zipCode: input.zipCode,
         merchantName: input.merchantName,
         searchTerms: supplementalSearchTerms,
       });
-      rawOffers = mergeWeeklyAdRawOffers(rawOffers, supplementalOffers);
-      if (supplementalOffers.length > 0) {
+      rawOffers = mergeWeeklyAdRawOffers(rawOffers, supplemental.offers);
+      if (supplemental.requestFailed) {
+        supplementalFailed = true;
+      }
+      if (supplemental.offers.length > 0) {
         retrievalLabel = `${retrievalLabel} + ingredient searches`;
       }
     }
   }
 
-  return { rawOffers, retrievalLabel };
+  const noCurrentFlyer =
+    rawOffers.length === 0 &&
+    merchant.provedEmpty &&
+    flyers.provedEmpty &&
+    !merchant.requestFailed &&
+    !flyers.requestFailed &&
+    !supplementalFailed;
+
+  return { rawOffers, retrievalLabel, noCurrentFlyer };
 }
 
 export function buildSupplementalFlippSearchTermsForIngredients(

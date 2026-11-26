@@ -4,6 +4,10 @@
 
 ---
 
+## Resume (as of 2026-11-26, no-flyer grace)
+
+**This slice (branch `fix/no-flyer-grace`, not on yum4less.com):** When every source answers and none has a current or upcoming flyer, the night records `flyer-not-published` and still exits 0. `YUM4LESS_NO_FLYER_GRACE_NIGHTS` defaults to 2. The morning line is `Name: no flyer published last night (night N of 2, not counted as a failure).` After that it is `Name has had no flyer for N nights.` and Needs you. A failed, blocked, empty, or unexpected response still fails the night. The daytime retry still picks a chain with no fresh rows and still stops at the daily cap. When at least `YUM4LESS_EARLY_AD_SHARE` (default 0.5) of tonight's offers start in the future, the note says `Name posted next week's ad early; matched counts compared again once it starts.` and does not compare matched ingredients. A visible-row drop still says Needs you. No new table. No chain, ZIP, state, or city exception. Dinner floors, `shopper_ranked`, classification, and recipe sources were not changed. `npm test` **1634/1634**. Integration **79/79** after `test:integration:reset`, and **79/79** again. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. `npm run audit:high` exit 0. A pass is not more dinners.
+
 ## Resume (as of 2026-11-23, OSM grocery pins)
 
 **This slice (branch `feat/next-three-2026-11-23`, third commit, not on yum4less.com):** The grocery file loads into `osm_grocery_places`, not `stores`. Nightly map-catalog, weekly-ad admission, aliases, and the morning note walk `stores` (about 290 rows). Tens of thousands of extra rows there would slow those walks and could change who is admitted. Store search reads the new table inside the radius and skips an id the catalog already has. The hand command is `npx tsx scripts/load-osm-grocery.ts`. `--dry-run` prints counts and writes nothing. `YUM4LESS_OSM_GROCERY_FILE` still defaults to `/osm/us-grocery.osm.pbf`. Convenience and fuel are never loaded. A department store is kept only when the name is Target. A place missing from two loads in a row is marked closed, not deleted. Official locator rows, chain ranking, prices, and market activation are not written. ZIP adds stay paused. Overpass stays off. The map tiles already show OpenStreetMap contributors. Migration `047`. The owner runs `db:migrate` and the load by hand. Relation-only shops are counted and not loaded yet. Dinner floors, `shopper_ranked`, the fail-loud set, classification, and recipe sources were not changed. `npm test` **1620/1620**. Integration **78/78**. Typecheck and lint passed. `npm run build` kept `/` as `ƒ`. `npm run test:e2e:ci` **39 passed**, 2 skipped. `npm run audit:high` exit 0. A pass is not more dinners.
@@ -388,6 +392,16 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 ---
 
 ## Changelog (newest first)
+
+### 2026-11-26 — No flyer is a reason, and an early next-week ad does not trip the matched-count line
+
+**Theme:** A Wednesday with no current flyer was failing the whole night, and an early next-week ad was looking like a matched-ingredient drop.
+
+**Shipped:** `9e99dc1` records `flyer-not-published` when the shared flyer feed and the store page both answer with no current or upcoming flyer. The night exits 0. The morning note stays quiet for `YUM4LESS_NO_FLYER_GRACE_NIGHTS` nights (default 2), then says Needs you. `e112d77` stores `early-ad` when the share of offers with a future start is at least `YUM4LESS_EARLY_AD_SHARE` (default 0.5) and skips only the matched-ingredient comparison. The streak is counted from `weekly_ad_run_stats.miss_reason`. No new table.
+
+**Limits:** Branch `fix/no-flyer-grace`. Not on yum4less.com until the owner fast-forwards master. A request that fails, times out, is blocked, or returns an unexpected body still fails the night. A visible-row drop still says Needs you. Whole Foods keeps its existing unpublished-flyer sentence. Dinner floors, `shopper_ranked`, classification, and recipe sources were not changed. A pass is not more dinners.
+
+**Evidence:** This session. `npm run typecheck` exit 0. `npm run lint` exit 0. `npm test` **1634/1634** (279 files). `npm run test:integration:reset` **79/79** (25 files) on a recreated `yum4less_test`, then `npm run test:integration` **79/79**. `npm run build` kept `/` as `ƒ` (54.7 kB / 188 kB). `npm run test:e2e:ci` **39 passed**, 2 skipped, exit 0. The first e2e attempt looked for Chromium in a sandbox cache; the retry used the installed browsers. `npm run audit:high` exit 0 and printed `high audit: no high or critical advisories.` Semgrep was not run.
 
 ### 2026-11-23 — OSM grocery file becomes map pins
 
@@ -3714,6 +3728,8 @@ Saved tab **cross-device** persistence stays paused (device-local Saved shipped)
 
 | Date | Decision | Status |
 |------|----------|--------|
+| 2026-11-26 | **A proved no-flyer night is a reason, not a failed night, for a limited streak.** Every source must answer normally and offer no current or upcoming flyer. The night records `flyer-not-published` and exits 0. `YUM4LESS_NO_FLYER_GRACE_NIGHTS` defaults to 2. The morning line does not say Needs you until the streak is longer. A failed, timed-out, blocked, or unexpected response still fails the night. The daytime retry is unchanged. The owner approved this one quieter case. No chain, ZIP, state, or city exception. | **Active** |
+| 2026-11-26 | **An early next-week ad does not compare matched ingredients.** When the share of tonight's offers with a future start is at least `YUM4LESS_EARLY_AD_SHARE` (default 0.5), the morning note says the ad was posted early and compares matched counts again once it starts. A visible-row drop still says Needs you. A real miss detail still wins over the early-ad mark. | **Active** |
 | 2026-11-23 | **Grocery-file pins live in `osm_grocery_places`, not `stores`.** Nightly map-catalog, weekly-ad admission, aliases, and the morning note walk `stores`. Tens of thousands of extra store rows would slow those walks and could change who is admitted. Search reads the new table beside the catalog and skips an id that is already saved. The loader is hand-run. A place missing twice is marked closed. No prices, no market activation, and ZIP adds stay paused. | **Active** |
 | 2026-11-23 | **A printed end that is still ahead stays visible after a missed night.** `YUM4LESS_KEEP_DATED_SALE_UNSEEN_DAYS` defaults to 3. The purge, the ranked read, and the morning note use that window. No printed end stays on the 24-hour rule. An ended row is removed. A future start does not replace the current offer. No chain, ZIP, state, or city exception. | **Active** |
 | 2026-11-19 | **The US grocery map file is its own container, run by a host Cron Job.** `yum4less-osm` keeps a Geofabrik US extract and writes `/data/grocery/us-grocery.osm.pbf`. Convenience and fuel stay out. No database and no secrets. The container sleeps until `docker exec yum4less-osm osm-refresh`. Defaults: full refresh after 60 days, replication cap 2048 MB, later loader path `/osm/us-grocery.osm.pbf`. The night job does not load the file. No state, ZIP, or chain exception. OpenStreetMap contributors keep the ODbL credit. | **Active** |
@@ -3911,6 +3927,14 @@ Bootstrap seed data is thin by design (roughly one pin per chain near a market),
 
 | Gate | Last verified | Result |
 |------|---------------|--------|
+| `npm test` (no-flyer grace) | 2026-11-26 | **1634/1634** pass (279 files). |
+| `npm run typecheck` (same slice) | 2026-11-26 | **Pass** (`tsc --noEmit`, exit 0). |
+| `npm run lint` (same slice) | 2026-11-26 | **Pass** (exit 0) |
+| `npm run test:integration:reset` (same slice) | 2026-11-26 | **79/79** pass (25 files) on a recreated `yum4less_test`. |
+| `npm run test:integration` (same slice) | 2026-11-26 | **79/79** pass (25 files) on that database. |
+| `npm run build` (same slice) | 2026-11-26 | **Pass** (Next.js 15.5.28). `/` is `ƒ` (54.7 kB / 188 kB). `/faq` and `/terms` stay `○`. |
+| `npm run test:e2e:ci` (same slice) | 2026-11-26 | **39 passed**, 2 skipped, exit 0. First attempt looked for Chromium in a sandbox cache. Retry used the installed browsers. |
+| `npm run audit:high` (same slice) | 2026-11-26 | **Exit 0.** Prints `high audit: no high or critical advisories.` |
 | `npm test` (next three, combined branch) | 2026-11-23 | **1620/1620** pass (278 files). |
 | `npm run typecheck` (same slice) | 2026-11-23 | **Pass** (`tsc --noEmit`, exit 0). Also exit 0 on commit 1 and commit 2 before the undated-row SQL correction; that correction is SQL text. |
 | `npm run lint` (same slice) | 2026-11-23 | **Pass** (exit 0) |

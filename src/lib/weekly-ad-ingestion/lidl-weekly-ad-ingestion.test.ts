@@ -47,6 +47,7 @@ describe("lidl weekly ad ingestion", () => {
   it("loads live offers from Flipp syndicated feed without direct scrape", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [
         {
           productName: "Butcher's Specialty fresh grass-fed ground beef, 93% lean",
@@ -81,6 +82,7 @@ describe("lidl weekly ad ingestion", () => {
   it("falls back to direct page scrape when Flipp returns no offers", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [],
     });
     vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent").mockResolvedValue({

@@ -136,6 +136,36 @@ describe("shouldFailWeeklyAdIngestExit", () => {
     ).toBe(false);
   });
 
+  it("does not fail the night for a no-flyer chain, and still fails when another chain errors", () => {
+    expect(
+      shouldFailWeeklyAdIngestExit({
+        results: [
+          { status: "live", chain: "walmart" },
+          { status: "live", chain: "publix" },
+        ],
+        syncSummaries: [{ failedCount: 0, chain: "walmart" }],
+      }),
+    ).toBe(false);
+    expect(
+      shouldFailWeeklyAdIngestExit({
+        results: [{ status: "error", chain: "walmart" }],
+        syncSummaries: [{ failedCount: 0, chain: "walmart" }],
+      }),
+    ).toBe(true);
+    expect(
+      shouldFailWeeklyAdIngestExit({
+        results: [
+          { status: "live", chain: "walmart" },
+          { status: "error", chain: "publix" },
+        ],
+        syncSummaries: [
+          { failedCount: 0, chain: "walmart" },
+          { failedCount: 0, chain: "publix" },
+        ],
+      }),
+    ).toBe(true);
+  });
+
   it("returns false when all chains succeed and no persist failures", () => {
     expect(
       shouldFailWeeklyAdIngestExit({

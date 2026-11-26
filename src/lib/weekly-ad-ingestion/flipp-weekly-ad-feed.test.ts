@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   buildFlippWeeklyAdSearchUrl,
   fetchFlippSearchOffersForMerchant,
+  flippFlyerList,
+  flippSearchItems,
   parseFlippWeeklyAdItems,
   parseFlippWeeklyAdItemsForMerchant,
+  readFlippMerchantFlyers,
+  readFlippMerchantSearch,
   selectFlyersForWeeklyAdPersist,
 } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 
@@ -169,5 +173,66 @@ describe("flipp-weekly-ad-feed", () => {
     expect(offers.map((offer) => offer.productName)).toEqual([
       "Clover Valley Spaghetti",
     ]);
+  });
+
+  it("treats an expected empty flyer list and merchant search as proved empty", async () => {
+    expect(flippFlyerList({ flyers: [] })).toEqual({ expected: true, flyers: [] });
+    expect(flippSearchItems({ items: [] })).toEqual({ expected: true, items: [] });
+    expect(flippFlyerList({ error: "nope" }).expected).toBe(false);
+    expect(flippSearchItems({ items: "nope" }).expected).toBe(false);
+
+    const search = await readFlippMerchantSearch({
+      zipCode: "23005",
+      merchantName: "Food Lion",
+      fetchImpl: async () =>
+        ({
+          ok: true,
+          json: async () => ({ items: [] }),
+        }) as Response,
+    });
+    const flyers = await readFlippMerchantFlyers({
+      zipCode: "23005",
+      merchantName: "Food Lion",
+      fetchImpl: async (url) => {
+        const href = String(url);
+        if (href.includes("/flipp/flyers")) {
+          return {
+            ok: true,
+            json: async () => ({
+              flyers: [{ id: 9, merchant: "Publix" }],
+            }),
+          } as Response;
+        }
+        throw new Error(`unexpected ${href}`);
+      },
+    });
+
+    expect(search.provedEmpty).toBe(true);
+    expect(search.requestFailed).toBe(false);
+    expect(flyers.provedEmpty).toBe(true);
+    expect(flyers.requestFailed).toBe(false);
+  });
+
+  it("throws on an HTTP failure and flags an unexpected body", async () => {
+    await expect(
+      readFlippMerchantSearch({
+        zipCode: "23005",
+        merchantName: "Food Lion",
+        fetchImpl: async () => ({ ok: false, status: 404 }) as Response,
+      }),
+    ).rejects.toThrow(/HTTP 404/);
+
+    const unexpected = await readFlippMerchantFlyers({
+      zipCode: "23005",
+      merchantName: "Food Lion",
+      fetchImpl: async () =>
+        ({
+          ok: true,
+          json: async () => ({ message: "maintenance" }),
+        }) as Response,
+    });
+    expect(unexpected.provedEmpty).toBe(false);
+    expect(unexpected.requestFailed).toBe(true);
+    expect(unexpected.offers).toEqual([]);
   });
 });

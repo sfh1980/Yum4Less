@@ -56,8 +56,10 @@ import { probeShopperArea } from "@/lib/owner/morning-shopper-probe";
 import {
   applyRunStatsToChainFacts,
   matchedCountsFromRunStats,
+  readNoFlyerNights,
   readWeeklyAdRunStats,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-run-stats";
+import { readNoFlyerGraceNights } from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
 import { isOsmOverpassDisabled } from "@/lib/osm-food-retail-discovery";
 import { readRecipeImportNeedsYouMornings } from "@/lib/recipe-import/themealdb-settings";
 
@@ -199,6 +201,7 @@ export async function runMorningReport(): Promise<void> {
   let previousMorningRowsPerStore: Record<string, number> | null | undefined;
   let matchedToday: Record<string, number> | null | undefined;
   let matchedPrevious: Record<string, number> | null | undefined;
+  let noFlyerNights: Record<string, number> | null | undefined;
   let priorCoverageDropNames: string[] | null | undefined;
   let priorThinPageNames: string[] | null | undefined;
   try {
@@ -221,6 +224,7 @@ export async function runMorningReport(): Promise<void> {
     chainPrices = applyRunStatsToChainFacts(chainPrices, todayStats);
     matchedToday = matchedCountsFromRunStats(todayStats);
     matchedPrevious = matchedCountsFromRunStats(yesterdayStats);
+    noFlyerNights = await readNoFlyerNights(reportDate);
     priorCoverageDropNames = priorNote
       ? coverageDropNamesInNote(priorNote.body)
       : null;
@@ -233,6 +237,7 @@ export async function runMorningReport(): Promise<void> {
     previousMorningRowsPerStore = undefined;
     matchedToday = undefined;
     matchedPrevious = undefined;
+    noFlyerNights = undefined;
     priorCoverageDropNames = undefined;
     priorThinPageNames = undefined;
   }
@@ -299,6 +304,8 @@ export async function runMorningReport(): Promise<void> {
           previousMorningRowsPerStore,
           matchedToday,
           matchedPrevious,
+          ...(noFlyerNights ? { noFlyerNights } : {}),
+          noFlyerGraceNights: readNoFlyerGraceNights(),
           priorCoverageDropNames,
           priorThinPageNames,
           coverageDropRatio: readMorningCoverageDropRatio(),

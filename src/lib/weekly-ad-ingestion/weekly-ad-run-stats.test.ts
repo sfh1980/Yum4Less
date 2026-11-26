@@ -6,6 +6,7 @@ import {
   recordWeeklyAdRunStats,
   type WeeklyAdRunStatRow,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-run-stats";
+import { EARLY_AD_RUN_REASON } from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
 
 const write = {
   chain: "publix" as const,
@@ -80,5 +81,15 @@ describe("weekly ad run stats", () => {
       stats,
     );
     expect(facts[0]?.thinReason).toBe("saved 39 cards but the bogo page showed 225");
+    const early = applyRunStatsToChainFacts(
+      [{ chainId: "publix", priceMissReason: null, earlyAd: false }],
+      new Map<string, WeeklyAdRunStatRow>([
+        [
+          "publix",
+          { chain: "publix", matched: 126, thinReason: null, missReason: EARLY_AD_RUN_REASON },
+        ],
+      ]),
+    );
+    expect(early[0]?.earlyAd).toBe(true);
   });
 });

@@ -40,6 +40,10 @@ import { logServerError } from "@/lib/server-log";
 import { sanitizeWeeklyAdFailureReason } from "@/lib/weekly-ad-ingestion/weekly-ad-failure-reason";
 import { recordWeeklyAdRunStats } from "@/lib/weekly-ad-ingestion/weekly-ad-run-stats";
 import {
+  chooseWeeklyAdRunMissReason,
+  readEarlyAdShare,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
+import {
   readWeeklyAdFlyerHash,
   recordWeeklyAdPriceMissReason,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-flyer-hash";
@@ -172,6 +176,7 @@ export async function runWeeklyAdIngestionForStores(input: {
             reason: "thin-page",
           });
         }
+        await recordNoFlyerMiss(result, Boolean(input.persistToDatabase));
         results.push(result);
         await rememberWeeklyAdChainRun({
           result,
@@ -234,6 +239,7 @@ export async function runWeeklyAdIngestionForStores(input: {
           reason: "thin-page",
         });
       }
+      await recordNoFlyerMiss(result, Boolean(input.persistToDatabase));
       results.push(result);
       await rememberWeeklyAdChainRun({
         result,
@@ -294,7 +300,26 @@ async function rememberWeeklyAdChainRun(input: {
     rowsFailed: input.summaries.reduce((sum, row) => sum + row.failedCount, 0),
     secondsTaken: (Date.now() - input.startedMs) / 1000,
     thinReason: input.result.thinReason ?? null,
-    missReason: input.result.missDetail ?? null,
+    missReason: chooseWeeklyAdRunMissReason({
+      noFlyer: input.result.noFlyer === true,
+      missDetail: input.result.missDetail ?? null,
+      offers: input.result.offers,
+      now: new Date(),
+      earlyAdShare: readEarlyAdShare(),
+    }),
+  });
+}
+
+async function recordNoFlyerMiss(
+  result: WeeklyAdIngestionResult,
+  persist: boolean,
+): Promise<void> {
+  if (!persist || result.noFlyer !== true) {
+    return;
+  }
+  await recordWeeklyAdPriceMissReason({
+    chain: result.chain,
+    reason: "flyer-not-published",
   });
 }
 

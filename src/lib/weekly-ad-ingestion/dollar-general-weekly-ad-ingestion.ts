@@ -1,6 +1,10 @@
 import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chain-config";
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
+import {
+  buildNoFlyerIngestionResult,
+  weeklyAdHarvestIsNoFlyer,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-harvest-gap";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
 import {
   matchWeeklyAdOffers,
@@ -88,6 +92,22 @@ async function ingestDollarGeneralWeeklyAd(
     }
 
     if (rawOffers.length === 0) {
+      if (
+        weeklyAdHarvestIsNoFlyer({
+          flippNoCurrentFlyer: flippResult.noCurrentFlyer,
+          pageHtml: captureHtml,
+        })
+      ) {
+        return buildNoFlyerIngestionResult({
+          chain: "dollar-general",
+          label,
+          provenance,
+          fallbackUsed,
+          fetchedAt,
+          termsNote,
+          zipCode: input.zipCode,
+        });
+      }
       const blockedNote = directScrapeBlocked
         ? " Dollar General direct pages often wrap a Flipp embed that HTTP cannot parse."
         : "";

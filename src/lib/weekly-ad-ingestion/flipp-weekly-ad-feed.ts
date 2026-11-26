@@ -76,13 +76,36 @@ export async function fetchFlippWeeklyAdOffers(input: {
   return parseFlippWeeklyAdItems(payload!.items ?? []);
 }
 
+/**
+ * One Flipp read after the HTTP call returned.
+ * provedEmpty: the JSON had the expected array and nothing in it was this merchant's.
+ * requestFailed: the JSON shape was not that array, or a later call in the same read failed.
+ * An HTTP error, timeout, or invalid JSON is not returned here — those throw,
+ * unless the call was one of the lookups that already swallow a failure.
+ */
+export type FlippOfferRead = {
+  offers: WeeklyAdRawOffer[];
+  provedEmpty: boolean;
+  requestFailed: boolean;
+};
+
 export async function fetchFlippSearchOffersForMerchant(input: {
   zipCode: string;
   merchantName: FlippWeeklyAdMerchantName;
   fetchImpl?: typeof fetch;
 }): Promise<WeeklyAdRawOffer[]> {
+  const read = await readFlippMerchantSearch(input);
+  return read.offers;
+}
+
+/** Merchant search. HTTP and JSON failures throw, same as before. */
+export async function readFlippMerchantSearch(input: {
+  zipCode: string;
+  merchantName: FlippWeeklyAdMerchantName;
+  fetchImpl?: typeof fetch;
+}): Promise<FlippOfferRead> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
+  const read = await readFlippJson<unknown>(
     buildFlippWeeklyAdSearchUrl({
       zipCode: input.zipCode,
       merchantName: input.merchantName,
@@ -90,7 +113,10 @@ export async function fetchFlippSearchOffersForMerchant(input: {
     fetchImpl,
     `Flipp weekly-ad search for ${input.merchantName}`,
   );
-  return parseFlippWeeklyAdItemsForMerchant(payload!.items ?? [], input.merchantName);
+  if (read.kind === "failed") {
+    throw new Error(`Flipp weekly-ad search for ${input.merchantName} failed`);
+  }
+  return flippSearchRead(read.value, input.merchantName);
 }
 
 export async function fetchFlippFlyerSummaries(input: {
@@ -115,23 +141,53 @@ export async function fetchFlippWeeklyAdOffersForMerchantFlyers(input: {
   merchantName: FlippWeeklyAdMerchantName;
   fetchImpl?: typeof fetch;
 }): Promise<WeeklyAdRawOffer[]> {
+  const read = await readFlippMerchantFlyers(input);
+  return read.offers;
+}
+
+/**
+ * Flyer list for one merchant.
+ * HTTP and JSON failures on the list throw.
+ * A list that is not an array (and has no flyers array) is requestFailed, not proved empty.
+ * Zero flyers for this merchant, on an expected list, is provedEmpty.
+ * A flyer that is listed still counts even when its items are empty.
+ * A swallowed item lookup is requestFailed and is not proved empty.
+ */
+export async function readFlippMerchantFlyers(input: {
+  zipCode: string;
+  merchantName: FlippWeeklyAdMerchantName;
+  fetchImpl?: typeof fetch;
+}): Promise<FlippOfferRead> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const flyers = await fetchFlippFlyerSummaries({
-    zipCode: input.zipCode,
+  const read = await readFlippJson<unknown>(
+    buildFlippFlyersUrl(input.zipCode),
     fetchImpl,
-  });
-  const merchantFlyers = flyers.filter(
+    "Flipp flyers lookup",
+  );
+  if (read.kind === "failed") {
+    throw new Error("Flipp flyers lookup failed");
+  }
+  const list = flippFlyerList(read.value);
+  if (!list.expected) {
+    return { offers: [], provedEmpty: false, requestFailed: true };
+  }
+
+  const merchantFlyers = list.flyers.filter(
     (flyer) => flyer.merchant?.toLowerCase() === input.merchantName.toLowerCase(),
   );
-  const selectedFlyers = selectFlyersForWeeklyAdPersist(merchantFlyers);
+  if (merchantFlyers.length === 0) {
+    return { offers: [], provedEmpty: true, requestFailed: false };
+  }
 
+  const selectedFlyers = selectFlyersForWeeklyAdPersist(merchantFlyers);
   const merged: WeeklyAdRawOffer[] = [];
+  let requestFailed = false;
   for (const flyer of selectedFlyers) {
     if (typeof flyer.id !== "number") {
       continue;
     }
 
-    const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
+    const payload = await readFlippJson<unknown>(
       buildFlippWeeklyAdSearchUrl({
         zipCode: input.zipCode,
         flyerId: flyer.id,
@@ -140,18 +196,22 @@ export async function fetchFlippWeeklyAdOffersForMerchantFlyers(input: {
       `Flipp flyer ${flyer.id} lookup`,
       { returnEmptyOnFailure: true },
     );
-
-    if (!payload) {
+    if (payload.kind === "failed") {
+      requestFailed = true;
       continue;
     }
-
+    const items = flippSearchItems(payload.value);
+    if (!items.expected) {
+      requestFailed = true;
+      continue;
+    }
     appendUniqueFlippOffers(
       merged,
-      parseFlippWeeklyAdItemsForMerchant(payload.items ?? [], input.merchantName),
+      parseFlippWeeklyAdItemsForMerchant(items.items, input.merchantName),
     );
   }
 
-  return merged;
+  return { offers: merged, provedEmpty: false, requestFailed };
 }
 
 const NON_GROCERY_FLYER_DEPARTMENT =
@@ -198,11 +258,23 @@ export async function fetchFlippWeeklyAdOffersForSearchTerms(input: {
   searchTerms: string[];
   fetchImpl?: typeof fetch;
 }): Promise<WeeklyAdRawOffer[]> {
+  const read = await readFlippSupplementalSearches(input);
+  return read.offers;
+}
+
+/** Ingredient searches. A swallowed failure or unexpected body sets requestFailed. */
+export async function readFlippSupplementalSearches(input: {
+  zipCode: string;
+  merchantName: FlippWeeklyAdMerchantName;
+  searchTerms: string[];
+  fetchImpl?: typeof fetch;
+}): Promise<FlippOfferRead> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const merged: WeeklyAdRawOffer[] = [];
+  let requestFailed = false;
 
   for (const searchTerm of input.searchTerms) {
-    const payload = await fetchFlippJson<FlippWeeklyAdSearchResponse>(
+    const payload = await readFlippJson<unknown>(
       buildFlippWeeklyAdSearchUrl({
         zipCode: input.zipCode,
         merchantName: `${input.merchantName} ${searchTerm}`,
@@ -211,20 +283,81 @@ export async function fetchFlippWeeklyAdOffersForSearchTerms(input: {
       `Flipp ${input.merchantName} ${searchTerm} lookup`,
       { returnEmptyOnFailure: true },
     );
-
-    if (!payload) {
+    if (payload.kind === "failed") {
+      requestFailed = true;
       continue;
     }
-
+    const items = flippSearchItems(payload.value);
+    if (!items.expected) {
+      requestFailed = true;
+      continue;
+    }
     appendUniqueFlippOffers(
       merged,
-      parseFlippWeeklyAdItems(payload.items ?? []).filter((offer) =>
+      parseFlippWeeklyAdItems(items.items).filter((offer) =>
         offer.productName.toLowerCase().includes(searchTerm.toLowerCase()),
       ),
     );
   }
 
-  return merged;
+  return {
+    offers: merged,
+    provedEmpty: !requestFailed && merged.length === 0,
+    requestFailed,
+  };
+}
+
+/** Expected search body is an object whose items field is an array. */
+export function flippSearchItems(payload: unknown): {
+  expected: boolean;
+  items: FlippWeeklyAdItem[];
+} {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { expected: false, items: [] };
+  }
+  const items = (payload as FlippWeeklyAdSearchResponse).items;
+  if (!Array.isArray(items)) {
+    return { expected: false, items: [] };
+  }
+  return { expected: true, items };
+}
+
+/** Expected flyer list is a flyers array, or the body itself as an array. */
+export function flippFlyerList(payload: unknown): {
+  expected: boolean;
+  flyers: FlippFlyerSummary[];
+} {
+  if (Array.isArray(payload)) {
+    return { expected: true, flyers: payload.filter(isFlyerSummary) };
+  }
+  if (!payload || typeof payload !== "object") {
+    return { expected: false, flyers: [] };
+  }
+  const flyers = (payload as FlippFlyersResponse).flyers;
+  if (!Array.isArray(flyers)) {
+    return { expected: false, flyers: [] };
+  }
+  return { expected: true, flyers: flyers.filter(isFlyerSummary) };
+}
+
+function flippSearchRead(payload: unknown, merchantName: string): FlippOfferRead {
+  const parsed = flippSearchItems(payload);
+  if (!parsed.expected) {
+    return { offers: [], provedEmpty: false, requestFailed: true };
+  }
+  const normalizedMerchant = merchantName.toLowerCase();
+  const merchantItems = parsed.items.filter((item) =>
+    item.merchant_name?.toLowerCase().includes(normalizedMerchant),
+  );
+  return {
+    offers: parseFlippWeeklyAdItemsForMerchant(parsed.items, merchantName),
+    provedEmpty: merchantItems.length === 0,
+    requestFailed: false,
+  };
+}
+
+function isFlyerSummary(value: unknown): value is FlippFlyerSummary {
+  return Boolean(value) && typeof value === "object";
 }
 
 export function mergeWeeklyAdRawOffers(
@@ -237,12 +370,16 @@ export function mergeWeeklyAdRawOffers(
   return merged;
 }
 
-async function fetchFlippJson<TPayload>(
+type FlippJsonRead<TPayload> =
+  | { kind: "ok"; value: TPayload }
+  | { kind: "failed" };
+
+async function readFlippJson<TPayload>(
   url: string,
   fetchImpl: typeof fetch,
   context: string,
   options: { returnEmptyOnFailure?: boolean } = {},
-): Promise<TPayload | undefined> {
+): Promise<FlippJsonRead<TPayload>> {
   try {
     const response = await fetchWithRetries(() =>
       fetchImpl(url, {
@@ -257,14 +394,27 @@ async function fetchFlippJson<TPayload>(
       throw new Error(`${context} failed with HTTP ${response.status}`);
     }
 
-    return (await response.json()) as TPayload;
+    return { kind: "ok", value: (await response.json()) as TPayload };
   } catch (error) {
     if (options.returnEmptyOnFailure) {
-      return undefined;
+      return { kind: "failed" };
     }
 
     throw error;
   }
+}
+
+async function fetchFlippJson<TPayload>(
+  url: string,
+  fetchImpl: typeof fetch,
+  context: string,
+  options: { returnEmptyOnFailure?: boolean } = {},
+): Promise<TPayload | undefined> {
+  const read = await readFlippJson<TPayload>(url, fetchImpl, context, options);
+  if (read.kind === "failed") {
+    return undefined;
+  }
+  return read.value;
 }
 
 function appendUniqueFlippOffers(target: WeeklyAdRawOffer[], nextOffers: WeeklyAdRawOffer[]) {

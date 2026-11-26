@@ -2,6 +2,11 @@ import { getDbPool } from "@/lib/db";
 import { logServerError } from "@/lib/server-log";
 import { weeklyAdRetryDate } from "@/lib/weekly-ad-ingestion/weekly-ad-retry";
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
+import {
+  countConsecutiveNoFlyerNights,
+  EARLY_AD_RUN_REASON,
+  NO_FLYER_RUN_REASON,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
 
 export type WeeklyAdRunStatWrite = {
   chain: WeeklyAdChain;
@@ -101,6 +106,7 @@ export function applyRunStatsToChainFacts<
     priceMissReason?: string | null;
     thinReason?: string | null;
     priceMissDetail?: string | null;
+    earlyAd?: boolean;
   },
 >(facts: readonly T[], stats: Map<string, WeeklyAdRunStatRow> | null): T[] {
   if (!stats) {
@@ -120,6 +126,9 @@ export function applyRunStatsToChainFacts<
     }
     if (fact.priceMissReason === "fetch-failed" && row.missReason) {
       next.priceMissDetail = row.missReason;
+    }
+    if (row.missReason === EARLY_AD_RUN_REASON) {
+      next.earlyAd = true;
     }
     return next;
   });
@@ -173,6 +182,60 @@ export async function readWeeklyAdRunStats(
     );
   } catch (error) {
     logServerError("weekly-ad-run-stats.read", error);
+    return null;
+  }
+}
+
+type NoFlyerMissRow = {
+  chain: string;
+  runDate: string;
+  missReason: string | null;
+};
+
+/**
+ * Consecutive no-flyer nights ending on endDate, keyed by chain.
+ * Null when the table cannot be read. An empty object means no current streak.
+ */
+export async function readNoFlyerNights(
+  endDate: string,
+  deps?: { query: (sql: string, params: readonly unknown[]) => Promise<{ rows: NoFlyerMissRow[] }> },
+): Promise<Record<string, number> | null> {
+  if (!deps && !runStatsDbEnabled()) {
+    return null;
+  }
+  try {
+    const query = deps?.query ?? ((sql, params) => getDbPool().query(sql, params as unknown[]));
+    const result = await query(
+      `
+        select chain,
+               to_char(run_date, 'YYYY-MM-DD') as "runDate",
+               miss_reason as "missReason"
+        from weekly_ad_run_stats
+        where run_date <= $1::date
+          and run_date > ($1::date - interval '60 days')
+        order by chain asc, run_date desc
+      `,
+      [endDate],
+    );
+    const byChain = new Map<string, NoFlyerMissRow[]>();
+    for (const row of result.rows) {
+      if (!row.chain || !row.runDate) {
+        continue;
+      }
+      const list = byChain.get(row.chain) ?? [];
+      list.push(row);
+      byChain.set(row.chain, list);
+    }
+    const streaks: Record<string, number> = {};
+    for (const [chain, rows] of byChain) {
+      const nights = countConsecutiveNoFlyerNights(rows, endDate);
+      if (nights > 0 && rows.some((row) => row.missReason === NO_FLYER_RUN_REASON)) {
+        streaks[chain] = nights;
+      }
+    }
+    return streaks;
+  } catch (error) {
+    logServerError("weekly-ad-run-stats.no-flyer", error);
     return null;
   }
 }

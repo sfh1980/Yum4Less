@@ -51,6 +51,7 @@ describe("kroger weekly ad ingestion", () => {
       .spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain")
       .mockResolvedValue({
         retrievalLabel: "Flipp syndicated weekly-ad feed + flyer lookup",
+        noCurrentFlyer: false,
         rawOffers: [
           {
             productName: "Kroger Fresh Chicken Thighs Family Pack",
@@ -93,6 +94,7 @@ describe("kroger weekly ad ingestion", () => {
   it("falls back to Kroger scrape when Flipp returns no offers", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [],
     });
     vi.spyOn(krogerFetcher, "fetchKrogerWeeklyAdPage").mockResolvedValue({
@@ -124,6 +126,7 @@ describe("kroger weekly ad ingestion", () => {
   it("uses last-resort API partial fill only when Flipp and scrape both return zero", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [],
     });
     vi.spyOn(krogerFetcher, "fetchKrogerWeeklyAdPage").mockResolvedValue({
@@ -160,6 +163,7 @@ describe("kroger weekly ad ingestion", () => {
   it("returns error when Flipp, scrape, and API fallback all return zero", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [],
     });
     vi.spyOn(krogerFetcher, "fetchKrogerWeeklyAdPage").mockResolvedValue({
