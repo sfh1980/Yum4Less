@@ -12,6 +12,7 @@ import {
   readWeeklyAdRetryMaxPerDay,
   WEEKLY_AD_RETRY_MAX_PER_DAY_DEFAULT,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-retry";
+import { readNoFlyerGraceNights } from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
 
 /** How long an unchanged flyer may keep refreshing last_verified_at. */
 export const WEEKLY_AD_MAX_UNVERIFIED_DAYS_ENV =
@@ -63,6 +64,7 @@ export function formatWeeklyAdSettingsLine(env: NodeJS.ProcessEnv = process.env)
     ["YUM4LESS_WEEKLY_AD_BACKOFF_MS", String(readWeeklyAdBackoffMs(env))],
     ["YUM4LESS_WEEKLY_AD_MAX_UNVERIFIED_DAYS", String(readWeeklyAdMaxUnverifiedDays(env))],
     ["YUM4LESS_WEEKLY_AD_RETRY_MAX_PER_DAY", String(weeklyAdRetryMaxForLog(env))],
+    ["YUM4LESS_NO_FLYER_GRACE_NIGHTS", String(readNoFlyerGraceNights(env))],
     ["YUM4LESS_PUBLIX_CARD_MAX_WAIT_MS", String(readPublixCardMaxWaitMs(env))],
     ["YUM4LESS_PUBLIX_CARD_SCROLL_VIEWPORTS", String(readPublixCardScrollViewports(env))],
     ["YUM4LESS_PUBLIX_THIN_MIN_CARDS", String(readPublixThinMinCards(env))],

@@ -2,6 +2,10 @@ import { getWeeklyAdChainConfig } from "@/lib/weekly-ad-ingestion/weekly-ad-chai
 import { captureWeeklyAdArtifacts } from "@/lib/weekly-ad-ingestion/weekly-ad-capture";
 import { mergeWeeklyAdRawOffers } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import { resolveFlippWeeklyAdOffersForChain } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-resolver";
+import {
+  buildNoFlyerIngestionResult,
+  weeklyAdHarvestIsNoFlyer,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-harvest-gap";
 import { buildWeeklyAdFixtureResult } from "@/lib/weekly-ad-ingestion/weekly-ad-fixture-ingest";
 import {
   matchWeeklyAdOffers,
@@ -128,6 +132,22 @@ async function ingestAldiWeeklyAd(
     }
 
     if (rawOffers.length === 0) {
+      if (
+        weeklyAdHarvestIsNoFlyer({
+          flippNoCurrentFlyer: flippResult.noCurrentFlyer,
+          pageHtml: captureHtml,
+        })
+      ) {
+        return buildNoFlyerIngestionResult({
+          chain: "aldi",
+          label,
+          provenance,
+          fallbackUsed,
+          fetchedAt,
+          termsNote,
+          zipCode: input.zipCode,
+        });
+      }
       captureWeeklyAdArtifacts({
         chain: "aldi",
         zipCode: input.zipCode,

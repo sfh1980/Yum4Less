@@ -11,6 +11,7 @@ import {
   readBusinessTimeZone,
 } from "@/lib/business-time-zone";
 import { OSM_OVERPASS_DISABLED_MESSAGE } from "@/lib/osm-food-retail-discovery";
+import { readNoFlyerGraceNights } from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
 
 export const MORNING_ZIP_BATCH = 3;
 export const OUTSIDE_CHECK_CUTOFF_ENV = "YUM4LESS_OUTSIDE_CHECK_CUTOFF";
@@ -564,17 +565,34 @@ export function rowsPerStoreFellLines(input: {
   });
 }
 
+export function noFlyerGraceSentence(name: string, nights: number, limit: number): string {
+  return `${name}: no flyer published last night (night ${nights} of ${limit}, not counted as a failure).`;
+}
+
+export function noFlyerOverGraceSentence(name: string, nights: number): string {
+  return `${name} has had no flyer for ${nights} nights.`;
+}
+
 export function matchedIngredientFellLines(input: {
-  chains: readonly { chainId?: string; displayName: string; shopperRanked?: boolean }[];
+  chains: readonly {
+    chainId?: string;
+    displayName: string;
+    shopperRanked?: boolean;
+  }[];
   today: Readonly<Record<string, number>> | null;
   previous: Readonly<Record<string, number>> | null;
   share: number;
+  /** Chains whose matched count is not compared tonight. */
+  skipChainIds?: ReadonlySet<string>;
 }): string[] {
   if (!input.today || !input.previous) {
     return [];
   }
   return input.chains.flatMap((chain) => {
     if (chain.shopperRanked !== true || !chain.chainId) {
+      return [];
+    }
+    if (input.skipChainIds?.has(chain.chainId)) {
       return [];
     }
     const today = input.today?.[chain.chainId];
@@ -716,6 +734,10 @@ export function describeMorningChainPrices(input: {
   matchedToday?: Readonly<Record<string, number>> | null;
   matchedPrevious?: Readonly<Record<string, number>> | null;
   dropAlertShare?: number;
+  /** Consecutive no-flyer nights ending today, by chain id. */
+  noFlyerNights?: Readonly<Record<string, number>>;
+  /** Nights that stay informational. Default is YUM4LESS_NO_FLYER_GRACE_NIGHTS. */
+  noFlyerGraceNights?: number;
 }): {
   lines: string[];
   needsAttention: boolean;
@@ -729,7 +751,40 @@ export function describeMorningChainPrices(input: {
     return { lines: [], needsAttention: false, exceptionNames: [], counted: 0 };
   }
 
-  const exceptions = counted.filter(
+  const graceLimit = input.noFlyerGraceNights ?? readNoFlyerGraceNights();
+  const noFlyerNightsOf = (chain: MorningChainPriceFact) =>
+    chain.chainId ? (input.noFlyerNights?.[chain.chainId] ?? 0) : 0;
+  const noFlyer = counted.filter((chain) => noFlyerNightsOf(chain) > 0);
+  const noFlyerWithoutPrices = new Set(
+    noFlyer.filter((chain) => chain.freshOfficialCount + chain.freshFlyerCount <= 0),
+  );
+  const summary = counted.filter((chain) => !noFlyerWithoutPrices.has(chain));
+  const graceLimitReached = noFlyer.flatMap((chain) => {
+    const nights = noFlyerNightsOf(chain);
+    const name = chain.displayName.trim();
+    if (nights > graceLimit) {
+      return [{ line: noFlyerOverGraceSentence(name, nights), needsYou: true }];
+    }
+    return [{ line: noFlyerGraceSentence(name, nights, graceLimit), needsYou: false }];
+  });
+  const graceLines = graceLimitReached.map((item) => item.line);
+  const graceNeedsYou = graceLimitReached.some((item) => item.needsYou);
+  const skipMatched = new Set(
+    noFlyer
+      .map((chain) => chain.chainId)
+      .filter((chainId): chainId is string => Boolean(chainId)),
+  );
+
+  if (summary.length === 0) {
+    return {
+      lines: graceLines,
+      needsAttention: graceNeedsYou,
+      exceptionNames: [],
+      counted: 0,
+    };
+  }
+
+  const exceptions = summary.filter(
     (chain) => chain.freshOfficialCount + chain.freshFlyerCount <= 0,
   );
   const exceptionNames = exceptions.map((chain) => chain.displayName.trim());
@@ -740,7 +795,7 @@ export function describeMorningChainPrices(input: {
   const ratio = input.coverageDropRatio ?? MORNING_COVERAGE_DROP_RATIO_DEFAULT;
   const previousRows = input.previousRowsPerStore;
   const drops = previousRows
-    ? counted.flatMap((chain) => {
+    ? summary.flatMap((chain) => {
         const name = chain.displayName.trim();
         const today = chain.rowsPerStore;
         const previous = previousRows[name];
@@ -761,7 +816,7 @@ export function describeMorningChainPrices(input: {
   const repeatedDrops = priorDrops
     ? dropNames.filter((name) => priorDrops.includes(name))
     : [];
-  const thinWithRows = counted.filter(
+  const thinWithRows = summary.filter(
     (chain) =>
       chain.priceMissReason === "thin-page" &&
       chain.freshOfficialCount + chain.freshFlyerCount > 0,
@@ -773,18 +828,19 @@ export function describeMorningChainPrices(input: {
     : [];
   const dropAlertShare = input.dropAlertShare ?? MORNING_DROP_ALERT_SHARE_DEFAULT;
   const fell = rowsPerStoreFellLines({
-    chains: counted,
+    chains: summary,
     previous: input.previousMorningRowsPerStore ?? null,
     share: dropAlertShare,
   });
   const matchedFell = matchedIngredientFellLines({
-    chains: counted,
+    chains: summary,
     today: input.matchedToday ?? null,
     previous: input.matchedPrevious ?? null,
     share: dropAlertShare,
+    skipChainIds: skipMatched,
   });
-  const census = rowsPerStoreCensusLine(counted);
-  const laterLine = startingLaterSentence(counted);
+  const census = rowsPerStoreCensusLine(summary);
+  const laterLine = startingLaterSentence(summary);
   const noStoreLine = noStoreOnFileSentence(input.chains);
   const extra = [
     ...thinWithRows.map((chain) =>
@@ -804,19 +860,19 @@ export function describeMorningChainPrices(input: {
   const fellNeedsYou = fell.length > 0 || matchedFell.length > 0;
 
   if (exceptionNames.length === 0) {
-    const count = counted.length;
+    const count = summary.length;
     const noun = count === 1 ? "chain" : "chains";
     const verb = count === 1 ? "has" : "have";
     return {
-      lines: [`All ${count} ${noun} ${verb} prices from the last day.`, ...extra],
-      needsAttention: dropNeedsYou || thinNeedsYou || fellNeedsYou,
+      lines: [`All ${count} ${noun} ${verb} prices from the last day.`, ...extra, ...graceLines],
+      needsAttention: dropNeedsYou || thinNeedsYou || fellNeedsYou || graceNeedsYou,
       exceptionNames: [],
       counted: count,
     };
   }
 
   const missing = exceptionNames.length;
-  const total = counted.length;
+  const total = summary.length;
   const verb = missing === 1 ? "is" : "are";
   const again = repeated.length > 0 ? " again" : "";
   return {
@@ -824,8 +880,10 @@ export function describeMorningChainPrices(input: {
       ...exceptions.map((chain) => chainPriceExceptionSentence(chain)),
       `${missing} of ${total} ${total === 1 ? "chain" : "chains"} ${verb} missing prices from the last day${again}.`,
       ...extra,
+      ...graceLines,
     ],
-    needsAttention: repeated.length > 0 || dropNeedsYou || thinNeedsYou || fellNeedsYou,
+    needsAttention:
+      repeated.length > 0 || dropNeedsYou || thinNeedsYou || fellNeedsYou || graceNeedsYou,
     exceptionNames,
     counted: total,
   };
@@ -864,6 +922,8 @@ export type MorningReportInput = {
   matchedToday?: Readonly<Record<string, number>> | null;
   matchedPrevious?: Readonly<Record<string, number>> | null;
   dropAlertShare?: number;
+  noFlyerNights?: Readonly<Record<string, number>>;
+  noFlyerGraceNights?: number;
   cloudflare?: CloudflareMorningFacts;
   /** Night Overpass was skipped on purpose. Informational; does not set Needs you. */
   storeLookupTurnedOff?: boolean;
@@ -911,13 +971,15 @@ export function composeMorningReport(input: MorningReportInput): {
         matchedToday: input.matchedToday ?? null,
         matchedPrevious: input.matchedPrevious ?? null,
         dropAlertShare: input.dropAlertShare,
+        noFlyerNights: input.noFlyerNights,
+        noFlyerGraceNights: input.noFlyerGraceNights,
       })
     : null;
   const priceGapNeedsYou =
-    describedPrices && describedPrices.counted > 0
+    describedPrices && describedPrices.lines.length > 0
       ? describedPrices.needsAttention
       : !input.pricesFresh;
-  if (describedPrices && describedPrices.counted > 0) {
+  if (describedPrices && describedPrices.lines.length > 0) {
     lines.push(...describedPrices.lines);
   } else {
     lines.push(

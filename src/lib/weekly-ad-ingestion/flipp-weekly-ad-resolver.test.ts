@@ -35,15 +35,21 @@ describe("flipp weekly ad resolver", () => {
   });
 
   it("merges merchant, flyer, and ingredient-search offers for Kroger", async () => {
-    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([
-      { productName: "Kroger Fresh Chicken Thighs Family Pack", price: 5.79 },
-    ]);
-    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForMerchantFlyers").mockResolvedValue([
-      { productName: "Kroger Black Beans 15 oz", price: 0.99 },
-    ]);
-    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForSearchTerms").mockResolvedValue([
-      { productName: "Kroger 80% Lean Ground Beef, 3 lb", price: 17.97 },
-    ]);
+    vi.spyOn(flippFeed, "readFlippMerchantSearch").mockResolvedValue({
+      offers: [{ productName: "Kroger Fresh Chicken Thighs Family Pack", price: 5.79 }],
+      provedEmpty: false,
+      requestFailed: false,
+    });
+    vi.spyOn(flippFeed, "readFlippMerchantFlyers").mockResolvedValue({
+      offers: [{ productName: "Kroger Black Beans 15 oz", price: 0.99 }],
+      provedEmpty: false,
+      requestFailed: false,
+    });
+    vi.spyOn(flippFeed, "readFlippSupplementalSearches").mockResolvedValue({
+      offers: [{ productName: "Kroger 80% Lean Ground Beef, 3 lb", price: 17.97 }],
+      provedEmpty: false,
+      requestFailed: false,
+    });
 
     const result = await resolveFlippWeeklyAdOffersForChain({
       chain: "kroger",
@@ -58,15 +64,21 @@ describe("flipp weekly ad resolver", () => {
   });
 
   it("merges merchant, flyer, and ingredient-search offers for Food Lion", async () => {
-    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([
-      { productName: "Corn on the Cob", price: 1 },
-    ]);
-    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForMerchantFlyers").mockResolvedValue([
-      { productName: "Mini Cucumbers", price: 1.99 },
-    ]);
-    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForSearchTerms").mockResolvedValue([
-      { productName: "Fresh Broccoli Crowns", price: 2.49 },
-    ]);
+    vi.spyOn(flippFeed, "readFlippMerchantSearch").mockResolvedValue({
+      offers: [{ productName: "Corn on the Cob", price: 1 }],
+      provedEmpty: false,
+      requestFailed: false,
+    });
+    vi.spyOn(flippFeed, "readFlippMerchantFlyers").mockResolvedValue({
+      offers: [{ productName: "Mini Cucumbers", price: 1.99 }],
+      provedEmpty: false,
+      requestFailed: false,
+    });
+    vi.spyOn(flippFeed, "readFlippSupplementalSearches").mockResolvedValue({
+      offers: [{ productName: "Fresh Broccoli Crowns", price: 2.49 }],
+      provedEmpty: false,
+      requestFailed: false,
+    });
 
     const result = await resolveFlippWeeklyAdOffersForChain({
       chain: "food-lion",
@@ -81,13 +93,23 @@ describe("flipp weekly ad resolver", () => {
   });
 
   it("searches only unmatched tracked ingredients when bulk feed partially matches", async () => {
-    vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue([
-      { productName: "BROCCOLI CROWNS", price: 1.79 },
-    ]);
-    vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForMerchantFlyers").mockResolvedValue([]);
+    vi.spyOn(flippFeed, "readFlippMerchantSearch").mockResolvedValue({
+      offers: [{ productName: "BROCCOLI CROWNS", price: 1.79 }],
+      provedEmpty: false,
+      requestFailed: false,
+    });
+    vi.spyOn(flippFeed, "readFlippMerchantFlyers").mockResolvedValue({
+      offers: [],
+      provedEmpty: true,
+      requestFailed: false,
+    });
     const searchSpy = vi
-      .spyOn(flippFeed, "fetchFlippWeeklyAdOffersForSearchTerms")
-      .mockResolvedValue([{ productName: "Fresh Lemons 2 lb Bag", price: 2.49 }]);
+      .spyOn(flippFeed, "readFlippSupplementalSearches")
+      .mockResolvedValue({
+        offers: [{ productName: "Fresh Lemons 2 lb Bag", price: 2.49 }],
+        provedEmpty: false,
+        requestFailed: false,
+      });
 
     await resolveFlippWeeklyAdOffersForChain({
       chain: "aldi",
@@ -100,5 +122,66 @@ describe("flipp weekly ad resolver", () => {
     const searchTerms = searchSpy.mock.calls[0]![0].searchTerms;
     expect(searchTerms).toEqual(["Lemon"]);
     expect(searchTerms).not.toContain("Broccoli");
+  });
+
+  it("marks no current flyer only when every read proved empty", async () => {
+    vi.spyOn(flippFeed, "readFlippMerchantSearch").mockResolvedValue({
+      offers: [],
+      provedEmpty: true,
+      requestFailed: false,
+    });
+    vi.spyOn(flippFeed, "readFlippMerchantFlyers").mockResolvedValue({
+      offers: [],
+      provedEmpty: true,
+      requestFailed: false,
+    });
+    vi.spyOn(flippFeed, "readFlippSupplementalSearches").mockResolvedValue({
+      offers: [],
+      provedEmpty: true,
+      requestFailed: false,
+    });
+
+    const result = await resolveFlippWeeklyAdOffersForChain({
+      chain: "food-lion",
+      zipCode: "23005",
+      merchantName: "Food Lion",
+      trackedIngredientIds: ["bananas"],
+    });
+
+    expect(result.rawOffers).toEqual([]);
+    expect(result.noCurrentFlyer).toBe(true);
+  });
+
+  it("does not mark no current flyer when a read failed or returned an unexpected body", async () => {
+    vi.spyOn(flippFeed, "readFlippMerchantSearch").mockResolvedValue({
+      offers: [],
+      provedEmpty: false,
+      requestFailed: true,
+    });
+    vi.spyOn(flippFeed, "readFlippMerchantFlyers").mockResolvedValue({
+      offers: [],
+      provedEmpty: true,
+      requestFailed: false,
+    });
+
+    const failed = await resolveFlippWeeklyAdOffersForChain({
+      chain: "food-lion",
+      zipCode: "23005",
+      merchantName: "Food Lion",
+      trackedIngredientIds: [],
+    });
+    expect(failed.noCurrentFlyer).toBe(false);
+
+    vi.spyOn(flippFeed, "readFlippMerchantSearch").mockRejectedValue(
+      new Error("Flipp weekly-ad search for Food Lion failed with HTTP 500"),
+    );
+    await expect(
+      resolveFlippWeeklyAdOffersForChain({
+        chain: "food-lion",
+        zipCode: "23005",
+        merchantName: "Food Lion",
+        trackedIngredientIds: [],
+      }),
+    ).rejects.toThrow(/HTTP 500/);
   });
 });

@@ -70,6 +70,7 @@ describe("dollar general weekly ad ingestion", () => {
   it("loads live offers from Flipp when the page scrape is not needed", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [
         {
           productName: "Clover Valley Spaghetti",
@@ -98,6 +99,7 @@ describe("dollar general weekly ad ingestion", () => {
   it("reports WAF blocking when Flipp and scrape both fail", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [],
     });
     vi.spyOn(pageFetcher, "fetchWeeklyAdPageContent").mockRejectedValue(

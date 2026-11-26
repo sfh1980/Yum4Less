@@ -6,23 +6,32 @@ import {
   shouldSupplementAldiWeeklyAdWithDirectScrape,
 } from "@/lib/weekly-ad-ingestion/aldi-weekly-ad-ingestion";
 import * as flippFeed from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
+import type { FlippOfferRead } from "@/lib/weekly-ad-ingestion/flipp-weekly-ad-feed";
 import * as pageFetcher from "@/lib/weekly-ad-ingestion/weekly-ad-page-fetcher";
 import type { WeeklyAdRawOffer } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 
 /** Live Aldi ingest walks merchant + flyer + ingredient Flipp lookups. Stub all three so CI never hits Flipp. */
+function flippRead(offers: WeeklyAdRawOffer[] = []): FlippOfferRead {
+  return {
+    offers,
+    provedEmpty: offers.length === 0,
+    requestFailed: false,
+  };
+}
+
 function stubAldiFlippFeed(input: {
   merchantOffers?: WeeklyAdRawOffer[];
   flyerOffers?: WeeklyAdRawOffer[];
   searchOffers?: WeeklyAdRawOffer[];
 }) {
-  vi.spyOn(flippFeed, "fetchFlippSearchOffersForMerchant").mockResolvedValue(
-    input.merchantOffers ?? [],
+  vi.spyOn(flippFeed, "readFlippMerchantSearch").mockResolvedValue(
+    flippRead(input.merchantOffers),
   );
-  vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForMerchantFlyers").mockResolvedValue(
-    input.flyerOffers ?? [],
+  vi.spyOn(flippFeed, "readFlippMerchantFlyers").mockResolvedValue(
+    flippRead(input.flyerOffers),
   );
-  vi.spyOn(flippFeed, "fetchFlippWeeklyAdOffersForSearchTerms").mockResolvedValue(
-    input.searchOffers ?? [],
+  vi.spyOn(flippFeed, "readFlippSupplementalSearches").mockResolvedValue(
+    flippRead(input.searchOffers),
   );
 }
 

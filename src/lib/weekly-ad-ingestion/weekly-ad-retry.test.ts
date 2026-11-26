@@ -348,6 +348,31 @@ describe("weekly-ad retry picker", () => {
     expect(message).not.toContain("limit");
   });
 
+  it("still retries a chain with no fresh rows and stops at the daily cap", () => {
+    const candidates = [{ chainId: "publix", freshCount: 0 }];
+    expect(
+      selectWeeklyAdRetryChain({
+        candidates,
+        attemptsToday: {},
+        maxPerDay: 7,
+      }),
+    ).toBe("publix");
+    expect(
+      selectWeeklyAdRetryChain({
+        candidates,
+        attemptsToday: { publix: 6 },
+        maxPerDay: 7,
+      }),
+    ).toBe("publix");
+    expect(
+      selectWeeklyAdRetryChain({
+        candidates,
+        attemptsToday: { publix: 7 },
+        maxPerDay: 7,
+      }),
+    ).toBeNull();
+  });
+
   it("mentions the daily limit only when a needy chain has hit the cap", () => {
     const message = weeklyAdRetrySkipMessage({
       candidates: [{ chainId: "publix", freshCount: 0 }],

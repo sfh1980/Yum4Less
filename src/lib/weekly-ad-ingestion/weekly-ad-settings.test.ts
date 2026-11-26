@@ -48,6 +48,7 @@ describe("formatWeeklyAdSettingsLine", () => {
     expect(line).toContain("YUM4LESS_PUBLIX_MERGE_SECTION_CARDS=1");
     expect(line).toContain("YUM4LESS_PUBLIX_HARVEST_MIN_SHARE=0.5");
     expect(line).toContain("YUM4LESS_PUBLIX_FEED_MIN_SHARE=0.25");
+    expect(line).toContain("YUM4LESS_NO_FLYER_GRACE_NIGHTS=2");
     expect(line).not.toContain("secret");
     expect(line).not.toContain("token-value");
     expect(line).not.toContain("https://");

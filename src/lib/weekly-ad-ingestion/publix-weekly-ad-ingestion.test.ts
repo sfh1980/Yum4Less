@@ -64,6 +64,7 @@ describe("publix weekly ad ingestion", () => {
     ]);
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [
         { productName: "Publix Boneless Skinless Chicken Breasts", price: 3.49 },
         { productName: "Kraft Parmesan Cheese", price: 4.29 },

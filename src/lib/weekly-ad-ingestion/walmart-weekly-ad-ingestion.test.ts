@@ -39,6 +39,7 @@ describe("walmart weekly ad ingestion", () => {
   it("skips walmart.com scrape when Flipp returns offers", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [
         {
           productName: "Fresh Bananas",
@@ -71,6 +72,7 @@ describe("walmart weekly ad ingestion", () => {
   it("falls back to Walmart page scrape only when Flipp is empty", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: false,
       rawOffers: [],
     });
     const pageSpy = vi
@@ -101,6 +103,7 @@ describe("walmart weekly ad ingestion", () => {
   it("reports captcha/WAF when Flipp and scrape both fail", async () => {
     vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
       retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: true,
       rawOffers: [],
     });
     vi.spyOn(walmartFetcher, "fetchWalmartWeeklyAdPage").mockRejectedValue(
@@ -119,5 +122,81 @@ describe("walmart weekly ad ingestion", () => {
     expect(result.status).toBe("error");
     expect(result.message).toContain("captcha");
     expect(result.message).toContain("Flipp syndicated feed also returned no offers");
+    expect(result.noFlyer).not.toBe(true);
+  });
+
+  it("records no flyer when Flipp proved none and the page loaded without an ad", async () => {
+    vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
+      retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: true,
+      rawOffers: [],
+    });
+    vi.spyOn(walmartFetcher, "fetchWalmartWeeklyAdPage").mockResolvedValue({
+      html: "<!doctype html><html><body><p>No weekly ad this week.</p></body></html>",
+      method: "http",
+      networkJsonBodies: [],
+      waitSelectorMatched: false,
+      attempts: 1,
+    });
+
+    const client = createWalmartWeeklyAdIngestionClient();
+    const result = await client.ingestWeeklyAd({
+      chain: "walmart",
+      storeId: "walmart-mechanicsville",
+      storeName: "Walmart",
+      zipCode: "23005",
+      trackedIngredientIds: ["bananas"],
+    });
+
+    expect(result.status).toBe("live");
+    expect(result.noFlyer).toBe(true);
+    expect(result.offers).toEqual([]);
+    expect(result.message).toContain("no current or upcoming flyer");
+    expect(result.message).not.toContain("could not load");
+  });
+
+  it("stays an error when the page is empty or blocked even if Flipp had no flyer", async () => {
+    vi.spyOn(flippResolver, "resolveFlippWeeklyAdOffersForChain").mockResolvedValue({
+      retrievalLabel: "Flipp syndicated weekly-ad feed",
+      noCurrentFlyer: true,
+      rawOffers: [],
+    });
+    vi.spyOn(walmartFetcher, "fetchWalmartWeeklyAdPage").mockResolvedValue({
+      html: "",
+      method: "http",
+      networkJsonBodies: [],
+      waitSelectorMatched: false,
+      attempts: 1,
+      browserFailed: true,
+    });
+
+    const client = createWalmartWeeklyAdIngestionClient();
+    const emptyPage = await client.ingestWeeklyAd({
+      chain: "walmart",
+      storeId: "walmart-mechanicsville",
+      storeName: "Walmart",
+      zipCode: "23005",
+      trackedIngredientIds: ["bananas"],
+    });
+    expect(emptyPage.status).toBe("error");
+    expect(emptyPage.noFlyer).not.toBe(true);
+    expect(emptyPage.message).toContain("could not load");
+
+    vi.spyOn(walmartFetcher, "fetchWalmartWeeklyAdPage").mockResolvedValue({
+      html: "<!doctype html><html><body>Robot or human? captcha</body></html>",
+      method: "browser",
+      networkJsonBodies: [],
+      waitSelectorMatched: false,
+      attempts: 1,
+    });
+    const blocked = await client.ingestWeeklyAd({
+      chain: "walmart",
+      storeId: "walmart-mechanicsville",
+      storeName: "Walmart",
+      zipCode: "23005",
+      trackedIngredientIds: ["bananas"],
+    });
+    expect(blocked.status).toBe("error");
+    expect(blocked.noFlyer).not.toBe(true);
   });
 });

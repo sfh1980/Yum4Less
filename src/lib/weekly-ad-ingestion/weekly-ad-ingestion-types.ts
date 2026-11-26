@@ -67,6 +67,11 @@ export type WeeklyAdIngestionResult = {
   thinReason?: string;
   /** Short fetch-failed text. No URL, token, or store id. */
   missDetail?: string;
+  /**
+   * Every source answered and none had a current or upcoming flyer.
+   * The turn is not an error. The night does not fail because of it.
+   */
+  noFlyer?: boolean;
   message: string;
   fetchedAt: string;
   termsNote: string;

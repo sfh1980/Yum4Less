@@ -1014,6 +1014,64 @@ describe("morning report", () => {
     expect(first.body).toContain("Nothing needs you.");
   });
 
+  it("keeps a no-flyer chain quiet for two nights and says Needs you on the third", () => {
+    const chains = [
+      priceChain({
+        displayName: "Food Lion",
+        chainId: "food-lion",
+        freshFlyerCount: 0,
+        rowsPerStore: 0,
+        shopperRanked: true,
+      }),
+      priceChain({ displayName: "Aldi", chainId: "aldi", freshFlyerCount: 40, rowsPerStore: 40 }),
+    ];
+    const first = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: [],
+      noFlyerNights: { "food-lion": 1 },
+      noFlyerGraceNights: 2,
+      matchedToday: { "food-lion": 0, aldi: 20 },
+      matchedPrevious: { "food-lion": 80, aldi: 20 },
+      previousMorningRowsPerStore: { "Food Lion": 40, Aldi: 40, [SHOPPER_WINDOW_BASELINE_KEY]: 1 },
+    });
+    expect(first.body).toContain(
+      "Food Lion: no flyer published last night (night 1 of 2, not counted as a failure).",
+    );
+    expect(first.body).not.toContain("Food Lion has no prices");
+    expect(first.body).not.toContain("Food Lion fell from");
+    expect(first.body).not.toContain("Food Lion matched ingredients fell");
+    expect(first.needsAttention).toBe(false);
+    expect(first.body).toContain("Nothing needs you.");
+
+    const second = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: [],
+      noFlyerNights: { "food-lion": 2 },
+      noFlyerGraceNights: 2,
+    });
+    expect(second.body).toContain(
+      "Food Lion: no flyer published last night (night 2 of 2, not counted as a failure).",
+    );
+    expect(second.needsAttention).toBe(false);
+    expect(second.body).toContain("Nothing needs you.");
+
+    const third = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: chains,
+      priorChainPriceExceptions: [],
+      noFlyerNights: { "food-lion": 3 },
+      noFlyerGraceNights: 2,
+    });
+    expect(third.body).toContain("Food Lion has had no flyer for 3 nights.");
+    expect(third.needsAttention).toBe(true);
+    expect(third.body.endsWith("Needs you.")).toBe(true);
+  });
+
   it("accepts only a Discord webhook URL", () => {
     expect(
       isDiscordWebhookUrl("https://discord.com/api/webhooks/1/token"),
