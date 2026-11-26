@@ -1072,6 +1072,89 @@ describe("morning report", () => {
     expect(third.body.endsWith("Needs you.")).toBe(true);
   });
 
+  it("does not compare matched ingredients when tonight's ad has not started", () => {
+    const early = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Publix",
+          chainId: "publix",
+          freshFlyerCount: 220,
+          rowsPerStore: 20,
+          shopperRanked: true,
+          earlyAd: true,
+        }),
+      ],
+      priorChainPriceExceptions: [],
+      matchedToday: { publix: 126 },
+      matchedPrevious: { publix: 290 },
+      previousMorningRowsPerStore: { Publix: 20, [SHOPPER_WINDOW_BASELINE_KEY]: 1 },
+    });
+    expect(early.body).toContain(
+      "Publix posted next week's ad early; matched counts compared again once it starts.",
+    );
+    expect(early.body).not.toContain("matched ingredients fell");
+    expect(early.needsAttention).toBe(false);
+    expect(early.body).toContain("Nothing needs you.");
+
+    const realDrop = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Publix",
+          chainId: "publix",
+          freshFlyerCount: 220,
+          rowsPerStore: 20,
+          shopperRanked: true,
+        }),
+      ],
+      priorChainPriceExceptions: [],
+      matchedToday: { publix: 126 },
+      matchedPrevious: { publix: 290 },
+    });
+    expect(realDrop.body).toContain("Publix matched ingredients fell from 290 to 126.");
+    expect(realDrop.needsAttention).toBe(true);
+
+    const mixed = composeMorningReport({
+      ...quiet,
+      addSkipped: "not-add-day",
+      chainPrices: [
+        priceChain({
+          displayName: "Publix",
+          chainId: "publix",
+          freshFlyerCount: 220,
+          rowsPerStore: 20,
+          shopperRanked: true,
+          earlyAd: true,
+        }),
+        priceChain({
+          displayName: "Aldi",
+          chainId: "aldi",
+          freshFlyerCount: 40,
+          rowsPerStore: 10,
+          shopperRanked: true,
+        }),
+      ],
+      priorChainPriceExceptions: [],
+      matchedToday: { publix: 126, aldi: 8 },
+      matchedPrevious: { publix: 290, aldi: 40 },
+      previousMorningRowsPerStore: {
+        Publix: 20,
+        Aldi: 40,
+        [SHOPPER_WINDOW_BASELINE_KEY]: 1,
+      },
+    });
+    expect(mixed.body).toContain(
+      "Publix posted next week's ad early; matched counts compared again once it starts.",
+    );
+    expect(mixed.body).not.toContain("Publix matched ingredients fell");
+    expect(mixed.body).toContain("Aldi matched ingredients fell from 40 to 8.");
+    expect(mixed.body).toContain("Aldi fell from 40 to 10 rows per store.");
+    expect(mixed.needsAttention).toBe(true);
+  });
+
   it("accepts only a Discord webhook URL", () => {
     expect(
       isDiscordWebhookUrl("https://discord.com/api/webhooks/1/token"),

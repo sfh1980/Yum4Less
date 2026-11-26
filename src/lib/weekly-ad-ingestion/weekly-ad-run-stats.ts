@@ -4,6 +4,7 @@ import { weeklyAdRetryDate } from "@/lib/weekly-ad-ingestion/weekly-ad-retry";
 import type { WeeklyAdChain } from "@/lib/weekly-ad-ingestion/weekly-ad-ingestion-types";
 import {
   countConsecutiveNoFlyerNights,
+  EARLY_AD_RUN_REASON,
   NO_FLYER_RUN_REASON,
 } from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
 
@@ -105,6 +106,7 @@ export function applyRunStatsToChainFacts<
     priceMissReason?: string | null;
     thinReason?: string | null;
     priceMissDetail?: string | null;
+    earlyAd?: boolean;
   },
 >(facts: readonly T[], stats: Map<string, WeeklyAdRunStatRow> | null): T[] {
   if (!stats) {
@@ -124,6 +126,9 @@ export function applyRunStatsToChainFacts<
     }
     if (fact.priceMissReason === "fetch-failed" && row.missReason) {
       next.priceMissDetail = row.missReason;
+    }
+    if (row.missReason === EARLY_AD_RUN_REASON) {
+      next.earlyAd = true;
     }
     return next;
   });

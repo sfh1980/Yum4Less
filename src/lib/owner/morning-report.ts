@@ -186,6 +186,8 @@ export type MorningChainPriceFact = {
   catalogStoreCount?: number;
   /** Fresh rows whose start is still in the future, divided by admitted stores. */
   startingLaterPerStore?: number;
+  /** Tonight's scraped offers were mostly for an ad that has not started. */
+  earlyAd?: boolean;
 };
 
 const CHAIN_PRICE_EXCEPTION_LINE =
@@ -573,11 +575,16 @@ export function noFlyerOverGraceSentence(name: string, nights: number): string {
   return `${name} has had no flyer for ${nights} nights.`;
 }
 
+export function earlyAdSentence(name: string): string {
+  return `${name} posted next week's ad early; matched counts compared again once it starts.`;
+}
+
 export function matchedIngredientFellLines(input: {
   chains: readonly {
     chainId?: string;
     displayName: string;
     shopperRanked?: boolean;
+    earlyAd?: boolean;
   }[];
   today: Readonly<Record<string, number>> | null;
   previous: Readonly<Record<string, number>> | null;
@@ -592,7 +599,7 @@ export function matchedIngredientFellLines(input: {
     if (chain.shopperRanked !== true || !chain.chainId) {
       return [];
     }
-    if (input.skipChainIds?.has(chain.chainId)) {
+    if (chain.earlyAd || input.skipChainIds?.has(chain.chainId)) {
       return [];
     }
     const today = input.today?.[chain.chainId];
@@ -841,6 +848,9 @@ export function describeMorningChainPrices(input: {
   });
   const census = rowsPerStoreCensusLine(summary);
   const laterLine = startingLaterSentence(summary);
+  const earlyLines = summary
+    .filter((chain) => chain.earlyAd === true)
+    .map((chain) => earlyAdSentence(chain.displayName.trim()));
   const noStoreLine = noStoreOnFileSentence(input.chains);
   const extra = [
     ...thinWithRows.map((chain) =>
@@ -850,6 +860,7 @@ export function describeMorningChainPrices(input: {
     ...drops,
     ...fell,
     ...matchedFell,
+    ...earlyLines,
     ...(repeatedDrops.length > 0 ? [COVERAGE_DROP_AGAIN_LINE] : []),
     ...(census ? [census] : []),
     ...(laterLine ? [laterLine] : []),

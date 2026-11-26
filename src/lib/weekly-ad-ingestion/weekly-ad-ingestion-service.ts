@@ -39,7 +39,10 @@ import { purgeStaleRankedPriceObservations } from "@/lib/price-observation-write
 import { logServerError } from "@/lib/server-log";
 import { sanitizeWeeklyAdFailureReason } from "@/lib/weekly-ad-ingestion/weekly-ad-failure-reason";
 import { recordWeeklyAdRunStats } from "@/lib/weekly-ad-ingestion/weekly-ad-run-stats";
-import { chooseWeeklyAdRunMissReason } from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
+import {
+  chooseWeeklyAdRunMissReason,
+  readEarlyAdShare,
+} from "@/lib/weekly-ad-ingestion/weekly-ad-run-reasons";
 import {
   readWeeklyAdFlyerHash,
   recordWeeklyAdPriceMissReason,
@@ -300,6 +303,9 @@ async function rememberWeeklyAdChainRun(input: {
     missReason: chooseWeeklyAdRunMissReason({
       noFlyer: input.result.noFlyer === true,
       missDetail: input.result.missDetail ?? null,
+      offers: input.result.offers,
+      now: new Date(),
+      earlyAdShare: readEarlyAdShare(),
     }),
   });
 }
